@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>ESMOJO</title>
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem('esmojo-theme') || 'light'; } catch { document.documentElement.dataset.theme = 'light'; }
+    </script>
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Naar de inhoud</a>
+    <aside class="rail" aria-label="Zijbalk">
+      <a class="brand" href="#/" aria-label="ESMOJO homepage">E<span></span></a>
+      <nav aria-label="Hoofdnavigatie" id="navigation"></nav>
+      <div class="rail-bottom">
+        <button class="rail-item" id="theme-toggle" type="button" aria-label="Donkere modus inschakelen" aria-pressed="false">
+          <span id="theme-icon"></span><span class="tooltip" role="tooltip" id="theme-label">Donkere modus</span>
+        </button>
+        <a class="rail-item profile" href="#/account" aria-label="Accountinstellingen" data-page="account">
+          <span class="avatar"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="12" r="5" fill="currentColor"/><path d="M6 29v-3a10 10 0 0 1 20 0v3" fill="currentColor"/></svg></span>
+          <span class="tooltip" role="tooltip">Accountinstellingen</span>
+        </a>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header><span class="wordmark">ESMOJO<span class="brand-dot">.</span></span><span class="section-label" id="section-label">Homepage</span></header>
+      <main id="content" tabindex="-1"><div class="page-heading"><span class="eyebrow">ESMOJO</span><h1 id="page-title">Homepage</h1><div class="heading-line"></div></div></main>
+    </div>
+  </body>
+</html>
