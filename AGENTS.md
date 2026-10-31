@@ -3,8 +3,10 @@
 ## Uitvoering en publicatie
 
 Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende
-controles en push afgeronde wijzigingen naar GitHub main, zodat Vercel esmojo.nl
-bijwerkt. Vraag voor normale bouw- en publicatiestappen niet opnieuw toestemming.
+controles en publiceer afgeronde wijzigingen via GitHub main, zodat Vercel esmojo.nl
+bijwerkt. Bij gelijktijdig werk gebruiken beide accounts een eigen taakbranch en
+volgen ze docs/samenwerken.md: actuele main integreren, opnieuw controleren en
+zonder force push publiceren. Vraag voor normale bouw- en publicatiestappen niet opnieuw toestemming.
 Werk Resend, Supabase en Google Drive bij wanneer de gevraagde functie die diensten
 raakt; bestaande gegevensclassificatie en toegangsafspraken blijven van toepassing.
 
@@ -67,9 +69,10 @@ betekenis of gebruik. Raad niet. Niet-geclassificeerde gegevens niet opslaan.
 - Openbaar: opslag in Supabase is door de gebruiker toegestaan. Dit betekent
   niet automatisch anonieme lees- of schrijftoegang. Stel toegangsbeleid expliciet
   vast en gebruik Row Level Security voor tabellen die via een API bereikbaar zijn.
-- Vertrouwelijk: opslag in de zakelijke Google Workspace. Google Cloud en
-  Firebase zijn geen automatisch goedgekeurde vervangers voor Workspace.
-  Kies de precieze Workspace-opslag pas na inventarisatie van gegevens en beheer.
+- Vertrouwelijk: opslag uitsluitend in de afgesproken Google Drive-map in Mijn
+  Drive van een normaal Google-account met werkmail. Ga niet uit van Google
+  Workspace of een Shared Drive. Google Cloud en Firebase zijn geen automatisch
+  goedgekeurde vervangers.
 
 Vertrouwelijke gegevens mogen niet ongemerkt via Supabase, Vercel-serverfuncties,
 Resend, logs, analytics, builds of persistente browseropslag worden verwerkt.
@@ -97,8 +100,9 @@ Automatische Apps Script-publicatie via GitHub Actions en clasp is voorbereid.
 De workflow gebruikt de vaste Script-ID en bestaande deployment-ID in
 tools/apps-script/deployment.json. Behoud manifest, webapp-URL en Script properties.
 De eenmalige Google-autorisatie wordt als CLASPRC_JSON uitsluitend in GitHub
-Actions-secrets bewaard, nooit in code of chat. De eerste echte automatische
-publicatie moet nog worden bevestigd; alleen lokale mocks zijn uitgevoerd.
+Actions-secrets bewaard, nooit in code of chat. De gebruiker heeft een succesvolle
+automatische publicatierun bevestigd; claim nieuwe publicaties alleen op basis
+van nieuwe runtime- of workflowresultaten.
 
 Bewaar geen sleutels in broncode. Publiceer geen service-role-sleutel of
 Google-credentials in frontendbundels. Een Google-login op zichzelf bewijst geen
