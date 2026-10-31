@@ -33,6 +33,7 @@ a { color: inherit; text-decoration: none; }
 .rail { position: fixed; inset: 0 auto 0 0; width: 76px; background: var(--rail); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 24px 12px 16px; z-index: 10; }
 .brand { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-bottom: 38px; }
 .brand svg { display: block; width: auto; height: 48px; max-width: 100%; }
+.brand svg path[fill="#0c1011"] { fill: #404040; }
 :root[data-theme="dark"] .brand svg path[fill="#0c1011"] { fill: #fff; }
 nav, .rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .rail-bottom { margin-top: auto; gap: 12px; }
