@@ -1,0 +1,27 @@
+name: Check application
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - name: Authentication, authorization and existing server tests
+        run: |
+          node server/accounts-api.test.js
+          node server/account-profiles.test.js
+          node server/drive-write-diagnostic.test.js
+          node server/apps-script.test.js
+          node server/google-drive.test.js
+          node tools/apps-script/deploy.test.mjs
