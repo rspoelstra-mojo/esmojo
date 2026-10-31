@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDriveCheck } from './drive-check.js';
+import { AppsScriptError } from './apps-script.js';
 const env = { GOOGLE_DRIVE_SHARED_SECRET: 'test-only-'.repeat(5), GOOGLE_DRIVE_SCRIPT_URL: 'https://script.google.com/macros/s/test/exec' };
 const res = () => ({ headers: {}, setHeader(key, value) { this.headers[key] = value; }, end(body) { this.body = body; } });
 const req = secret => ({ method: 'POST', headers: { origin: 'https://esmojo.nl' }, body: { secret } });
@@ -31,4 +32,14 @@ test('foutdetails worden niet doorgegeven', async () => {
   await createDriveCheck({ env, check: async () => { throw new Error('private'); } })(req(env.GOOGLE_DRIVE_SHARED_SECRET), output);
   assert.equal(output.statusCode, 502);
   assert.ok(!output.body.includes('private'));
+});
+
+test('alleen bekende foutcodes worden vertaald zonder foutinhoud te tonen', async () => {
+  for(const code of ['SIGNATURE','NOT_JSON','SCRIPT','RESPONSE','<script>private</script>']) {
+    const output=res();
+    await createDriveCheck({env,check:async()=>{throw new AppsScriptError(code,'private details');}})(req(env.GOOGLE_DRIVE_SHARED_SECRET),output);
+    assert.equal(output.statusCode,502);
+    assert.ok(!output.body.includes('private'));
+    if(!code.includes('<')) assert.match(output.body,new RegExp(`Controlecode: ${code}`));
+  }
 });

@@ -47,3 +47,14 @@ test('configuratie en API-fouten worden afgehandeld', async () => {
   await assert.rejects(checkAppsScriptConnection({ env, request: async () => new Response('private', { status: 403 }) }), /HTTP 403/);
   await assert.rejects(checkAppsScriptConnection({ env, request: async () => new Response('<html>Login</html>') }), /geen JSON/);
 });
+
+test('verschillende Google-antwoorden leveren veilige diagnosecodes op', async () => {
+  for (const [payload, code] of [
+    [{ok:false,error:'Geen toegang.'}, 'SIGNATURE'],
+    [{ok:false,error:'Drive-controle mislukt.'}, 'SCRIPT'],
+    [null, 'RESPONSE'],
+    [{error:'private information'}, 'RESPONSE'],
+  ]) {
+    await assert.rejects(checkAppsScriptConnection({env,request:async()=>Response.json(payload)}), error => error.code === code && !error.message.includes('private information'));
+  }
+});
