@@ -29,7 +29,6 @@ function renderPage() {
   document.querySelector('.workspace').classList.toggle('has-submenu', hasSubmenu);
   document.querySelector('.submenu').hidden = !hasSubmenu;
   document.querySelector('#submenu-title').textContent = title;
-  document.querySelector('#section-label').textContent = title;
   document.title = `${title} · ESMOJO`;
   document.querySelectorAll('[data-page]').forEach(link => {
     if (link.dataset.page === route) link.setAttribute('aria-current', 'page');
