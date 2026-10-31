@@ -1,4 +1,4 @@
-// ESMOJO: alleen een verbindingstest, nog geen bestandsimport of opslag.
+// ESMOJO: statuscontrole en afgeschermde accountprofielen (Accounts.gs).
 const ESMOJO_FOLDER_ID = '1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk';
 
 // Eerst handmatig uitvoeren in de Apps Script-editor.
@@ -17,6 +17,10 @@ function doGet() {
 function doPost(event) {
   try {
     const raw = event && event.postData && event.postData.contents;
+    if (raw && raw.length <= 120000) {
+      const envelope = JSON.parse(raw);
+      if (envelope.action === 'accounts') return esmojoAccounts_(envelope);
+    }
     if (!raw || raw.length > 4096) return esmojoReply_({ ok: false, error: 'Geen toegang.' });
     const input = JSON.parse(raw);
     const secret = PropertiesService.getScriptProperties().getProperty('ESMOJO_SHARED_SECRET');
