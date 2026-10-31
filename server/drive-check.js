@@ -1,8 +1,17 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { checkAppsScriptConnection } from './apps-script.js';
+import { AppsScriptError, checkAppsScriptConnection } from './apps-script.js';
 
 const ORIGIN = 'https://esmojo.nl';
 const digest = value => createHash('sha256').update(value).digest();
+const DIAGNOSIS = {
+  CONFIG: 'De Apps Script-instellingen in Vercel zijn niet compleet.',
+  URL: 'De script-URL in Vercel is ongeldig. Gebruik de volledige Web-app-URL van script.google.com die eindigt op /exec.',
+  HTTP: 'Google gaf een HTTP-fout terug. Controleer de deployment-URL en of de webapp nog actief is, uitgevoerd wordt als jezelf en toegankelijk is voor Iedereen.',
+  NOT_JSON: 'Google gaf een webpagina terug in plaats van het verwachte JSON-antwoord. Mogelijk vraagt Google om inloggen, ontbreekt doPost in de gepubliceerde versie of is de deployment niet toegankelijk. Controleer Implementeren → Implementaties beheren: Web-app, uitvoeren als jezelf, toegang Iedereen en de nieuwste codeversie.',
+  SIGNATURE: 'Apps Script heeft het verzoek ontvangen maar weigert de ondertekening. Controleer of ESMOJO_SHARED_SECRET in de scripteigenschappen exact gelijk is aan GOOGLE_DRIVE_SHARED_SECRET in Vercel, zonder extra spaties of aanhalingstekens. Deploy Vercel opnieuw na een wijziging.',
+  SCRIPT: 'Apps Script heeft een fout gemeld tijdens de controle. Controleer of de volledige Code.gs is gepubliceerd en voer testConnection in de editor uit. Kijk in Uitvoeringen of Google-toestemming opnieuw nodig is.',
+  RESPONSE: 'Apps Script gaf JSON terug, maar niet het verwachte statusantwoord. Publiceer de volledige Code.gs als nieuwe versie van de bestaande webapp.',
+};
 
 export function createDriveCheck({ env = process.env, check = checkAppsScriptConnection, now = Date.now } = {}) {
   return async function handler(req, res) {
@@ -37,8 +46,11 @@ export function createDriveCheck({ env = process.env, check = checkAppsScriptCon
       const result = await check({ env });
       if (!result?.ok || !result.folderAccessible) throw new Error();
       page(200, `<p>Verbinding geslaagd: Vercel kan via het ondertekende Apps Script-verzoek de ESMOJO-map bereiken.</p><p>Controletijd: ${Math.max(0, Math.round(now() - started))} ms. Geen bestanden gelezen of gewijzigd. Import en opslag zijn nog niet gebouwd.</p>`);
-    } catch {
-      page(502, '<p>De verbinding is niet bevestigd. Controleer of de script-URL eindigt op /exec, of beide geheimen exact overeenkomen en of de nieuwste scriptversie is gepubliceerd als webapp met toegang voor Iedereen.</p>');
+    } catch (error) {
+      // Alleen onze vaste foutcodes tonen, nooit Google-responses of ruwe fouten.
+      const code = error instanceof AppsScriptError && Object.hasOwn(DIAGNOSIS, error.code) ? error.code : null;
+      const message = code ? DIAGNOSIS[code] : 'Het verzoek naar Google kon niet worden afgerond, bijvoorbeeld door een timeout of netwerkfout. Probeer nogmaals en controleer de webapp-deployment als dit blijft gebeuren.';
+      page(502, `<p>De verbinding is niet bevestigd.</p><p>${message}</p>${code ? `<p>Controlecode: ${code}</p>` : ''}`);
     }
   };
 }
