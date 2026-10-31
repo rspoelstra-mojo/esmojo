@@ -40,6 +40,12 @@ Supabase, logs, analytics of persistente browseropslag toe. De zakelijke map is
 medewerkersrechten zijn nog niet aangesloten. Publiceer geen Drive-endpoints
 voordat authenticatie en autorisatie zijn geïmplementeerd.
 
+De tijdelijke OAuth-instelroutes zijn op verzoek van de gebruiker verwijderd.
+Herstel deze niet automatisch. Een eenvoudigere Drive-koppeling via een gedeelde
+Drive en serviceaccount wordt onderzocht, maar is nog niet ingericht. De oude
+Google-configuratie in Vercel moet door iemand met Vercel-toegang worden
+verwijderd; verwijdering daarvan is vanuit deze werkmap niet bevestigd.
+
 Bewaar geen sleutels in broncode. Publiceer geen service-role-sleutel of
 Google-credentials in frontendbundels. Een Google-login op zichzelf bewijst geen
 toestemming tot vertrouwelijke gegevens.
