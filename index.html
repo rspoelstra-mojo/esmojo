@@ -16,7 +16,7 @@
   </head>
   <body>
     <a class="skip-link" href="#content">Naar de inhoud</a>
-    <aside class="rail" aria-label="Zijbalk">
+    <aside class="rail" aria-label="Hoofdmenu">
       <a class="brand" href="#/" aria-label="ESMOJO homepage"></a>
       <nav aria-label="Hoofdnavigatie" id="navigation"></nav>
       <div class="rail-bottom">
@@ -34,7 +34,11 @@
     </aside>
     <div class="workspace">
       <header><span class="wordmark">ESMOJO<span class="brand-dot">.</span></span><span class="section-label" id="section-label">Homepage</span></header>
-      <main id="content" tabindex="-1"><div class="page-heading"><span class="eyebrow">ESMOJO</span><h1 id="page-title">Homepage</h1><div class="heading-line"></div></div></main>
+      <aside class="submenu" aria-label="Submenu" hidden>
+        <h2 id="submenu-title"></h2>
+        <nav id="submenu-navigation" aria-labelledby="submenu-title"></nav>
+      </aside>
+      <main id="content" tabindex="-1"><div class="content-box"><div class="page-heading"><span class="eyebrow">ESMOJO</span><h1 id="page-title">Homepage</h1><div class="heading-line"></div></div></div></main>
     </div>
   </body>
 </html>
