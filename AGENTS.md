@@ -35,6 +35,12 @@ blijft JO altijd blauw en heeft het logo geen eigen blauw achtergrondvlak.
 
 ## Snelheid
 
+Het menu met iconen heet het hoofdmenu. De tweede laag ernaast heet het submenu
+en is bedoeld voor tekstmenu's en andere onderdelen, zonder iconen. Alle pagina's
+behalve Homepage hebben een submenu. De contentbox staat gecentreerd tussen het
+submenu en de rechter schermrand, bovenaan uitgelijnd met het logo. Op smalle
+schermen staat het submenu boven de content om voldoende leesruimte te houden.
+
 Snelheid is het belangrijkste ontwerpuitgangspunt. De gebruiker accepteert een
 langere eerste laadbeurt of refresh als navigatie en veelgebruikte acties daarna
 direct werken. Laad passende veelgebruikte gegevens vooraf, hergebruik gegevens

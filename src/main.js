@@ -25,6 +25,10 @@ document.querySelector('#navigation').innerHTML = [
 function renderPage() {
   const route = location.hash.replace(/^#\/?/, '');
   const title = pages[route] || 'Pagina niet gevonden';
+  const hasSubmenu = route !== '';
+  document.querySelector('.workspace').classList.toggle('has-submenu', hasSubmenu);
+  document.querySelector('.submenu').hidden = !hasSubmenu;
+  document.querySelector('#submenu-title').textContent = title;
   document.querySelector('#page-title').textContent = title;
   document.querySelector('#section-label').textContent = title;
   document.title = `${title} · ESMOJO`;
