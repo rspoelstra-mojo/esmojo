@@ -1,0 +1,8 @@
+{
+  "name": "esmojo-apps-script-tools",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@google/clasp": "3.4.1"
+  }
+}

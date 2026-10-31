@@ -4,3 +4,6 @@ dist/
 .env
 .env.*
 !.env.example
+.clasprc.json
+.clasp.json
+clasp-credentials*.json

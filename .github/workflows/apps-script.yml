@@ -1,0 +1,41 @@
+name: Publish Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'google-apps-script/**'
+      - 'tools/apps-script/**'
+      - 'server/apps-script.test.js'
+      - '.github/workflows/apps-script.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-production
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Check script and publication safety
+        run: |
+          node server/apps-script.test.js
+          node --test tools/apps-script/deploy.test.mjs
+      - name: Install pinned publication tool
+        run: npm ci --prefix tools/apps-script --no-audit --no-fund
+      - name: Update existing webapp
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: node tools/apps-script/deploy.mjs
