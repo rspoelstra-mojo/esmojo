@@ -52,10 +52,6 @@ nav, .rail-bottom { display: flex; flex-direction: column; align-items: center; 
 .avatar { width: 33px; height: 33px; border-radius: 50%; overflow: hidden; background: #cfddd8; color: #627c71; display: flex; align-items: end; justify-content: center; }
 .avatar svg { width: 32px; height: 32px; }
 .workspace { margin-left: 76px; min-height: 100dvh; }
-header { min-height: 88px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 20px 42px; border-bottom: 1px solid var(--line); }
-.wordmark { font-weight: 800; letter-spacing: -1px; font-size: 20px; }
-.brand-dot { color: var(--accent); }
-.section-label { font-size: 12px; color: var(--muted); }
 main { padding: 64px 100px; outline: none; }
 .page-heading { max-width: 1100px; margin: auto; }
 .eyebrow { font-size: 10px; font-weight: 650; letter-spacing: 3px; color: var(--muted); }
@@ -63,9 +59,6 @@ h1 { font-size: 40px; font-weight: 550; letter-spacing: -1.4px; margin: 14px 0 3
 .heading-line { height: 1px; background: var(--line); }
 .submenu[hidden] { display: none; }
 .has-submenu { --submenu-width: 210px; }
-.has-submenu header { display: none; }
-.has-submenu .section-label { display: none; }
-.has-submenu .wordmark { display: none; }
 .submenu { position: fixed; top: 0; bottom: 0; left: 76px; width: var(--submenu-width); padding: 24px 16px; border-right: 1px solid var(--line); background: var(--canvas); overflow-y: auto; }
 .submenu h2 { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 #submenu-navigation { align-items: stretch; margin-top: 24px; }
@@ -73,9 +66,8 @@ h1 { font-size: 40px; font-weight: 550; letter-spacing: -1.4px; margin: 14px 0 3
 .has-submenu .content-box { width: 100%; max-width: 1000px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: 44px; background: var(--canvas); }
 .skip-link { position: fixed; top: -80px; left: 90px; background: var(--tip); color: var(--tip-text); padding: 12px; z-index: 20; }
 .skip-link:focus { top: 10px; }
-@media (max-width: 600px) { header { min-height: 72px; padding: 20px 24px; } main { padding: 44px 24px; } .rail { padding-top: 16px; } .brand { margin-bottom: 30px; } }
+@media (max-width: 600px) { main { padding: 44px 24px; } .rail { padding-top: 16px; } .brand { margin-bottom: 30px; } }
 @media (max-width: 700px) {
-  .has-submenu header { position: static; width: auto; height: 64px; padding: 0 20px; border-right: 0; }
   .submenu { position: static; width: auto; padding: 16px 20px; border-right: 0; border-bottom: 1px solid var(--line); }
   #submenu-navigation:empty { margin: 0; }
   .has-submenu main { margin-left: 0; padding: 16px; }
