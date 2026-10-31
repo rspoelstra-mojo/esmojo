@@ -60,6 +60,12 @@ en vraag goedkeuring voordat je de tragere uitvoering bouwt.
 
 ## Gegevensclassificatie
 
+Accountprofielen (voornaam, achternaam, e-mailadres, functie, optionele profielfoto
+en rol) zijn door de gebruiker als Vertrouwelijk geclassificeerd. Opslag in
+Google Drive. Als expliciete uitzondering mag Supabase Auth het e-mailadres,
+wachtwoordbeveiliging en verplichte TOTP-tweestapsverificatie beheren. Bewaar geen
+profielvelden of foto's in Supabase-gebruikersmetadata of persistente browseropslag.
+
 Er zijn twee categorieën: Openbaar en Vertrouwelijk.
 Vraag de gebruiker bij elke nieuwe gegevenssoort of nieuwe velden expliciet
 welke categorie van toepassing is, voordat je opslag of verwerking bouwt.
