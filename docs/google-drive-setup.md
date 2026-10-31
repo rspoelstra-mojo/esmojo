@@ -1,77 +1,34 @@
-# Google Drive-aansluiting
+# Google Drive: tijdelijke OAuth-setup verwijderd
 
-Status: servermodule en afgeschermde OAuth-setup voorbereid, niet live verbonden
-of getest. Geen API-route voor bestandsgegevens. Geen echte bestanden aangemaakt
-of gelezen.
+De gebruiker heeft gevraagd alle tijdelijke Google-instelroutes en bijbehorende
+Vercel-variabelen te verwijderen. De routes /api/google/connect en
+/api/google/callback, hun implementatie en de bijbehorende tests zijn uit de
+code verwijderd. Er is geen publiek Drive-endpoint meer in de huidige broncode.
+De verwijderde bestanden blijven herstelbaar via de Git-geschiedenis.
 
-## Tijdelijke OAuth-setup
+De niet-aangesloten servermodule google-drive.js en zijn tests blijven behouden.
+Er is geen actieve bestandsimport of Drive-opslag. Deze module moet opnieuw
+worden aangesloten of aangepast voor een nieuwe authenticatiemethode.
 
-De callback is https://esmojo.nl/api/google/callback. Stel GOOGLE_CLIENT_ID en
-GOOGLE_CLIENT_SECRET in Vercel Production in. Voeg GOOGLE_SETUP_PASSWORD als
-Secret toe: een uniek, willekeurig wachtwoord van minimaal 32 tekens, uit een
-wachtwoordmanager. Deploy daarna opnieuw.
+## Externe opruiming: nog niet bevestigd
 
-Open https://esmojo.nl/api/google/connect en vul dat instelwachtwoord in. Gebruik
-het zakelijke Google-account dat als testgebruiker staat geregistreerd. De flow
-vraagt uitsluitend drive.file, offline toegang en expliciete toestemming. De
-flow controleert herkomst, een ondertekende state-cookie en PKCE, met een
-insteltermijn van tien minuten.
+Er is vanuit deze werkmap geen Vercel-beheertoegang. Verwijder in het
+Vercel-project esmojo, bij Settings → Environment Variables, de oude
+GOOGLE_SETUP_PASSWORD, GOOGLE_CLIENT_SECRET en GOOGLE_REFRESH_TOKEN indien
+aanwezig, plus GOOGLE_CLIENT_ID. Controleer alle omgevingen en eventuele gedeelde
+bindings. Laat Supabase-variabelen en RESEND_API_KEY staan.
 
-Na toestemming verschijnt het refresh token tijdelijk op een niet-gecachete
-pagina. Sla het zelf direct op als GOOGLE_REFRESH_TOKEN (Secret, Production) in
-Vercel. Deel het niet met de agent of in screenshots. Deploy opnieuw. De route
-sluit zodra GOOGLE_REFRESH_TOKEN aanwezig is. Verwijder vervolgens de tijdelijke
-GOOGLE_SETUP_PASSWORD en deploy opnieuw zodat ook oude setups uitgeschakeld zijn.
-Deze handmatige overdracht is nodig omdat de app geen toegang heeft tot de
-Vercel-instellingen-API; tokens worden niet automatisch persistent opgeslagen.
+Deploy de opgeschoonde broncode opnieuw na het verwijderen van de variabelen.
+Oudere deployments kunnen hun oude code en configuratie behouden: verwijder
+oude deployments met deze instelroutes of scherm ze af via deployment protection.
+Verwijderde variabelen trekken reeds uitgegeven Google-tokens niet in. Eventueel
+verleende Google-toegang en de oude OAuth-client kunnen afzonderlijk bij Google
+worden ingetrokken/verwijderd. Die acties zijn niet vanuit deze werkmap uitgevoerd.
 
-De bestaande map is daarmee nog niet gedeeld met de OAuth-client. Bouw en test
-Google Picker-selectie als vervolgstap voordat de map gebruikt wordt. Ook daarna
-zijn bestaande of door andere apps toegevoegde bestanden niet automatisch
-toegankelijk met drive.file. Medewerkerslogin staat los van deze technische setup.
+## Vervolg
 
-De gebruiker staat verwerking van vertrouwelijke informatie door Vercel toe,
-met Google Drive als opslag. De map in de zakelijke Mijn Drive is
-1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk. Maak deze map niet openbaar.
-
-## Autorisatie die nog moet worden ingesteld
-
-1. Maak/selecteer een bedrijfsbeheerd Google Cloud-project voor ESMOJO en activeer
-   de Google Drive API. Dit project beheert de API-toegang; gegevens blijven in
-   Workspace Drive. Organisatiebeleid kan hiervoor beheerdersrechten vereisen.
-2. Configureer Google Auth Platform, bij voorkeur met doelgroep Internal binnen
-   de Workspace-organisatie. Als Internal niet beschikbaar is, onderzoek eerst
-   het organisatiebeleid. Externe apps in Testing kunnen refresh tokens krijgen
-   die na zeven dagen verlopen; behandel dat niet als productieconfiguratie.
-3. Kies autorisatiescopes pas na uitleg en toestemming. drive.file geeft toegang
-   tot app-aangemaakte of expliciet via Picker geselecteerde bestanden, niet
-   automatisch tot alle bestaande/toekomstige bestanden in een gekozen map.
-   Imports van JSON die een andere app in de map zet kunnen bredere Drive-toegang
-   vereisen. De mapbeperking in onze code beperkt niet de OAuth-rechten zelf.
-4. Bouw een afgeschermde OAuth-setupflow met state-validatie en een exact
-   geregistreerde redirect-URI. Vraag offline toegang voor een refresh token.
-   Plaats geen tokens in URL's, logs of broncode. Gebruik geen openbare
-   token-generator van derden om toegang tot de bedrijfs-Drive te geven.
-5. Bewaar GOOGLE_CLIENT_ID als configuratie en GOOGLE_CLIENT_SECRET plus
-   GOOGLE_REFRESH_TOKEN als secrets in het betreffende Vercel-project. Gebruik
-   geen VITE_-prefix. De gebruiker deelt deze secrets niet in chat.
-
-## Test en ingebruikname
-
-De module server/google-drive.js hergebruikt toegangstokens kortstondig in het
-servergeheugen. Bestandsinhoud wordt niet persistent gecachet of gelogd.
-Nieuwe JSON-bestanden worden alleen in de vastgelegde map gemaakt. Lezen
-controleert maplidmaatschap, MIME-type en maximaal 1 MB. Lijsten zijn gepagineerd.
-Er is geen automatische retry van writes: die zou dubbele bestanden veroorzaken.
-
-Test na autorisatie met fictieve JSON: aanmaken, terugvinden en teruglezen;
-controleer ook een geweigerd bestand buiten de map. Echte gegevens pas na hun
-classificatie en een afgesproken JSON-schema. Werk medewerkersauthenticatie en
-rechten uit voordat een website-endpoint deze module kan aanroepen. Het zakelijke
-Google-account dat autoriseert is de technische identiteit; collega's krijgen
-niet automatisch diezelfde toegang. Intrekken van Google-toegang moet de
-verbinding blokkeren.
-
-Een serviceaccount is geen standaardoplossing voor deze Mijn Drive-map: het heeft
-geen eigen opslagquota en kan niet zomaar nieuwe bestanden bezitten. Verplaats
-naar een gedeelde Drive als later voor een serviceaccount wordt gekozen.
+Een gedeelde Drive met een serviceaccount wordt als eenvoudiger alternatief
+onderzocht. Beschikbaarheid en organisatiebeleid moeten nog worden gecontroleerd.
+De map 1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk in zakelijke Mijn Drive blijft behouden
+en beperkt gedeeld. De gebruiker staat verwerking door Vercel toe met opslag in
+Google Drive. Medewerkerslogin en toegangsrechten zijn nog niet aangesloten.
