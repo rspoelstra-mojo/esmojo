@@ -1,0 +1,8 @@
+{
+  "name": "ESMOJO",
+  "short_name": "ESMOJO",
+  "icons": [
+    { "src": "/icons/favicon-blauw-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/favicon-blauw-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

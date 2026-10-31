@@ -14,9 +14,15 @@ JO behoudt exact het oorspronkelijke blauw; verder niets wijzigen. Geen algemeen
 CSS-filter toepassen dat ook JO verandert. Nieuwe afwijkingen vereisen expliciete
 toestemming van de gebruiker.
 
-De referentie is in de chat aangeleverd; er is nog geen origineel afbeeldingsbestand
-in de repository beschikbaar. Vraag bij daadwerkelijke integratie om het originele
-bestand als dat dan nog ontbreekt; reconstrueer het niet uit het voorbeeld.
+De originele aangeleverde SVG staat in src/assets/ESMOJO-logo.svg en de originele
+transparante PNG in public/brand/ESMOJO-logo-transparant.png. Gebruik deze bronbestanden;
+reconstrueer het logo niet. De SVG-geometrie en bronkleuren blijven ongewijzigd.
+
+De gebruiker heeft afzonderlijk een faviconvariant goedgekeurd en aangeleverd:
+alle zes letters wit op een achtergrond met het oorspronkelijke JO-blauw #002ff4.
+Die bestanden staan in public/icons en zijn uitsluitend voor favicons en
+site-iconen, niet als vervanging van het normale logo in het menu. In het menu
+blijft JO altijd blauw en heeft het logo geen eigen blauw achtergrondvlak.
 
 ## Snelheid
 
