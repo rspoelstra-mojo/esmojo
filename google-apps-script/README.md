@@ -1,5 +1,11 @@
 # ESMOJO Drive-test via Apps Script
 
+Automatische publicatie is voorbereid in .github/workflows/apps-script.yml.
+Zie tools/apps-script/README.md voor de eenmalige clasp-autorisatie. De eerste
+echte automatische publicatie moet nog worden uitgevoerd nadat CLASPRC_JSON
+veilig als GitHub Actions-secret is toegevoegd. Website- en Apps Script-publicatie
+zijn afzonderlijke workflows; een succesvolle Vercel-build bewijst geen scriptupdate.
+
 De gebruiker heeft een geslaagde live statuscheck bevestigd: Vercel bereikt de
 ESMOJO-map via een ondertekend verzoek, in die meting in 1092 ms. De tijdelijke
 testpagina is daarna op verzoek verwijderd. De OAuth-instelroute blijft eveneens

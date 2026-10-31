@@ -49,6 +49,13 @@ herstel deze niet automatisch. Behoud de Apps Script-webapp en haar huidige
 verbindingsinstellingen. Bestandsimport en opslag moeten nog worden gebouwd.
 De gebruiker heeft gemeld dat de oude OAuth-variabelen in Vercel zijn opgeruimd.
 
+Automatische Apps Script-publicatie via GitHub Actions en clasp is voorbereid.
+De workflow gebruikt de vaste Script-ID en bestaande deployment-ID in
+tools/apps-script/deployment.json. Behoud manifest, webapp-URL en Script properties.
+De eenmalige Google-autorisatie wordt als CLASPRC_JSON uitsluitend in GitHub
+Actions-secrets bewaard, nooit in code of chat. De eerste echte automatische
+publicatie moet nog worden bevestigd; alleen lokale mocks zijn uitgevoerd.
+
 Bewaar geen sleutels in broncode. Publiceer geen service-role-sleutel of
 Google-credentials in frontendbundels. Een Google-login op zichzelf bewijst geen
 toestemming tot vertrouwelijke gegevens.
