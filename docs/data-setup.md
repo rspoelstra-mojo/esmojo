@@ -1,4 +1,19 @@
-# Opslag: voorbereid, nog niet aangesloten
+# Opslag: voorbereid, nog niet live gecontroleerd
+
+## Stand van de aansluiting
+
+De gebruiker heeft een Supabase-project in Parijs aangemaakt en in Vercel
+VITE_SUPABASE_URL en VITE_SUPABASE_PUBLISHABLE_KEY voor alle omgevingen ingesteld.
+Die waarden zijn niet automatisch beschikbaar in deze cloudwerkmap.
+De client staat in src/lib/supabase.js en wordt alleen op aanvraag geladen via
+getSupabase(). Er zijn nog geen pagina's die gegevens opvragen. Sessiepersistentie
+en automatische auth-afhandeling staan uit totdat de login en classificatie van
+accountgegevens zijn afgesproken. Implementeer geen login zonder die keuzes.
+
+De ESMOJO-map staat volgens de gebruiker in de zakelijke Mijn Drive, niet in een
+gedeelde Drive. De Drive-koppeling en rechten zijn nog niet aangesloten.
+
+De Supabase-verbinding is nog niet met de werkelijke Vercel-waarden getest.
 
 ## Openbaar — Supabase
 
