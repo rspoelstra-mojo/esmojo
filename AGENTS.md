@@ -65,6 +65,8 @@ en rol) zijn door de gebruiker als Vertrouwelijk geclassificeerd. Opslag in
 Google Drive. Als expliciete uitzondering mag Supabase Auth het e-mailadres,
 wachtwoordbeveiliging en verplichte TOTP-tweestapsverificatie beheren. Bewaar geen
 profielvelden of foto's in Supabase-gebruikersmetadata of persistente browseropslag.
+De gebruiker staat Resend toe het e-mailadres en de eenmalige activatielink te
+verwerken voor accountuitnodigingen. Voeg geen profielvelden toe aan die mails.
 
 Er zijn twee categorieën: Openbaar en Vertrouwelijk.
 Vraag de gebruiker bij elke nieuwe gegevenssoort of nieuwe velden expliciet
