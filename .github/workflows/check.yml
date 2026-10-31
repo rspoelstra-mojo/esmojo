@@ -21,6 +21,7 @@ jobs:
         run: |
           node server/accounts-api.test.js
           node server/account-profiles.test.js
+          node server/drive-write-diagnostic.test.js
           node server/apps-script.test.js
           node server/google-drive.test.js
           node tools/apps-script/deploy.test.mjs
