@@ -27,8 +27,12 @@ worden ingetrokken/verwijderd. Die acties zijn niet vanuit deze werkmap uitgevoe
 
 ## Vervolg
 
-Een gedeelde Drive met een serviceaccount wordt als eenvoudiger alternatief
-onderzocht. Beschikbaarheid en organisatiebeleid moeten nog worden gecontroleerd.
+Gedeelde Drives bleken niet beschikbaar. De gebruiker heeft vervolgens een
+Apps Script-webapp ingericht en succesvolle bereikbaarheid vanuit Vercel bevestigd
+(1092 ms). De tijdelijke verbindingstestpagina is daarna op verzoek verwijderd.
+Zie google-apps-script/README.md voor de huidige koppeling. Behoud de bestaande
+Apps Script-webapp en haar verbindingsinstellingen; er is nog geen bestandsimport
+of opslag geïmplementeerd.
 De map 1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk in zakelijke Mijn Drive blijft behouden
 en beperkt gedeeld. De gebruiker staat verwerking door Vercel toe met opslag in
 Google Drive. Medewerkerslogin en toegangsrechten zijn nog niet aangesloten.

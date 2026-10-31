@@ -36,16 +36,18 @@ serverzijde; alleen verborgen knoppen bieden geen beveiliging.
 De gebruiker heeft expliciet toegestaan dat Vercel vertrouwelijke gegevens
 verwerkt, mits opslag plaatsvindt in Google Drive. Dit staat geen opslag in
 Supabase, logs, analytics of persistente browseropslag toe. De zakelijke map is
-1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk in Mijn Drive. Google-autorisatie en
-medewerkersrechten zijn nog niet aangesloten. Publiceer geen Drive-endpoints
+1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk in Mijn Drive. De gebruiker heeft succesvolle
+bereikbaarheid via ondertekend Apps Script bevestigd (1092 ms). Medewerkersrechten
+zijn nog niet aangesloten. Publiceer geen Drive-endpoints
 voordat authenticatie en autorisatie zijn geïmplementeerd.
 
 De tijdelijke OAuth-instelroutes zijn op verzoek van de gebruiker verwijderd.
 Herstel deze niet automatisch. De gedeelde Drive is niet beschikbaar gebleken;
-een Apps Script-koppeling met ondertekende serververzoeken wordt nu getest.
-De oude
-Google-configuratie in Vercel moet door iemand met Vercel-toegang worden
-verwijderd; verwijdering daarvan is vanuit deze werkmap niet bevestigd.
+de Apps Script-koppeling met ondertekende serververzoeken is op bereikbaarheid
+getest. De tijdelijke verbindingstestpagina is daarna op verzoek verwijderd;
+herstel deze niet automatisch. Behoud de Apps Script-webapp en haar huidige
+verbindingsinstellingen. Bestandsimport en opslag moeten nog worden gebouwd.
+De gebruiker heeft gemeld dat de oude OAuth-variabelen in Vercel zijn opgeruimd.
 
 Bewaar geen sleutels in broncode. Publiceer geen service-role-sleutel of
 Google-credentials in frontendbundels. Een Google-login op zichzelf bewijst geen

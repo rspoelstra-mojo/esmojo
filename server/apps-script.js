@@ -4,7 +4,7 @@ export class AppsScriptError extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
 
-// Alleen servercode. De beheerderscontrole vereist authenticatie; geen gegevenscache.
+// Alleen servercode; geen website-endpoint en geen gegevenscache.
 export async function checkAppsScriptConnection({ env = process.env, request = fetch, now = Date.now } = {}) {
   const url = env.GOOGLE_DRIVE_SCRIPT_URL;
   const secret = env.GOOGLE_DRIVE_SHARED_SECRET;

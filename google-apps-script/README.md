@@ -1,7 +1,9 @@
 # ESMOJO Drive-test via Apps Script
 
-Voorbereid, nog niet live getest. Dit vervangt de oude OAuth-instelroute niet
-automatisch: die blijft verwijderd. De bestaande OAuth-Drive-module wordt niet
+De gebruiker heeft een geslaagde live statuscheck bevestigd: Vercel bereikt de
+ESMOJO-map via een ondertekend verzoek, in die meting in 1092 ms. De tijdelijke
+testpagina is daarna op verzoek verwijderd. De OAuth-instelroute blijft eveneens
+verwijderd. De bestaande OAuth-Drive-module wordt niet
 gebruikt. Deze eerste versie biedt uitsluitend een statuscheck, geen inhoudelijke
 bestandsgegevens, imports of writes.
 
@@ -35,12 +37,12 @@ server/apps-script.js kan dan een ondertekende statuscheck uitvoeren. Er is nog
 geen website-endpoint; voeg geen publieke bestandsroute toe zonder medewerkers-
 authenticatie. Deel geen secrets, logs met credentials of autorisatietokens.
 
-De afgeschermde beheerderscontrole staat op https://esmojo.nl/api/drive-check.
-Deze vraagt via POST om het bestaande verbindingsgeheim, controleert dat op de
-server en weigert verzoeken van een andere Origin. GET toont alleen het formulier.
-De controle verwerkt geen bestandsinhoud. Er worden geen secrets gelogd of in de
-browser opgeslagen. Dit is geen medewerkerslogin of bestands-API. De controle
-toont de responstijd voor het meten van opstartvertraging.
+De tijdelijke testpagina, route en formuliercode zijn verwijderd. Herstel deze
+niet automatisch. De serveradapter en Apps Script-webapp blijven behouden voor
+toekomstige functies. GOOGLE_DRIVE_SCRIPT_URL, GOOGLE_DRIVE_SHARED_SECRET en
+ESMOJO_SHARED_SECRET blijven noodzakelijk en mogen bij deze opruiming niet worden
+verwijderd. De koppeling bevestigt alleen bereikbaarheid; lezen, schrijven en
+importeren van bestanden zijn nog niet geïmplementeerd.
 
 De statuscheck accepteert een tijdsvenster van twee minuten. Hij is alleen-lezen
 en kan veilig herhaald worden. Voeg voor toekomstige schrijfacties expliciete
