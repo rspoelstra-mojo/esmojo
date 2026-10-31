@@ -1,5 +1,29 @@
 // Alleen handmatig door een bevoegde scriptbeheerder uitvoeren in de Google-editor.
 // Geen publieke route, geen persoonsgegevens in Git of uitvoeringslogs.
+function diagnoseAccountStorage() {
+  let file;
+  let stage = 'map openen';
+  try {
+    const folder = DriveApp.getFolderById(ESMOJO_FOLDER_ID);
+    if (folder.isTrashed()) throw new Error('De map staat in de prullenbak.');
+    stage = 'leeg testbestand maken';
+    // Geen profiel, secrets, account-ID of bestaande bestanden gebruiken.
+    const blob = Utilities.newBlob('{}', 'application/json', '_esmojo_write_test.json');
+    file = folder.createFile(blob);
+    stage = 'testbestand opruimen';
+    file.setTrashed(true);
+    console.log('Drive-schrijftest geslaagd. Het lege testbestand is naar de prullenbak verplaatst. Er zijn geen accountgegevens gewijzigd.');
+  } catch (error) {
+    // Alleen deze lege test mag de Google-fout tonen. Identificaties worden gewist.
+    const detail = String(error && error.message || 'Onbekende Google-fout')
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[account]')
+      .replace(/https?:\/\/\S+/g, '[Google-link]')
+      .replace(/[A-Za-z0-9_-]{25,}/g, '[identificatie]')
+      .slice(0, 700);
+    throw new Error('Drive-schrijftest (' + stage + '): ' + detail);
+  }
+}
+
 function setupFirstAdministrator() {
   const properties = PropertiesService.getScriptProperties();
   const raw = properties.getProperty('ESMOJO_FIRST_ADMIN_PROFILE');
