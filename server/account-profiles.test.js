@@ -61,3 +61,27 @@ test('serveradapter ondertekent ook de payload en actor', async () => {
   const request = createProfiles({ env: { GOOGLE_DRIVE_SCRIPT_URL: 'https://script.google.com/macros/s/test/exec', GOOGLE_DRIVE_SHARED_SECRET: secret }, request: async (_, options) => Response.json(h.send(JSON.parse(options.body))) });
   assert.equal((await request('self', admin)).id, admin); await assert.rejects(request('list', user));
 });
+test('editorinstelling ondertekent het profiel, verwijdert tijdelijke invoer en logt geen persoonsgegevens', () => {
+  for (const ok of [true, false]) {
+    const input = profile(admin);
+    const properties = { ESMOJO_SHARED_SECRET: secret, ESMOJO_FIRST_ADMIN_PROFILE: JSON.stringify(input) };
+    const messages = [];
+    const context = vm.createContext({
+      console: { log: message => messages.push(message) },
+      PropertiesService: { getScriptProperties: () => ({ getProperty: key => properties[key], deleteProperty: key => { delete properties[key]; } }) },
+      Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, getUuid: () => admin,
+        computeDigest: (algorithm, text) => [...createHash(algorithm).update(text).digest()], computeHmacSha256Signature: (message, key) => [...createHmac('sha256', key).update(message).digest()] },
+      esmojoAccounts_: request => {
+        const body = JSON.parse(request.body);
+        assert.equal(body.operation, 'bootstrap'); assert.equal(body.profile.id, admin); assert.equal(body.profile.role, 'beheerder');
+        const digest = createHash('sha256').update(request.body).digest('hex');
+        assert.equal(request.signature, createHmac('sha256', secret).update(`accounts\n${request.timestamp}\n${request.nonce}\n${digest}`).digest('hex'));
+        return { getContent: () => JSON.stringify({ ok, code: ok ? undefined : 'CONFLICT' }) };
+      },
+    });
+    vm.runInContext(readFileSync(new URL('../google-apps-script/Setup.gs', import.meta.url), 'utf8'), context);
+    if (ok) { context.setupFirstAdministrator(); assert.equal(properties.ESMOJO_FIRST_ADMIN_PROFILE, undefined); }
+    else { assert.throws(() => context.setupFirstAdministrator(), /bestaat al/); assert.ok(properties.ESMOJO_FIRST_ADMIN_PROFILE); }
+    for (const message of messages) { assert.equal(message.includes(input.email), false); assert.equal(message.includes(input.id), false); }
+  }
+});
