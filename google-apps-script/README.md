@@ -35,6 +35,13 @@ server/apps-script.js kan dan een ondertekende statuscheck uitvoeren. Er is nog
 geen website-endpoint; voeg geen publieke bestandsroute toe zonder medewerkers-
 authenticatie. Deel geen secrets, logs met credentials of autorisatietokens.
 
+De afgeschermde beheerderscontrole staat op https://esmojo.nl/api/drive-check.
+Deze vraagt via POST om het bestaande verbindingsgeheim, controleert dat op de
+server en weigert verzoeken van een andere Origin. GET toont alleen het formulier.
+De controle verwerkt geen bestandsinhoud. Er worden geen secrets gelogd of in de
+browser opgeslagen. Dit is geen medewerkerslogin of bestands-API. De controle
+toont de responstijd voor het meten van opstartvertraging.
+
 De statuscheck accepteert een tijdsvenster van twee minuten. Hij is alleen-lezen
 en kan veilig herhaald worden. Voeg voor toekomstige schrijfacties expliciete
 autorisatie, schemavalidatie en replay-/dubbele-verwerkingsbescherming toe.

@@ -1,6 +1,6 @@
 import { createHmac, randomBytes } from 'node:crypto';
 
-// Alleen servercode. Geen publiek website-endpoint en geen gegevenscache.
+// Alleen servercode. De beheerderscontrole vereist authenticatie; geen gegevenscache.
 export async function checkAppsScriptConnection({ env = process.env, request = fetch, now = Date.now } = {}) {
   const url = env.GOOGLE_DRIVE_SCRIPT_URL;
   const secret = env.GOOGLE_DRIVE_SHARED_SECRET;
