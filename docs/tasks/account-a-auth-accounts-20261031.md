@@ -1,8 +1,10 @@
 # Verplichte login en accountbeheer
 
 Eigenaar: account A. Branch: task/account-a-auth-accounts-20261031.
-Status: implementatie op draft PR #3; live activering geblokkeerd door ontbrekende
-beheerconfiguratie en nog uit te voeren eerste-beheerder-/integratietest.
+Status: gereed voor de eerste live login en TOTP-activering via PR #3.
+Gebruiker heeft de Supabase-instellingen uitgevoerd en de eerste identiteit
+aangemaakt. Drive-schrijven en koppelen van het eerste beheerdersprofiel zijn
+door de gebruiker met succesvolle uitvoeringsresultaten bevestigd.
 
 Scope: verplichte login met TOTP, alleen beheerders mogen accounts beheren,
 Accounts-submenu met tabel en aanmaken/bewerken/verwijderen. Raakt src/main.js,
@@ -20,12 +22,12 @@ servercontrole op Supabase-token én TOTP, Drive-rollen en profielregister,
 bescherming tegen zelfverwijdering, herhaalde schrijfverzoeken en accounttoegang
 na blokkering. Profielen blijven uit Supabase en persistente browseropslag.
 
-Controles: productiebuild en 37 lokale tests geslaagd. Twee Chromium-flows met
+Controles: productiebuild en 43 lokale tests geslaagd. Twee Chromium-flows met
 nagebootste externe diensten controleren login, foutieve TOTP, accountaanmaak,
 mobiel, activering/QR/wachtwoord en uitloggen. Dit bewijst geen live koppelingen.
 
-Openstaand: SUPABASE_SECRET_KEY server-side beschikbaar maken, Supabase Auth
-instellen, nieuwe Apps Script-accountopslag publiceren/autoriseren, eerste
-beheerder aanmaken en live testen. Zie docs/accounts-inrichten.md. Niet naar
-productie mergen zolang de verplichte login de bestaande site zou afsluiten
-zonder bruikbaar beheerdersaccount. Er is geen echte uitnodigingsmail verzonden.
+Openstaand: eerste echte login met TOTP en accountaanmaak via de website testen.
+De gebruiker meldt SUPABASE_SECRET_KEY in Vercel te hebben ingesteld; de
+serverconfiguratie wordt na deployment met een ongeauthenticeerd verzoek
+gecontroleerd. Zie docs/accounts-inrichten.md. Er is nog geen echte
+uitnodigingsmail vanuit accountbeheer verzonden.
