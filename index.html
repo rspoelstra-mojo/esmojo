@@ -15,8 +15,9 @@
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
+    <section id="auth-panel" class="auth-panel" aria-label="Inloggen"><p>Inloggen laden…</p></section>
     <a class="skip-link" href="#content">Naar de inhoud</a>
-    <aside class="rail" aria-label="Hoofdmenu">
+    <aside class="rail" aria-label="Hoofdmenu" hidden>
       <a class="brand" href="#/" aria-label="ESMOJO homepage"></a>
       <nav aria-label="Hoofdnavigatie" id="navigation"></nav>
       <div class="rail-bottom">
@@ -32,7 +33,7 @@
         </a>
       </div>
     </aside>
-    <div class="workspace">
+    <div class="workspace" hidden>
       <aside class="submenu" aria-label="Submenu" hidden>
         <h2 id="submenu-title"></h2>
         <nav id="submenu-navigation" aria-labelledby="submenu-title"></nav>

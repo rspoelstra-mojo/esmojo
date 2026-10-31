@@ -1,5 +1,10 @@
 import './style.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
+import { startAuth, logout } from './auth.js';
+import { createAccountsView } from './accounts.js';
+
+let profile = null;
+let disposePage = () => {};
 
 // Exact aangeleverde SVG; de donkere modus verandert via CSS alleen ESMO.
 document.querySelector('.brand').innerHTML = logo;
@@ -23,15 +28,31 @@ document.querySelector('#navigation').innerHTML = [
 ].map(([route, glyph, label]) => `<a class="rail-item" href="#/${route}" data-page="${route}" aria-label="${label}">${icon(glyph)}<span class="tooltip" role="tooltip">${label}</span></a>`).join('');
 
 function renderPage() {
+  disposePage(); disposePage = () => {};
+  const content = document.querySelector('.content-box');
+  content.replaceChildren();
+  if (!profile) return;
   const route = location.hash.replace(/^#\/?/, '');
-  const title = pages[route] || 'Pagina niet gevonden';
+  const root = route.split('/')[0];
+  const title = pages[root] || 'Pagina niet gevonden';
   const hasSubmenu = route !== '';
   document.querySelector('.workspace').classList.toggle('has-submenu', hasSubmenu);
   document.querySelector('.submenu').hidden = !hasSubmenu;
   document.querySelector('#submenu-title').textContent = title;
   document.title = `${title} · ESMOJO`;
+  const submenu = document.querySelector('#submenu-navigation'); submenu.replaceChildren();
+  if (root === 'beheerder') {
+    if (profile.role !== 'beheerder') { content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
+    const link = document.createElement('a'); link.href = '#/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
+    if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');
+    submenu.append(link);
+    if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile);
+  }
+  if (root === 'account') {
+    const button = document.createElement('button'); button.className = 'secondary-button'; button.textContent = 'Uitloggen'; button.addEventListener('click', () => logout()); content.append(button);
+  }
   document.querySelectorAll('[data-page]').forEach(link => {
-    if (link.dataset.page === route) link.setAttribute('aria-current', 'page');
+    if (link.dataset.page === root) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
 }
@@ -52,3 +73,23 @@ document.querySelector('#theme-toggle').addEventListener('click', () => {
 window.addEventListener('hashchange', renderPage);
 renderPage();
 renderTheme();
+startAuth({
+  onReady(current) {
+    profile = current;
+    document.querySelector('.rail').hidden = false;
+    document.querySelector('.workspace').hidden = false;
+    document.querySelector('[data-page="beheerder"]').hidden = profile.role !== 'beheerder';
+    const avatar = document.querySelector('.avatar');
+    if (profile.photo) {
+      const image = document.createElement('img'); image.src = profile.photo; image.alt = ''; image.width = 33; image.height = 33; avatar.replaceChildren(image);
+    } else { avatar.textContent = profile.firstName.charAt(0).toUpperCase(); }
+    renderPage();
+  },
+  onSignedOut() {
+    profile = null; disposePage(); disposePage = () => {};
+    document.querySelector('.content-box').replaceChildren();
+    document.querySelector('.avatar').replaceChildren();
+    document.querySelector('.rail').hidden = true;
+    document.querySelector('.workspace').hidden = true;
+  },
+});
