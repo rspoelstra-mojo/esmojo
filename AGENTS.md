@@ -1,5 +1,13 @@
 # ESMOJO-projectafspraken
 
+## Uitvoering en publicatie
+
+Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende
+controles en push afgeronde wijzigingen naar GitHub main, zodat Vercel esmojo.nl
+bijwerkt. Vraag voor normale bouw- en publicatiestappen niet opnieuw toestemming.
+Werk Resend, Supabase en Google Drive bij wanneer de gevraagde functie die diensten
+raakt; bestaande gegevensclassificatie en toegangsafspraken blijven van toepassing.
+
 ## Officieel logo
 
 De door de gebruiker op 31 oktober 2026 aangeleverde logoafbeelding is de
@@ -9,7 +17,8 @@ verhoudingen, positionering, afstanden en kleuren. Alleen proportioneel schalen
 van het complete logo is toegestaan. Geen vervorming, uitsnede, herindeling,
 losse lettervariant, benadering met een lettertype of opnieuw getekend logo.
 
-Uitsluitend voor de donkere websitevariant mogen de letters ESMO wit worden.
+In het lichte menu mogen de letters ESMO via gerichte CSS #404040 worden;
+het originele SVG-bronbestand blijft intact. Voor de donkere websitevariant mogen de letters ESMO wit worden.
 JO behoudt exact het oorspronkelijke blauw; verder niets wijzigen. Geen algemeen
 CSS-filter toepassen dat ook JO verandert. Nieuwe afwijkingen vereisen expliciete
 toestemming van de gebruiker.
