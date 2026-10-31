@@ -1,5 +1,23 @@
 # ESMOJO-projectafspraken
 
+## Officieel logo
+
+De door de gebruiker op 31 oktober 2026 aangeleverde logoafbeelding is de
+gezaghebbende bron: ES bovenaan, MO daaronder, JO onderaan; ESMO zwart en JO blauw.
+Behoud in iedere toepassing exact de oorspronkelijke lettervormen, onderlinge
+verhoudingen, positionering, afstanden en kleuren. Alleen proportioneel schalen
+van het complete logo is toegestaan. Geen vervorming, uitsnede, herindeling,
+losse lettervariant, benadering met een lettertype of opnieuw getekend logo.
+
+Uitsluitend voor de donkere websitevariant mogen de letters ESMO wit worden.
+JO behoudt exact het oorspronkelijke blauw; verder niets wijzigen. Geen algemeen
+CSS-filter toepassen dat ook JO verandert. Nieuwe afwijkingen vereisen expliciete
+toestemming van de gebruiker.
+
+De referentie is in de chat aangeleverd; er is nog geen origineel afbeeldingsbestand
+in de repository beschikbaar. Vraag bij daadwerkelijke integratie om het originele
+bestand als dat dan nog ontbreekt; reconstrueer het niet uit het voorbeeld.
+
 ## Snelheid
 
 Snelheid is het belangrijkste ontwerpuitgangspunt. De gebruiker accepteert een
