@@ -33,6 +33,13 @@ Stel de toegestane verwerkingsroute vast voordat je die implementeert. Gebruik
 geen openbare Drive-links als toegangsbeveiliging. Controleer toegang aan de
 serverzijde; alleen verborgen knoppen bieden geen beveiliging.
 
+De gebruiker heeft expliciet toegestaan dat Vercel vertrouwelijke gegevens
+verwerkt, mits opslag plaatsvindt in Google Drive. Dit staat geen opslag in
+Supabase, logs, analytics of persistente browseropslag toe. De zakelijke map is
+1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk in Mijn Drive. Google-autorisatie en
+medewerkersrechten zijn nog niet aangesloten. Publiceer geen Drive-endpoints
+voordat authenticatie en autorisatie zijn geïmplementeerd.
+
 Bewaar geen sleutels in broncode. Publiceer geen service-role-sleutel of
 Google-credentials in frontendbundels. Een Google-login op zichzelf bewijst geen
 toestemming tot vertrouwelijke gegevens.

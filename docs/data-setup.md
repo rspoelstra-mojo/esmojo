@@ -11,7 +11,10 @@ en automatische auth-afhandeling staan uit totdat de login en classificatie van
 accountgegevens zijn afgesproken. Implementeer geen login zonder die keuzes.
 
 De ESMOJO-map staat volgens de gebruiker in de zakelijke Mijn Drive, niet in een
-gedeelde Drive. De Drive-koppeling en rechten zijn nog niet aangesloten.
+gedeelde Drive. De gebruiker heeft verwerking door Vercel toegestaan met opslag
+in Google Drive. De servermodule is voorbereid en met fictieve responses getest;
+Google-autorisatie en medewerkersrechten zijn nog niet aangesloten. Zie
+google-drive-setup.md voor de actuele aansluitstappen.
 
 De Supabase-verbinding is nog niet met de werkelijke Vercel-waarden getest.
 
