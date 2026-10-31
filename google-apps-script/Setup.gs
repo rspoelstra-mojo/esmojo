@@ -20,7 +20,18 @@ function setupFirstAdministrator() {
   const signature = hex(Utilities.computeHmacSha256Signature('accounts\n' + timestamp + '\n' + nonce + '\n' + digest, secret, Utilities.Charset.UTF_8));
   const response = JSON.parse(esmojoAccounts_({ body, timestamp, nonce, signature }).getContent());
   if (!response.ok) {
-    throw new Error(response.code === 'CONFLICT' ? 'Er bestaat al een accountregister. Er is niets overschreven.' : 'Profiel niet gekoppeld. Controleer profielvelden en Drive-schrijftoegang.');
+    const messages = {
+      CONFLICT: 'Er bestaat al een accountregister. Er is niets overschreven.',
+      PROFILE_INVALID: 'Controleer id, email, firstName, lastName en jobTitle in ESMOJO_FIRST_ADMIN_PROFILE.',
+      DRIVE_FOLDER: 'De ingestelde Drive-map kan niet worden geopend. Controleer account en maprechten.',
+      DRIVE_READ: 'Het accountregister kan niet uit Drive worden gelezen. Controleer Drive-rechten.',
+      DRIVE_WRITE: 'Het accountregister kan niet in Drive worden opgeslagen. Controleer schrijfrechten en Drive-autorisatie van het script.',
+      REGISTER_INVALID: 'Het bestaande accountregister is ongeldig. Er is niets overschreven.',
+      REGISTER_DUPLICATE: 'Er zijn meerdere accountregisters met dezelfde naam. Er is niets overschreven.',
+      FORBIDDEN: 'Het interne instelverzoek is afgewezen. Controleer de bestaande verbindingsinstelling.',
+      BUSY: 'De accountopslag is bezig. Probeer het nogmaals.',
+    };
+    throw new Error(messages[response.code] || 'Profiel niet gekoppeld. De interne instelstap is mislukt.');
   }
   properties.deleteProperty('ESMOJO_FIRST_ADMIN_PROFILE');
   console.log('Eerste beheerdersprofiel gekoppeld. Authenticator en wachtwoord moeten nog in de applicatie worden bevestigd.');
