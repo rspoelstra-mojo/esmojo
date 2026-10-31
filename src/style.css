@@ -67,7 +67,7 @@ h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 550; letter-spacing: -1.4px
 .submenu h2 { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 #submenu-navigation { align-items: stretch; margin-top: 24px; }
 .has-submenu main { margin-left: var(--submenu-width); padding: 24px clamp(24px, 4vw, 64px); }
-.has-submenu .content-box { width: 100%; max-width: 1170px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: clamp(24px, 3vw, 44px); background: var(--canvas); }
+.has-submenu .content-box { width: 100%; max-width: 1100px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: clamp(24px, 3vw, 44px); background: var(--canvas); }
 .skip-link { position: fixed; top: -80px; left: 90px; background: var(--tip); color: var(--tip-text); padding: 12px; z-index: 20; }
 .skip-link:focus { top: 10px; }
 @media (max-width: 600px) { header { height: 72px; padding: 0 24px; } main { padding-top: 44px; } .rail { padding-top: 16px; } .brand { margin-bottom: 30px; } }
