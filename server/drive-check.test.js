@@ -11,10 +11,11 @@ test('formulier bevat geen geheim en GET doet geen Drive-verzoek', async () => {
   assert.equal(output.statusCode, 200);
   assert.ok(!output.body.includes(env.GOOGLE_DRIVE_SHARED_SECRET));
   assert.equal(output.headers['Cache-Control'], 'no-store, private');
+  assert.equal(output.headers['Referrer-Policy'], 'same-origin');
 });
 test('verkeerd geheim of herkomst bereikt Google niet', async () => {
   const handler = createDriveCheck({ env, check: () => assert.fail() });
-  for (const input of [req('wrong'), { ...req(env.GOOGLE_DRIVE_SHARED_SECRET), headers: { origin: 'https://evil.example' } }]) {
+  for (const input of [req('wrong'), ...['https://evil.example', 'null', undefined].map(origin => ({ ...req(env.GOOGLE_DRIVE_SHARED_SECRET), headers: { origin } }))]) {
     const output = res(); await handler(input, output); assert.equal(output.statusCode, 403);
   }
 });

@@ -8,7 +8,9 @@ export function createDriveCheck({ env = process.env, check = checkAppsScriptCon
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('CDN-Cache-Control', 'no-store');
-    res.setHeader('Referrer-Policy', 'no-referrer');
+    // no-referrer maakt Origin bij een formulier-POST 'null' in Chromium.
+    // same-origin behoudt de controle zonder referrers naar andere sites te sturen.
+    res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
