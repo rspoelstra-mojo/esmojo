@@ -35,6 +35,11 @@ blijft JO altijd blauw en heeft het logo geen eigen blauw achtergrondvlak.
 
 ## Snelheid
 
+Lettertype en lettergroottes blijven gelijk bij verschillende schermbreedtes.
+Gebruik geen viewport-afhankelijke fontgroottes of schaaltransformaties om inhoud
+passend te maken. Laat onderdelen die niet naast elkaar passen onder elkaar
+doorlopen; behoud vaste maten voor tekst, iconen en bedieningselementen.
+
 Het menu met iconen heet het hoofdmenu. De tweede laag ernaast heet het submenu
 en is bedoeld voor tekstmenu's en andere onderdelen, zonder iconen. Alle pagina's
 behalve Homepage hebben een submenu. De contentbox staat gecentreerd tussen het
