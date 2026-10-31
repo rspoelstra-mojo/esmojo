@@ -64,7 +64,7 @@ h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 550; letter-spacing: -1.4px
 .has-submenu .section-label { display: none; }
 .has-submenu .wordmark { display: none; }
 .submenu { position: fixed; top: 0; bottom: 0; left: 76px; width: var(--submenu-width); padding: 24px 16px; border-right: 1px solid var(--line); background: var(--canvas); overflow-y: auto; }
-.submenu h2 { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.submenu h2 { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 #submenu-navigation { align-items: stretch; margin-top: 24px; }
 .has-submenu main { margin-left: var(--submenu-width); padding: 24px clamp(24px, 4vw, 64px); }
 .has-submenu .content-box { width: 100%; max-width: 900px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: clamp(24px, 3vw, 44px); background: var(--canvas); }
