@@ -1,7 +1,34 @@
 # Google Drive-aansluiting
 
-Status: servermodule voorbereid, niet live verbonden of getest. Geen publieke
-API-route. Geen echte bestanden aangemaakt of gelezen.
+Status: servermodule en afgeschermde OAuth-setup voorbereid, niet live verbonden
+of getest. Geen API-route voor bestandsgegevens. Geen echte bestanden aangemaakt
+of gelezen.
+
+## Tijdelijke OAuth-setup
+
+De callback is https://esmojo.nl/api/google/callback. Stel GOOGLE_CLIENT_ID en
+GOOGLE_CLIENT_SECRET in Vercel Production in. Voeg GOOGLE_SETUP_PASSWORD als
+Secret toe: een uniek, willekeurig wachtwoord van minimaal 32 tekens, uit een
+wachtwoordmanager. Deploy daarna opnieuw.
+
+Open https://esmojo.nl/api/google/connect en vul dat instelwachtwoord in. Gebruik
+het zakelijke Google-account dat als testgebruiker staat geregistreerd. De flow
+vraagt uitsluitend drive.file, offline toegang en expliciete toestemming. De
+flow controleert herkomst, een ondertekende state-cookie en PKCE, met een
+insteltermijn van tien minuten.
+
+Na toestemming verschijnt het refresh token tijdelijk op een niet-gecachete
+pagina. Sla het zelf direct op als GOOGLE_REFRESH_TOKEN (Secret, Production) in
+Vercel. Deel het niet met de agent of in screenshots. Deploy opnieuw. De route
+sluit zodra GOOGLE_REFRESH_TOKEN aanwezig is. Verwijder vervolgens de tijdelijke
+GOOGLE_SETUP_PASSWORD en deploy opnieuw zodat ook oude setups uitgeschakeld zijn.
+Deze handmatige overdracht is nodig omdat de app geen toegang heeft tot de
+Vercel-instellingen-API; tokens worden niet automatisch persistent opgeslagen.
+
+De bestaande map is daarmee nog niet gedeeld met de OAuth-client. Bouw en test
+Google Picker-selectie als vervolgstap voordat de map gebruikt wordt. Ook daarna
+zijn bestaande of door andere apps toegevoegde bestanden niet automatisch
+toegankelijk met drive.file. Medewerkerslogin staat los van deze technische setup.
 
 De gebruiker staat verwerking van vertrouwelijke informatie door Vercel toe,
 met Google Drive als opslag. De map in de zakelijke Mijn Drive is
