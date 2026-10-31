@@ -14,14 +14,19 @@ function esmojoAccounts_(input) {
   if (difference) return esmojoReply_({ ok: false, code: 'FORBIDDEN' });
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
+  let stage = 'REQUEST';
   try {
     const request = JSON.parse(input.body);
+    stage = 'DRIVE_FOLDER';
     const folder = DriveApp.getFolderById(ESMOJO_FOLDER_ID);
     if (folder.isTrashed()) throw new Error();
+    stage = 'DRIVE_READ';
     const files = folder.getFilesByName('_esmojo_accounts_v1.json');
     const file = files.hasNext() ? files.next() : null;
-    if (files.hasNext()) throw new Error(); // Dubbele registers niet stilzwijgend kiezen.
+    if (files.hasNext()) return esmojoReply_({ ok: false, code: 'REGISTER_DUPLICATE' });
+    stage = 'REGISTER_INVALID';
     const state = file ? JSON.parse(file.getBlob().getDataAsString('UTF-8')) : { profiles: [], nonces: {} };
+    if (!Array.isArray(state.profiles) || !state.nonces || typeof state.nonces !== 'object') throw new Error();
     if (request.operation === 'bootstrap-check') return esmojoReply_({ ok: state.profiles.length === 0, code: state.profiles.length ? 'CONFLICT' : undefined, data: { empty: state.profiles.length === 0 } });
     const actor = state.profiles.find(profile => profile.id === request.actor && !profile.disabled);
     const denied = () => esmojoReply_({ ok: false, code: 'FORBIDDEN' });
@@ -42,15 +47,15 @@ function esmojoAccounts_(input) {
     const target = state.profiles.find(profile => profile.id === request.id);
     const profile = request.profile;
     if (['create', 'bootstrap', 'update'].includes(request.operation)) {
-      if (!profile || !['beheerder', 'gebruiker'].includes(profile.role)) return denied();
+      if (!profile || !['beheerder', 'gebruiker'].includes(profile.role)) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       for (const key of ['firstName', 'lastName', 'jobTitle']) {
-        if (typeof profile[key] !== 'string' || !profile[key].trim() || profile[key].length > 120) return denied();
+        if (typeof profile[key] !== 'string' || !profile[key].trim() || profile[key].length > 120) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       }
       if (profile.photo !== undefined && profile.photo !== '' && (typeof profile.photo !== 'string' || profile.photo.length > 100000 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(profile.photo))) return denied();
     }
     if (['create', 'bootstrap'].includes(request.operation)) {
-      if (!/^[0-9a-f-]{36}$/i.test(profile.id || '') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email || '')
-          || state.profiles.some(item => item.id === profile.id || item.email.toLowerCase() === profile.email.toLowerCase())) return conflict();
+      if (!/^[0-9a-f-]{36}$/i.test(profile.id || '') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email || '')) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
+      if (state.profiles.some(item => item.id === profile.id || item.email.toLowerCase() === profile.email.toLowerCase())) return conflict();
       state.profiles.push({ id: profile.id, email: profile.email.toLowerCase(), firstName: profile.firstName,
         lastName: profile.lastName, jobTitle: profile.jobTitle, role: request.operation === 'bootstrap' ? 'beheerder' : profile.role,
         photo: profile.photo || '', activated: false, disabled: false });
@@ -67,10 +72,11 @@ function esmojoAccounts_(input) {
       else state.profiles = state.profiles.filter(item => item.id !== target.id);
     } else return denied();
     const serialized = JSON.stringify(state);
+    stage = 'DRIVE_WRITE';
     if (file) file.setContent(serialized);
-    else folder.createFile('_esmojo_accounts_v1.json', serialized, 'application/json');
+    else folder.createFile(Utilities.newBlob(serialized, 'application/json', '_esmojo_accounts_v1.json'));
     return esmojoReply_({ ok: true, data: { ok: true } });
   } catch (_) {
-    return esmojoReply_({ ok: false, code: 'UNAVAILABLE' });
+    return esmojoReply_({ ok: false, code: stage });
   } finally { lock.releaseLock(); }
 }
