@@ -9,15 +9,19 @@ const secret = 'test-only-secret-'.repeat(4);
 const admin = '11111111-1111-4111-8111-111111111111';
 const user = '22222222-2222-4222-8222-222222222222';
 const profile = (id, role = 'beheerder') => ({ id, email: `${id}@example.invalid`, firstName: 'Test', lastName: 'User', jobTitle: 'Tester', role, activated: true, disabled: false });
-function harness(profiles = [profile(admin), profile(user, 'gebruiker')]) {
+function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exists = true, failWrite = false } = {}) {
   let state = JSON.stringify({ profiles, nonces: {} });
   let writes = 0, locked = false;
   const file = { getBlob: () => ({ getDataAsString: () => state }), setContent: value => { assert.ok(locked); state = value; writes++; } };
   const context = vm.createContext({ Date, JSON, Number, Object,
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => secret }) },
     LockService: { getScriptLock: () => ({ tryLock: () => { locked = true; return true; }, releaseLock: () => { locked = false; } }) },
-    Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (algorithm, text) => [...createHash(algorithm).update(text).digest()], computeHmacSha256Signature: (message, key) => [...createHmac('sha256', key).update(message).digest()] },
-    DriveApp: { getFolderById: () => ({ isTrashed: () => false, getFilesByName: () => { let used = false; return { hasNext: () => !used, next: () => { used = true; return file; } }; } }) },
+    Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (algorithm, text) => [...createHash(algorithm).update(text).digest()], computeHmacSha256Signature: (message, key) => [...createHmac('sha256', key).update(message).digest()], newBlob: (content, mimeType, name) => ({ content, mimeType, name }) },
+    DriveApp: { getFolderById: () => ({ isTrashed: () => false, getFilesByName: () => { let used = !exists; return { hasNext: () => !used, next: () => { used = true; return file; } }; }, createFile: blob => {
+      assert.ok(locked); assert.equal(blob.name, '_esmojo_accounts_v1.json'); assert.equal(blob.mimeType, 'application/json');
+      if (failWrite) throw new Error('sensitive-provider-message');
+      state = blob.content; exists = true; writes++; return file;
+    } }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
   vm.runInContext(readFileSync(new URL('../google-apps-script/Code.gs', import.meta.url), 'utf8'), context);
@@ -55,6 +59,20 @@ test('geblokkeerde en niet-geactiveerde accounts kunnen geen beheeracties uitvoe
 });
 test('bootstrap weigert een bestaand register te overschrijven', () => {
   const h = harness(); assert.equal(h.send(signed({ operation: 'bootstrap', actor: user, profile: profile(user) })).ok, false); assert.equal(h.writes(), 0);
+});
+test('eerste beheerder maakt een nieuw JSON-register via een blob aan', () => {
+  const h = harness([], { exists: false });
+  const result = h.send(signed({ operation: 'bootstrap', actor: 'operator', profile: profile(admin) }));
+  assert.equal(result.ok, true); assert.equal(h.writes(), 1); assert.equal(h.state().profiles[0].id, admin); assert.equal(h.state().profiles[0].activated, false);
+});
+test('mislukte eerste opslag geeft de schrijffase aan zonder providerdetails', () => {
+  const h = harness([], { exists: false, failWrite: true });
+  const result = h.send(signed({ operation: 'bootstrap', actor: 'operator', profile: profile(admin) }));
+  assert.equal(result.code, 'DRIVE_WRITE'); assert.equal(JSON.stringify(result).includes('sensitive-provider-message'), false); assert.equal(h.writes(), 0);
+});
+test('ongeldig eerste profiel wordt van een schrijffout onderscheiden', () => {
+  const h = harness([], { exists: false });
+  assert.equal(h.send(signed({ operation: 'bootstrap', actor: 'operator', profile: { ...profile(admin), jobTitle: '' } })).code, 'PROFILE_INVALID'); assert.equal(h.writes(), 0);
 });
 test('serveradapter ondertekent ook de payload en actor', async () => {
   const h = harness();
