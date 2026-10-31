@@ -1,8 +1,8 @@
 :root {
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: light;
-  --canvas: #fff;
-  --rail: #f9f9f9;
+  --canvas: #f7f7f7;
+  --rail: #eeeeee;
   --text: #242424;
   --muted: #8c8c8c;
   --line: #ededed;
@@ -58,14 +58,14 @@ main { padding: 64px clamp(28px, 6vw, 100px); outline: none; }
 h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 550; letter-spacing: -1.4px; margin: 14px 0 30px; }
 .heading-line { height: 1px; background: var(--line); }
 .submenu[hidden] { display: none; }
-.has-submenu { --submenu-width: 140px; }
+.has-submenu { --submenu-width: 210px; }
 .has-submenu header { position: fixed; top: 0; left: 76px; width: var(--submenu-width); padding: 0 20px; border-right: 1px solid var(--line); background: var(--canvas); }
 .has-submenu .section-label { display: none; }
 .submenu { position: fixed; top: 88px; bottom: 0; left: 76px; width: var(--submenu-width); padding: 28px 16px; border-right: 1px solid var(--line); background: var(--canvas); overflow-y: auto; }
 .submenu h2 { margin: 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 #submenu-navigation { align-items: stretch; margin-top: 24px; }
 .has-submenu main { margin-left: var(--submenu-width); padding: 24px clamp(24px, 4vw, 64px); }
-.has-submenu .content-box { width: 100%; max-width: 900px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: clamp(24px, 3vw, 44px); background: var(--canvas); border: 1px solid var(--line); border-radius: 12px; }
+.has-submenu .content-box { width: 100%; max-width: 900px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: clamp(24px, 3vw, 44px); background: var(--canvas); }
 .skip-link { position: fixed; top: -80px; left: 90px; background: var(--tip); color: var(--tip-text); padding: 12px; z-index: 20; }
 .skip-link:focus { top: 10px; }
 @media (max-width: 600px) { header { height: 72px; padding: 0 24px; } main { padding-top: 44px; } .rail { padding-top: 16px; } .brand { margin-bottom: 30px; } }
