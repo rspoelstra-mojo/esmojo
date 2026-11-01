@@ -36,8 +36,16 @@
     </aside>
     <div class="workspace" hidden>
       <aside class="submenu" aria-label="Submenu" hidden>
-        <h2 id="submenu-title"></h2>
+        <div class="submenu-heading">
+          <h2 id="submenu-title"></h2>
+          <div class="submenu-search" role="search" aria-label="Submenu filteren">
+            <input id="submenu-search-input" type="search" aria-label="Zoek in submenu" placeholder="Zoeken…" autocomplete="off" spellcheck="false" disabled tabindex="-1" />
+          </div>
+          <button id="submenu-search-toggle" class="submenu-search-toggle" type="button" aria-label="Zoeken in submenu" aria-expanded="false" aria-controls="submenu-search-input" hidden></button>
+        </div>
         <nav id="submenu-navigation" aria-labelledby="submenu-title"></nav>
+        <p id="submenu-search-empty" class="submenu-search-empty" hidden>Geen resultaten</p>
+        <span id="submenu-search-status" class="visually-hidden" role="status"></span>
       </aside>
       <main id="content" tabindex="-1"><div class="content-box"></div></main>
     </div>
