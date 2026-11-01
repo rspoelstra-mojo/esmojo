@@ -1,5 +1,6 @@
 import './show-profile.css';
 import { access } from './auth.js';
+import { researchView, renderResearch, safeResearchUrl } from './lib/research-view.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 
 // Statussen worden alleen na bevestigde Drive-opslag bijgewerkt.
@@ -20,6 +21,7 @@ export function createShowProfile(panel, { show } = {}) {
   const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
   const drafts = new Map();
+  let researchByNumber = null, researchErrors = {};
   const section = node('section', 'show-profile'); panel.append(section);
   const menuLink = document.querySelector('#submenu-navigation [aria-current="page"]');
   const loading = menuLink ? createSubmenuLoading(menuLink, panel) : null;
@@ -28,7 +30,7 @@ export function createShowProfile(panel, { show } = {}) {
   function message(text) { const p = node('p', 'profile-message', text); p.setAttribute('role', 'status'); return p; }
   async function load() {
     loaded = false; loadError = ''; renderOverview(); const finish = loading?.start(); panel.setAttribute('aria-busy', 'true');
-    try { const data = await request({ operation: 'read' }); if (disposed) return; records = data.analyses; revision = data.revision; loaded = true; }
+    try { const data = await request({ operation: 'read' }); if (disposed) return; records = data.analyses; revision = data.revision; researchByNumber = data.researchByNumber ?? null; researchErrors = data.researchErrors || {}; loaded = true; }
     catch { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.'; }
     finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed) renderOverview(); }
   }
@@ -59,7 +61,7 @@ export function createShowProfile(panel, { show } = {}) {
     body.append(ring, legend); overview.append(body);
     const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
     const info = node('div', ''), view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button'; view.disabled = !loaded; view.onclick = () => openEditor(selected);
-    info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(overview, highlight);
+    info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || researchView(researchByNumber?.[selected]).summaryText || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(overview, highlight);
     layout.append(categories, aside); section.append(layout);
     if (focusNumber) section.querySelector(`#analysis-open-${focusNumber}`)?.focus();
   }
@@ -89,9 +91,10 @@ export function createShowProfile(panel, { show } = {}) {
       text.value = availableText; text.oninput(); text.focus();
       if (text.value.length > 400) error.textContent = 'De overgenomen tekst is langer dan 400 tekens. Kort hem in voordat je opslaat.';
     };
+    const researchDate = node('p', 'analysis-researched');
     const full = node('details', 'analysis-research-details'), fullTitle = node('summary', '', 'Volledige analyse'), answer = node('div', 'analysis-research-answer'); full.append(fullTitle, answer);
-    const sources = node('details', 'analysis-research-details'), sourcesTitle = node('summary', '', 'Bronnen (0)'), sourceList = node('ul', ''); sources.append(sourcesTitle, sourceList);
-    aiCard.append(aiSummary, full, sources);
+    const sources = node('details', 'analysis-research-details'), sourcesTitle = node('summary', '', 'Bronnen (0)'), sourceList = node('div', 'analysis-research-sources'); sources.append(sourcesTitle, sourceList);
+    aiCard.append(researchDate, aiSummary, full, sources);
     const error = message(''), actions = node('div', 'analysis-editor-actions'), draft = node('button', 'secondary-button', 'Opslaan als concept'), complete = node('button', 'analysis-complete', 'Afronden');
     draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(aiCard, summaryCard, error, actions); section.append(back, header, form); title.focus({ preventScroll: true });
     window.scrollTo({ top: 0, left: window.scrollX, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -109,21 +112,29 @@ export function createShowProfile(panel, { show } = {}) {
       finally { if (!disposed && editorNumber === number) lock(false); }
     }
     draft.onclick = () => save('draft'); form.onsubmit = event => { event.preventDefault(); save('completed'); };
-    const finish = loading?.start(); aiCard.setAttribute('aria-busy', 'true');
+    const finish = researchByNumber === null ? loading?.start() : null; aiCard.setAttribute('aria-busy', 'true');
     try {
-      const data = await request({ operation: 'read', questionNumber: number }); if (disposed || editorNumber !== number) return;
+      const data = researchByNumber !== null ? { analyses: records, revision, research: researchByNumber[number] || null } : await request({ operation: 'read', questionNumber: number }); if (disposed || editorNumber !== number) return;
       records = data.analyses; revision = data.revision;
       text.value = drafts.get(number) ?? records[number]?.summary ?? ''; counter.textContent = `${text.value.length} / 400`;
       ready = true; lock(false);
       const research = data.research;
-      if (research) {
-        availableText = research.answer.split(/\n\s*\n/)[0]; aiText.textContent = availableText; answer.textContent = research.answer; adopt.disabled = !availableText;
-        for (const source of research.sources || []) { if (!/^https:\/\//.test(source.url)) continue; const li = node('li', ''), link = node('a', '', source.title); link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; li.append(link); sourceList.append(li); }
-        sourcesTitle.textContent = `Bronnen (${sourceList.children.length})`;
+      if (researchErrors[number]) { aiText.textContent = researchErrors[number]; answer.textContent = researchErrors[number]; }
+      else if (research) {
+        const view = researchView(research);
+        availableText = view.summaryText; renderResearch(aiText, view.summary); renderResearch(answer, view.analysis); adopt.disabled = !availableText;
+        researchDate.textContent = `Onderzocht op ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(research.researchedAt))}`;
+        if (view.sourcesMarkdown) renderResearch(sourceList, view.sourcesMarkdown);
+        else {
+          const list = node('ol', '');
+          for (const source of view.sources) { const li = node('li', ''), link = node('a', '', source.title); link.href = safeResearchUrl(source.url); link.target = '_blank'; link.rel = 'noopener noreferrer'; li.append(link); list.append(li); }
+          sourceList.append(list);
+        }
+        sourcesTitle.textContent = `Bronnen (${view.sources.length})`;
       } else answer.textContent = 'Nog geen AI-analyse beschikbaar.';
     } catch { if (!disposed && editorNumber === number) error.textContent = 'Laden is niet gelukt. Ga terug en probeer opnieuw; opslaan is nog niet beschikbaar.'; }
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
   load();
-  return () => { disposed = true; loading?.dispose(); drafts.clear(); records = {}; };
+  return () => { disposed = true; loading?.dispose(); drafts.clear(); records = {}; researchByNumber = null; researchErrors = {}; };
 }
