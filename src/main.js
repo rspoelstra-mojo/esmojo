@@ -1,3 +1,4 @@
+import { clearProfileSaves } from './lib/profile-saves.js';
 import { installRouter, pageRoute } from './lib/router.js';
 import './style.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
@@ -76,23 +77,8 @@ function renderPage() {
     else link.removeAttribute('aria-current');
   });
 }
-function renderTheme() {
-  const dark = document.documentElement.dataset.theme === 'dark';
-  const label = dark ? 'Lichte modus' : 'Donkere modus';
-  document.querySelector('#theme-icon').innerHTML = icon(dark ? 'sun' : 'moon');
-  document.querySelector('#theme-label').textContent = label;
-  document.querySelector('#theme-toggle').setAttribute('aria-label', `${label} inschakelen`);
-  document.querySelector('#theme-toggle').setAttribute('aria-pressed', String(dark));
-}
-document.querySelector('#theme-toggle').addEventListener('click', () => {
-  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = theme;
-  try { localStorage.setItem('esmojo-theme', theme); } catch { /* Theme still works without storage. */ }
-  renderTheme();
-});
 installRouter({onNavigate:renderPage});
 renderPage();
-renderTheme();
 startAuth({
   onReady(current) {
     profile = current;
@@ -106,7 +92,7 @@ startAuth({
     renderPage();
   },
   onSignedOut() {
-    clearInterval(menuRefreshTimer);menuRefreshTimer=null;
+    clearProfileSaves();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
     profile = null; disposePage(); disposePage = () => {};
     document.querySelector('.content-box').replaceChildren();

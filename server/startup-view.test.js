@@ -15,3 +15,9 @@ test('Eerste HTML heeft het originele logo, geen loginfoto-preload of zichtbare 
  assert.ok(html.includes('id="app-boot"'));assert.ok(html.includes('id="auth-panel" class="auth-panel" aria-label="Inloggen" hidden'));assert.equal(html.includes('Inloggen laden'),false);assert.equal(html.includes('preload" as="image"'),false);assert.equal(html.split(logo).length-1,2);
  const css=readFileSync(new URL('../src/accounts.css',import.meta.url),'utf8');assert.ok(css.includes('.auth-panel[data-screen="login"]::before'));assert.equal(css.includes('.auth-panel::before'),false);
 });
+
+test('Systeemthema geldt vóór eerste paint en schakelt de hele website live mee, zonder opgeslagen override',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');const script=/<script>\s*([\s\S]*?)<\/script>/.exec(html)[1];let changed;const document={documentElement:{dataset:{}}};
+ vm.runInNewContext(script,{document,window:{matchMedia:query=>{assert.equal(query,'(prefers-color-scheme: dark)');return{matches:true,addEventListener:(event,callback)=>{assert.equal(event,'change');changed=callback;}};}},localStorage:{getItem(){throw Error('Geen opgeslagen override lezen');}}});
+ assert.equal(document.documentElement.dataset.theme,'dark');changed({matches:false});assert.equal(document.documentElement.dataset.theme,'light');assert.ok(html.includes('.boot-mark path{fill:#002ff4}'));assert.ok(html.includes('--boot-canvas:#080f20'));assert.equal(html.includes('id="theme-toggle"'),false);
+});
