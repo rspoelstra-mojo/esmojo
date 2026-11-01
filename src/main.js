@@ -1,7 +1,8 @@
 import './style.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
-import { startAuth, logout } from './auth.js';
+import { startAuth } from './auth.js';
 import { createAccountsView } from './accounts.js';
+import { createProfileView, renderAvatar } from './profile.js';
 
 let profile = null;
 let disposePage = () => {};
@@ -49,7 +50,11 @@ function renderPage() {
     if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile);
   }
   if (root === 'account') {
-    const button = document.createElement('button'); button.className = 'secondary-button'; button.textContent = 'Uitloggen'; button.addEventListener('click', () => logout()); content.append(button);
+    disposePage = createProfileView(content, profile, updated => {
+      if (!profile || profile.id !== updated.id) return;
+      profile = updated;
+      renderAvatar(document.querySelector('.avatar'), profile);
+    });
   }
   document.querySelectorAll('[data-page]').forEach(link => {
     if (link.dataset.page === root) link.setAttribute('aria-current', 'page');
@@ -79,10 +84,7 @@ startAuth({
     document.querySelector('.rail').hidden = false;
     document.querySelector('.workspace').hidden = false;
     document.querySelector('[data-page="beheerder"]').hidden = profile.role !== 'beheerder';
-    const avatar = document.querySelector('.avatar');
-    if (profile.photo) {
-      const image = document.createElement('img'); image.src = profile.photo; image.alt = ''; image.width = 33; image.height = 33; avatar.replaceChildren(image);
-    } else { avatar.textContent = profile.firstName.charAt(0).toUpperCase(); }
+    renderAvatar(document.querySelector('.avatar'), profile);
     renderPage();
   },
   onSignedOut() {

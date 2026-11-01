@@ -1,5 +1,6 @@
 import { getSupabase } from './lib/supabase.js';
 import './accounts.css';
+import logo from './assets/ESMOJO-logo.svg?raw';
 
 let client;
 let onReady;
@@ -27,10 +28,12 @@ function screen(title, description, fields, submitText, submit) {
   panel().replaceChildren();
   const form = document.createElement('form');
   form.className = 'auth-card';
+  const brand = document.createElement('div'); brand.className = 'auth-logo'; brand.setAttribute('role', 'img'); brand.setAttribute('aria-label', 'ESMOJO');
+  brand.innerHTML = logo; brand.querySelector('svg').setAttribute('aria-hidden', 'true');
   const heading = document.createElement('h1'); heading.textContent = title;
   const intro = document.createElement('p'); intro.textContent = description;
   const message = document.createElement('p'); message.setAttribute('role', 'alert'); message.className = 'form-message';
-  form.append(heading, intro);
+  form.append(brand, heading, intro);
   for (const field of fields) {
     const label = document.createElement('label'); label.textContent = field.label;
     const input = document.createElement('input');
@@ -38,7 +41,10 @@ function screen(title, description, fields, submitText, submit) {
     label.append(input); form.append(label);
   }
   const button = document.createElement('button'); button.className = 'primary-button'; button.textContent = submitText;
-  form.append(message, button); panel().append(form);
+  const theme = document.createElement('button'); theme.type = 'button'; theme.className = 'auth-theme-toggle secondary-button';
+  function labelTheme() { theme.textContent = document.documentElement.dataset.theme === 'dark' ? 'Lichte modus' : 'Donkere modus'; }
+  labelTheme(); theme.addEventListener('click', () => { document.querySelector('#theme-toggle').click(); labelTheme(); });
+  form.append(message, button); panel().append(theme, form);
   form.addEventListener('submit', async event => {
     event.preventDefault(); button.disabled = true; message.textContent = '';
     try { await submit(new FormData(form), form); }

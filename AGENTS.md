@@ -60,6 +60,12 @@ en vraag goedkeuring voordat je de tragere uitvoering bouwt.
 
 ## Gegevensclassificatie
 
+Accountinstellingen zijn voor gebruikers alleen-lezen, behalve de eigen
+profielfoto. Laat bij foto-upload altijd een ronde uitsnede kiezen met zoom en
+verschuiving; bewaar alleen die bevestigde uitsnede in Drive. Werk daarna de
+avatar in het hoofdmenu direct bij. Andere profielvelden en rollen mogen niet
+via de eigen fotoroute worden aangepast.
+
 Accountprofielen (voornaam, achternaam, e-mailadres, functie, optionele profielfoto
 en rol) zijn door de gebruiker als Vertrouwelijk geclassificeerd. Opslag in
 Google Drive. Als expliciete uitzondering mag Supabase Auth het e-mailadres,
