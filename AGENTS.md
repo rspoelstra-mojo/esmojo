@@ -184,3 +184,8 @@ identieke uploads mogen veilig worden herhaald. Upload én teruglezen verifiëre
 De eigen onderzoekstoken hoort uitsluitend in Vercel en als secretvereiste voor
 esmojo.nl in de uitvoeromgeving, nooit in code/chat/logs. Onderzoeks-JSON wordt
 voorlopig als concept opgeslagen, niet automatisch op de website getoond.
+
+De gebruiker heeft op 1 november 2026 gevraagd de elf bestaande onderzoeks-JSON’s
+correct in het ingelogde Showprofiel te tonen. AI-samenvatting, volledige analyse,
+bronnen en onderzoeksdatum zijn leesbaar per onderwerp. Dit wijzigt geen eigen
+samenvattingen of concept/afgerond-status; onderzoek blijft afzonderlijk concept.

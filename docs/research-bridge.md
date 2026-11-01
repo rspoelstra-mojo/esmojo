@@ -54,7 +54,8 @@ toe. De bestemming is altijd de bestaande generalFolderId van de eerste show.
 De volledige Drive-parentketen wordt gecontroleerd. Vaste namen zijn
 onderzoek_01.json t/m onderzoek_11.json; een afwijkend gelijknamig bestaand
 bestand veroorzaakt CONFLICT, geen overschrijving. Ook al bestaande research
-blijft concept; deze brug publiceert nog geen antwoorden op de website.
+blijft concept. Op verzoek van de gebruiker toont het ingelogde Showprofiel de
+AI-inhoud alleen-lezen; eigen samenvatting en afrondstatus blijven afzonderlijk.
 
 Een later toegevoegde eerdere showdatum verplaatst uitsluitend eigen beheerde
 onderzoeks-JSON mee naar de nieuwe algemene map. De canonical concertId verandert
