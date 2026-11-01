@@ -1,0 +1,3 @@
+# Definitieve categorieafronding
+
+Account B, branch task/account-b-analyse-afronden-20261101. Voeg bezoekersafronding na vier AI-stappen én drie bevestigde handmatige blokken toe, en artiestafronding na zeven stappen. Overlay over inhoudsgebied, menus blijven zichtbaar; cijfer 1–10 en verplichte toelichting. Nieuwe eindcijfers/toelichtingen expliciet Openbaar; afzonderlijke Drive-opslag, geen vertrouwelijke ticketinhoud vermengen. Servercontrole, revisiecontrole, ongeldig maken bij gewijzigde onderliggende stappen. Scope show-profile/overlay, API, Apps Script en tests; bestaande main-publicatie. Geen echte concertdata wijzigen tijdens tests.
