@@ -7,8 +7,10 @@ in Google Drive. Supabase Auth mag e-mailadres, wachtwoordbeveiliging en TOTP
 beheren. Resend mag e-mailadres en activatielink verwerken voor uitnodigingen.
 Wachtwoorden en TOTP-secrets komen niet in Drive of profielen terecht.
 
-De browser bewaart de Supabase-sessie alleen in geheugen. Opnieuw laden vraagt
-opnieuw inloggen. Er is geen openbare registratie. Een uitnodiging geeft eerst
+De browser bewaart de actieve Supabase-sessie in geheugen. Een versleutelde
+HttpOnly/Secure/SameSite-cookie bewaart het refresh-token en een vaste eindtijd
+van 72 uur vanaf de wachtwoordaanmelding. Verversen kan de sessie herstellen;
+tokenvernieuwing verlengt die termijn niet. Er is geen openbare registratie. Een uitnodiging geeft eerst
 alleen toegang tot het instellen van de authenticator en het eigen wachtwoord.
 Pas een geactiveerd profiel plus een door Supabase geverifieerd `aal2`-token
 geeft applicatietoegang. Iedere beschermde API-aanroep controleert dit opnieuw.
