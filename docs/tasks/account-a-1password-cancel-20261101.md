@@ -11,3 +11,9 @@ beschikbaar voor automatisch verzenden. Behoud handmatig annuleren, de
 verzendvergrendeling, de 72-uurs sessie en verplichte server-side TOTP-controle.
 De echte extensie is niet in de testomgeving aanwezig: video en simulatie
 onderbouwen de wijziging, definitieve bevestiging komt van de gebruiker.
+
+Controles: build en bestaande authenticatie-/sessietests slagen. Chromium met
+fictieve gegevens controleert één expliciete submitknop in het TOTP-formulier,
+Annuleren als sibling buiten het formulier, handmatig annuleren, automatische
+knopkeuze, foutieve code/retry, hervatten na verversen en automatisch verlopen
+van de 72-uurs sessie. De eerdere dubbele-verzendvergrendeling blijft behouden.

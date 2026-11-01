@@ -77,9 +77,12 @@ function screen(title, description, fields, submitText, submit) {
   panel().hidden = false;
   panel().replaceChildren();
   const form = document.createElement('form');
-  form.className = 'auth-card';
+  form.className = 'auth-form';
+  const card = document.createElement('div'); card.className = 'auth-card'; card.append(form);
   form.id = fields.some(field => field.autocomplete === 'one-time-code') ? 'esmojo-authenticator' : fields.some(field => field.autocomplete === 'current-password') ? 'esmojo-login' : 'esmojo-setup';
   form.method = 'post';
+  form.name = form.id;
+  form.setAttribute('aria-label', title);
   const brand = document.createElement('div'); brand.className = 'auth-logo'; brand.setAttribute('role', 'img'); brand.setAttribute('aria-label', 'ESMOJO');
   brand.innerHTML = logo; brand.querySelector('svg').setAttribute('aria-hidden', 'true');
   const heading = document.createElement('h1'); heading.textContent = title;
@@ -95,8 +98,8 @@ function screen(title, description, fields, submitText, submit) {
     for (const [name, value] of Object.entries(field)) if (name !== 'label') input.setAttribute(name, value);
     label.append(input); form.append(label);
   }
-  const button = document.createElement('button'); button.className = 'primary-button'; button.textContent = submitText;
-  form.append(message, button); panel().append(brand, form);
+  const button = document.createElement('button'); button.type = 'submit'; button.className = 'primary-button'; button.textContent = submitText;
+  form.append(message, button); panel().append(brand, card);
   // Een late tweede wachtwoordlogin mag de MFA-sessie niet terugzetten naar aal1.
   const submitOnce = singleSubmission(async () => {
     button.disabled = true; message.textContent = '';
@@ -188,8 +191,9 @@ function setPassword() {
 }
 
 function addLogout(form) {
-  const button = document.createElement('button'); button.type = 'button'; button.className = 'text-button'; button.textContent = 'Terug naar inloggen';
-  button.addEventListener('click', () => logout()); form.append(button);
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'text-button'; button.textContent = 'Annuleren';
+  button.setAttribute('data-1p-ignore', '');
+  button.addEventListener('click', () => logout()); form.after(button);
 }
 
 export async function logout(message) {
