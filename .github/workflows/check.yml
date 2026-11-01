@@ -20,6 +20,7 @@ jobs:
       - name: Authentication, authorization and existing server tests
         run: |
           node server/accounts-api.test.js
+          node server/auth-submission.test.js
           node server/account-profiles.test.js
           node server/drive-write-diagnostic.test.js
           node server/apps-script.test.js

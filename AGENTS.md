@@ -29,6 +29,10 @@ De originele aangeleverde SVG staat in src/assets/ESMOJO-logo.svg en de originel
 transparante PNG in public/brand/ESMOJO-logo-transparant.png. Gebruik deze bronbestanden;
 reconstrueer het logo niet. De SVG-geometrie en bronkleuren blijven ongewijzigd.
 
+Uitsluitend op het inlogscherm is door de gebruiker ook toegestaan: alle letters
+wit met 50% dekking, buiten de login-kaart op dezelfde positie en grootte als
+het hoofdmenu-logo. Pas dit alleen met CSS toe; laat de originele SVG intact.
+
 De gebruiker heeft afzonderlijk een faviconvariant goedgekeurd en aangeleverd:
 alle zes letters wit op een achtergrond met het oorspronkelijke JO-blauw #002ff4.
 Die bestanden staan in public/icons en zijn uitsluitend voor favicons en
