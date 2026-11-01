@@ -1,4 +1,5 @@
 import './show-page.css';
+import { createShowProfile } from './show-profile.js';
 
 export function formatShowDates(dates) {
   return dates.map(date => new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Amsterdam' }).format(new Date(`${date}T12:00:00Z`))).join(' · ');
@@ -35,6 +36,7 @@ export function createShowPage(content, show) {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'show-tab'; button.textContent = label;
     button.id = `show-tab-${index}`; button.setAttribute('role', 'tab'); button.setAttribute('aria-controls', `show-panel-${index}`);
     const panel = document.createElement('section'); panel.id = `show-panel-${index}`; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', button.id); panel.tabIndex = 0;
+    if (label === 'Showprofiel') createShowProfile(panel);
     button.addEventListener('click', () => select(index));
     button.addEventListener('keydown', event => {
       let next;
