@@ -61,7 +61,7 @@ h1 { font-size: 40px; font-weight: 550; letter-spacing: -1.4px; margin: 14px 0 3
 .has-submenu { --submenu-width: 210px; }
 .submenu { position: fixed; top: 0; bottom: 0; left: 76px; width: var(--submenu-width); padding: 24px 16px; border-right: 1px solid var(--line); background: var(--canvas); overflow-y: auto; }
 .submenu h2 { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
-#submenu-navigation { align-items: stretch; margin-top: 24px; }
+#submenu-navigation { align-items: stretch; gap: 4px; margin-top: 24px; }
 .has-submenu main { margin-left: var(--submenu-width); }
 .content-box { width: 100%; max-width: 1000px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: 44px; background: var(--canvas); }
 .skip-link { position: fixed; top: -80px; left: 90px; background: var(--tip); color: var(--tip-text); padding: 12px; z-index: 20; }

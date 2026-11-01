@@ -23,7 +23,7 @@ button:disabled { opacity: .55; cursor: wait; }
 .totp-qr { background: #fff; padding: 8px; align-self: center; }
 .auth-card details { font-size: 14px; overflow-wrap: anywhere; }
 .auth-card code { display: block; margin-top: 12px; user-select: all; }
-.submenu-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 8px; font-size: 14px; }
+.submenu-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
 .submenu-spinner { display: inline-block; width: 18px; height: 18px; flex-shrink: 0; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: submenu-spin .75s linear infinite; }
 @keyframes submenu-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .submenu-spinner { animation: none; } }
