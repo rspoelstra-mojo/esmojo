@@ -31,13 +31,14 @@ button:disabled { opacity: .55; cursor: wait; }
 button.submenu-link { width: 100%; border: 0; font-family: inherit; font-size: 14px; color: var(--text); background: transparent; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
 button.submenu-link:hover { background: var(--hover); }
 .submenu-heading { position: relative; min-height: 24px; }
-.submenu-heading h2 { line-height: 24px; transition: opacity .16s; }
+.submenu-heading h2 { padding-left: 12px; line-height: 24px; transition: opacity .16s; }
 .submenu-heading.has-search h2 { padding-right: 32px; }
 .submenu-search-toggle { position: absolute; top: -2px; right: -2px; display: grid; place-items: center; width: 28px; height: 28px; padding: 3px; color: var(--text); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
 .submenu-search-toggle:hover { background: var(--hover); }
 .submenu-search-toggle svg { width: 20px; height: 20px; }
 .submenu-search { position: absolute; top: -4px; left: 0; right: 34px; visibility: hidden; pointer-events: none; clip-path: inset(0 0 0 100%); transition: clip-path .18s ease, visibility .18s; }
 .submenu-search input { display: block; width: 100%; min-width: 0; height: 32px; padding: 5px 8px; color: var(--text); background: var(--canvas); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 16px; }
+.submenu-search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
 .submenu-heading.is-searching h2 { opacity: 0; }
 .submenu-heading.is-searching .submenu-search { visibility: visible; pointer-events: auto; clip-path: inset(0); }
 .submenu-search-empty { padding: 12px; margin: 0; color: var(--muted); font-size: 14px; }
