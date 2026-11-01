@@ -1,6 +1,7 @@
 import { getSupabase } from './lib/supabase.js';
 import './accounts.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
+import { singleSubmission } from './lib/single-submission.js';
 
 let client;
 let onReady;
@@ -28,34 +29,42 @@ function screen(title, description, fields, submitText, submit) {
   panel().replaceChildren();
   const form = document.createElement('form');
   form.className = 'auth-card';
+  form.id = fields.some(field => field.autocomplete === 'one-time-code') ? 'esmojo-authenticator' : fields.some(field => field.autocomplete === 'current-password') ? 'esmojo-login' : 'esmojo-setup';
+  form.method = 'post';
   const brand = document.createElement('div'); brand.className = 'auth-logo'; brand.setAttribute('role', 'img'); brand.setAttribute('aria-label', 'ESMOJO');
   brand.innerHTML = logo; brand.querySelector('svg').setAttribute('aria-hidden', 'true');
   const heading = document.createElement('h1'); heading.textContent = title;
+  if (title === 'Inloggen') heading.className = 'visually-hidden';
   const intro = document.createElement('p'); intro.textContent = description;
   const message = document.createElement('p'); message.setAttribute('role', 'alert'); message.className = 'form-message';
-  form.append(brand, heading, intro);
+  form.append(heading);
+  if (description) form.append(intro);
   for (const field of fields) {
     const label = document.createElement('label'); label.textContent = field.label;
     const input = document.createElement('input');
+    input.id = `esmojo-${field.name}`;
     for (const [name, value] of Object.entries(field)) if (name !== 'label') input.setAttribute(name, value);
     label.append(input); form.append(label);
   }
   const button = document.createElement('button'); button.className = 'primary-button'; button.textContent = submitText;
-  const theme = document.createElement('button'); theme.type = 'button'; theme.className = 'auth-theme-toggle secondary-button';
-  function labelTheme() { theme.textContent = document.documentElement.dataset.theme === 'dark' ? 'Lichte modus' : 'Donkere modus'; }
-  labelTheme(); theme.addEventListener('click', () => { document.querySelector('#theme-toggle').click(); labelTheme(); });
-  form.append(message, button); panel().append(theme, form);
-  form.addEventListener('submit', async event => {
-    event.preventDefault(); button.disabled = true; message.textContent = '';
+  form.append(message, button); panel().append(brand, form);
+  // Een late tweede wachtwoordlogin mag de MFA-sessie niet terugzetten naar aal1.
+  const submitOnce = singleSubmission(async () => {
+    button.disabled = true; message.textContent = '';
     try { await submit(new FormData(form), form); }
     catch (error) { message.textContent = error.message || 'Probeer het opnieuw.'; }
     finally { button.disabled = false; }
+  }, () => form.isConnected);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    void submitOnce();
   });
+  form.querySelector('input')?.focus({ preventScroll: true });
   return form;
 }
 
 function signIn(message = '') {
-  screen('Inloggen', message || 'Log in met je ESMOJO-account. Daarna bevestig je de code uit je authenticator.', [
+  screen('Inloggen', message, [
     { label: 'E-mailadres', name: 'email', type: 'email', autocomplete: 'username', required: '' },
     { label: 'Wachtwoord', name: 'password', type: 'password', autocomplete: 'current-password', required: '' },
   ], 'Inloggen', async fields => {
