@@ -68,28 +68,20 @@ export function createShowProfile(panel, { show } = {}) {
       if (category.title === 'Bezoekersanalyse') {
         const row = node('div', 'visitor-analysis'), button = node('button', 'visitor-analysis-summary'); button.type = 'button';
         const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
-        button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'), node('span','analysis-status','Handmatig invoeren'),arrow);
+        const ticketBadge=node('span','analysis-status',finalization?.ticketsReady?'Afgerond':'Handmatig invoeren');ticketBadge.dataset.status=finalization?.ticketsReady?'completed':'pending';
+        button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'),ticketBadge,arrow);
         button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();void refreshFinalization();}}); };
         row.append(button);card.append(row);
       }
       categories.append(card);
     }
-    const completed = Object.values(records).filter(record => record.status === 'completed').length;
     for(const [key,label]of [['visitors','Bezoekersanalyse afronden'],['artist','Artiestanalyse afronden']]) {
       if(loaded&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
     }
     if(finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,onStale:refreshFinalization});
-    const overview = node('section', 'profile-overview'); overview.append(node('h3', '', 'Analyse in beeld'));
-    const body = node('div', 'profile-overview-body'), ring = node('div', 'profile-progress-ring', `${completed} / 11`); ring.style.setProperty('--progress', `${completed / 11 * 100}%`); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `${completed} van 11 analyses afgerond`);
-    const legend = node('ul', 'profile-legend');
-    for (const state of ['completed', 'draft', 'pending']) {
-      const count = state === 'pending' ? 11 - Object.keys(records).length : Object.values(records).filter(record => record.status === state).length;
-      const item = node('li', ''); item.dataset.status = state; item.append(node('span', 'profile-status-dot'), node('span', '', analysisStatuses[state]), node('strong', '', String(count))); legend.append(item);
-    }
-    body.append(ring, legend); overview.append(body);
     const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
     const info = node('div', ''), view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button'; view.disabled = !loaded; view.onclick = () => openEditor(selected);
-    info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || researchView(researchByNumber?.[selected]).summaryText || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(overview, highlight);
+    info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || researchView(researchByNumber?.[selected]).summaryText || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(highlight);
     layout.append(categories, aside); section.append(layout);
     if (focusNumber) section.querySelector(`#analysis-open-${focusNumber}`)?.focus();
   }

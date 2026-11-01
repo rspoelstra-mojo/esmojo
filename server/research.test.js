@@ -271,10 +271,10 @@ test('Categorieafronding vereist alle stappen, bewaart openbare eindcijfers apar
  const contents={ticket_sales:JSON.stringify(read.shows.map(row=>({...row,count:'1234'}))),visitor_origins:JSON.stringify({netherlands:'90',foreign:[{country:'Vrij testland',percentage:'3'},{country:'Canada',percentage:'2'},{country:'België',percentage:'1'}]}),domestic_origins:JSON.stringify([{province:'Drenthe',percentage:'29,1'},{province:'Groningen',percentage:'17,4'},{province:'Friesland',percentage:'11,7'}])};
  let beforeLast;
  for(const field of Object.keys(contents)){
-  beforeLast=(await shows('final-read',{concertId})).finalization.basis;
+  const before=(await shows('final-read',{concertId})).finalization;assert.equal(before.ticketsReady,false);beforeLast=before.basis;
   const lock={concertId,actor:'test-user',field,token:'a'.repeat(36),expectedVersion:0};await shows('ticket-reserve',lock);await shows('ticket-review',{...lock,content:contents[field]});versions[field]=1;
  }
- state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.visitors.ready,true);
+ state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.visitors.ready,true);assert.equal(state.ticketsReady,true);
  await assert.rejects(shows('final-complete',{...input,basis:beforeLast}),/FINAL_CONFLICT/);
  const completed=await shows('final-complete',{...input,basis:state.basis});assert.ok(completed.finalization.categories.visitors.completedAt);assert.ok(completed.finalization.categories.artist.completedAt);
  const file=h.firstFolder.files.find(file=>file.name==='analyseafronding.json'),value=JSON.parse(file.content);assert.equal(value.classification,'openbaar');assert.equal(value.categories.visitors.score,6);assert.equal(value.categories.visitors.note,input.note);
@@ -282,7 +282,7 @@ test('Categorieafronding vereist alle stappen, bewaart openbare eindcijfers apar
  await shows('profile-save',{concertId,questionNumber:5,status:'draft',summary:'Wijziging',revision:11});
  state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.artist.completedAt,null);assert.ok(state.categories.visitors.completedAt);
  const lock={concertId,actor:'test-user',field:'ticket_sales',token:'b'.repeat(36),expectedVersion:1};await shows('ticket-reserve',lock);await shows('ticket-reopen',lock);
- state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.visitors.completedAt,null);assert.equal(state.categories.visitors.ready,false);
+ state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.visitors.completedAt,null);assert.equal(state.categories.visitors.ready,false);assert.equal(state.ticketsReady,false);
  assert.equal(JSON.parse(file.content).history.length,2);assert.equal(JSON.parse(file.content).history[0].score,6);
  const destination=h.artist.createFolder('Earlier');h.context.esmojoMoveAnalysisFinal_(h.firstFolder,destination,h.first.concertId,'Earlier');assert.equal(JSON.parse(destination.files.find(f=>f.name==='analyseafronding.json').content).concertId,'Earlier');
 });

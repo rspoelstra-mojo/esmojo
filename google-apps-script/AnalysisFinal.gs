@@ -13,7 +13,7 @@ function esmojoAnalysisFinalState_(target,profile) {
   const shows=saleShows({shows:target.seriesShows}),ticketsReady=ticketVerified&&ticketFields.every(field=>fields[field]?.completed_at&&validTicketContent(field,fields[field].content,shows));
   const categories={};
   for(const category of Object.keys(finalCategories)){const ready=categoryReady(category,profile.analyses,ticketsReady);categories[category]={ready,completedAt:ready?document.categories[category]?.completedAt||null:null};}
-  return {categories,basis:{profileRevision:profile.revision,finalRevision:document.revision,ticketVersions:Object.fromEntries(ticketFields.map(field=>[field,fields[field]?.version||0]))}};
+  return {categories,ticketsReady,basis:{profileRevision:profile.revision,finalRevision:document.revision,ticketVersions:Object.fromEntries(ticketFields.map(field=>[field,fields[field]?.version||0]))}};
 }
 function esmojoAnalysisFinal_(request) {
   const input=Object.assign({},request,{operation:request.operation.slice(6)});validateFinalRequest(input);
