@@ -34,6 +34,8 @@ function esmojoAccounts_(input) {
     if (request.operation === 'self') return actor ? esmojoReply_({ ok: true, data: actor }) : denied();
     if (request.operation === 'activate') {
       if (!actor) return denied();
+    } else if (request.operation === 'photo') {
+      if (!actor || !actor.activated) return denied();
     } else if (request.operation === 'bootstrap') {
       if (state.profiles.length) return conflict();
     } else if (!actor || actor.role !== 'beheerder' || !actor.activated) return denied();
@@ -59,6 +61,11 @@ function esmojoAccounts_(input) {
       state.profiles.push({ id: profile.id, email: profile.email.toLowerCase(), firstName: profile.firstName,
         lastName: profile.lastName, jobTitle: profile.jobTitle, role: request.operation === 'bootstrap' ? 'beheerder' : profile.role,
         photo: profile.photo || '', activated: false, disabled: false });
+    } else if (request.operation === 'photo') {
+      if (Object.keys(request).some(key => !['operation', 'actor', 'photo'].includes(key))
+          || typeof request.photo !== 'string' || request.photo.length > 100000
+          || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(request.photo)) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
+      actor.photo = request.photo;
     } else if (request.operation === 'activate') {
       actor.activated = true;
     } else if (['update', 'disable', 'delete'].includes(request.operation)) {
@@ -75,7 +82,7 @@ function esmojoAccounts_(input) {
     stage = 'DRIVE_WRITE';
     if (file) file.setContent(serialized);
     else folder.createFile(Utilities.newBlob(serialized, 'application/json', '_esmojo_accounts_v1.json'));
-    return esmojoReply_({ ok: true, data: { ok: true } });
+    return esmojoReply_({ ok: true, data: request.operation === 'photo' ? actor : { ok: true } });
   } catch (_) {
     return esmojoReply_({ ok: false, code: stage });
   } finally { lock.releaseLock(); }

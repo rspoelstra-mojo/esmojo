@@ -32,8 +32,13 @@ export function validateProfile(input) {
   if (!['beheerder', 'gebruiker'].includes(input.role)) throw new Error('VALIDATION');
   output.role = input.role;
   if (input.photo !== undefined) {
-    if (input.photo !== '' && (typeof input.photo !== 'string' || input.photo.length > 100000 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(input.photo))) throw new Error('VALIDATION');
+    validatePhoto(input.photo);
     output.photo = input.photo;
   }
   return output;
+}
+
+export function validatePhoto(photo) {
+  if (photo !== '' && (typeof photo !== 'string' || photo.length > 100000 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(photo))) throw new Error('VALIDATION');
+  return photo;
 }
