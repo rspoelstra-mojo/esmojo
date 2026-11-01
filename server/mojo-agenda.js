@@ -81,3 +81,29 @@ export function upcomingArtists(concerts, now = new Date()) {
   }
   return [...names.values()].sort((a, b) => a.name.localeCompare(b.name, 'nl'));
 }
+
+// Bouw reeksen vóór het 90-dagenfilter, zodat een lopende reeks haar vaste URL behoudt.
+export function upcomingShows(concerts, now = new Date()) {
+  const from = calendarDate(now), until = addDays(from, 90), weekUntil = addDays(from, 7);
+  const artists = new Map();
+  for (const row of concerts) {
+    if (row.venue !== 'Gashouder' || row.city !== 'Amsterdam') continue;
+    const key = artistKey(row.artist);
+    if (!artists.has(key)) artists.set(key, new Map());
+    artists.get(key).set(row.date, row);
+  }
+  const series = [];
+  for (const rows of artists.values()) {
+    let current;
+    for (const row of [...rows.values()].sort((a, b) => a.date.localeCompare(b.date))) {
+      if (!current || addDays(current.dates.at(-1), 1) !== row.date) {
+        current = { key: row.concertId || concertId(row.artist, row.date), name: row.artist, dates: [], venue: row.venue, city: row.city };
+        series.push(current);
+      }
+      current.dates.push(row.date);
+    }
+  }
+  return series.filter(show => show.dates.some(date => date >= from && date < until))
+    .map(show => ({ ...show, group: show.dates.some(date => date >= from && date < weekUntil) ? 'week' : 'period' }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'nl') || a.dates[0].localeCompare(b.dates[0]));
+}
