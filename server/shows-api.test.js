@@ -12,7 +12,7 @@ test('Shows-menu vereist geldige MFA, actuele activering en niet-verlopen sessie
     const handler = makeAccountsHandler({ env: { VITE_SUPABASE_URL: 'url', VITE_SUPABASE_PUBLISHABLE_KEY: 'key', SUPABASE_SECRET_KEY: 'secret' }, clientFactory: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'test', factors: [{ factor_type: 'totp', status: 'verified' }] } } }) } }), profiles: async () => ({ role: 'gebruiker', activated: input.activated !== false }), shows: async () => { calls++; return { checkedAt: new Date().toISOString(), concerts: [{ artist: 'A', venue: 'Gashouder', city: 'Amsterdam', date: calendarDate() }] }; } });
     const res = response(); await handler({ method: 'GET', query: { action: 'shows' }, headers: input.auth === false ? {} : { authorization: `Bearer ${token}` } }, res);
     if (Object.keys(input).length) { assert.ok([401, 403].includes(res.code)); assert.equal(calls, 0); }
-    else { assert.equal(res.code, 200); assert.deepEqual(res.data.artists, [{ key: 'a', name: 'A', group: 'week' }]); assert.equal(calls, 1); }
+    else { assert.equal(res.code, 200); assert.deepEqual(res.data.artists, [{ key: 'a', name: 'A', group: 'week' }]); assert.equal(res.data.shows[0].name, 'A'); assert.deepEqual(res.data.shows[0].dates, [calendarDate()]); assert.equal(res.data.shows[0].venue, 'Gashouder'); assert.equal(calls, 1); }
   }
 });
 test('import verifieert workflow vóór netwerk/opslag; geen clientpayload of bron-URLs worden gebruikt', async () => {

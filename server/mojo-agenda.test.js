@@ -50,3 +50,20 @@ test('week is vandaag t/m dag 6, periode start op dag 7; artiest komt maar eenma
   const dst = upcomingArtists([row('Dag6', '2027-04-02'), row('Dag7', '2027-04-03')], new Date('2027-03-26T23:30:00Z'));
   assert.deepEqual(dst.map(a => a.group), ['week', 'period']);
 });
+
+test('showpagina’s groeperen dagelijkse reeksen, scheiden losse shows en behouden stabiele sleutels', async () => {
+  const { upcomingShows } = await import('./mojo-agenda.js');
+  const row = (artist, date, venue = 'Gashouder') => ({ artist, date, venue, city: 'Amsterdam', concertId: concertId(artist, date) });
+  const result = upcomingShows([
+    row('A', '2026-11-02'), row('A', '2026-10-31'), row('A', '2026-11-01'), row('A', '2026-11-02'),
+    row('A', '2026-11-08'), row('B', '2026-11-07'), row('C', '2027-01-30'), row('D', '2026-11-03', 'Paradiso'),
+  ], new Date('2026-11-01T12:00:00Z'));
+  assert.equal(result.length, 3);
+  assert.equal(result[0].key, 'A_Gashouder_31102026');
+  assert.deepEqual(result[0].dates, ['2026-10-31', '2026-11-01', '2026-11-02']);
+  assert.equal(result[0].group, 'week'); assert.equal(result[1].group, 'period');
+  assert.equal(result[1].key, 'A_Gashouder_08112026');
+  assert.deepEqual(upcomingShows([], new Date()), []);
+  const nextDay = upcomingShows([row('A', '2026-10-31'), row('A', '2026-11-01'), row('A', '2026-11-02')], new Date('2026-11-02T12:00:00Z'));
+  assert.equal(nextDay[0].key, result[0].key);
+});
