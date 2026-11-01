@@ -19,11 +19,12 @@ verhoudingen, positionering, afstanden en kleuren. Alleen proportioneel schalen
 van het complete logo is toegestaan. Geen vervorming, uitsnede, herindeling,
 losse lettervariant, benadering met een lettertype of opnieuw getekend logo.
 
-In het lichte menu mogen de letters ESMO via gerichte CSS #404040 worden;
-het originele SVG-bronbestand blijft intact. Voor de donkere websitevariant mogen de letters ESMO wit worden.
-JO behoudt exact het oorspronkelijke blauw; verder niets wijzigen. Geen algemeen
-CSS-filter toepassen dat ook JO verandert. Nieuwe afwijkingen vereisen expliciete
-toestemming van de gebruiker.
+Op uitdrukkelijk verzoek van de gebruiker op 1 november 2026 is het volledige
+hoofdmenu-logo monochroom: alle letters inclusief JO krijgen via gerichte CSS
+#404040 in de lichte modus, en wit in de bestaande donkere modus. Het originele
+SVG-bronbestand, geometrie en bronkleuren blijven intact. Deze toestemming geldt
+alleen voor het hoofdmenu; andere logotoepassingen behouden hun oorspronkelijke
+kleuren tenzij afzonderlijk goedgekeurd. Geen algemeen filter of vervorming.
 
 De originele aangeleverde SVG staat in src/assets/ESMOJO-logo.svg en de originele
 transparante PNG in public/brand/ESMOJO-logo-transparant.png. Gebruik deze bronbestanden;
@@ -37,7 +38,7 @@ De gebruiker heeft afzonderlijk een faviconvariant goedgekeurd en aangeleverd:
 alle zes letters wit op een achtergrond met het oorspronkelijke JO-blauw #002ff4.
 Die bestanden staan in public/icons en zijn uitsluitend voor favicons en
 site-iconen, niet als vervanging van het normale logo in het menu. In het menu
-blijft JO altijd blauw en heeft het logo geen eigen blauw achtergrondvlak.
+geldt de hierboven goedgekeurde monochrome variant, zonder blauw achtergrondvlak.
 
 ## Snelheid
 
