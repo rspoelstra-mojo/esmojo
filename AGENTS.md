@@ -58,6 +58,12 @@ behalve Homepage hebben een submenu. De contentbox staat gecentreerd tussen het
 submenu en de rechter schermrand, bovenaan uitgelijnd met het logo. Op smalle
 schermen staat het submenu boven de content om voldoende leesruimte te houden.
 
+Beheerder, Shows en Artiest hebben een vergrootglas naast de submenu-titel. Het
+zoekveld opent over de titel en filtert uitsluitend titels van submenu-items,
+lokaal en direct; nooit de pagina-inhoud. Hergebruik src/submenu-search.js en
+geef nieuwe links zo nodig data-submenu-title mee. Geen zoekopdrachten opslaan
+of naar een zoekdienst sturen. Escape/sluiten maakt de volledige lijst zichtbaar.
+
 Snelheid is het belangrijkste ontwerpuitgangspunt. De gebruiker accepteert een
 langere eerste laadbeurt of refresh als navigatie en veelgebruikte acties daarna
 direct werken. Laad passende veelgebruikte gegevens vooraf, hergebruik gegevens

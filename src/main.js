@@ -3,9 +3,15 @@ import logo from './assets/ESMOJO-logo.svg?raw';
 import { startAuth } from './auth.js';
 import { createAccountsView } from './accounts.js';
 import { createProfileView, renderAvatar } from './profile.js';
+import { createSubmenuSearch } from './submenu-search.js';
 
 let profile = null;
 let disposePage = () => {};
+const submenuSearch = createSubmenuSearch({
+  heading: document.querySelector('.submenu-heading'), input: document.querySelector('#submenu-search-input'),
+  toggle: document.querySelector('#submenu-search-toggle'), navigation: document.querySelector('#submenu-navigation'),
+  empty: document.querySelector('#submenu-search-empty'), status: document.querySelector('#submenu-search-status'),
+});
 
 // Exact aangeleverde SVG; de donkere modus verandert via CSS alleen ESMO.
 document.querySelector('.brand').innerHTML = logo;
@@ -43,10 +49,11 @@ function renderPage() {
   document.title = `${title} · ESMOJO`;
   const submenu = document.querySelector('#submenu-navigation'); submenu.replaceChildren();
   if (root === 'beheerder') {
-    if (profile.role !== 'beheerder') { content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
+    if (profile.role !== 'beheerder') { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
     const link = document.createElement('a'); link.href = '#/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
     if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');
     submenu.append(link);
+    link.dataset.submenuTitle = 'Accounts';
     if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile, link);
   }
   if (root === 'account') {
@@ -56,6 +63,7 @@ function renderPage() {
       renderAvatar(document.querySelector('.avatar'), profile);
     });
   }
+  submenuSearch.setSection(root, ['shows', 'artiest'].includes(root) || (root === 'beheerder' && profile.role === 'beheerder'));
   document.querySelectorAll('[data-page]').forEach(link => {
     if (link.dataset.page === root) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -88,6 +96,7 @@ startAuth({
     renderPage();
   },
   onSignedOut() {
+    submenuSearch.reset();
     profile = null; disposePage(); disposePage = () => {};
     document.querySelector('.content-box').replaceChildren();
     document.querySelector('.avatar').replaceChildren();
