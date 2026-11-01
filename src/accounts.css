@@ -25,6 +25,9 @@ button:disabled { opacity: .55; cursor: wait; }
 .auth-card code { display: block; margin-top: 12px; user-select: all; }
 .submenu { --submenu-text-inset: 12px; }
 .submenu-link { margin: 0; border: 0; font-family: inherit; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px var(--submenu-text-inset); border-radius: 8px; font-size: 14px; }
+.submenu-group-heading { margin: 16px 0 4px; padding: 0 var(--submenu-text-inset); font-size: 12px; line-height: 20px; font-weight: 600; color: var(--muted); }
+.submenu-group-heading:first-child { margin-top: 0; }
+.submenu-group-empty { margin: 0; padding: 8px var(--submenu-text-inset); font-size: 14px; color: var(--muted); }
 .submenu-spinner { display: inline-block; width: 18px; height: 18px; flex-shrink: 0; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: submenu-spin .75s linear infinite; }
 @keyframes submenu-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .submenu-spinner { animation: none; } }
