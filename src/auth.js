@@ -71,9 +71,12 @@ async function remember(session) {
 function enter(profile, deadline) {
   armExpiry(deadline);
   panel().hidden = true; panel().replaceChildren(); onReady(profile);
+  document.querySelector('#app-boot').hidden=true;
 }
 
 function screen(title, description, fields, submitText, submit) {
+  document.querySelector('#app-boot').hidden=true;
+  panel().dataset.screen=title==='Inloggen'?'login':'account';
   panel().hidden = false;
   panel().replaceChildren();
   const form = document.createElement('form');
