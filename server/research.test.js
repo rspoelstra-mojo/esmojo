@@ -19,10 +19,11 @@ function harness(firstOffset = 4) {
   const all = new Map(), nonces = new Map();
   const iterator = items => { let n = 0; return { hasNext: () => n < items.length, next: () => items[n++] }; };
   class File {
-    constructor(folder, blob) { this.folder = folder; this.name = blob.name; this.content = blob.content; this.id = `file-${++next}`; writes++; }
+    constructor(folder, blob) { this.folder = folder; this.name = blob.name; this.content = blob.content; this.id = `file-${++next}`; this.mimeType=blob.type; all.set(this.id,this); writes++; }
     getId() { return this.id; }
     getName() { return this.name; }
-    getBlob() { return { getDataAsString: () => this.content }; }
+    getBlob() { return { getDataAsString: () => this.content, getBytes: () => [...Buffer.from(this.content)] }; }
+    getMimeType() { return this.mimeType; } isTrashed() { return false; } getParents() { return iterator([this.folder]); }
     setContent(value) { this.content = value; writes++; }
     moveTo(folder) { this.folder.files.splice(this.folder.files.indexOf(this), 1); folder.files.push(this); this.folder = folder; }
   }
@@ -48,13 +49,13 @@ function harness(firstOffset = 4) {
   const index = production.createFile({ name: '_esmojo_shows_v1.json', content: JSON.stringify(state) });
   const context = vm.createContext({ console,
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => secret }) },
-    Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (algo, body) => [...createHash(algo).update(body).digest()], computeHmacSha256Signature: (body, key) => [...createHmac('sha256', key).update(body).digest()], newBlob: (content, type, name) => ({ content, type, name }), formatDate: date => calendarDate(date) },
+    Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (algo, body) => [...createHash(algo).update(Array.isArray(body)?Buffer.from(body):body).digest()], computeHmacSha256Signature: (body, key) => [...createHmac('sha256', key).update(body).digest()], base64Encode: value => Buffer.from(value).toString('base64'), base64Decode: value => [...Buffer.from(value,'base64')], newBlob: (content, type, name) => ({ content, type, name }), formatDate: date => calendarDate(date) },
     LockService: { getUserLock: () => ({ tryLock: () => !blocked, releaseLock: () => {} }), getScriptLock: () => { throw new Error('Accountlock niet gebruiken'); } },
     CacheService: { getScriptCache: () => ({ get: key => nonces.get(key), put: (key, value) => nonces.set(key, value) }) },
-    DriveApp: { getFolderById: id => { reads++; if (!all.has(id)) throw new Error(); return all.get(id); } },
+    DriveApp: { getFileById: id => { if(!all.has(id))throw Error();return all.get(id); }, getFolderById: id => { reads++; if (!all.has(id)) throw new Error(); return all.get(id); } },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
-  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs', 'ShowProfile.gs', 'TicketValidators.gs', 'TicketData.gs', 'FinalValidators.gs', 'AnalysisFinal.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
+  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs', 'ShowProfile.gs', 'TicketValidators.gs', 'TicketData.gs', 'FinalValidators.gs', 'AnalysisFinal.gs', 'ShowProfilePdf.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
   const raw = input => context.doPost({ postData: { contents: JSON.stringify(input) } });
   const request = async (url, options) => { assert.equal(url, env.GOOGLE_DRIVE_SCRIPT_URL); envelope = JSON.parse(options.body); return Response.json(raw(envelope)); };
   const store = createResearchStore({ env, request });
@@ -284,4 +285,37 @@ test('Categorieafronding vereist alle stappen, bewaart openbare eindcijfers apar
  state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.visitors.completedAt,null);assert.equal(state.categories.visitors.ready,false);
  assert.equal(JSON.parse(file.content).history.length,2);assert.equal(JSON.parse(file.content).history[0].score,6);
  const destination=h.artist.createFolder('Earlier');h.context.esmojoMoveAnalysisFinal_(h.firstFolder,destination,h.first.concertId,'Earlier');assert.equal(JSON.parse(destination.files.find(f=>f.name==='analyseafronding.json').content).concertId,'Earlier');
+});
+
+test('PDF-reservering, gebruikerssnapshot, idempotente opslag en revisiegebonden download in uitsluitend Drive',async()=>{
+ const h=harness(),shows=createShowsStore({env,request:h.request}),concertId=h.later.concertId,layoutVersion='gashouder-showprofile-v6-confidential-footer';
+ await assert.rejects(shows('report-status',{concertId}),/REPORT_NOT_READY/);
+ for(let number=1;number<=11;number++)await shows('profile-save',{concertId,questionNumber:number,status:'completed',summary:'UITSLUITEND_GEBRUIKER_'+number,revision:number-1});
+ const ticket=await shows('ticket-read',{concertId,actor:'Test ESM'}),contents={ticket_sales:JSON.stringify(ticket.shows.map(row=>({...row,count:'1234'}))),visitor_origins:JSON.stringify({netherlands:'90',foreign:[{country:'België',percentage:'3'},{country:'Canada',percentage:'2'},{country:'Frankrijk',percentage:'1'}]}),domestic_origins:JSON.stringify([{province:'Drenthe',percentage:'30'},{province:'Groningen',percentage:'20'},{province:'Friesland',percentage:'10'}])};
+ for(const field of Object.keys(contents)){const lock={concertId,field,actor:'Test ESM',token:'a'.repeat(36),expectedVersion:0};await shows('ticket-reserve',lock);await shows('ticket-review',{...lock,content:contents[field]});}
+ for(const category of ['visitors','artist']){const state=await shows('final-read',{concertId});await shows('final-complete',{concertId,category,score:4,note:'Eigen definitieve toelichting.',basis:state.finalization.basis});}
+ h.context.esmojoReadResearch_=()=>{throw Error('AI-inhoud mag nooit worden gelezen');};
+ const status=await shows('report-status',{concertId});assert.equal(status.state,'pending');
+ const claim={concertId,jobId:'a'.repeat(36),manager:'Test ESM',layoutVersion},reserved=await shows('report-reserve',claim);assert.equal(reserved.state,'reserved');assert.equal(reserved.version,1);assert.equal(reserved.record.workflow.visitors.fields.gender_ratio.content,'UITSLUITEND_GEBRUIKER_1');assert.equal('research'in reserved.record,false);assert.equal(reserved.record.workflow.artist.score_review.reason,'Eigen definitieve toelichting.');
+ assert.equal((await shows('report-reserve',{...claim,jobId:'b'.repeat(36)})).state,'generating');
+ const pdf=Buffer.from('%PDF-1.7\n'+('synthetic PDF bytes for storage test only. '.repeat(5))+'\n%%EOF'),commit={...claim,revision:reserved.revision,version:reserved.version,fileName:reserved.fileName,pdfBase64:pdf.toString('base64'),sha256:createHash('sha256').update(pdf).digest('hex')};delete commit.manager;
+ await assert.rejects(shows('report-commit',{...commit,revision:'b'.repeat(64)}),/REPORT_CONFLICT/);
+ await assert.rejects(shows('report-commit',{...commit,sha256:'b'.repeat(64)}),/VALIDATION/);
+ assert.equal((await shows('report-commit',commit)).state,'ready');const writes=h.writes();assert.equal((await shows('report-commit',commit)).state,'ready');assert.equal(h.writes(),writes);
+ assert.equal(h.firstFolder.files.filter(file=>file.mimeType==='application/pdf').length,1);assert.equal(h.laterFolder.files.length,0);const register=h.firstFolder.files.find(file=>file.name==='showprofiel-pdf.json');assert.equal(JSON.parse(register.content).classification,'vertrouwelijk');
+ const download=await shows('report-download',{concertId});assert.equal(download.pdfBase64,commit.pdfBase64);assert.equal(download.fileName,reserved.fileName);
+ // Een onderliggende wijziging blokkeert de oude PDF onmiddellijk, zonder die te overschrijven.
+ await shows('profile-save',{concertId,questionNumber:1,status:'draft',summary:'Gewijzigde eigen tekst',revision:11});await assert.rejects(shows('report-download',{concertId}),/REPORT_NOT_READY/);assert.equal(h.firstFolder.files.filter(file=>file.mimeType==='application/pdf').length,1);
+ // Opnieuw afronden levert versie 2; een verlopen claim of herhaalde commit levert geen extra versie.
+ await shows('profile-save',{concertId,questionNumber:1,status:'completed',summary:'Nieuwe gebruikerssamenvatting',revision:12});const nextState=await shows('final-read',{concertId});await shows('final-complete',{concertId,category:'visitors',score:5,note:'Nieuwe eigen toelichting',basis:nextState.finalization.basis});
+ const next=await shows('report-reserve',{...claim,jobId:'c'.repeat(36)});assert.equal(next.version,2);assert.notEqual(next.revision,reserved.revision);
+ const metadata=JSON.parse(register.content);metadata.job.expiresAt=Date.now()-1;register.content=JSON.stringify(metadata);
+ assert.equal((await shows('report-status',{concertId})).state,'pending');const resumed=await shows('report-reserve',{...claim,jobId:'d'.repeat(36),manager:'Andere ESM'});assert.equal(resumed.version,2);assert.equal(resumed.record.manager,'Test ESM');
+ const bytes2=Buffer.from('%PDF-1.7\n'+('Tweede synthetische opslagtest. '.repeat(6))+'\n%%EOF'),payload2={...commit,jobId:'d'.repeat(36),revision:resumed.revision,version:2,fileName:resumed.fileName,pdfBase64:bytes2.toString('base64'),sha256:createHash('sha256').update(bytes2).digest('hex')};
+ // Simuleer createFile geslaagd, metadatabevestiging/antwoord verloren.
+ const orphan=h.firstFolder.createFile({name:resumed.fileName,type:'application/pdf',content:[...bytes2]});const beforeCommit=h.firstFolder.files.filter(file=>file.mimeType==='application/pdf').length;
+ await shows('report-commit',payload2);assert.equal(h.firstFolder.files.filter(file=>file.mimeType==='application/pdf').length,beforeCommit);assert.equal((await shows('report-status',{concertId})).version,2);
+ orphan.content=[...Buffer.from('Beschadigde testbytes')];await assert.rejects(shows('report-download',{concertId}),/REPORT_UNAVAILABLE/);orphan.content=[...bytes2];
+ const destination=h.artist.createFolder('Earlier');orphan.moveTo(destination); // Vorige migratie stopte halverwege.
+ h.context.esmojoMoveShowProfilePdf_(h.firstFolder,destination,h.first.concertId,'Earlier');assert.equal(destination.files.filter(file=>file.mimeType==='application/pdf').length,2);assert.equal(JSON.parse(destination.files.find(file=>file.name==='showprofiel-pdf.json').content).concertId,'Earlier');
 });

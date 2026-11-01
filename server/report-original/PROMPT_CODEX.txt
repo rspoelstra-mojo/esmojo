@@ -1,0 +1,128 @@
+Je neemt de bestaande ESMOJO Showprofiel-PDF-generator over. Bouw geen benadering op basis van screenshots. Reproduceer de meegestuurde implementatie en originele assets. Het doel is visuele/geometrische gelijkheid bij dezelfde invoer, fonts, generatoropties, locale, tijdzone en dependencies. De referentie is de productiecode bij SOURCE_COMMIT.txt (websiteversie 2.71); het PDF-opmaakprotocol zelf heet gashouder-showprofile-v6-confidential-footer.
+
+START
+Pak dit ZIP uit. Lees generate.mjs, example-input.json, server/report-pdf.ts en de runtime-afhankelijkheden voordat je iets wijzigt. Installeer met npm ci op Node 24, daarna: node generate.mjs example-input.json nieuwe-output.pdf. Het meegeleverde example-output.pdf is een synthetische referentie, geen werkelijk concertonderzoek. example-geometry.json bevat alle getekende tekstposities en kaartmaten voor precies die referentie. MANIFEST_SHA256.json controleert alle overdrachtsbestanden. Wijzig geen productiegegevens of publicaties voor deze reproductie.
+
+EENHEDEN EN EXACTHEID
+Dit is geen HTML/CSS-, browserprint-, screenshot- of canvas-PDF. Het is directe vectortekening met pdf-lib en @pdf-lib/fontkit. Gebruik de exacte package-lock.json. PDF-maten zijn punten (pt), geen pixels: 72 pt = 1 inch. Pagina W=595.2 pt, H=841.92 pt. Bij 96 dpi: pixelwaarde = puntwaarde * 4/3; bij 144 dpi: *2. Een tekening op een andere renderresolutie heeft andere pixelmaten zonder dat de PDF-layout verandert. Originele punten blijven leidend; rond ze niet af naar pixels. De referentie is geen exact 595.28×841.89 A4; gebruik 595.2×841.92.
+
+Alle top/baseline-coördinaten hieronder worden vanaf boven gemeten. pdf-lib tekent vanaf linksonder: tekst-y = H - baseline. Een kaart met top t en hoogte h krijgt y = H-t-h. Een tekstpositie is een baseline, NIET de bovenzijde van de letter. Meet fontbreedte met het daadwerkelijk ingesloten font; tekenhoogten worden waar nodig met de echte glyph bounding boxes berekend.
+
+PRODUCTIEPAD EN INVOER
+De productieaanroep staat in reference/server/finalize-report.ts: createReportPdf(record, assets, version, show, {fitText:true}). Zet visitorDataProof, twoPageProof, compactProof en flowProof NIET aan voor normale reproductie. Dit zijn afzonderlijke proefmodi en geen standaardproductiegedrag.
+
+De echte productieafronding is momenteel alleen op Gashouder gericht. Een ruimere Skill-import voor andere venues verandert deze PDF-regel niet automatisch. ReportShow bevat artist, venue en date. record bevat onder meer concert_id, manager, updated_at, concert en workflow. De PDF haalt analyse-inhoud UITSLUITEND uit workflow.visitors.fields[id].content en workflow.artist.fields[id].content, dus de door de ESM opgeslagen tekst. Gebruik hiervoor NIET research.cards, summary_points, provenance of de teksten uit de AI-zijbalk. Conclusies komen uit workflow.visitors.score_review en workflow.artist.score_review: score en reason. attention_proposals is geen bevestigde PDF-conclusie.
+
+Voor echte afronding moeten alle vereiste onderwerpen, ticketdata en beide scores door de ESM bevestigd zijn. De backend controleert onder meer layout_version, recordidentiteit, revision, version en opgeslagen bevestigingen. Hergebruik een bestaande PDF voor dezelfde revision; maak niet automatisch een extra documentversie. Het voorbeeldscript doet uitsluitend lokale rendering, geen opslag of workflowafronding.
+
+ASSETS — ORIGINELE BYTES GEBRUIKEN
+assets/body-font.ttf is de exacte body-font uit de actieve vormgevingsbundel, ingesloten met subset:true. assets/heading-font.otf is het exacte kopfont, subset:false. Ga niet af op een zelfgekozen fontnaam zoals Aptos/Arial; de binaire fontbestanden zijn normatief. assets/watermark.png is de originele voetafbeelding, op iedere inhoudspagina getekend op x=0,y=0,width=595.2,height=91.92. assets/cover.pdf is de originele covertemplate voor het niet-Gashouder/driepagina-pad; kopieer pagina 0 met pdf.copyPages. De productievariant met twee pagina's gebruikt deze cover NIET.
+
+De server bewaart deze vier assets oorspronkelijk base64-gecodeerd in een AES-256-GCM-bundel server/assets/report-resources.enc. Voor deze overdracht zijn ze met de bestaande geautoriseerde read-only voorziening ontsleuteld. Er zitten geen sleutel, accountgegevens of deploymentgeheimen in dit pakket. Het voorbeeldscript leest de assets rechtstreeks lokaal, zodat geen productietoegang nodig is.
+
+De drie muzieklogo's zijn GEEN PNG/JPEG-bestanden. De exacte monochrome vectorpaden staan in server/proof-music-icons.ts (Simple Icons v15, CC0), inclusief de reeds genormaliseerde cubic curves. Kopieer de paden exact. Voeg geen concertfoto, ander logo, favicon of barrierplaatje toe; die horen niet in deze PDF.
+
+KLEUREN
+BLUE RGB(0,71/255,186/255) = #0047BA.
+NAVY RGB(8/255,24/255,48/255) = #081830.
+LIGHT RGB(.96,.97,.98); BORDER RGB(.85,.88,.91); WHITE (1,1,1); TEXT (.12,.16,.22); MUTED (.36,.41,.48).
+Gebruik de exacte floating-point-kleurwaarden uit de code, niet een afgeronde hexbenadering voor de fractionele kleuren.
+
+TEKSTAFBREKING EN LETTERGROOTTE
+wrap verwijdert CR, splitst op iedere LF en bewaart ook lege regels als lege regels. Binnen een regel worden woorden getrimd en door één spatie gescheiden. De breedte wordt berekend met font.widthOfTextAtSize. Niet afbreken op een willekeurig aantal tekens. Normaal geldt: één woord of URL breder dan het tekstvak geeft een ReportError; het wordt niet stil afgekapt, verkleind per woord of met een afbreekstreep gesplitst. Alleen de losse flowProof-modus kent karakterafbreking.
+
+Normale analysisSize begint op 12 pt, leading=1.18 en bodyLeading=analysisSize*1.18. Met fitText:true probeert fitReportText iedere tiende punt: 12.0,11.9,11.8,...,0.1. De EERSTE passende grootte wordt gebruikt: dus de grootste passende grootte. Het is één gedeelde analyselichaamgrootte voor BEIDE pagina's. Geen AI-samenvatting, inhoudelijke inkorting, stil weglaten of automatisch extra pagina's toevoegen. Koppen, ticketlabels, muziekiconen en bepaalde conclusie-elementen behouden hun eigen vaste groottes. Deze historische implementatie heeft geen gebruiksvriendelijke minimumfontgrootte boven 0.1; verander dit niet stil bij een exacte reproductie.
+
+De passingstoets bouwt alle blokken opnieuw en controleert:
+- som bezoekersblokhoogten + 18*(aantal-1) <= 756-269.75 = 486.25 pt;
+- som artiestblokhoogten + 18*(aantal-1) <= 746-86 = 660 pt.
+Er gelden daarnaast aparte limieten voor titels, kop, voettekst en te brede woorden. Bij fouten géén gedeeltelijk of stil gewijzigd document teruggeven.
+
+KAARTVORM EN KOLOMMEN
+Alle normale kaarten: x=50, width=495; rechterrand=545. Radius=6. Vlakke LIGHT-achtergrond, geen schaduw en geen normale buitenomlijning. De afgeronde vorm bestaat uit twee rechthoeken en vier cirkels, zoals panel(). Houd die techniek aan voor dezelfde uitkomst.
+
+Twee kolommen: scheidslijn x=297.5, vanaf top+16 tot top+height-16, kleur BORDER, dikte .7 pt. Linker tekst x=66, rechter tekst x=313.5. Tekstbreedte per kolom 215.5 pt. Beide kolomkoppen staan op baseline top+24, font heading, 12 pt, NAVY. Eerste inhoudsbaseline: top+38+analysisSize. Volgende regels iedere bodyLeading. Eénkolomskaart: tekst x=66, breedte 463 pt. Hoogte vóór verticale verdeling: 54 + max(aantal regels per kolom)*bodyLeading.
+
+DE HOOGTE VAN IEDER VAK IS DYNAMISCH
+Er bestaat geen eerlijk universeel vast pixelgetal voor ieder vak. De bestaande code verdeelt overgebleven ruimte over rekbare kaarten. Bereken per pagina available=bottom-top-18*(n-1); minimum=sum(natuurlijke hoogten). Bij minimum>available: fout. Anders extra=(available-minimum)/aantal niet-fixed kaarten. Definitieve hoogte = natuurlijke hoogte+extra voor niet-fixed; fixed kaarten krijgen geen extra. Begin met de hieronder gegeven paginatop en verhoog per kaart top met definitieve hoogte+18. Dit is de exacte formule voor ELK vak. Gebruik example-geometry.json voor de resulterende afzonderlijke coördinaten bij de meegeleverde invoer. Bij langere/andere teksten moet je opnieuw meten, niet die voorbeeldgetallen vastzetten.
+
+PAGINA 1 — PRODUCTIEVARIANT TWEE PAGINA'S
+Eerst voetafbeelding; bovenste blauwe band: x=0, y=H-204.75, width=W, height=204.75.
+De tekstkop begint links op x=50. Artiest: heading 23.76 pt, wrapbreedte425, maximaal2regels, baselineafstand28. Datums/locatie: body10.5, wrap425, regelafstand12.39. Intro: body11, wrap425, regelafstand12.98. Intro exact: 'Dit showprofiel is naar alle zorgvuldigheid opgesteld door {manager},\nals Event Safety manager betrokken bij de voorbereiding van deze show.' De twee versie-/bronregels: body9, regelafstand14, exact 'Documentversie {version}.0 · Definitief afgerond' en 'Op basis van opgeslagen gegevens van {sourceDate}'.
+
+De vier koptekstgroepen worden NIET op geschatte CSS-hoogtes gezet. Bereken voor iedere regel met fontkit glyph.bbox het hoogste maxY en laagste minY, schaal met size/unitsPerEm. Hoogte groep=bottom-top; eerste baseline=-top. Alle vier groepen beginnen samen op top=32 en worden over145 pt verdeeld met spacing=(145-som(groephoogten))/3. spacing moet eindig en >=8 zijn, anders fout. Bereken de tekstbaseline per groep exact als headerTop+group.baseline+index*group.gap. HeaderTop neemt telkens group.height+spacing toe.
+
+Rechts staat de muziekstrip: gesloten afgerond SVG-pad van52×145 pt, radius8, x493, bovenkant32. Gebruik cubic k=radius*0.5522847498307936; geen overlappende vormen wegens naden. De drie tegels: top40,88,136; x503,32×32,radius6.4,kleur(.935,.935,.935). Logo's kleur(.775,.775,.775). Spotify/YouTube symbolSize24, gecentreerd met4pt padding; Apple Music32 met0 padding. Bij Apple wordt het eerste gesloten pad verwijderd met path.slice(path.indexOf('Z')+1). PDF-klikannotaties: Rect[503,H-top-32,535,H-top], geen border. Spotify/Apple/YouTube gebruiken de verified Puscifer-links uit artist-music-links.ts; andere artiesten gebruiken URL-gecodeerde zoeklinks. Gebruik geen verzonnen artiestprofielen.
+
+'Bezoekersanalyse': x50, baseline246.75, heading23 pt,NAVY. Blokkengebied top269.75,bottom756:
+1. Twee kolommen: 'Man/vrouw verhouding' ← gender_ratio; 'Leeftijdscategorie' ← age_range.
+2. Twee kolommen: 'Aankomstprofiel' ← arrival; 'Typische kenmerken' ← typical_traits.
+3. Ticket-/herkomstkaart, fixed.
+4. 'Conclusie bezoekersanalyse', fixed, BLUE.
+Bij meer dan drie kaartverkoopregels wordt ook de demografiekaart fixed; neem deze bijzonderheid over.
+
+TICKET-/HERKOMSTKAART
+Bronnen uit workflow.visitors.fields: ticket_sales.content, visitor_origins.content, domestic_origins.content. Gebruik de bestaande parsers en ticketSalesMatch; totals moeten bij de concertdagen passen. Niet-volledige of ongeldige gegevens geven een fout, geen gefingeerde nullen.
+VisitorOrigins exact: {netherlands:string, foreign:[{country:string,percentage:string},...exact3]}. DomesticOrigins exact drie {province,percentage}. De bestaande percentagesom-/naamcontroles blijven gelden.
+
+Kaart x50,w495. Verticale dividers x215 en380, dezelfde dikte/inset. Kolomteksten x66,231,396. Titels 'Verkochte tickets', 'Top 3 landen', 'Top 3 provincies': heading11, baseline top+24. Labels body9.5, labelbreedte98, regelafstand1.18. Percentages rechts uitlijnen op table.x+133 via gemeten fontbreedte. Iedere rijhoogte=max(15,hoogte landlabel,hoogte provincielabel,hoogte eventuele datumlabel)+5. Minimaal3rijen. Kaartheight=max(110,42+som(rijhoogten)+12).
+
+Bij één datum: ticketgetal x66, baseline top+59, heading, BLUE. Grootte min(26,133/head.widthOfTextAtSize(value,26)*26). Buitenlands aandeel=(10000-round(netherlands*100))/100; Nederlandse getalnotatie, suffix '% buitenlands', body9.5 op baseline top+38+rowHeights[0]+rowHeights[1]+9.5.
+Bij meerdere data: sorteer datum/tijd. Datumlabel body8.5; tijd alleen bij meerdere shows op dezelfde dag. Labelbreedte min(96,133-breedte(ticketgetal op9.5)-8). Ticketgetal body9.5, BLUE, rechts uitgelijnd op x199. Rijen beginnen op top+38. Buitenlands aandeel body8.5 onder de laatste rij volgens exacte code. Gebruik fullShowDate en de bestaande locale.
+
+PAGINA 2
+Voetafbeelding identiek. 'Artiestanalyse': x50,baseline63,heading23,NAVY. Blokkengebied top86,bottom746:
+1. 'Artiest' ← artist_description en 'Routing' ← tour_route.
+2. 'Show karakter' ← movement en 'Curfew' ← punctuality.
+3. 'Populariteit' ← popularity en 'Maatschappelijke gevoeligheid' ← social_sensitivity.
+4. Hele breedte: 'Bijzonderheden' ← special_notes.
+5. Hele breedte, fixed, BLUE: 'Conclusie artiestanalyse'.
+Dit zijn exact de elf analysevelden, plus de ticketkaart en twee bevestigde conclusies. Geen risicobeheersmaatregelen of extra onderwerpvakken toevoegen.
+
+CONCLUSIEKAARTEN
+Beide conclusiekaarten krijgen dezelfde natuurlijke hoogte: maximum van128 en de benodigde hoogte voor BEIDE redenen/legenda's. Formule per factor: 40+wrap(reason,463,body,analysisSize).length*bodyLeading+14+wrap(legend,463,body,8.5).length*8.5*1.18+14. Titel x65,baseline top+23,heading13,WHITE. Score '{score} / 10': x468,baseline top+24,heading18,WHITE. Reden x65,tekst-top top+40,breedte463,analysisSize,WHITE. Legenda body8.5,kleur(.87,.91,1),breedte463; tekst-top top+height-14-legendHeight.
+
+Bezoekerslegenda letterlijk:
+1 = Rustig publiek met hoge naleving van instructies.
+10 = Extreem energiek publiek met verhoogde kans op ongehoorzaamheid en incidenten.
+Artiestlegenda letterlijk:
+1 = Statische, voorspelbare productie.
+10 = Intensieve show met veel dynamiek en onvoorspelbaar artiestgedrag.
+Dit zijn de bestaande PDF-legenda's; vervang ze niet door recentere Skill-scoringsregels bij een reproductie.
+
+VOETTEKST
+Voet links x50. Artiest hoofdletters, heading9, wrap375, maximaal2regels; voorlopige baselines791-(n-1-index)*11. Tweede regel body9,MUTED: '{venue} · {DD-MM-YYYY} · v{version}.0 · {pagina} / {totaal}', voorlopige baseline807. Vertrouwelijkheidstekst body9,MUTED,wrap315, eerste baseline819, opvolgende10.62:
+'Dit document is strikt vertrouwelijk en mag niet verspreid worden zonder nadrukkelijke toestemming van MOJO Concerts.'
+
+De hele voet wordt verticaal gecentreerd tussen de inhoudsonderrand en H. Meet glyph-inktgrenzen voor alle voetregels met fontkit. Neem top=min(inkt-top),bottom=max(inkt-bottom), en shift=(contentBottom+H-top-bottom)/2. Voeg shift aan ELKE voetbaseline toe. contentBottom is756 voor bezoekers en746 voor artiest. Behoud alle interne afstanden. Gebruik geen vaste afgeronde footer-y als vervanging.
+
+DATUMS EN METADATA
+Gebruik nl-NL en Europe/Amsterdam. Meerdere concertdatums lopen via reportCoverDate/reportShowDates/compactShowDates: unieke gesorteerde datums, gelijke maand compact, jaar volgens de bestaande regels. sourceDate komt uit record.updated_at, niet uit de huidige klok. Documentversie is de rapportversie uit de opslagcontext, niet websiteversie2.71. Bestandsnaam: SP_{artist}_{venue}_{DDMMYYYY}.pdf, met de exacte karaktervervanging uit reportFileName.
+PDF title: 'Showprofiel {artist} — versie {version}.0'; author=record.manager; subject='Op basis van opgeslagen gegevens van {sourceDate}'; creationDate en modificationDate beide new Date(record.updated_at).
+
+FONT-FINALISERING
+Na pdf.flush moet het heading-fontdescriptor FontFile3 gebruiken; verwijder FontFile2. Descendant subtype=CIDFontType0, verwijder CIDToGIDMap, fontstream subtype=OpenType. Dit is noodzakelijk voor het oorspronkelijke OpenType/CFF-font. Niet vervangen door standaard Helvetica en niet overslaan omdat één PDF-viewer iets ogenschijnlijk goed toont.
+
+ALTERNATIEVE MODI
+Behoud de broncode van de driepagina-/losse-covervariant en de proofmodi, maar activeer ze niet per ongeluk. Niet-Gashouder zonder twoPageProof voegt cover.pdf pagina0 toe met eigen plaatsingen; zie exact de if(!twoPageLayout)-tak. compactProof verandert onder andere padding54→42, titeltop24→20, teksttop38→32, inset16→12, gap18→10 en leading1.18→1.1. flowProof kan extra pagina's en gesplitste kaarten maken met paginateReport. Geen van deze modi hoort bij de normale {fitText:true}-productieaanroep.
+
+CONTROLE EN OPLEVERING
+1. Genereer de referentie met ongewijzigde bron en assets; vergelijk paginagrootte en aantal pagina's, geëxtraheerde tekst, links, fontinsluiting en geometry.
+2. Render beide PDFs met dezelfde PDF-renderer, resolutie en antialiasinginstellingen. Vergelijk pixel voor pixel. Gebruik geen verschillende viewers om een verschil weg te verklaren.
+3. Controleer lange teksten, lange artiestnamen, meerdere datums en te brede woorden met de meegeleverde bestaande fit-/datum-/paginatests. Nooit inhoud verwijderen om de opmaak passend te maken.
+4. Visueel 1-op-1 en byte-identiek zijn verschillende eisen. Voor byte-identiek moeten ook invoer, metadata, bibliotheekversies en serialisatie gelijk zijn. De voorbeeldgenerator is in twee verse Node-processen gecontroleerd; de SHA-uitkomst staat in VERIFICATION.json. Garandeer niet dat gewijzigde dependencies/platformen dezelfde bytes maken. Bij een letterlijke kopie van een bestaand onveranderd document is bewaren/teruggeven van de oorspronkelijke PDF de enige algemene byte-identieke route.
+5. Rapporteer exact welke bestanden je hergebruikt, welke afwijkingen je hebt gevonden en welke vergelijking daadwerkelijk is uitgevoerd. Claim geen identiteit op basis van alleen globale gelijkenis.
+
+
+CONCRETE VAKMATEN VOOR HET SYNTHETISCHE VOORBEELD (pt; geen universele vaste maten)
+Pagina 1: x=50; top=269.75; breedte=495; hoogte=95.125; radius=6.
+Pagina 1: x=50; top=382.875; breedte=495; hoogte=95.125; radius=6.
+Pagina 1: x=50; top=496; breedte=495; hoogte=114; radius=6.
+Pagina 1: x=50; top=628; breedte=495; hoogte=128; radius=6.
+Pagina 2: x=50; top=86; breedte=495; hoogte=118.53999999999999; radius=6.
+Pagina 2: x=50; top=222.54; breedte=495; hoogte=118.53999999999999; radius=6.
+Pagina 2: x=50; top=359.08; breedte=495; hoogte=118.53999999999999; radius=6.
+Pagina 2: x=50; top=495.62; breedte=495; hoogte=104.38; radius=6.
+Pagina 2: x=50; top=618; breedte=495; hoogte=128; radius=6.
+
+De originele fonts zijn met fontconfig geïdentificeerd als Aptos Regular en Futura Bold. watermark.png is1191×184 pixels; de tekengrootte blijft595.2×91.92 pt. Lokale tests: node --test tests/*.test.ts. Bestanden onder reference/ zijn alleen bronreferentie, geen zelfstandig uitvoerbare applicatie of productieroute.

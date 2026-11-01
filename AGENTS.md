@@ -223,3 +223,17 @@ maakt de betreffende categorieafronding ongeldig, met behoud van oude cijfers en
 toelichtingen in historie. Kopieer geen vertrouwelijke ticketinhoud naar dit bestand.
 De afrondoverlay beslaat alleen het inhoudsgebied, met formuliervelden binnen de
 vaste contentbox; hoofdmenu en submenu blijven zichtbaar en bereikbaar.
+
+## Definitief Showprofiel-PDF
+
+Na beide definitieve categoriebeoordelingen genereert ESMOJO automatisch het
+Showprofiel-PDF met uitsluitend bevestigde gebruikerssamenvattingen, handmatige
+ticket-/herkomstgegevens en eigen eindcijfers/toelichtingen. Nooit AI-zijbalken,
+onderzoeksantwoorden of onbevestigde voorstellen opnemen. De gecombineerde PDF
+is Vertrouwelijk en staat met het revisieregister alleen in de Drive-showmap;
+Vercel mag genereren en beveiligd doorgeven, zonder inhoud te loggen of bewaren.
+Dezelfde invoerrevisie hergebruikt het bestaande bestand; oude versies blijven
+behouden bij wijzigingen. Download blijft account-/MFA-/revisiegecontroleerd.
+De originele generator en assets staan ongewijzigd in server/report-original;
+het meegeleverde PDF-opmaakprotocol is normatief, inclusief fonts en voetafbeelding.
+Deze aangeleverde PDF-assets vervangen geen logo in de site. Zie docs/showprofiel-pdf.md.
