@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "checkedAt": "2026-11-01T20:53:39.589Z",
+  "shows": [
+    {
+      "key": "Antoon_Gashouder_18122026",
+      "name": "Antoon",
+      "dates": [
+        "2026-12-18"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "AVATAR_Gashouder_01122026",
+      "name": "AVATAR",
+      "dates": [
+        "2026-12-01"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Buiten-Westen_Gashouder_06112026",
+      "name": "Buiten Westen",
+      "dates": [
+        "2026-11-06",
+        "2026-11-07",
+        "2026-11-08"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "week"
+    },
+    {
+      "key": "BUNT._Gashouder_25112026",
+      "name": "BUNT.",
+      "dates": [
+        "2026-11-25"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "EsDeeKid_Gashouder_30112026",
+      "name": "EsDeeKid",
+      "dates": [
+        "2026-11-30"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Freya-Skye_Gashouder_14112026",
+      "name": "Freya Skye",
+      "dates": [
+        "2026-11-14"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "FS-Green_Gashouder_05122026",
+      "name": "FS Green",
+      "dates": [
+        "2026-12-05"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Kingfishr_Gashouder_03122026",
+      "name": "Kingfishr",
+      "dates": [
+        "2026-12-03"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Montell-Fish_Gashouder_13112026",
+      "name": "Montell Fish",
+      "dates": [
+        "2026-11-13"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Overmono_Gashouder_11112026",
+      "name": "Overmono",
+      "dates": [
+        "2026-11-11"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Puscifer_Gashouder_05112026",
+      "name": "Puscifer",
+      "dates": [
+        "2026-11-05"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "week"
+    },
+    {
+      "key": "Skepta_Gashouder_04122026",
+      "name": "Skepta",
+      "dates": [
+        "2026-12-04"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "¥ØU$UK€-¥UK1MAT$U-(Yousuke-Yukimatsu)_Gashouder_12032027",
+      "name": "¥ØU$UK€ ¥UK1MAT$U (Yousuke Yukimatsu)",
+      "dates": [
+        "2027-03-12"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Bonobo_Gashouder_05032027",
+      "name": "Bonobo",
+      "dates": [
+        "2027-03-05"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "week"
+    },
+    {
+      "key": "IJSLAND_Gashouder_04022027",
+      "name": "IJSLAND",
+      "dates": [
+        "2027-02-04",
+        "2027-02-05",
+        "2027-02-06"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Jacob-Banks_Gashouder_17032027",
+      "name": "Jacob Banks",
+      "dates": [
+        "2027-03-17"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Jesse-Welles_Gashouder_11022027",
+      "name": "Jesse Welles",
+      "dates": [
+        "2027-02-11"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "JPEGMAFIA_Gashouder_19022027",
+      "name": "JPEGMAFIA",
+      "dates": [
+        "2027-02-19"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Klangphonics_Gashouder_04032027",
+      "name": "Klangphonics",
+      "dates": [
+        "2027-03-04"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "week"
+    },
+    {
+      "key": "Nessa-Barrett_Gashouder_16032027",
+      "name": "Nessa Barrett",
+      "dates": [
+        "2027-03-16"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Palace_Gashouder_07032027",
+      "name": "Palace",
+      "dates": [
+        "2027-03-07"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "week"
+    },
+    {
+      "key": "Sienna-Spiro_Gashouder_14032027",
+      "name": "Sienna Spiro",
+      "dates": [
+        "2027-03-14",
+        "2027-03-15"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Warhaus_Gashouder_20022027",
+      "name": "Warhaus",
+      "dates": [
+        "2027-02-20"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "2hollis_Gashouder_10042027",
+      "name": "2hollis",
+      "dates": [
+        "2027-04-10"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Ashe_Gashouder_18042027",
+      "name": "Ashe",
+      "dates": [
+        "2027-04-18"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Jordan-Rakei_Gashouder_13042027",
+      "name": "Jordan Rakei",
+      "dates": [
+        "2027-04-13"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Orbital_Gashouder_29042027",
+      "name": "Orbital",
+      "dates": [
+        "2027-04-29"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "sor_Gashouder_03042027",
+      "name": "sor",
+      "dates": [
+        "2027-04-03"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "The-Wombats_Gashouder_07042027",
+      "name": "The Wombats",
+      "dates": [
+        "2027-04-07"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    },
+    {
+      "key": "Jean-Michel-Jarre_Gashouder_06102027",
+      "name": "Jean-Michel Jarre",
+      "dates": [
+        "2027-10-06",
+        "2027-10-07",
+        "2027-10-08"
+      ],
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "group": "period"
+    }
+  ]
+}
