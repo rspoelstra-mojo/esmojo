@@ -93,6 +93,9 @@ function esmojoShows_(input) {
       }
       const generalFolder = DriveApp.getFolderById(first.folderId);
       const oldGeneral = group.find(row => row.generalFileId);
+      if (oldGeneral && oldGeneral.concertId !== first.concertId && typeof esmojoMoveResearch_ === 'function') {
+        esmojoMoveResearch_(DriveApp.getFolderById(oldGeneral.folderId), generalFolder, oldGeneral.concertId, first.concertId);
+      }
       let generalFile = esmojoShowFile_(generalFolder, 'algemeen.json');
       if (!generalFile && oldGeneral && oldGeneral.concertId !== first.concertId) {
         // Alleen ons eigen gegenereerde algemene bestand verplaatsen, geen
