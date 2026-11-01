@@ -1,0 +1,12 @@
+{
+  "source_commit": "eb2fa1a532267d7963f3d2358308c04b3bf8cfe6",
+  "node_version": "v24.19.0",
+  "two_fresh_processes_byte_identical": true,
+  "example_pdf_sha256": "e66f0bb6753a783866e9a6fdb474e58e70343ebfeca90de4ec5c41fe989dab1a",
+  "page_size_pt": [
+    595.2,
+    841.92
+  ],
+  "pages": 2,
+  "tests_log": "✔ pagination includes gaps, accepts exact fits and moves intact cards without empty trailing pages (1.947774ms)\n✔ ticket figures stay with the conclusion when the pair fits a continuation page (0.375858ms)\n✔ oversized blocks split with content preserved and all planned pages remain within their bounds (0.752353ms)\n✔ unbreakable oversized content fails instead of looping or silently dropping data (0.566346ms)\n✔ a header-only first page remains in the plan so continuation content cannot overlap its header (0.177277ms)\n✔ text fitting tries every exact tenth and stops at the largest fitting size (2.906089ms)\n✔ text fitting preserves the original size when possible and never skips a tenth (0.27679ms)\n✔ text fitting cannot loop indefinitely or silently drop text if no size fits (0.630425ms)\nℹ tests 8\nℹ suites 0\nℹ pass 8\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 147.601322\n"
+}

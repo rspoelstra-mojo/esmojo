@@ -1,3 +1,5 @@
+import { waitUntil } from '@vercel/functions';
+import { createShowProfilePdfService, validatePdfRequest } from './showprofile-pdf.js';
 import { validateFinalRequest } from '../shared/analysis-finalization.js';
 import { validateTicketRequest } from './ticket-data.js';
 import { getMojoPhoto } from './mojo-photo.js';
@@ -9,7 +11,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, shows = createShowsStore({ env }) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -90,8 +92,15 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
+      const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
+      if(action==='show-profile-pdf'&&req.method==='POST'){
+        try{const input=validatePdfRequest(req.body);if(input.operation==='download')return reply(200,await pdfService.download(input.concertId));const status=await pdfService.status(input.concertId);
+          if((input.operation==='ensure'&&status.state==='pending')||(input.operation==='retry'&&['pending','failed'].includes(status.state))){schedulePdf(pdfService.ensure(input.concertId,pdfManager()).catch(()=>{}));return reply(200,{state:'generating'});}return reply(200,status);
+        }catch(error){return reply(error.message==='VALIDATION'?400:['REPORT_NOT_READY','REPORT_CONFLICT'].includes(error.message)?409:503,{error:error.message==='VALIDATION'?'Ongeldig PDF-verzoek.':'Het showprofiel is niet beschikbaar. Vernieuw de show; je gegevens zijn behouden.'});}
+      }
       if (action === 'analysis-finalization' && req.method === 'POST') {
-        try { const input = validateFinalRequest(req.body); const {operation,...payload}=input; return reply(200, await shows('final-'+operation,payload)); }
+        try { const input = validateFinalRequest(req.body); const {operation,...payload}=input; const result=await shows('final-'+operation,payload);if(operation==='complete'&&result.finalization?.categories.visitors.completedAt&&result.finalization?.categories.artist.completedAt)schedulePdf(pdfService.ensure(input.concertId,pdfManager()).catch(()=>{}));return reply(200,result); }
         catch(error) { const code=error.message; return reply(code==='VALIDATION'?400:['FINAL_CONFLICT','FINAL_NOT_READY'].includes(code)?409:503,{error:code==='VALIDATION'?'Kies een cijfer van 1 tot en met 10 en vul een toelichting in (maximaal 2000 tekens).':code==='FINAL_NOT_READY'?'Nog niet alle vereiste stappen zijn afgerond. Vernieuw het overzicht.':code==='FINAL_CONFLICT'?'De analyse is intussen gewijzigd of al afgerond. Vernieuw het overzicht; je invoer is behouden.':'Afronden of laden is niet gelukt. Je invoer is behouden.'}); }
       }
       if (action === 'ticket-data' && req.method === 'POST') {

@@ -1,0 +1,102 @@
+{
+  "record": {
+    "concert_id": "VOORBEELD_GASHOUDER_14112026",
+    "manager": "Voorbeeld ESM",
+    "updated_at": "2026-10-30T12:00:00.000Z",
+    "status": "pending",
+    "workflow": {
+      "visitors": {
+        "fields": {
+          "gender_ratio": {
+            "content": "Dit is synthetische voorbeeldtekst voor gender_ratio.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "age_range": {
+            "content": "Dit is synthetische voorbeeldtekst voor age_range.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "arrival": {
+            "content": "Dit is synthetische voorbeeldtekst voor arrival.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "typical_traits": {
+            "content": "Dit is synthetische voorbeeldtekst voor typical_traits.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "ticket_sales": {
+            "content": "4500"
+          },
+          "visitor_origins": {
+            "content": "{\"netherlands\": \"90\", \"foreign\": [{\"country\": \"Belgi\\u00eb\", \"percentage\": \"5\"}, {\"country\": \"Duitsland\", \"percentage\": \"3\"}, {\"country\": \"Frankrijk\", \"percentage\": \"2\"}]}"
+          },
+          "domestic_origins": {
+            "content": "[{\"province\": \"Noord-Holland\", \"percentage\": \"50\"}, {\"province\": \"Zuid-Holland\", \"percentage\": \"30\"}, {\"province\": \"Utrecht\", \"percentage\": \"20\"}]"
+          }
+        },
+        "score_review": {
+          "score": 4,
+          "reason": "Voorbeeld van een door de ESM bevestigde samenvatting. Uitsluitend bedoeld voor de opmaakcontrole.",
+          "completed_at": "2026-10-30T12:00:00.000Z",
+          "manager": "Voorbeeld ESM"
+        }
+      },
+      "artist": {
+        "fields": {
+          "artist_description": {
+            "content": "Dit is synthetische voorbeeldtekst voor artist_description.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "tour_route": {
+            "content": "Dit is synthetische voorbeeldtekst voor tour_route.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "movement": {
+            "content": "Dit is synthetische voorbeeldtekst voor movement.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "punctuality": {
+            "content": "Dit is synthetische voorbeeldtekst voor punctuality.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "popularity": {
+            "content": "Dit is synthetische voorbeeldtekst voor popularity.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "social_sensitivity": {
+            "content": "Dit is synthetische voorbeeldtekst voor social_sensitivity.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          },
+          "special_notes": {
+            "content": "Dit is synthetische voorbeeldtekst voor special_notes.",
+            "completed_at": "2026-10-30T12:00:00.000Z"
+          }
+        },
+        "score_review": {
+          "score": 4,
+          "reason": "Voorbeeld van een door de ESM bevestigde samenvatting. Uitsluitend bedoeld voor de opmaakcontrole.",
+          "completed_at": "2026-10-30T12:00:00.000Z",
+          "manager": "Voorbeeld ESM"
+        }
+      }
+    },
+    "research": {},
+    "concert": {
+      "id": "synthetic",
+      "artist": "Voorbeeldartiest",
+      "venue": "Gashouder",
+      "city": "Amsterdam",
+      "date": "2026-11-14",
+      "time": "20:00",
+      "genre": "Voorbeeld"
+    }
+  },
+  "version": 1,
+  "show": {
+    "artist": "Voorbeeldartiest",
+    "venue": "Gashouder",
+    "date": "2026-11-14"
+  },
+  "options": {
+    "fitText": true
+  }
+}

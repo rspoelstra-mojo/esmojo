@@ -102,3 +102,10 @@
 .analysis-final-form .analysis-summary { margin-bottom: 18px; }
 .analysis-final-form .analysis-editor-actions { margin-top: 22px; }
 @media (max-width: 700px) { .analysis-final-overlay { padding: 16px; } .analysis-final-box { padding: 20px; } }
+
+.profile-pdf-card { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); }
+.profile-pdf-card h3 { margin: 0 0 12px; font-size: 17px; font-weight: 650; }
+.profile-pdf-card p { margin: 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.profile-pdf-card button { width: 100%; margin-top: 16px; padding: 10px; font-size: 13px; }
+.profile-pdf-loading h3::after { content: ''; display: inline-block; width: 14px; height: 14px; margin-left: 12px; border: 2px solid var(--line); border-top-color: var(--profile-blue); border-radius: 50%; vertical-align: -1px; animation: submenu-spin .75s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .profile-pdf-loading h3::after { animation: none; border-color: var(--profile-blue); } }
