@@ -1,3 +1,4 @@
+import { getMojoPhoto } from './mojo-photo.js';
 import { validateShowProfile } from './show-profile.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
@@ -87,6 +88,13 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if (action === 'show-photo' && req.method === 'POST') {
+        const input = req.body;
+        if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });
+        const index = await shows('list');
+        const concert = index.concerts.find(row => row.concertId === input.concertId);
+        return reply(200, { photo: concert ? await getMojoPhoto(concert.sourceUrl) : null });
+      }
       if (action === 'show-profile' && req.method === 'POST') {
         try {
           const input = validateShowProfile(req.body);
