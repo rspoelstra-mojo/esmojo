@@ -3,7 +3,7 @@
 .profile-category-intro p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
 .profile-layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--profile-aside-width, 250px); align-items: start; gap: 20px; }
 .profile-categories, .profile-insights { display: grid; gap: 20px; min-width: 0; }
-.profile-category, .profile-overview { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: var(--profile-corner-radius, 12px); background: var(--canvas); }
+.profile-category { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: var(--profile-corner-radius, 12px); background: var(--canvas); }
 .profile-category-header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
 .profile-category-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; background: var(--profile-tint); color: var(--profile-blue); }
 .profile-category-icon svg { width: 23px; height: 23px; }
@@ -24,15 +24,6 @@
 .visitor-analysis-ai, .visitor-analysis-field { min-width: 0; }
 .visitor-analysis-ai h5, .visitor-analysis-field label { display: block; margin: 0 0 10px; font-size: 13px; line-height: 1.5; font-weight: 600; }
 .visitor-analysis-field textarea { display: block; width: 100%; max-width: 100%; min-height: 160px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); color: var(--text); font: inherit; font-size: 14px; line-height: 1.5; resize: vertical; }
-.profile-overview h3 { margin: 0 0 18px; font-size: 17px; font-weight: 650; }
-.profile-overview-body { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 18px; }
-.profile-progress-ring { display: grid; place-items: center; width: 96px; height: 96px; flex: 0 0 96px; border-radius: 50%; background: radial-gradient(closest-side, var(--canvas) 73%, transparent 75%), conic-gradient(var(--profile-blue) var(--progress), var(--line) 0); font-size: 20px; font-weight: 700; }
-.profile-legend { display: grid; gap: 12px; flex: 1 1 180px; list-style: none; margin: 0; padding: 0; font-size: 12px; }
-.profile-legend li { display: flex; align-items: center; gap: 8px; }
-.profile-legend strong { margin-left: auto; font-weight: 600; }
-.profile-status-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--muted); }
-.profile-legend [data-status="completed"] .profile-status-dot { background: #25a45d; }
-.profile-legend [data-status="draft"] .profile-status-dot { background: #b99832; }
 .profile-highlight { display: flex; align-items: flex-start; gap: 12px; border-radius: 12px; padding: 18px; background: var(--profile-tint); }
 .profile-highlight-icon { width: 22px; flex: 0 0 22px; color: var(--profile-blue); }
 .profile-highlight-icon svg { width: 22px; height: 22px; }
@@ -95,7 +86,7 @@
 .analysis-final-option { position: relative; cursor: pointer; }
 .analysis-final-option input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; }
 .analysis-final-option span { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; font-size: 16px; }
-.analysis-final-option input:checked + span { color: var(--profile-blue); background: var(--profile-tint); border-color: var(--profile-blue); font-weight: 650; }
+.analysis-final-option input:checked + span { color: hsl(var(--score-hue) 80% 24%); background: hsl(var(--score-hue) 85% 88%); border-color: hsl(var(--score-hue) 75% 34%); font-weight: 650; }
 .analysis-final-option input:focus-visible + span { outline: 2px solid var(--profile-blue); outline-offset: 2px; }
 .analysis-final-meaning { margin: 18px 0 26px; font-size: 14px; line-height: 1.6; }
 .analysis-final-meaning p { margin: 8px 0; }
@@ -109,3 +100,6 @@
 .profile-pdf-card button { width: 100%; margin-top: 16px; padding: 10px; font-size: 13px; }
 .profile-pdf-loading h3::after { content: ''; display: inline-block; width: 14px; height: 14px; margin-left: 12px; border: 2px solid var(--line); border-top-color: var(--profile-blue); border-radius: 50%; vertical-align: -1px; animation: submenu-spin .75s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .profile-pdf-loading h3::after { animation: none; border-color: var(--profile-blue); } }
+
+/* De kopbadge eindigt op dezelfde lijn als de status vóór de chevron. */
+.profile-category-count { margin-inline-start: auto; margin-inline-end: 39px; }
