@@ -1,3 +1,4 @@
+import { validateFinalRequest } from '../shared/analysis-finalization.js';
 import { validateTicketRequest } from './ticket-data.js';
 import { getMojoPhoto } from './mojo-photo.js';
 import { validateShowProfile } from './show-profile.js';
@@ -89,6 +90,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if (action === 'analysis-finalization' && req.method === 'POST') {
+        try { const input = validateFinalRequest(req.body); const {operation,...payload}=input; return reply(200, await shows('final-'+operation,payload)); }
+        catch(error) { const code=error.message; return reply(code==='VALIDATION'?400:['FINAL_CONFLICT','FINAL_NOT_READY'].includes(code)?409:503,{error:code==='VALIDATION'?'Kies een cijfer van 1 tot en met 10 en vul een toelichting in (maximaal 2000 tekens).':code==='FINAL_NOT_READY'?'Nog niet alle vereiste stappen zijn afgerond. Vernieuw het overzicht.':code==='FINAL_CONFLICT'?'De analyse is intussen gewijzigd of al afgerond. Vernieuw het overzicht; je invoer is behouden.':'Afronden of laden is niet gelukt. Je invoer is behouden.'}); }
+      }
       if (action === 'ticket-data' && req.method === 'POST') {
         try { const input = validateTicketRequest(req.body); return reply(200, await shows(input.operation, { ...input.payload, actor })); }
         catch (error) { const code = error.message; return reply(code === 'VALIDATION' ? 400 : code === 'TICKET_CONFLICT' ? 409 : 503, { error: code === 'TICKET_CONFLICT' ? 'Dit veld is gereserveerd of intussen gewijzigd. Je invoer is behouden. Ga terug en laad de laatste gegevens.' : code === 'VALIDATION' ? 'Controleer de ingevoerde waarden en showdagen.' : 'Laden of opslaan is niet gelukt. Je invoer is behouden.' }); }

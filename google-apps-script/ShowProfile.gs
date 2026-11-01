@@ -41,22 +41,23 @@ function esmojoShowProfile_(request) {
           || !Number.isFinite(Date.parse(value.researchedAt))) throw new Error('CONFLICT');
       return { questionNumber: number, question: value.question, answer: value.answer, sources: value.sources, researchedAt: value.researchedAt };
     };
-    if (request.questionNumber !== undefined) return { revision: document.revision, analyses: document.analyses, research: readResearch(request.questionNumber) };
+    if (request.questionNumber !== undefined) return { revision: document.revision, analyses: document.analyses, research: readResearch(request.questionNumber), finalization: esmojoAnalysisFinalState_(target,document) };
     const researchByNumber = {}, researchErrors = {};
     for (let number = 1; number <= 11; number++) {
       try { const research = readResearch(number); if (research) researchByNumber[number] = research; }
       catch { researchErrors[number] = 'Onderzoeksbestand kon niet worden gelezen. Vernieuw de pagina of laat het bestand controleren.'; }
     }
-    return { revision: document.revision, analyses: document.analyses, researchByNumber, researchErrors, research: null };
+    return { revision: document.revision, analyses: document.analyses, researchByNumber, researchErrors, research: null, finalization: esmojoAnalysisFinalState_(target,document) };
   }
   if (request.revision !== document.revision) throw new Error('PROFILE_CONFLICT');
+  esmojoInvalidateAnalysisFinal_(target.folder,target.primary.concertId,request.questionNumber<=4?'visitors':'artist');
   document.analyses[String(request.questionNumber)] = { summary: request.summary, status: request.status, updatedAt: new Date().toISOString() };
   document.revision++;
   const body = JSON.stringify(document, null, 2);
   const saved = file ? (file.setContent(body), file) : target.folder.createFile(Utilities.newBlob(body, 'application/json', filename));
   const verified = esmojoReadShowProfile_(saved, target.primary.concertId);
   if (JSON.stringify(verified) !== JSON.stringify(document)) throw new Error('UNAVAILABLE');
-  return { revision: verified.revision, analyses: verified.analyses };
+  return { revision: verified.revision, analyses: verified.analyses, finalization: esmojoAnalysisFinalState_(target,verified) };
 }
 function esmojoMoveShowProfile_(from, to, oldId, newId) {
   const source = esmojoShowFile_(from, 'showprofiel.json'), destination = esmojoShowFile_(to, 'showprofiel.json');
