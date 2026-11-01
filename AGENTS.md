@@ -189,3 +189,16 @@ De gebruiker heeft op 1 november 2026 gevraagd de elf bestaande onderzoeks-JSONâ
 correct in het ingelogde Showprofiel te tonen. AI-samenvatting, volledige analyse,
 bronnen en onderzoeksdatum zijn leesbaar per onderwerp. Dit wijzigt geen eigen
 samenvattingen of concept/afgerond-status; onderzoek blijft afzonderlijk concept.
+
+## Handmatige bezoekersdata
+
+De gebruiker classificeert alle ingevoerde aantallen en herkomstgegevens expliciet
+als Vertrouwelijk. Toon Aantallen en herkomst binnen Showprofiel onder de bestaande
+tabjes met Terug naar overzicht; geen extra AI-veld of nieuwe paginaroute. Bewaar
+workflow.visitors.fields.ticket_sales/visitor_origins/domestic_origins inclusief
+content en completed_at in workflow_json in bezoekersdata.json in de canonieke
+concert/reeksmap in Drive. Bewerkreserveringen en wijzigingshistorie staan uitsluitend
+in hetzelfde vertrouwelijke bestand; account/MFA, servervalidatie, vervallende
+veldreserveringen en versies beschermen iedere opslag. Tijdelijke concepten alleen
+in browsergeheugen. Geen logs, analytics of persistente browseropslag van invoer.
+De elf openbare AI-bestanden en eigen Showprofiel-samenvattingen blijven gescheiden.

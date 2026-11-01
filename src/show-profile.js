@@ -1,4 +1,5 @@
 import './show-profile.css';
+import { createTicketDataPage } from './ticket-data-page.js';
 import { access } from './auth.js';
 import { researchView, renderResearch, safeResearchUrl } from './lib/research-view.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
@@ -21,6 +22,7 @@ export function createShowProfile(panel, { show } = {}) {
   const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
   const drafts = new Map();
+  const ticketState = { drafts: {}, base: {} }; let disposeTickets = () => {}, ticketOpen = false;
   let researchByNumber = null, researchErrors = {};
   const section = node('section', 'show-profile'); panel.append(section);
   const menuLink = document.querySelector('#submenu-navigation [aria-current="page"]');
@@ -32,10 +34,10 @@ export function createShowProfile(panel, { show } = {}) {
     loaded = false; loadError = ''; renderOverview(); const finish = loading?.start(); panel.setAttribute('aria-busy', 'true');
     try { const data = await request({ operation: 'read' }); if (disposed) return; records = data.analyses; revision = data.revision; researchByNumber = data.researchByNumber ?? null; researchErrors = data.researchErrors || {}; loaded = true; }
     catch { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.'; }
-    finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed) renderOverview(); }
+    finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed && !ticketOpen) renderOverview(); }
   }
   function renderOverview(focusNumber) {
-    editorNumber = null; section.replaceChildren();
+    disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
     if (loadError) { const retry = node('button', 'secondary-button', 'Opnieuw laden'); retry.type = 'button'; retry.onclick = load; section.append(message(loadError), retry); }
     const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
     for (const category of analysisCategories) {
@@ -47,6 +49,13 @@ export function createShowProfile(panel, { show } = {}) {
         const title = node('span', 'analysis-row-title', entry.question), arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
         button.append(title, badgeFor(entry.number), arrow); button.onclick = () => openEditor(entry.number);
         const row = node('div', 'visitor-analysis'); row.append(button); card.append(row);
+      }
+      if (category.title === 'Bezoekersanalyse') {
+        const row = node('div', 'visitor-analysis'), button = node('button', 'visitor-analysis-summary'); button.type = 'button';
+        const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
+        button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'), node('span','analysis-status','Handmatig'),arrow);
+        button.onclick = () => { ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,state:ticketState,onBack:()=>renderOverview()}); };
+        row.append(button);card.append(row);
       }
       categories.append(card);
     }
@@ -136,5 +145,5 @@ export function createShowProfile(panel, { show } = {}) {
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
   load();
-  return () => { disposed = true; loading?.dispose(); drafts.clear(); records = {}; researchByNumber = null; researchErrors = {}; };
+  return () => { disposed = true; disposeTickets(); loading?.dispose(); drafts.clear(); records = {}; researchByNumber = null; researchErrors = {}; };
 }
