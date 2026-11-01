@@ -160,10 +160,16 @@ Bewaar geen sleutels in broncode. Publiceer geen service-role-sleutel of
 Google-credentials in frontendbundels. Een Google-login op zichzelf bewijst geen
 toestemming tot vertrouwelijke gegevens.
 
-## Onderzoeksimport (later te bouwen)
+## Onderzoeksbrug
 
-Beoogde route: ChatGPT-onderzoek naar een JSON-bestand in Google Drive, vervolgens
-import in ESMOJO als concept voor controle. Bepaal de JSON-structuur samen met de
-gebruiker en controleer de beschikbare Drive-schrijfmogelijkheid voordat de
-koppeling wordt gebouwd. Classificeer de velden vóór import en splits opslag
-volgens categorie. Er is nog geen importkoppeling geïmplementeerd.
+De elf onderzoeksantwoorden, bronlinks en onderzoeksdatum zijn expliciet Openbaar.
+De brug wordt voorbereid volgens docs/research-bridge.md; live activatie is nog
+niet bevestigd. Gebruik .agents/skills/esmojo-onderzoek/SKILL.md bij onderzoek.
+De elf echte prompts ontbreken nog; verzin ze niet. Eén JSON-bestand per vraag,
+uitsluitend bij de eerste showdatum van de reeks. De server kiest de bestemming
+via de bestaande index en valideert de Drive-parentketen. Alleen onderzoek_01.json
+t/m onderzoek_11.json, geen overschrijven/verwijderen of accounttoegang. Bestaande
+identieke uploads mogen veilig worden herhaald. Upload én teruglezen verifiëren.
+De eigen onderzoekstoken hoort uitsluitend in Vercel en als secretvereiste voor
+esmojo.nl in de uitvoeromgeving, nooit in code/chat/logs. Onderzoeks-JSON wordt
+voorlopig als concept opgeslagen, niet automatisch op de website getoond.
