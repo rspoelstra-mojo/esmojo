@@ -4,9 +4,9 @@ import { startAuth } from './auth.js';
 import { createAccountsView } from './accounts.js';
 import { createProfileView, renderAvatar } from './profile.js';
 import { createSubmenuSearch } from './submenu-search.js';
-import { createShowsSubmenu } from './shows.js';
+import { createShowsSubmenu, refreshShowsMenu } from './shows.js';
 
-let profile = null;
+let profile = null, menuRefreshTimer=null;
 let disposePage = () => {};
 const submenuSearch = createSubmenuSearch({
   heading: document.querySelector('.submenu-heading'), input: document.querySelector('#submenu-search-input'),
@@ -95,6 +95,9 @@ renderTheme();
 startAuth({
   onReady(current) {
     profile = current;
+    clearInterval(menuRefreshTimer);
+    void refreshShowsMenu();
+    menuRefreshTimer=setInterval(()=>{if(!document.hidden)void refreshShowsMenu();},60000);
     document.querySelector('.rail').hidden = false;
     document.querySelector('.workspace').hidden = false;
     document.querySelector('[data-page="beheerder"]').hidden = profile.role !== 'beheerder';
@@ -102,6 +105,7 @@ startAuth({
     renderPage();
   },
   onSignedOut() {
+    clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
     profile = null; disposePage(); disposePage = () => {};
     document.querySelector('.content-box').replaceChildren();

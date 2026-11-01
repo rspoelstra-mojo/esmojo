@@ -237,3 +237,27 @@ behouden bij wijzigingen. Download blijft account-/MFA-/revisiegecontroleerd.
 De originele generator en assets staan ongewijzigd in server/report-original;
 het meegeleverde PDF-opmaakprotocol is normatief, inclusief fonts en voetafbeelding.
 Deze aangeleverde PDF-assets vervangen geen logo in de site. Zie docs/showprofiel-pdf.md.
+
+## Direct menu en sessie-opstart
+
+Op verzoek van de gebruiker: hoofdmenu en submenu verschijnen na sessiecontrole
+zonder eigen laadplaceholder. Shows gebruikt een meegeleverde openbare beginlijst
+en een lokale cache van uitsluitend concert-ID, artiestnaam, datums, zaal en stad.
+Geen profielen, tokens, rechten, analyses, ticketdata of foto's hierin bewaren.
+Ververs maximaal één keer per Nederlands middagvenster (12.00 tot volgende 12.00),
+op de achtergrond; behoud het bestaande menu en open concepten bij vernieuwing.
+Datumgroepen worden lokaal voor vandaag berekend. Alleen pagina-inhoud toont een
+laadrondje in de bijbehorende menuknop. Autorisatie blijft serverzijdig verplicht.
+De initiële sessiecontrole toont het originele gecentreerde logo met vulanimatie
+op een neutrale lichte achtergrond; oorspronkelijke vormen en kleuren blijven
+intact. De concertachtergrond verschijnt uitsluitend bij het echte inlogformulier.
+
+## Websiteversie
+
+De gebruiker wil vanaf deze publicatie V1.00 klein en horizontaal gecentreerd
+onder de profielfoto in het hoofdmenu zien. Verhoog bij iedere volgende gepubliceerde
+website-update het nummer met één honderdste: V1.01, V1.02 enzovoort. Werk de zichtbare
+tekst en het toegankelijke versielabel in index.html samen bij. Niet bij losse
+branch-/taaknotitiecommits verhogen. Een grote versiesprong naar V2.0 gebeurt
+uitsluitend op expliciet verzoek van de gebruiker; nooit automatisch doortellen
+naar een nieuw hoofdnummer. Dit is de websiteversie, niet de PDF-documentversie.
