@@ -88,7 +88,7 @@ function esmojoResearchTarget_(concertId) {
   if (!artistFolder || parents.hasNext() || artistFolder.isTrashed() || esmojoArtistKey_(artistFolder.getName()) !== esmojoArtistKey_(primary.artist)) throw new Error();
   const artistParents = artistFolder.getParents();
   if (!artistParents.hasNext() || artistParents.next().getId() !== production.getId() || artistParents.hasNext()) throw new Error();
-  return { selected, primary, folder, seriesDates: index.concerts.filter(row => row.generalConcertId === primary.concertId).map(row => row.date).sort() };
+  return { selected, primary, folder, seriesShows: index.concerts.filter(row => row.generalConcertId === primary.concertId).map(row => ({ date: row.date, time: row.time || 'Niet vermeld' })), seriesDates: index.concerts.filter(row => row.generalConcertId === primary.concertId).map(row => row.date).sort() };
 }
 function esmojoResearchConcert_(row) { return { concertId: row.concertId, artist: row.artist, venue: 'Gashouder', city: 'Amsterdam', date: row.date }; }
 function esmojoResearchName_(number) { return 'onderzoek_' + ('0' + number).slice(-2) + '.json'; }
