@@ -51,7 +51,7 @@ function esmojoMcpAuth_(input) {
     if (p.operation === 'register') {
       if (state.clients.length >= 200) fail('LIMIT');
       text(p.clientId, 100); text(p.name, 80);
-      const allowed = ['https://chatgpt.com/connector_platform/oauth_redirect', 'https://chat.openai.com/connector_platform/oauth_redirect'];
+      const allowed = ['https://chatgpt.com/connector_platform_oauth_redirect', 'https://chatgpt.com/connector_platform/oauth_redirect', 'https://chat.openai.com/connector_platform/oauth_redirect'];
       if (!Array.isArray(p.redirectUris) || !p.redirectUris.length || p.redirectUris.length > 2 || p.redirectUris.some(u => !allowed.includes(u)) || state.clients.some(x => x.id === p.clientId)) fail('INVALID_CLIENT');
       if (!['none', 'client_secret_post', 'client_secret_basic'].includes(p.authMethod) || (p.authMethod !== 'none' && !/^[a-f0-9]{64}$/.test(p.secretHash || ''))) fail('INVALID_CLIENT');
       state.clients.push({ id: p.clientId, name: p.name, redirectUris: p.redirectUris, authMethod: p.authMethod, secretHash: p.authMethod === 'none' ? null : p.secretHash, createdAt: now });

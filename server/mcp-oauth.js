@@ -7,7 +7,9 @@ export const RESOURCE = `${ISSUER}/api/mcp`;
 export const SCOPE = 'esmojo.research';
 const endpoint = action => `${ISSUER}/api/mcp-oauth?action=${action}`;
 const cookieName = '__Host-esmojo-mcp-consent';
-const redirectUris = ['https://chatgpt.com/connector_platform/oauth_redirect', 'https://chat.openai.com/connector_platform/oauth_redirect'];
+// Current OpenAI stable redirect (RFC 9207); keep the earlier exact paths for
+// already registered clients. Never widen this to a host/path wildcard.
+const redirectUris = ['https://chatgpt.com/connector_platform_oauth_redirect', 'https://chatgpt.com/connector_platform/oauth_redirect', 'https://chat.openai.com/connector_platform/oauth_redirect'];
 const safe = text => String(text).replace(/[&<>"']/g, x => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[x]);
 const key = env => {
   if (!env.GOOGLE_DRIVE_SHARED_SECRET || env.GOOGLE_DRIVE_SHARED_SECRET.length < 32) throw Error('CONFIG');
