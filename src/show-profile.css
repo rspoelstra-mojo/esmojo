@@ -70,3 +70,15 @@
 .analysis-ai-summary { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
 .analysis-ai-text { flex: 1 1 260px; min-width: 0; }
 .analysis-adopt { flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--profile-blue); border-radius: 7px; background: var(--canvas); color: var(--profile-blue); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+/* Opmaak uit onderzoeks-JSON: vaste tekstmaten, uitsluitend binnen de contentbox. */
+.analysis-researched { margin: -4px 0 14px; color: var(--muted); font-size: 12px; }
+.analysis-researched:empty { display: none; }
+.analysis-ai-text, .analysis-research-answer, .analysis-research-sources { white-space: normal; }
+.analysis-ai-text p, .analysis-research-answer p { margin: 0 0 12px; white-space: pre-line; }
+.analysis-ai-text > :last-child, .analysis-research-answer > :last-child { margin-bottom: 0; }
+.analysis-research-answer h4 { margin: 14px 0 8px; font-size: 14px; }
+.analysis-research-details .analysis-research-answer ul, .analysis-research-details .analysis-research-answer ol { margin: 0; padding: 0 0 0 22px; white-space: normal; }
+.analysis-research-answer li, .analysis-research-sources li { margin-bottom: 10px; }
+.analysis-research-sources { padding: 0 16px 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.analysis-research-sources ol, .analysis-research-sources ul { padding: 0 0 0 22px; margin: 0; white-space: normal; }
