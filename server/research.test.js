@@ -51,7 +51,7 @@ function harness(firstOffset = 4) {
     DriveApp: { getFolderById: id => { reads++; if (!all.has(id)) throw new Error(); return all.get(id); } },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
-  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
+  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs', 'ShowProfile.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
   const raw = input => context.doPost({ postData: { contents: JSON.stringify(input) } });
   const request = async (url, options) => { assert.equal(url, env.GOOGLE_DRIVE_SCRIPT_URL); envelope = JSON.parse(options.body); return Response.json(raw(envelope)); };
   const store = createResearchStore({ env, request });
@@ -155,4 +155,40 @@ test('onderzoeksmigratie is hervatbaar na een onderbroken metadata-update of map
     h.context.esmojoMoveResearch_(h.firstFolder, target, h.first.concertId, 'earlier');
     assert.equal(h.firstFolder.files.some(file => file.name === 'onderzoek_01.json'), false); assert.equal(target.files.length, 1); assert.equal(JSON.parse(target.files[0].content).concertId, 'earlier');
   }
+});
+
+
+test('Showprofiel slaat samenvatting en status apart op, leest terug en weigert revisieconflicten', async () => {
+  const h = harness(), shows = createShowsStore({ env, request: h.request });
+  const read = await shows('profile-read', { concertId: h.later.concertId });
+  assert.equal(read.revision, 0); assert.deepEqual(read.analyses, {});
+  const draft = await shows('profile-save', { concertId: h.later.concertId, questionNumber: 1, status: 'draft', summary: 'Openbare testsamenvatting', revision: 0 });
+  assert.equal(draft.revision, 1); assert.equal(draft.analyses[1].status, 'draft');
+  assert.equal(h.firstFolder.files.filter(file => file.name === 'showprofiel.json').length, 1);
+  assert.equal(h.laterFolder.files.filter(file => file.name === 'showprofiel.json').length, 0);
+  assert.equal(h.firstFolder.files.filter(file => file.name.startsWith('onderzoek_')).length, 0);
+  await assert.rejects(shows('profile-save', { concertId: h.first.concertId, questionNumber: 1, status: 'completed', summary: 'Stale edit', revision: 0 }), /PROFILE_CONFLICT/);
+  const completed = await shows('profile-save', { concertId: h.first.concertId, questionNumber: 1, status: 'completed', summary: 'Afgeronde testsamenvatting', revision: 1 });
+  assert.equal(completed.analyses[1].status, 'completed');
+  const restored = await shows('profile-read', { concertId: h.later.concertId, questionNumber: 1 });
+  assert.deepEqual(restored.analyses, completed.analyses); assert.equal(restored.research, null);
+  const replay = h.raw(h.envelope()); assert.equal(replay.ok, true); // Een read verandert niets.
+  const result = await shows('profile-save', { concertId: h.first.concertId, questionNumber: 2, status: 'draft', summary: '', revision: 2 });
+  assert.equal(result.revision, 3);
+  assert.equal(h.raw(h.envelope()).ok, false); // Een write mag niet worden herhaald.
+  await assert.rejects(shows('profile-save', { concertId: h.first.concertId, questionNumber: 1, status: 'completed', summary: '', revision: 3 }));
+  await assert.rejects(shows('profile-read', { concertId: '../accounts' }));
+  const before = h.writes(); h.block();
+  await assert.rejects(shows('profile-save', { concertId: h.first.concertId, questionNumber: 1, status: 'draft', summary: 'Busy', revision: 3 }));
+  assert.equal(h.writes(), before);
+});
+
+test('Showprofiel volgt alleen de algemene reeksmap bij een eerdere showdatum', async () => {
+  const h = harness(), shows = createShowsStore({ env, request: h.request });
+  await shows('profile-save', { concertId: h.first.concertId, questionNumber: 1, status: 'draft', summary: 'Bewaren', revision: 0 });
+  const destination = h.artist.createFolder('Earlier');
+  h.context.esmojoMoveShowProfile_(h.firstFolder, destination, h.first.concertId, 'Earlier');
+  assert.equal(h.firstFolder.files.filter(f => f.name === 'showprofiel.json').length, 0);
+  const file = destination.files.find(f => f.name === 'showprofiel.json');
+  assert.equal(JSON.parse(file.content).concertId, 'Earlier'); assert.equal(JSON.parse(file.content).analyses[1].summary, 'Bewaren');
 });

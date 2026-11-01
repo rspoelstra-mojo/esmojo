@@ -1,6 +1,8 @@
 import './show-profile.css';
+import { access } from './auth.js';
+import { createSubmenuLoading } from './lib/submenu-loading.js';
 
-// Alleen weergave: statusvoorwaarden, onderzoeksinhoud en opslag volgen later.
+// Statussen worden alleen na bevestigde Drive-opslag bijgewerkt.
 export const analysisStatuses = Object.freeze({ pending: 'Nog niet begonnen', draft: 'Concept opgeslagen', completed: 'Afgerond' });
 export const analysisCategories = [
   { title: 'Bezoekersanalyse', description: 'Analyse van het verwachte publiek.', icon: 'people', questions: ['Man/vrouw verhouding', 'Leeftijdsrange', 'Aankomstprofiel', 'Typische kenmerken'] },
@@ -14,56 +16,105 @@ const paths = {
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
 const node = (tag, className, text) => { const el = document.createElement(tag); el.className = className; if (text !== undefined) el.textContent = text; return el; };
-export function createShowProfile(panel, status = 'pending') {
-  const state = Object.hasOwn(analysisStatuses, status) ? status : 'pending';
-  const total = analysisCategories.reduce((count, category) => count + category.questions.length, 0);
-  const completed = state === 'completed' ? total : 0;
-  const section = node('section', 'show-profile');
-  const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
-  const overview = node('section', 'profile-overview'); overview.append(node('h3', '', 'Analyse in beeld'));
-  const overviewBody = node('div', 'profile-overview-body');
-  const ring = node('div', 'profile-progress-ring', `${completed} / ${total}`); ring.style.setProperty('--progress', `${completed / total * 100}%`); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `${completed} van ${total} analyses afgerond`);
-  const legend = node('ul', 'profile-legend');
-  for (const key of ['completed', 'draft', 'pending']) {
-    const item = node('li', ''); item.dataset.status = key;
-    const dot = node('span', 'profile-status-dot'); dot.setAttribute('aria-hidden', 'true');
-    item.append(dot, node('span', '', analysisStatuses[key]), node('strong', '', String(key === state ? total : 0))); legend.append(item);
+export function createShowProfile(panel, { show } = {}) {
+  const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
+  let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
+  const drafts = new Map();
+  const section = node('section', 'show-profile'); panel.append(section);
+  const menuLink = document.querySelector('#submenu-navigation [aria-current="page"]');
+  const loading = menuLink ? createSubmenuLoading(menuLink, panel) : null;
+  const request = body => access('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
+  const badgeFor = number => { const state = records[number]?.status || 'pending'; const badge = node('span', 'analysis-status', analysisStatuses[state]); badge.dataset.status = state; return badge; };
+  function message(text) { const p = node('p', 'profile-message', text); p.setAttribute('role', 'status'); return p; }
+  async function load() {
+    loaded = false; loadError = ''; renderOverview(); const finish = loading?.start(); panel.setAttribute('aria-busy', 'true');
+    try { const data = await request({ operation: 'read' }); if (disposed) return; records = data.analyses; revision = data.revision; loaded = true; }
+    catch { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.'; }
+    finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed) renderOverview(); }
   }
-  overviewBody.append(ring, legend); overview.append(overviewBody);
-  const highlight = node('section', 'profile-highlight');
-  const highlightIcon = node('span', 'profile-highlight-icon'); highlightIcon.innerHTML = icon('info');
-  const highlightBody = node('div', ''); const selectedTitle = node('h3', '', 'Man/vrouw verhouding');
-  const description = node('p', '', 'Nog geen analyse beschikbaar.');
-  const view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button';
-  highlightBody.append(selectedTitle, description, view); highlight.append(highlightIcon, highlightBody); aside.append(overview, highlight);
-  let selectedBlock, selectedSummary;
-  const summaries = [];
-  function select(block, summary, title) {
-    selectedBlock = block; selectedSummary = summary; selectedTitle.textContent = title;
-    summaries.forEach(item => item.classList.toggle('is-current', item === summary));
-  }
-  let index = 0;
-  for (const category of analysisCategories) {
-    const card = node('section', 'profile-category');
-    const categoryHeader = node('div', 'profile-category-header'), categoryIcon = node('span', 'profile-category-icon'); categoryIcon.innerHTML = icon(category.icon);
-    const categoryIntro = node('div', 'profile-category-intro'); categoryIntro.append(node('h3', '', category.title), node('p', '', category.description));
-    categoryHeader.append(categoryIcon, categoryIntro, node('span', 'profile-category-count', `${category.questions.length} analyses`)); card.append(categoryHeader);
-    for (const question of category.questions) {
-      const id = `show-analysis-${++index}`;
-      const block = node('details', 'visitor-analysis'), summary = node('summary', 'visitor-analysis-summary');
-      const questionIcon = node('span', 'analysis-question-icon'); questionIcon.innerHTML = icon(category.icon);
-      const title = node('h4', '', question), badge = node('span', 'analysis-status', analysisStatuses[state]); badge.dataset.status = state;
-      const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
-      summary.append(questionIcon, title, badge, arrow); summaries.push(summary);
-      summary.addEventListener('click', () => select(block, summary, question));
-      const columns = node('div', 'visitor-analysis-columns'), ai = node('section', 'visitor-analysis-ai'); ai.append(node('h5', '', 'AI Analyse'));
-      const field = node('div', 'visitor-analysis-field'), label = node('label', '', 'Tekst'); label.htmlFor = id;
-      const text = node('textarea', ''); text.id = id; text.rows = 8; text.setAttribute('aria-label', `Tekst bij ${question}`);
-      field.append(label, text); columns.append(ai, field); block.append(summary, columns); card.append(block);
-      if (index === 1) select(block, summary, question);
+  function renderOverview(focusNumber) {
+    editorNumber = null; section.replaceChildren();
+    if (loadError) { const retry = node('button', 'secondary-button', 'Opnieuw laden'); retry.type = 'button'; retry.onclick = load; section.append(message(loadError), retry); }
+    const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
+    for (const category of analysisCategories) {
+      const card = node('section', 'profile-category'), header = node('div', 'profile-category-header'), glyph = node('span', 'profile-category-icon'); glyph.innerHTML = icon(category.icon);
+      const intro = node('div', 'profile-category-intro'); intro.append(node('h3', '', category.title), node('p', '', category.description));
+      header.append(glyph, intro, node('span', 'profile-category-count', `${category.questions.length} analyses`)); card.append(header);
+      for (const entry of entries.filter(entry => entry.category === category)) {
+        const button = node('button', 'visitor-analysis-summary'); button.type = 'button'; button.id = `analysis-open-${entry.number}`; button.disabled = !loaded;
+        button.classList.toggle('is-current', selected === entry.number);
+        const glyph = node('span', 'analysis-question-icon'); glyph.innerHTML = icon(category.icon);
+        const title = node('span', 'analysis-row-title', entry.question), arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
+        button.append(glyph, title, badgeFor(entry.number), arrow); button.onclick = () => openEditor(entry.number);
+        const row = node('div', 'visitor-analysis'); row.append(button); card.append(row);
+      }
+      categories.append(card);
     }
-    categories.append(card);
+    const completed = Object.values(records).filter(record => record.status === 'completed').length;
+    const overview = node('section', 'profile-overview'); overview.append(node('h3', '', 'Analyse in beeld'));
+    const body = node('div', 'profile-overview-body'), ring = node('div', 'profile-progress-ring', `${completed} / 11`); ring.style.setProperty('--progress', `${completed / 11 * 100}%`); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `${completed} van 11 analyses afgerond`);
+    const legend = node('ul', 'profile-legend');
+    for (const state of ['completed', 'draft', 'pending']) {
+      const count = state === 'pending' ? 11 - Object.keys(records).length : Object.values(records).filter(record => record.status === state).length;
+      const item = node('li', ''); item.dataset.status = state; item.append(node('span', 'profile-status-dot'), node('span', '', analysisStatuses[state]), node('strong', '', String(count))); legend.append(item);
+    }
+    body.append(ring, legend); overview.append(body);
+    const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
+    const info = node('div', ''), view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button'; view.disabled = !loaded; view.onclick = () => openEditor(selected);
+    info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(overview, highlight);
+    layout.append(categories, aside); section.append(layout);
+    if (focusNumber) section.querySelector(`#analysis-open-${focusNumber}`)?.focus();
   }
-  view.addEventListener('click', () => { selectedBlock.open = true; selectedSummary.focus(); selectedBlock.scrollIntoView({ block: 'nearest', behavior: 'auto' }); });
-  layout.append(categories, aside); section.append(layout); panel.append(section);
+  async function openEditor(number) {
+    if (!loaded || disposed) return;
+    selected = number; editorNumber = number; const entry = entries[number - 1];
+    section.replaceChildren();
+    const back = node('button', 'profile-back', '← Terug naar overzicht'); back.type = 'button';
+    const header = node('div', 'analysis-editor-header'), glyph = node('span', 'profile-category-icon'); glyph.innerHTML = icon(entry.category.icon);
+    const intro = node('div', 'analysis-editor-intro'), title = node('h2', '', entry.question); title.tabIndex = -1; intro.append(title, node('p', '', entry.category.title));
+    header.append(glyph, intro, badgeFor(number));
+    if (records[number]?.updatedAt) header.append(node('p', 'analysis-updated', `Laatst bijgewerkt ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(records[number].updatedAt))}`));
+    const form = node('form', 'analysis-editor-form'), summaryCard = node('section', 'analysis-editor-card');
+    const label = node('label', 'analysis-editor-label', 'Jouw samenvatting'); label.htmlFor = 'analysis-summary';
+    const text = node('textarea', 'analysis-summary'); text.id = 'analysis-summary'; text.maxLength = 400; text.rows = 4; text.value = drafts.get(number) ?? records[number]?.summary ?? '';
+    const counter = node('span', 'analysis-character-count', `${text.value.length} / 400`); text.setAttribute('aria-describedby', 'analysis-character-count'); counter.id = 'analysis-character-count';
+    text.oninput = () => { drafts.set(number, text.value); counter.textContent = `${text.value.length} / 400`; text.setCustomValidity(''); };
+    summaryCard.append(label, text, counter);
+    const aiCard = node('section', 'analysis-editor-card'); aiCard.append(node('h3', '', 'AI-analyse'));
+    const aiSummary = node('div', 'analysis-ai-summary', 'Nog geen AI-analyse beschikbaar.');
+    const full = node('details', 'analysis-research-details'), fullTitle = node('summary', '', 'Volledige analyse'), answer = node('div', 'analysis-research-answer'); full.append(fullTitle, answer);
+    const sources = node('details', 'analysis-research-details'), sourcesTitle = node('summary', '', 'Bronnen (0)'), sourceList = node('ul', ''); sources.append(sourcesTitle, sourceList);
+    aiCard.append(aiSummary, full, sources);
+    const error = message(''), actions = node('div', 'analysis-editor-actions'), draft = node('button', 'secondary-button', 'Opslaan als concept'), complete = node('button', 'analysis-complete', 'Afronden');
+    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(summaryCard, aiCard, error, actions); section.append(back, header, form); title.focus();
+    back.onclick = () => { if (!busy) { drafts.set(number, text.value); renderOverview(number); } };
+    let ready = false; text.disabled = true;
+    const lock = value => { busy = value; back.disabled = value; draft.disabled = value || !ready; complete.disabled = value || !ready; text.disabled = value || !ready; form.setAttribute('aria-busy', String(value)); };
+    lock(false);
+    async function save(status) {
+      if (busy || !ready) return;
+      if (status === 'completed' && !text.value.trim()) { text.setCustomValidity('Vul een samenvatting in voordat je de analyse afrondt.'); text.reportValidity(); return; }
+      lock(true); error.textContent = '';
+      try { const data = await request({ operation: 'save', questionNumber: number, status, summary: text.value, revision }); if (disposed) return; records = data.analyses; revision = data.revision; drafts.delete(number); busy = false; renderOverview(number); }
+      catch (failure) { if (!disposed) error.textContent = failure.message || 'Opslaan is niet gelukt. Probeer opnieuw.'; }
+      finally { if (!disposed && editorNumber === number) lock(false); }
+    }
+    draft.onclick = () => save('draft'); form.onsubmit = event => { event.preventDefault(); save('completed'); };
+    const finish = loading?.start(); aiCard.setAttribute('aria-busy', 'true');
+    try {
+      const data = await request({ operation: 'read', questionNumber: number }); if (disposed || editorNumber !== number) return;
+      records = data.analyses; revision = data.revision;
+      text.value = drafts.get(number) ?? records[number]?.summary ?? ''; counter.textContent = `${text.value.length} / 400`;
+      ready = true; lock(false);
+      const research = data.research;
+      if (research) {
+        aiSummary.textContent = research.answer.split(/\n\s*\n/)[0]; answer.textContent = research.answer;
+        for (const source of research.sources || []) { if (!/^https:\/\//.test(source.url)) continue; const li = node('li', ''), link = node('a', '', source.title); link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; li.append(link); sourceList.append(li); }
+        sourcesTitle.textContent = `Bronnen (${sourceList.children.length})`;
+      } else answer.textContent = 'Nog geen AI-analyse beschikbaar.';
+    } catch { if (!disposed && editorNumber === number) error.textContent = 'Laden is niet gelukt. Ga terug en probeer opnieuw; opslaan is nog niet beschikbaar.'; }
+    finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
+  }
+  load();
+  return () => { disposed = true; loading?.dispose(); drafts.clear(); records = {}; };
 }
