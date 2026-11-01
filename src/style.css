@@ -1,6 +1,7 @@
 :root {
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
+  --menu-top: 24px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   color-scheme: light;
@@ -33,12 +34,12 @@ body { margin: 0; background: var(--canvas); color: var(--text); }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { font: inherit; }
 a { color: inherit; text-decoration: none; }
-.rail { position: fixed; inset: 0 auto 0 0; width: 76px; background: var(--rail); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 24px 12px 16px; z-index: 10; }
+.rail { position: fixed; inset: 0 auto 0 0; width: 76px; background: var(--rail); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: var(--menu-top) 12px 16px; z-index: 10; }
 .brand { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin-bottom: 38px; }
 .rail { box-shadow: 3px 0 8px -4px #00000014; }
 .brand svg { display: block; width: auto; height: 48px; max-width: 100%; }
-.brand svg path[fill="#0c1011"] { fill: #404040; }
-:root[data-theme="dark"] .brand svg path[fill="#0c1011"] { fill: #fff; }
+.brand svg path { fill: #404040; }
+:root[data-theme="dark"] .brand svg path { fill: #fff; }
 nav, .rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .rail-bottom { margin-top: auto; gap: 12px; }
 .rail-item { position: relative; width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--text); cursor: pointer; }
@@ -59,16 +60,16 @@ h1 { font-size: 40px; font-weight: 550; letter-spacing: -1.4px; margin: 14px 0 3
 .heading-line { height: 1px; background: var(--line); }
 .submenu[hidden] { display: none; }
 .has-submenu { --submenu-width: 210px; }
-.submenu { position: fixed; top: 0; bottom: 0; left: 76px; width: var(--submenu-width); padding: 24px 16px; border-right: 1px solid var(--line); background: var(--canvas); overflow-y: auto; }
+.submenu { position: fixed; top: 0; bottom: 0; left: 76px; width: var(--submenu-width); padding: calc(var(--menu-top) - 5px) 16px; border-right: 1px solid var(--line); background: var(--canvas); overflow-y: auto; }
 .submenu h2 { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 #submenu-navigation { align-items: stretch; gap: 4px; margin-top: 24px; }
 .has-submenu main { margin-left: var(--submenu-width); }
 .content-box { width: 100%; max-width: 1000px; min-height: calc(100dvh - 48px); margin-inline: auto; padding: 44px; background: var(--canvas); }
 .skip-link { position: fixed; top: -80px; left: 90px; background: var(--tip); color: var(--tip-text); padding: 12px; z-index: 20; }
 .skip-link:focus { top: 10px; }
-@media (max-width: 600px) { .rail { padding-top: 16px; } .brand { margin-bottom: 30px; } }
+@media (max-width: 600px) { :root { --menu-top: 16px; } .brand { margin-bottom: 30px; } }
 @media (max-width: 700px) {
-  .submenu { position: static; width: auto; padding: 16px 20px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .submenu { position: static; width: auto; padding: calc(var(--menu-top) - 5px) 20px; border-right: 0; border-bottom: 1px solid var(--line); }
   #submenu-navigation:empty { margin: 0; }
   main { padding: 16px; }
   .has-submenu main { margin-left: 0; }
