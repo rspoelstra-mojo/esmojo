@@ -7,11 +7,25 @@ let client;
 let onReady;
 let onSignedOut;
 let running = false;
+let expiresAt = null;
+let expiryTimer;
+let loggingOut = false;
+let activeSession = null;
+let restoring = null;
 const panel = () => document.querySelector('#auth-panel');
 
 export async function access(action, { method = 'GET', body } = {}) {
+  if (expiresAt && Date.now() >= expiresAt) { await logout('Je bent na 72 uur automatisch uitgelogd. Log opnieuw in.'); throw new Error('Je sessie is verlopen.'); }
+  if (activeSession && expiresAt && activeSession.expires_at * 1000 <= Date.now() + 30000) {
+    // Gebruik de gedeelde cookie i.p.v. een mogelijk oud refresh-token uit een ander tabblad.
+    const previousUser = activeSession.user.id;
+    const restored = await restoreRemembered();
+    if (!restored || restored.profile.id !== previousUser) { await logout(); throw new Error('Log opnieuw in.'); }
+    armExpiry(restored.expiresAt);
+  }
   const { data } = await client.auth.getSession();
   if (!data.session) throw new Error('Log opnieuw in.');
+  activeSession = data.session;
   const response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store',
     headers: { Authorization: `Bearer ${data.session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}) });
@@ -22,6 +36,41 @@ export async function access(action, { method = 'GET', body } = {}) {
     throw new Error(result.error || 'Het verzoek is mislukt.');
   }
   return result;
+}
+
+async function restoreRemembered() {
+  if (restoring) return restoring;
+  const run = async () => {
+    const response = await fetch('/api/access?action=restore', { method: 'POST', credentials: 'same-origin', cache: 'no-store' });
+    if (response.status === 401 || response.status === 403) return null;
+    if (!response.ok) throw new Error('Je sessie kan tijdelijk niet worden hersteld. Probeer opnieuw.');
+    const restored = await response.json();
+    if (!restored.expiresAt || restored.expiresAt <= Date.now()) return null;
+    const result = await client.auth.setSession({ access_token: restored.session.access_token, refresh_token: restored.session.refresh_token });
+    if (result.error) return null;
+    activeSession = result.data.session;
+    return restored;
+  };
+  restoring = (navigator.locks ? navigator.locks.request('esmojo-session-refresh', run) : run()).finally(() => { restoring = null; });
+  return restoring;
+}
+
+function armExpiry(deadline) {
+  clearTimeout(expiryTimer); expiresAt = deadline;
+  if (deadline) expiryTimer = setTimeout(() => { void logout('Je bent na 72 uur automatisch uitgelogd. Log opnieuw in.'); }, Math.max(0, deadline - Date.now()));
+}
+async function remember(session) {
+  const response = await fetch('/api/access?action=remember', { method: 'POST', cache: 'no-store', credentials: 'same-origin',
+    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: session.refresh_token }) });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Je sessie kon niet worden bewaard. Probeer opnieuw.');
+  armExpiry(result.expiresAt);
+  return result.expiresAt;
+}
+function enter(profile, deadline) {
+  armExpiry(deadline);
+  panel().hidden = true; panel().replaceChildren(); onReady(profile);
 }
 
 function screen(title, description, fields, submitText, submit) {
@@ -83,8 +132,9 @@ async function continueLogin() {
     if (assurance.data.currentLevel === 'aal2') {
       const { profile } = await access('session');
       if (!profile.activated) return setPassword();
-      panel().hidden = true; panel().replaceChildren();
-      onReady(profile); return;
+      const { data } = await client.auth.getSession();
+      const deadline = await remember(data.session);
+      enter(profile, deadline); return;
     }
     const listed = await client.auth.mfa.listFactors();
     if (listed.error) throw new Error('Authenticatorgegevens konden niet worden opgehaald.');
@@ -143,15 +193,35 @@ function addLogout(form) {
 }
 
 export async function logout(message) {
+  if (loggingOut) return;
+  loggingOut = true; armExpiry(null); activeSession = null;
   onSignedOut();
-  await client.auth.signOut({ scope: 'local' });
-  signIn(message);
+  try {
+    await Promise.allSettled([
+      fetch('/api/access?action=forget', { method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(10000) }),
+      client.auth.signOut({ scope: 'local' }),
+    ]);
+  } finally { loggingOut = false; signIn(message); }
 }
 
 export async function startAuth(callbacks) {
   ({ onReady, onSignedOut } = callbacks);
   try {
     client = await getSupabase();
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED' && session && expiresAt) {
+        activeSession = session;
+        // Buiten de Supabase-lock werken. Alleen het token vernieuwen, niet de eindtijd.
+        setTimeout(() => { if (!loggingOut && expiresAt) void remember(session).catch(() => logout('Je sessie kon niet worden vernieuwd. Log opnieuw in.')); }, 0);
+      }
+      if (event === 'SIGNED_OUT' && !loggingOut) {
+        activeSession = null; armExpiry(null); onSignedOut(); signIn();
+        void fetch('/api/access?action=forget', { method: 'POST', credentials: 'same-origin', cache: 'no-store' }).catch(() => {});
+      }
+    });
+    const checkExpiry = () => { if (expiresAt && Date.now() >= expiresAt) void logout('Je bent na 72 uur automatisch uitgelogd. Log opnieuw in.'); };
+    window.addEventListener('focus', checkExpiry);
+    document.addEventListener('visibilitychange', checkExpiry);
     const match = /^#\/activeren\?token=([^&]+)(?:&type=(invite|recovery))?$/.exec(location.hash);
     if (match) {
       const token = decodeURIComponent(match[1]);
@@ -159,11 +229,11 @@ export async function startAuth(callbacks) {
       const result = await client.auth.verifyOtp({ token_hash: token, type: match[2] || 'invite' });
       if (result.error) { signIn('De uitnodiging is ongeldig of verlopen. Vraag je beheerder om een nieuwe uitnodiging.'); return; }
       await continueLogin();
-    } else signIn();
-    // Refresh blijft in geheugen. Geen tokens of profielen in localStorage/sessionStorage.
-    client.auth.onAuthStateChange(event => {
-      if (event === 'SIGNED_OUT') { onSignedOut(); signIn(); }
-    });
+    } else {
+      const restored = await restoreRemembered();
+      if (!restored) { signIn(); return; }
+      enter(restored.profile, restored.expiresAt);
+    }
   } catch {
     screen('Inloggen niet beschikbaar', 'De beveiligde accountdienst is nog niet volledig aangesloten. Er wordt geen toegang verleend. Probeer het later opnieuw.', [], 'Opnieuw proberen', () => location.reload());
   }
