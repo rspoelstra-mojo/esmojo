@@ -1,5 +1,6 @@
 import { access } from './auth.js';
 import { cropPhoto } from './photo-crop.js';
+import { createSubmenuLoading } from './lib/submenu-loading.js';
 
 const glyphs = {
   edit: '<path d="m14 4 6 6M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15Z"/>',
@@ -14,8 +15,9 @@ function element(tag, text, className) {
   return node;
 }
 
-export function createAccountsView(container, currentUser) {
+export function createAccountsView(container, currentUser, submenuLink) {
   let disposed = false;
+  const loading = createSubmenuLoading(submenuLink, container);
   const controller = new AbortController();
   const view = element('section', '', 'accounts-view');
   container.replaceChildren(view);
@@ -24,7 +26,8 @@ export function createAccountsView(container, currentUser) {
     notice.setAttribute('role', 'status'); view.prepend(notice);
   };
   async function load() {
-    view.replaceChildren(element('p', 'Accounts laden…', 'account-notice'));
+    const finishLoading = loading.start();
+    view.replaceChildren();
     try {
       const result = await access('accounts');
       if (disposed) return;
@@ -62,6 +65,7 @@ export function createAccountsView(container, currentUser) {
       }
       view.append(table);
     } catch (error) { if (!disposed) { view.replaceChildren(); report(error.message, true); } }
+    finally { finishLoading(); }
   }
   function action(glyph, label, callback) {
     const button = element('button', '', 'icon-button'); button.type = 'button'; button.title = label; button.setAttribute('aria-label', label);
@@ -118,5 +122,5 @@ export function createAccountsView(container, currentUser) {
     });
   }
   load();
-  return () => { disposed = true; controller.abort(); view.replaceChildren(); };
+  return () => { disposed = true; loading.dispose(); controller.abort(); view.replaceChildren(); };
 }

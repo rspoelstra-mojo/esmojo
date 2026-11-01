@@ -47,7 +47,7 @@ function renderPage() {
     const link = document.createElement('a'); link.href = '#/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
     if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');
     submenu.append(link);
-    if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile);
+    if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile, link);
   }
   if (root === 'account') {
     disposePage = createProfileView(content, profile, updated => {

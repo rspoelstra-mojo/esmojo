@@ -41,6 +41,12 @@ blijft JO altijd blauw en heeft het logo geen eigen blauw achtergrondvlak.
 
 ## Snelheid
 
+Toon bij het laden van pagina-inhoud geen laadtekst in de contentbox. Plaats een
+klein draaiend rondje rechts in de bijbehorende paginaknop in het submenu, zoals
+bij Accounts. Hergebruik src/lib/submenu-loading.js; rond de laadstatus af in
+finally en ruim die op bij navigatie, ook bij fouten of late reacties. Behoud
+toegankelijke aria-busy-status en respecteer minder-bewegen-instellingen.
+
 Lettertype en lettergroottes blijven gelijk bij verschillende schermbreedtes.
 Gebruik geen viewport-afhankelijke fontgroottes of schaaltransformaties om inhoud
 passend te maken. Laat onderdelen die niet naast elkaar passen onder elkaar
