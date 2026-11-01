@@ -21,6 +21,7 @@ export function createShowPage(content, show) {
   const indicator = document.createElement('span'); indicator.className = 'show-tab-indicator'; indicator.setAttribute('aria-hidden', 'true');
   const panels = document.createElement('div'); panels.className = 'show-panels';
   const buttons = [], views = [];
+  let disposeProfile = () => {};
   let active = 0;
   function position() {
     const button = buttons[active];
@@ -36,7 +37,7 @@ export function createShowPage(content, show) {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'show-tab'; button.textContent = label;
     button.id = `show-tab-${index}`; button.setAttribute('role', 'tab'); button.setAttribute('aria-controls', `show-panel-${index}`);
     const panel = document.createElement('section'); panel.id = `show-panel-${index}`; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', button.id); panel.tabIndex = 0;
-    if (label === 'Showprofiel') createShowProfile(panel);
+    if (label === 'Showprofiel') disposeProfile = createShowProfile(panel, { show });
     button.addEventListener('click', () => select(index));
     button.addEventListener('keydown', event => {
       let next;
@@ -53,5 +54,5 @@ export function createShowPage(content, show) {
   select(0);
   const observer = new ResizeObserver(position); observer.observe(bar);
   const frame = requestAnimationFrame(() => bar.classList.add('show-tabs-ready'));
-  return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  return () => { disposeProfile(); observer.disconnect(); cancelAnimationFrame(frame); };
 }

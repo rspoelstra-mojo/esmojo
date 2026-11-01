@@ -1,3 +1,4 @@
+import { validateShowProfile } from './show-profile.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
 import { sendEmail } from './email.js';
@@ -86,6 +87,17 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if (action === 'show-profile' && req.method === 'POST') {
+        try {
+          const input = validateShowProfile(req.body);
+          return reply(200, await shows(input.operation, input.payload));
+        } catch (error) {
+          const code = error.message;
+          return reply(code === 'VALIDATION' ? 400 : code === 'PROFILE_CONFLICT' ? 409 : 503, { error: code === 'PROFILE_CONFLICT'
+            ? 'Deze analyse is intussen gewijzigd. Ga terug en laad de nieuwste versie; je tekst is niet overschreven.'
+            : code === 'VALIDATION' ? 'Controleer de samenvatting (maximaal 400 tekens).' : 'Opslaan of laden is niet gelukt. Je tekst blijft in beeld; probeer opnieuw.' });
+        }
+      }
       if (action === 'shows' && req.method === 'GET') {
         const data = await shows('list');
         if (!data.checkedAt) return reply(503, { error: 'De concertagenda is nog niet geïmporteerd.' });
