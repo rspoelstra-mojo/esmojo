@@ -1,5 +1,5 @@
 import './show-page.css';
-import { access } from './auth.js';
+import { loadShowPhoto } from './show-photo.js';
 import { createShowProfile } from './show-profile.js';
 
 export function formatShowDates(dates) {
@@ -59,7 +59,7 @@ export function createShowPage(content, show) {
   image.onerror = () => { photo.hidden = true; };
   photo.append(image);
   bar.append(indicator); heading.append(intro, photo, bar); page.append(heading, panels); content.replaceChildren(page);
-  access('show-photo', { method: 'POST', body: { concertId: show.key } }).then(({ photo: data }) => {
+  loadShowPhoto(show.key).then(data => {
     if (disposed || !data) return;
     const url = new URL(data.imageUrl), source = new URL(data.sourceUrl);
     if (url.origin !== 'https://www.mojo.nl' || !url.pathname.startsWith('/media/') || source.origin !== 'https://www.mojo.nl') return;
