@@ -103,3 +103,5 @@
 
 /* De kopbadge eindigt op dezelfde lijn als de status vóór de chevron. */
 .profile-category-count { margin-inline-start: auto; margin-inline-end: 39px; }
+
+.analysis-status[data-status="failed"] { background: #fce8e8; color: #923333; }

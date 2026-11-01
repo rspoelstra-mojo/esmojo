@@ -249,7 +249,7 @@ op de achtergrond; behoud het bestaande menu en open concepten bij vernieuwing.
 Datumgroepen worden lokaal voor vandaag berekend. Alleen pagina-inhoud toont een
 laadrondje in de bijbehorende menuknop. Autorisatie blijft serverzijdig verplicht.
 De initiële sessiecontrole toont het originele gecentreerde logo met vulanimatie
-op een neutrale lichte achtergrond; oorspronkelijke vormen en kleuren blijven
+op een achtergrond die het systeemthema volgt; de oorspronkelijke vormen blijven
 intact. De concertachtergrond verschijnt uitsluitend bij het echte inlogformulier.
 
 ## Websiteversie
@@ -270,3 +270,22 @@ de gerichte Vercel-rewrites voor directe bezoeken en refresh. Oude #/bladwijzers
 worden clientzijdig naar hun pad omgezet. De bestaande activatiegeheimen blijven
 als afzonderlijke beveiligingsuitzondering in het fragment tot ze zijn verwerkt;
 verplaats nooit een uitnodigingstoken naar query/pad en daarmee requestlogs.
+
+De gebruiker heeft voor de batterij-laadanimatie expliciet toegestaan dat alle
+letters van het originele logo blauw #002ff4 zijn. Pas dit uitsluitend met
+gerichte .boot-mark-CSS toe; behoud bron-SVG en alle geometrie. Andere logo's
+blijven hun bestaande kleurregels houden.
+
+Het laadscherm en de hele website volgen automatisch prefers-color-scheme van het
+apparaat, direct vóór de eerste paint en live bij systeemwijzigingen. Geen
+handmatige thema-override of opgeslagen themakeuze; de oude menuschakelaar is
+vervangen door automatisch systeemgedrag. Op het laadscherm staat geen themaknop.
+
+Onderwerpen opslaan geeft direct het overzicht terug; de writes lopen na elkaar
+in tijdelijk geheugen door met actuele serverrevisies. Toon pas na bevestiging
+Concept opgeslagen/Afgerond. Bewaar invoer bij fouten/conflicten, stop volgende
+writes na een onzekere opslag en lees bij een bewuste herpoging de huidige revisie.
+SPA-navigatie onderbreekt writes niet; afmelden wist wachtrijen en conceptgeheugen.
+Een bestaand definitief PDF toont direct gereed/download met stille statuscontrole;
+zichtbare voortgang uitsluitend bij daadwerkelijke generatie, geen render op iedere
+paginaopening. Download blijft aan de server gecontroleerd, zonder PDF-prefetch.

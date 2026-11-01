@@ -1,4 +1,5 @@
 import './show-profile.css';
+import { profileSaves } from './lib/profile-saves.js';
 import { createShowProfilePdfWidget } from './showprofile-pdf.js';
 import { openAnalysisFinalization } from './analysis-finalization.js';
 import { createTicketDataPage } from './ticket-data-page.js';
@@ -6,7 +7,7 @@ import { access } from './auth.js';
 import { researchView, renderResearch, safeResearchUrl } from './lib/research-view.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 
-// Statussen worden alleen na bevestigde Drive-opslag bijgewerkt.
+// Alleen bevestigde Drive-opslag wordt als opgeslagen/afgerond getoond.
 export const analysisStatuses = Object.freeze({ pending: 'Nog niet begonnen', draft: 'Concept opgeslagen', completed: 'Afgerond' });
 export const analysisCategories = [
   { title: 'Bezoekersanalyse', description: 'Analyse van het verwachte publiek.', icon: 'people', questions: ['Man/vrouw verhouding', 'Leeftijdsrange', 'Aankomstprofiel', 'Typische kenmerken'] },
@@ -23,46 +24,48 @@ const node = (tag, className, text) => { const el = document.createElement(tag);
 export function createShowProfile(panel, { show } = {}) {
   const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
-  const drafts = new Map();
+  const request = body => access('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
+  const saves=profileSaves(show.key,request),drafts=saves.drafts;
+  let firstPdfGeneration=false;
   const ticketState = { drafts: {}, base: {} }; let disposeTickets = () => {}, ticketOpen = false;
   let disposePdf = () => {};
   let researchByNumber = null, researchErrors = {}, finalization = null, disposeFinal = () => {}, statusSequence = 0, finalizationError = '';
   const section = node('section', 'show-profile'); panel.append(section);
   const menuLink = document.querySelector('#submenu-navigation [aria-current="page"]');
   const loading = menuLink ? createSubmenuLoading(menuLink, panel) : null;
-  const request = body => access('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
-  const badgeFor = number => { const state = records[number]?.status || 'pending'; const badge = node('span', 'analysis-status', analysisStatuses[state]); badge.dataset.status = state; return badge; };
+  const badgeFor = number => { const state = saves.pending.has(number)?'saving':saves.errors.has(number)?'failed':records[number]?.status || 'pending'; const badge = node('span', 'analysis-status', state==='saving'?'Opslaan…':state==='failed'?'Niet opgeslagen':analysisStatuses[state]); badge.dataset.status = state; return badge; };
   function message(text) { const p = node('p', 'profile-message', text); p.setAttribute('role', 'status'); return p; }
   async function load() {
     const sequence=++statusSequence; loaded = false; loadError = ''; finalizationError=''; renderOverview(); const finish = loading?.start(); panel.setAttribute('aria-busy', 'true');
-    try { const data = await request({ operation: 'read' }); if (disposed) return; researchByNumber = data.researchByNumber ?? null; researchErrors = data.researchErrors || {}; if(!loaded||sequence===statusSequence){records = data.analyses; revision = data.revision; finalization = data.finalization || null;} loaded = true; }
+    try { const data = await request({ operation: 'read' }); if (disposed) return; researchByNumber = data.researchByNumber ?? null; researchErrors = data.researchErrors || {}; if(!loaded||sequence===statusSequence){saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;} loaded = true; }
     catch { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.'; }
     finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed && !ticketOpen) renderOverview(); }
   }
   async function refreshFinalization() {
     const sequence=++statusSequence;
-    try { const data=await access('analysis-finalization',{method:'POST',body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;records=data.analyses;revision=data.revision;finalization=data.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
+    try { const data=await access('analysis-finalization',{method:'POST',body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
     catch { /* Geen afrondknop tonen met een onzekere status. */ if(!disposed&&sequence===statusSequence){finalization=null;finalizationError='Afrondstatus laden is niet gelukt.';if(!ticketOpen&&editorNumber===null)renderOverview();} }
   }
   function completeCategory(category) {
-    if(!finalization?.categories[category]?.ready||finalization.categories[category].completedAt)return;
+    if(saves.pending.size||saves.errors.size||!finalization?.categories[category]?.ready||finalization.categories[category].completedAt)return;
     const basis=structuredClone(finalization.basis);
-    disposeFinal=openAnalysisFinalization({category,submit:async values=>{const data=await access('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;records=data.analyses;revision=data.revision;finalization=data.finalization;},onClose:()=>{disposeFinal=()=>{};if(!disposed){renderOverview();void refreshFinalization();}}});
+    disposeFinal=openAnalysisFinalization({category,submit:async values=>{const data=await access('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;},onClose:()=>{disposeFinal=()=>{};if(!disposed){renderOverview();void refreshFinalization();}}});
   }
   function renderOverview(focusNumber) {
     disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
     if (loadError) { const retry = node('button', 'secondary-button', 'Opnieuw laden'); retry.type = 'button'; retry.onclick = load; section.append(message(loadError), retry); }
     if(finalizationError){const retry=node('button','secondary-button','Afrondstatus opnieuw laden');retry.type='button';retry.onclick=refreshFinalization;section.append(message(finalizationError),retry);}
+    for(const [number,failure]of saves.errors){const notice=message(`${entries[number-1].question}: ${failure} Je invoer is behouden. Open het onderwerp om opnieuw op te slaan.`);notice.setAttribute('role','alert');section.append(notice);}
     const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
     for (const category of analysisCategories) {
       const card = node('section', 'profile-category'), header = node('div', 'profile-category-header'), glyph = node('span', 'profile-category-icon'); glyph.innerHTML = icon(category.icon);
       const intro = node('div', 'profile-category-intro'); intro.append(node('h3', '', category.title), node('p', '', category.description));
-      const categoryKey=category.title==='Bezoekersanalyse'?'visitors':'artist',finalized=Boolean(finalization?.categories[categoryKey]?.completedAt);
+      const categoryKey=category.title==='Bezoekersanalyse'?'visitors':'artist',finalized=Boolean(finalization?.categories[categoryKey]?.completedAt)&&![...saves.pending,...saves.errors.keys()].some(number=>(number<=4?'visitors':'artist')===categoryKey);
       header.append(glyph, intro, node('span', 'profile-category-count'+(finalized?' profile-finalized':''), finalized?'Definitief afgerond':`${category.questions.length} analyses`)); card.append(header);
       for (const entry of entries.filter(entry => entry.category === category)) {
-        const button = node('button', 'visitor-analysis-summary'); button.type = 'button'; button.id = `analysis-open-${entry.number}`; button.disabled = !loaded;
+        const button = node('button', 'visitor-analysis-summary'); button.type = 'button'; button.id = `analysis-open-${entry.number}`; button.disabled = !loaded||saves.pending.has(entry.number);
         const title = node('span', 'analysis-row-title', entry.question), arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
-        button.append(title, badgeFor(entry.number), arrow); button.onclick = () => openEditor(entry.number);
+        button.append(title, badgeFor(entry.number), arrow);if(saves.pending.has(entry.number)){button.setAttribute('aria-busy','true');const spinner=node('span','submenu-spinner');spinner.setAttribute('aria-hidden','true');button.append(spinner);} button.onclick = () => openEditor(entry.number);
         const row = node('div', 'visitor-analysis'); row.append(button); card.append(row);
       }
       if (category.title === 'Bezoekersanalyse') {
@@ -76,17 +79,17 @@ export function createShowProfile(panel, { show } = {}) {
       categories.append(card);
     }
     for(const [key,label]of [['visitors','Bezoekersanalyse afronden'],['artist','Artiestanalyse afronden']]) {
-      if(loaded&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
+      if(loaded&&!saves.pending.size&&!saves.errors.size&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
     }
-    if(finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,onStale:refreshFinalization});
+    if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,onStale:refreshFinalization,firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
     const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
     const info = node('div', ''), view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button'; view.disabled = !loaded; view.onclick = () => openEditor(selected);
     info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || researchView(researchByNumber?.[selected]).summaryText || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(highlight);
     layout.append(categories, aside); section.append(layout);
-    if (focusNumber) section.querySelector(`#analysis-open-${focusNumber}`)?.focus();
+    if(focusNumber){const target=section.querySelector(`#analysis-open-${focusNumber}`);if(target?.disabled){section.tabIndex=-1;section.focus({preventScroll:true});}else target?.focus();}
   }
   async function openEditor(number) {
-    if (!loaded || disposed) return;
+    if (!loaded || disposed||saves.pending.has(number)) return;
     disposePdf(); disposePdf=()=>{}; selected = number; editorNumber = number; const entry = entries[number - 1];
     section.replaceChildren();
     const back = node('button', 'profile-back', '← Terug naar overzicht'); back.type = 'button';
@@ -126,16 +129,15 @@ export function createShowProfile(panel, { show } = {}) {
       if (busy || !ready) return;
       if (text.value.length > 400) { text.setCustomValidity('Kort je samenvatting in tot maximaal 400 tekens.'); text.reportValidity(); return; }
       if (status === 'completed' && !text.value.trim()) { text.setCustomValidity('Vul een samenvatting in voordat je de analyse afrondt.'); text.reportValidity(); return; }
-      lock(true); error.textContent = '';
-      try { const data = await request({ operation: 'save', questionNumber: number, status, summary: text.value, revision }); if (disposed) return; records = data.analyses; revision = data.revision; finalization=data.finalization||null; drafts.delete(number); busy = false; renderOverview(number); }
-      catch (failure) { if (!disposed) error.textContent = failure.message || 'Opslaan is niet gelukt. Probeer opnieuw.'; }
-      finally { if (!disposed && editorNumber === number) lock(false); }
+      drafts.set(number,text.value);
+      saves.enqueue(number,status,text.value);
+      renderOverview(number);
     }
     draft.onclick = () => save('draft'); form.onsubmit = event => { event.preventDefault(); save('completed'); };
     const finish = researchByNumber === null ? loading?.start() : null; aiCard.setAttribute('aria-busy', 'true');
     try {
-      const data = researchByNumber !== null ? { analyses: records, revision, research: researchByNumber[number] || null } : await request({ operation: 'read', questionNumber: number }); if (disposed || editorNumber !== number) return;
-      records = data.analyses; revision = data.revision;
+      const data = researchByNumber !== null ? { analyses: records, revision, finalization, research: researchByNumber[number] || null } : await request({ operation: 'read', questionNumber: number }); if (disposed || editorNumber !== number) return;
+      saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;
       text.value = drafts.get(number) ?? records[number]?.summary ?? ''; counter.textContent = `${text.value.length} / 400`;
       ready = true; lock(false);
       const research = data.research;
@@ -155,6 +157,7 @@ export function createShowProfile(panel, { show } = {}) {
     } catch { if (!disposed && editorNumber === number) error.textContent = 'Laden is niet gelukt. Ga terug en probeer opnieuw; opslaan is nog niet beschikbaar.'; }
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
+  const unsubscribe=saves.subscribe(()=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
   load();
-  return () => { disposed = true; disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); drafts.clear(); records = {}; researchByNumber = null; researchErrors = {}; };
+  return () => { disposed = true; unsubscribe(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
 }
