@@ -261,3 +261,12 @@ tekst en het toegankelijke versielabel in index.html samen bij. Niet bij losse
 branch-/taaknotitiecommits verhogen. Een grote versiesprong naar V2.0 gebeurt
 uitsluitend op expliciet verzoek van de gebruiker; nooit automatisch doortellen
 naar een nieuw hoofdnummer. Dit is de websiteversie, niet de PDF-documentversie.
+
+## Pagina-adressen
+
+De gewone pagina's gebruiken paden zonder routinghekje, bijvoorbeeld /shows en
+/beheerder/accounts. Gebruik src/lib/router.js voor interne navigatie en behoud
+de gerichte Vercel-rewrites voor directe bezoeken en refresh. Oude #/bladwijzers
+worden clientzijdig naar hun pad omgezet. De bestaande activatiegeheimen blijven
+als afzonderlijke beveiligingsuitzondering in het fragment tot ze zijn verwerkt;
+verplaats nooit een uitnodigingstoken naar query/pad en daarmee requestlogs.

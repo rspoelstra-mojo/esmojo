@@ -30,5 +30,31 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/shows/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/artiest/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/statistieken/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/beheerder/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/account/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/activeren/:path*",
+      "destination": "/index.html"
+    }
   ]
 }

@@ -30,7 +30,7 @@ jobs:
           node --test server/analysis-finalization.test.js server/ticket-data.test.js src/lib/research-view.test.js src/lib/show-photo-cache.test.js server/mojo-photo.test.js server/mojo-agenda.test.js server/github-identity.test.js server/shows-store.test.js server/shows-api.test.js
           node server/showprofile-pdf.test.js
           node server/showprofile-download.test.js
-          node --test src/lib/show-menu-cache.test.js server/startup-view.test.js
+          node --test src/lib/show-menu-cache.test.js server/startup-view.test.js src/lib/router.test.js
           node tools/pdf/verify-original.mjs
           node --test server/report-original/tests/*.test.ts
           node server/research.test.js
