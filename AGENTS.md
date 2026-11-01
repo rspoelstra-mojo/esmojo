@@ -77,6 +77,10 @@ en vraag goedkeuring voordat je de tragere uitvoering bouwt.
 
 ## Gegevensclassificatie
 
+De gebruiker heeft artiestfoto’s van openbare MOJO-concertaankondigingen expliciet
+Openbaar verklaard. Gebruik de foto van de betreffende concertpagina; laad die
+op de achtergrond binnen de afgesproken contentbox. Geen logo-aanpassingen.
+
 De gebruiker heeft op 1 november 2026 eigen Showprofiel-samenvattingen expliciet
 Openbaar verklaard. Sla samenvatting, concept/afgerond-status en wijzigingsdatum
 op in showprofiel.json in de bestaande algemene concert/reeksmap in Drive.

@@ -1,9 +1,9 @@
 .show-profile { width: 100%; min-width: 0; container-type: inline-size; --profile-blue: #002ff4; --profile-tint: #edf2ff; }
 :root[data-theme="dark"] .show-profile { --profile-blue: #7296ff; --profile-tint: #101e3c; }
 .profile-category-intro p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
-.profile-layout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; align-items: start; gap: 20px; }
+.profile-layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--profile-aside-width, 250px); align-items: start; gap: 20px; }
 .profile-categories, .profile-insights { display: grid; gap: 20px; min-width: 0; }
-.profile-category, .profile-overview { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); }
+.profile-category, .profile-overview { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: var(--profile-corner-radius, 12px); background: var(--canvas); }
 .profile-category-header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
 .profile-category-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; background: var(--profile-tint); color: var(--profile-blue); }
 .profile-category-icon svg { width: 23px; height: 23px; }
