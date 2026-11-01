@@ -3,11 +3,12 @@
 .auth-panel { position: relative; isolation: isolate; min-height: 100dvh; display: flex; align-items: center; padding: 80px 10%; background: var(--canvas); }
 .auth-panel::before { content: ''; position: fixed; inset: 0; z-index: -1; background-image: url('./assets/login-background.webp'); background-size: cover; background-position: center; }
 .auth-card { width: 448px; max-width: 100%; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; padding: 40px 32px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); box-shadow: 0 16px 64px #00000014; }
+.auth-form { display: flex; flex-direction: column; gap: 20px; }
 .auth-logo { position: fixed; top: 24px; left: 13.5px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; opacity: .5; pointer-events: none; }
 .auth-logo svg { display: block; height: 48px; width: auto; max-width: 100%; }
 .auth-logo svg path { fill: #fff; }
-.auth-card > .primary-button { background: #002ff4; color: #fff; border-color: #002ff4; min-height: 46px; font-weight: 600; }
-:root[data-theme="dark"] .auth-card > .primary-button { background: #7296ff; border-color: #7296ff; color: #080f20; }
+.auth-form > .primary-button { background: #002ff4; color: #fff; border-color: #002ff4; min-height: 46px; font-weight: 600; }
+:root[data-theme="dark"] .auth-form > .primary-button { background: #7296ff; border-color: #7296ff; color: #080f20; }
 .auth-card h1, .accounts-view h1 { font-size: 24px; font-weight: 600; letter-spacing: -.5px; margin: 0; }
 .auth-card p { margin: 0; font-size: 16px; line-height: 1.5; }
 .auth-card label, .account-form label { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
