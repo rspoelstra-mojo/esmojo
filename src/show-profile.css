@@ -82,3 +82,23 @@
 .analysis-research-answer li, .analysis-research-sources li { margin-bottom: 10px; }
 .analysis-research-sources { padding: 0 16px 16px; line-height: 1.6; overflow-wrap: anywhere; }
 .analysis-research-sources ol, .analysis-research-sources ul { padding: 0 0 0 22px; margin: 0; white-space: normal; }
+.profile-finalized { background: #e7f5ed; color: #28734d; }
+.profile-finalize-button { width: 100%; text-align: center; }
+.analysis-final-overlay { position: fixed; right: 0; bottom: 0; z-index: 8; overflow-y: auto; padding: 24px 64px; background: var(--canvas); --profile-blue: #002ff4; --profile-tint: #edf2ff; }
+:root[data-theme="dark"] .analysis-final-overlay { --profile-blue: #7296ff; --profile-tint: #101e3c; }
+.analysis-final-box { max-width: 1000px; margin: 0 auto; padding: 44px; }
+.analysis-final-box h2 { margin: 0 0 26px; font-size: 24px; line-height: 1.3; }
+.analysis-final-form { min-width: 0; }
+.analysis-final-score { min-width: 0; margin: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; }
+.analysis-final-score legend { padding: 0 6px; font-size: 17px; font-weight: 650; }
+.analysis-final-scale { display: flex; flex-wrap: wrap; gap: 10px; }
+.analysis-final-option { position: relative; cursor: pointer; }
+.analysis-final-option input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; }
+.analysis-final-option span { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; font-size: 16px; }
+.analysis-final-option input:checked + span { color: var(--profile-blue); background: var(--profile-tint); border-color: var(--profile-blue); font-weight: 650; }
+.analysis-final-option input:focus-visible + span { outline: 2px solid var(--profile-blue); outline-offset: 2px; }
+.analysis-final-meaning { margin: 18px 0 26px; font-size: 14px; line-height: 1.6; }
+.analysis-final-meaning p { margin: 8px 0; }
+.analysis-final-form .analysis-summary { margin-bottom: 18px; }
+.analysis-final-form .analysis-editor-actions { margin-top: 22px; }
+@media (max-width: 700px) { .analysis-final-overlay { padding: 16px; } .analysis-final-box { padding: 20px; } }

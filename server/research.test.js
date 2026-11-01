@@ -54,7 +54,7 @@ function harness(firstOffset = 4) {
     DriveApp: { getFolderById: id => { reads++; if (!all.has(id)) throw new Error(); return all.get(id); } },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
-  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs', 'ShowProfile.gs', 'TicketValidators.gs', 'TicketData.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
+  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs', 'ShowProfile.gs', 'TicketValidators.gs', 'TicketData.gs', 'FinalValidators.gs', 'AnalysisFinal.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
   const raw = input => context.doPost({ postData: { contents: JSON.stringify(input) } });
   const request = async (url, options) => { assert.equal(url, env.GOOGLE_DRIVE_SCRIPT_URL); envelope = JSON.parse(options.body); return Response.json(raw(envelope)); };
   const store = createResearchStore({ env, request });
@@ -253,4 +253,35 @@ test('Vertrouwelijke bezoekersdata volgt een nieuwe eerdere reeksmap; inhoud en 
  const file=destination.files.find(file=>file.name==='bezoekersdata.json'),data=JSON.parse(file.content);
  assert.equal(data.concertId,'Earlier');assert.equal(JSON.parse(data.workflow_json).visitors.fields.visitor_origins.content,content);assert.equal(data.history.length,1);assert.deepEqual(data.leases,{});
  assert.equal(h.firstFolder.files.some(file=>file.name==='bezoekersdata.json'),false);
+});
+
+
+test('Categorieafronding vereist alle stappen, bewaart openbare eindcijfers apart en controleert concurrentie',async()=>{
+ const h=harness(),shows=createShowsStore({env,request:h.request}),concertId=h.later.concertId;
+ for(let number=1;number<=11;number++)await shows('profile-save',{concertId,questionNumber:number,status:'completed',summary:'Testanalyse '+number,revision:number-1});
+ let state=(await shows('final-read',{concertId})).finalization;
+ assert.equal(state.categories.visitors.ready,false);assert.equal(state.categories.artist.ready,true);
+ const input={concertId,category:'visitors',score:6,note:'Een expliciete openbare testtoelichting.',basis:state.basis};
+ await assert.rejects(shows('final-complete',input),/FINAL_NOT_READY/);
+ for(const change of [{score:0},{score:11},{score:1.5},{score:'5'},{note:''},{note:'  '},{note:'x'.repeat(2001)},{category:'__proto__'}])await assert.rejects(shows('final-complete',{...input,...change}),/VALIDATION/);
+ const artist=await shows('final-complete',{...input,category:'artist'});assert.ok(artist.finalization.categories.artist.completedAt);
+ await assert.rejects(shows('final-complete',{...input,category:'artist'}),/FINAL_CONFLICT/);
+ const read=await shows('ticket-read',{concertId,actor:'test-user'}),versions={};
+ const contents={ticket_sales:JSON.stringify(read.shows.map(row=>({...row,count:'1234'}))),visitor_origins:JSON.stringify({netherlands:'90',foreign:[{country:'Vrij testland',percentage:'3'},{country:'Canada',percentage:'2'},{country:'België',percentage:'1'}]}),domestic_origins:JSON.stringify([{province:'Drenthe',percentage:'29,1'},{province:'Groningen',percentage:'17,4'},{province:'Friesland',percentage:'11,7'}])};
+ let beforeLast;
+ for(const field of Object.keys(contents)){
+  beforeLast=(await shows('final-read',{concertId})).finalization.basis;
+  const lock={concertId,actor:'test-user',field,token:'a'.repeat(36),expectedVersion:0};await shows('ticket-reserve',lock);await shows('ticket-review',{...lock,content:contents[field]});versions[field]=1;
+ }
+ state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.visitors.ready,true);
+ await assert.rejects(shows('final-complete',{...input,basis:beforeLast}),/FINAL_CONFLICT/);
+ const completed=await shows('final-complete',{...input,basis:state.basis});assert.ok(completed.finalization.categories.visitors.completedAt);assert.ok(completed.finalization.categories.artist.completedAt);
+ const file=h.firstFolder.files.find(file=>file.name==='analyseafronding.json'),value=JSON.parse(file.content);assert.equal(value.classification,'openbaar');assert.equal(value.categories.visitors.score,6);assert.equal(value.categories.visitors.note,input.note);
+ assert.equal(file.content.includes('Vrij testland'),false);assert.equal(file.content.includes('1234'),false);assert.equal(file.content.includes('netherlands'),false);
+ await shows('profile-save',{concertId,questionNumber:5,status:'draft',summary:'Wijziging',revision:11});
+ state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.artist.completedAt,null);assert.ok(state.categories.visitors.completedAt);
+ const lock={concertId,actor:'test-user',field:'ticket_sales',token:'b'.repeat(36),expectedVersion:1};await shows('ticket-reserve',lock);await shows('ticket-reopen',lock);
+ state=(await shows('final-read',{concertId})).finalization;assert.equal(state.categories.visitors.completedAt,null);assert.equal(state.categories.visitors.ready,false);
+ assert.equal(JSON.parse(file.content).history.length,2);assert.equal(JSON.parse(file.content).history[0].score,6);
+ const destination=h.artist.createFolder('Earlier');h.context.esmojoMoveAnalysisFinal_(h.firstFolder,destination,h.first.concertId,'Earlier');assert.equal(JSON.parse(destination.files.find(f=>f.name==='analyseafronding.json').content).concertId,'Earlier');
 });

@@ -210,3 +210,16 @@ in hetzelfde vertrouwelijke bestand; account/MFA, servervalidatie, vervallende
 veldreserveringen en versies beschermen iedere opslag. Tijdelijke concepten alleen
 in browsergeheugen. Geen logs, analytics of persistente browseropslag van invoer.
 De elf openbare AI-bestanden en eigen Showprofiel-samenvattingen blijven gescheiden.
+
+## Definitieve analyseafronding
+
+De gebruiker heeft eindcijfers (1–10) en toelichtingen van bezoekers- en
+artiestanalyse expliciet Openbaar verklaard. Bewaar ze afzonderlijk in
+analyseafronding.json in de canonieke reeksmap in Drive. Voor bezoekers zijn vier
+afgeronde AI-onderwerpen én drie geldige bevestigde handmatige blokken vereist;
+voor artiest zeven afgeronde AI-onderwerpen. De server controleert vereisten en
+revisies vóór definitieve opslag. Wijziging/heropening van een onderliggende stap
+maakt de betreffende categorieafronding ongeldig, met behoud van oude cijfers en
+toelichtingen in historie. Kopieer geen vertrouwelijke ticketinhoud naar dit bestand.
+De afrondoverlay beslaat alleen het inhoudsgebied, met formuliervelden binnen de
+vaste contentbox; hoofdmenu en submenu blijven zichtbaar en bereikbaar.

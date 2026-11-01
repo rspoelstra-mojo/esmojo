@@ -42,10 +42,12 @@ function esmojoTicketData_(request) {
   if (op === 'review') {
     if (stored?.completed_at || visitors.completed_at || !validTicketContent(field, request.content, shows)) throw Error('VALIDATION');
     const content = field === 'ticket_sales' ? normalizedTicketSales(request.content, shows) : request.content;
+    esmojoInvalidateAnalysisFinal_(target.folder,target.primary.concertId,'visitors');
     visitors.fields[field] = { content, completed_at: new Date(now).toISOString(), version: version + 1 };
   } else {
     if (!stored?.completed_at) throw Error('VALIDATION');
     if (field !== 'ticket_sales' && visitors.completed_at) throw Error('TICKET_CONFLICT');
+    esmojoInvalidateAnalysisFinal_(target.folder,target.primary.concertId,'visitors');
     visitors.fields[field] = Object.assign({}, stored || { content: '' }, { completed_at: null, version: version + 1 });
     visitors.completed_at = null; delete visitors.score; delete workflow.completed_at;
   }
