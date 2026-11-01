@@ -41,7 +41,10 @@ hoofdletterongevoelig hergebruikt. Ambigue dubbele mappen leiden tot een fout,
 niet tot willekeurig kiezen. Concerten worden per artiest/datum ontdubbeld;
 twee aparte sessies op dezelfde datum hebben in deze eerste opzet hetzelfde ID.
 
-Apps Script controleert HMAC, tijdvenster, payload, replay en een script-lock.
+Apps Script controleert HMAC, tijdvenster, payload, replay en een import-lock.
+De import gebruikt een afzonderlijke UserLock, omdat de webapp als eigenaar
+draait. De ScriptLock van accountbeheer blijft beschikbaar. Menulezers lezen
+zonder import-lock de laatst volledig gepubliceerde index, ook tijdens een import.
 Het behoudt alle bestaande mappen en andere documenten, ook bij afgelasting of
 verwijdering uit MOJO. Alleen de actieve menu-index verandert. Herhalen maakt
 geen dubbele mappen en ongewijzigde JSON-bestanden worden niet opnieuw geschreven.
