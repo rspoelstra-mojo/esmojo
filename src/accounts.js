@@ -1,4 +1,5 @@
 import { access } from './auth.js';
+import { cropPhoto } from './photo-crop.js';
 
 const glyphs = {
   edit: '<path d="m14 4 6 6M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15Z"/>',
@@ -15,6 +16,7 @@ function element(tag, text, className) {
 
 export function createAccountsView(container, currentUser) {
   let disposed = false;
+  const controller = new AbortController();
   const view = element('section', '', 'accounts-view');
   container.replaceChildren(view);
   const report = (message, error = false) => {
@@ -102,7 +104,11 @@ export function createAccountsView(container, currentUser) {
         if (account) fields.id = account.id;
         if (select.disabled) fields.role = account.role;
         if (clear.checked) fields.photo = '';
-        if (photo.files[0]) fields.photo = await resizePhoto(photo.files[0]);
+        if (photo.files[0]) {
+          const cropped = await cropPhoto(photo.files[0], { signal: controller.signal });
+          if (!cropped || disposed) return;
+          fields.photo = cropped;
+        }
         const result = await access('accounts', { method: account ? 'PATCH' : 'POST', body: fields });
         if (disposed) return;
         await load();
@@ -112,18 +118,5 @@ export function createAccountsView(container, currentUser) {
     });
   }
   load();
-  return () => { disposed = true; view.replaceChildren(); };
-}
-
-async function resizePhoto(file) {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5000000) throw new Error('Kies een PNG-, JPG- of WebP-foto van maximaal 5 MB.');
-  const bitmap = await createImageBitmap(file);
-  try {
-    const ratio = Math.min(1, 320 / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas'); canvas.width = Math.round(bitmap.width * ratio); canvas.height = Math.round(bitmap.height * ratio);
-    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const data = canvas.toDataURL('image/jpeg', .75);
-    if (data.length > 100000) throw new Error('Deze foto is te groot. Kies een kleinere foto.');
-    return data;
-  } finally { bitmap.close(); }
+  return () => { disposed = true; controller.abort(); view.replaceChildren(); };
 }

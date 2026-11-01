@@ -87,3 +87,20 @@ test('responses bevatten nooit cachebare profielen', async () => {
 test('profielvalidatie weigert rollen, SVG-fotos, grote fotos en onvolledige profielen', () => {
   for (const input of [{ ...profile, role: 'owner' }, { ...profile, photo: 'data:image/svg+xml;base64,AAAA' }, { ...profile, photo: 'x'.repeat(100001) }, { ...profile, firstName: '' }]) assert.throws(() => validateProfile(input));
 });
+test('een gewone gebruiker kan alleen een eigen foto opslaan zonder beheersleutelacties', async () => {
+  const { response, calls } = await run({ action: 'photo', method: 'PATCH', own: { ...profile, role: 'gebruiker' }, body: { photo: 'data:image/jpeg;base64,AAAA' } });
+  assert.equal(response.code, 200); assert.deepEqual(calls.map(call => call[0]), ['self', 'photo']);
+  assert.equal(calls[1][1], id); assert.deepEqual(calls[1][2], { photo: 'data:image/jpeg;base64,AAAA' });
+});
+test('eigen fotoroute weigert IDs, rollen en andere profielvelden in de aanvraag', async () => {
+  for (const extra of [{ id: other }, { role: 'beheerder' }, { firstName: 'Changed' }]) {
+    const { response, calls } = await run({ action: 'photo', method: 'PATCH', own: { ...profile, role: 'gebruiker' }, body: { photo: 'data:image/jpeg;base64,AAAA', ...extra } });
+    assert.equal(response.code, 400); assert.deepEqual(calls.map(call => call[0]), ['self']);
+  }
+});
+test('eigen fotoroute vereist TOTP en een geactiveerd profiel', async () => {
+  for (const config of [{ aal: 'aal1' }, { own: { ...profile, activated: false } }]) {
+    const { response, calls } = await run({ action: 'photo', method: 'PATCH', body: { photo: 'data:image/jpeg;base64,AAAA' }, ...config });
+    assert.equal(response.code, 403); assert.equal(calls.some(call => call[0] === 'photo'), false);
+  }
+});

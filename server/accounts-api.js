@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { createProfiles, validateProfile } from './account-profiles.js';
+import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
 import { sendEmail } from './email.js';
 
 export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail } = {}) {
@@ -53,6 +53,13 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if (action === 'photo' && req.method === 'PATCH') {
+        const input = req.body;
+        if (!input || Object.keys(input).length !== 1 || !Object.hasOwn(input, 'photo') || !input.photo) throw new Error('VALIDATION');
+        const photo = validatePhoto(input.photo);
+        const profile = await profiles('photo', actor, { photo });
+        return reply(200, { profile });
+      }
       if (own.role !== 'beheerder') return reply(403, { error: 'Alleen beheerders hebben toegang.' });
       if (action !== 'accounts') return reply(404, { error: 'Niet gevonden.' });
       if (req.method === 'GET') return reply(200, { accounts: await profiles('list', actor) });
