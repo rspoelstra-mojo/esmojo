@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run build
@@ -28,6 +28,10 @@ jobs:
           node server/google-drive.test.js
           node tools/apps-script/deploy.test.mjs
           node --test server/analysis-finalization.test.js server/ticket-data.test.js src/lib/research-view.test.js src/lib/show-photo-cache.test.js server/mojo-photo.test.js server/mojo-agenda.test.js server/github-identity.test.js server/shows-store.test.js server/shows-api.test.js
+          node server/showprofile-pdf.test.js
+          node server/showprofile-download.test.js
+          node tools/pdf/verify-original.mjs
+          node --test server/report-original/tests/*.test.ts
           node server/research.test.js
           node tools/research/client.test.mjs
           node server/mcp.test.js

@@ -1,4 +1,5 @@
 import './show-profile.css';
+import { createShowProfilePdfWidget } from './showprofile-pdf.js';
 import { openAnalysisFinalization } from './analysis-finalization.js';
 import { createTicketDataPage } from './ticket-data-page.js';
 import { access } from './auth.js';
@@ -24,6 +25,7 @@ export function createShowProfile(panel, { show } = {}) {
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
   const drafts = new Map();
   const ticketState = { drafts: {}, base: {} }; let disposeTickets = () => {}, ticketOpen = false;
+  let disposePdf = () => {};
   let researchByNumber = null, researchErrors = {}, finalization = null, disposeFinal = () => {}, statusSequence = 0, finalizationError = '';
   const section = node('section', 'show-profile'); panel.append(section);
   const menuLink = document.querySelector('#submenu-navigation [aria-current="page"]');
@@ -48,7 +50,7 @@ export function createShowProfile(panel, { show } = {}) {
     disposeFinal=openAnalysisFinalization({category,submit:async values=>{const data=await access('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;records=data.analyses;revision=data.revision;finalization=data.finalization;},onClose:()=>{disposeFinal=()=>{};if(!disposed){renderOverview();void refreshFinalization();}}});
   }
   function renderOverview(focusNumber) {
-    disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
+    disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
     if (loadError) { const retry = node('button', 'secondary-button', 'Opnieuw laden'); retry.type = 'button'; retry.onclick = load; section.append(message(loadError), retry); }
     if(finalizationError){const retry=node('button','secondary-button','Afrondstatus opnieuw laden');retry.type='button';retry.onclick=refreshFinalization;section.append(message(finalizationError),retry);}
     const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
@@ -67,7 +69,7 @@ export function createShowProfile(panel, { show } = {}) {
         const row = node('div', 'visitor-analysis'), button = node('button', 'visitor-analysis-summary'); button.type = 'button';
         const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
         button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'), node('span','analysis-status','Handmatig invoeren'),arrow);
-        button.onclick = () => { ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();void refreshFinalization();}}); };
+        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();void refreshFinalization();}}); };
         row.append(button);card.append(row);
       }
       categories.append(card);
@@ -76,6 +78,7 @@ export function createShowProfile(panel, { show } = {}) {
     for(const [key,label]of [['visitors','Bezoekersanalyse afronden'],['artist','Artiestanalyse afronden']]) {
       if(loaded&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
     }
+    if(finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,onStale:refreshFinalization});
     const overview = node('section', 'profile-overview'); overview.append(node('h3', '', 'Analyse in beeld'));
     const body = node('div', 'profile-overview-body'), ring = node('div', 'profile-progress-ring', `${completed} / 11`); ring.style.setProperty('--progress', `${completed / 11 * 100}%`); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `${completed} van 11 analyses afgerond`);
     const legend = node('ul', 'profile-legend');
@@ -92,7 +95,7 @@ export function createShowProfile(panel, { show } = {}) {
   }
   async function openEditor(number) {
     if (!loaded || disposed) return;
-    selected = number; editorNumber = number; const entry = entries[number - 1];
+    disposePdf(); disposePdf=()=>{}; selected = number; editorNumber = number; const entry = entries[number - 1];
     section.replaceChildren();
     const back = node('button', 'profile-back', '← Terug naar overzicht'); back.type = 'button';
     const header = node('div', 'analysis-editor-header'), glyph = node('span', 'profile-category-icon'); glyph.innerHTML = icon(entry.category.icon);
@@ -161,5 +164,5 @@ export function createShowProfile(panel, { show } = {}) {
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
   load();
-  return () => { disposed = true; disposeFinal(); disposeTickets(); loading?.dispose(); drafts.clear(); records = {}; researchByNumber = null; researchErrors = {}; };
+  return () => { disposed = true; disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); drafts.clear(); records = {}; researchByNumber = null; researchErrors = {}; };
 }
