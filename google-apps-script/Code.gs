@@ -21,6 +21,7 @@ function doPost(event) {
       const envelope = JSON.parse(raw);
       if (envelope.action === 'accounts') return esmojoAccounts_(envelope);
       if (envelope.action === 'shows') return esmojoShows_(envelope);
+      if (envelope.action === 'research') return esmojoResearch_(envelope);
     }
     if (!raw || raw.length > 4096) return esmojoReply_({ ok: false, error: 'Geen toegang.' });
     const input = JSON.parse(raw);
