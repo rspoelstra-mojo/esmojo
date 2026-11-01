@@ -1,3 +1,4 @@
+import { validateTicketRequest } from './ticket-data.js';
 import { getMojoPhoto } from './mojo-photo.js';
 import { validateShowProfile } from './show-profile.js';
 import { createClient } from '@supabase/supabase-js';
@@ -88,6 +89,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if (action === 'ticket-data' && req.method === 'POST') {
+        try { const input = validateTicketRequest(req.body); return reply(200, await shows(input.operation, { ...input.payload, actor })); }
+        catch (error) { const code = error.message; return reply(code === 'VALIDATION' ? 400 : code === 'TICKET_CONFLICT' ? 409 : 503, { error: code === 'TICKET_CONFLICT' ? 'Dit veld is gereserveerd of intussen gewijzigd. Je invoer is behouden. Ga terug en laad de laatste gegevens.' : code === 'VALIDATION' ? 'Controleer de ingevoerde waarden en showdagen.' : 'Laden of opslaan is niet gelukt. Je invoer is behouden.' }); }
+      }
       if (action === 'show-photo' && req.method === 'POST') {
         const input = req.body;
         if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });

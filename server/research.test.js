@@ -7,6 +7,7 @@ import { makeResearchHandler } from './research-api.js';
 import { createResearchStore } from './research-store.js';
 import { createShowsStore } from './shows-store.js';
 import { calendarDate, addDays, concertId } from './mojo-agenda.js';
+import { validTicketContent } from '../shared/ticket-data.js';
 import { validateResearchRequest, resolveResearchConcert } from './research-validation.js';
 
 const secret = 'test-only-drive-'.repeat(4), token = 'a'.repeat(64);
@@ -53,7 +54,7 @@ function harness(firstOffset = 4) {
     DriveApp: { getFolderById: id => { reads++; if (!all.has(id)) throw new Error(); return all.get(id); } },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
-  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs', 'ShowProfile.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
+  for (const name of ['Code.gs', 'Shows.gs', 'Research.gs', 'ShowProfile.gs', 'TicketValidators.gs', 'TicketData.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
   const raw = input => context.doPost({ postData: { contents: JSON.stringify(input) } });
   const request = async (url, options) => { assert.equal(url, env.GOOGLE_DRIVE_SCRIPT_URL); envelope = JSON.parse(options.body); return Response.json(raw(envelope)); };
   const store = createResearchStore({ env, request });
@@ -215,4 +216,41 @@ test('Showprofiel leest elf onderzoeksslots uit de canonieke reeksmap zonder eig
   assert.equal(Object.keys(isolated.researchByNumber).length, 10); assert.ok(isolated.researchErrors[7]);
   assert.equal(isolated.researchByNumber[8].answer, 'Samenvatting voor onderwerp 8');
   assert.equal(wrong.content, JSON.stringify({ ...JSON.parse(original), questionNumber: 8 }));
+});
+
+
+test('Vertrouwelijke ticketdata: reservering, servervalidatie, conflict, historie en heropenen in Drive', async () => {
+ const h=harness(),shows=createShowsStore({env,request:h.request});
+ const input={concertId:h.later.concertId,actor:'user-a'},field='ticket_sales',token='a'.repeat(36);
+ const read=await shows('ticket-read',input);assert.deepEqual(read.workflow.visitors.fields,{});assert.equal(h.writes(),0);
+ const request={...input,field,token,expectedVersion:0};
+ await assert.rejects(shows('ticket-review',{...request,content:'5'}),/TICKET_CONFLICT/);
+ await shows('ticket-reserve',request);
+ await assert.rejects(shows('ticket-reserve',{...request,actor:'user-b',token:'b'.repeat(36)}),/TICKET_CONFLICT/);
+ await assert.rejects(shows('ticket-review',{...request,content:'5'}),/VALIDATION/); // meerdere echte showdagen
+ const content=JSON.stringify(read.shows.map((show,i)=>({...show,count:i?'3438':'003327'})));
+ const saved=await shows('ticket-review',{...request,content});assert.ok(saved.workflow.visitors.fields[field].completed_at);
+ assert.deepEqual(JSON.parse(saved.workflow.visitors.fields[field].content).map(r=>r.count),['3327','3438']);
+ const file=h.firstFolder.files.find(f=>f.name==='bezoekersdata.json');assert.ok(file);assert.equal(JSON.parse(file.content).classification,'vertrouwelijk');
+ assert.equal(JSON.parse(file.content).history.length,1);assert.equal(h.laterFolder.files.length,0);assert.equal(file.content.includes('ESMOJO/Research'),false);
+ assert.equal(JSON.stringify(saved).includes('user-a'),false);assert.equal(JSON.stringify(saved).includes('leases'),false);
+ await assert.rejects(shows('ticket-reserve',request),/TICKET_CONFLICT/);
+ await shows('ticket-reserve',{...request,expectedVersion:1});
+ const reopened=await shows('ticket-reopen',{...request,expectedVersion:1});assert.equal(reopened.workflow.visitors.fields[field].completed_at,null);
+ assert.equal(reopened.workflow.visitors.fields[field].content,saved.workflow.visitors.fields[field].content);assert.equal(JSON.parse(file.content).history.length,2);
+ const holder={...request,expectedVersion:2};await shows('ticket-reserve',holder);await shows('ticket-release',holder);
+ await shows('ticket-reserve',{...holder,actor:'user-b',token:'b'.repeat(36)});
+ const data=JSON.parse(file.content);data.leases[field].expiresAt=Date.now()-1;file.content=JSON.stringify(data);
+ await assert.rejects(shows('ticket-review',{...holder,actor:'user-b',token:'b'.repeat(36),content}),/TICKET_CONFLICT/);
+});
+
+
+test('Vertrouwelijke bezoekersdata volgt een nieuwe eerdere reeksmap; inhoud en historie blijven behouden', async()=>{
+ const h=harness(),shows=createShowsStore({env,request:h.request}),request={concertId:h.first.concertId,actor:'user-a',field:'visitor_origins',token:'a'.repeat(36),expectedVersion:0};
+ const content=JSON.stringify({netherlands:'90',foreign:[{country:'België',percentage:'3'},{country:'Zwitserland',percentage:'2'},{country:'Canada',percentage:'1'}]});
+ await shows('ticket-reserve',request);await shows('ticket-review',{...request,content});
+ const destination=h.artist.createFolder('Earlier');h.context.esmojoMoveTicketData_(h.firstFolder,destination,h.first.concertId,'Earlier');
+ const file=destination.files.find(file=>file.name==='bezoekersdata.json'),data=JSON.parse(file.content);
+ assert.equal(data.concertId,'Earlier');assert.equal(JSON.parse(data.workflow_json).visitors.fields.visitor_origins.content,content);assert.equal(data.history.length,1);assert.deepEqual(data.leases,{});
+ assert.equal(h.firstFolder.files.some(file=>file.name==='bezoekersdata.json'),false);
 });
