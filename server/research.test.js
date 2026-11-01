@@ -20,6 +20,7 @@ function harness(firstOffset = 4) {
   class File {
     constructor(folder, blob) { this.folder = folder; this.name = blob.name; this.content = blob.content; this.id = `file-${++next}`; writes++; }
     getId() { return this.id; }
+    getName() { return this.name; }
     getBlob() { return { getDataAsString: () => this.content }; }
     setContent(value) { this.content = value; writes++; }
     moveTo(folder) { this.folder.files.splice(this.folder.files.indexOf(this), 1); folder.files.push(this); this.folder = folder; }
@@ -30,6 +31,7 @@ function harness(firstOffset = 4) {
     getParents() { return iterator(this.parent ? [this.parent] : []); }
     getFolders() { return iterator(this.folders); }
     getFoldersByName(name) { return iterator(this.folders.filter(folder => folder.name === name)); }
+    getFiles() { return iterator(this.files); }
     getFilesByName(name) { return iterator(this.files.filter(file => file.name === name)); }
     createFolder(name) { const folder = new Folder(name, this); this.folders.push(folder); return folder; }
     createFile(blob) { const file = new File(this, blob); this.files.push(file); return file; }
@@ -191,4 +193,26 @@ test('Showprofiel volgt alleen de algemene reeksmap bij een eerdere showdatum', 
   assert.equal(h.firstFolder.files.filter(f => f.name === 'showprofiel.json').length, 0);
   const file = destination.files.find(f => f.name === 'showprofiel.json');
   assert.equal(JSON.parse(file.content).concertId, 'Earlier'); assert.equal(JSON.parse(file.content).analyses[1].summary, 'Bewaren');
+});
+
+test('Showprofiel leest elf onderzoeksslots uit de canonieke reeksmap zonder eigen status/tekst te wijzigen', async () => {
+  const h = harness(), shows = createShowsStore({ env, request: h.request });
+  for (let number = 1; number <= 11; number++) await h.api({ operation: 'write', concertId: h.later.concertId, questionNumber: number, result: { ...result, answer: `Samenvatting voor onderwerp ${number}` } });
+  await shows('profile-save', { concertId: h.later.concertId, questionNumber: 3, status: 'completed', summary: 'Eigen tekst behouden', revision: 0 });
+  const before = h.writes();
+  const read = await shows('profile-read', { concertId: h.later.concertId });
+  assert.equal(Object.keys(read.researchByNumber).length, 11);
+  for (let number = 1; number <= 11; number++) {
+    assert.equal(read.researchByNumber[number].questionNumber, number);
+    assert.equal(read.researchByNumber[number].answer, `Samenvatting voor onderwerp ${number}`);
+    assert.equal(read.researchByNumber[number].researchedAt, result.researchedAt);
+  }
+  assert.equal(read.analyses[3].summary, 'Eigen tekst behouden'); assert.equal(read.analyses[3].status, 'completed');
+  assert.equal(h.writes(), before); assert.deepEqual(read.researchErrors, {});
+  const wrong = h.firstFolder.files.find(file => file.name === 'onderzoek_07.json');
+  const original = wrong.content; wrong.content = JSON.stringify({ ...JSON.parse(original), questionNumber: 8 });
+  const isolated = await shows('profile-read', { concertId: h.first.concertId });
+  assert.equal(Object.keys(isolated.researchByNumber).length, 10); assert.ok(isolated.researchErrors[7]);
+  assert.equal(isolated.researchByNumber[8].answer, 'Samenvatting voor onderwerp 8');
+  assert.equal(wrong.content, JSON.stringify({ ...JSON.parse(original), questionNumber: 8 }));
 });
