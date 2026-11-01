@@ -7,7 +7,7 @@ const id = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
 const profile = { id, firstName: 'Test', lastName: 'Account', jobTitle: 'Tester', role: 'beheerder', activated: true, email: 'test@example.invalid' };
 const env = { VITE_SUPABASE_URL: 'https://project.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SECRET_KEY: 'server-test', RESEND_API_KEY: 'mail-test' };
-const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password' }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
+const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
 
 async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false } = {}) {
   const calls = [];

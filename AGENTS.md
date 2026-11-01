@@ -76,6 +76,12 @@ en vraag goedkeuring voordat je de tragere uitvoering bouwt.
 
 ## Gegevensclassificatie
 
+De gebruiker heeft verzocht maximaal 72 uur ingelogd te blijven, ook na
+browserherstart. Alleen het noodzakelijke sessiegeheim mag versleuteld in een
+HttpOnly/Secure/SameSite-cookie worden bewaard. Profielgegevens en tokens blijven
+uit localStorage/sessionStorage. De termijn begint bij de wachtwoordaanmelding,
+wordt niet verlengd door refresh en wordt ook op de server gecontroleerd.
+
 Accountinstellingen zijn voor gebruikers alleen-lezen, behalve de eigen
 profielfoto. Laat bij foto-upload altijd een ronde uitsnede kiezen met zoom en
 verschuiving; bewaar alleen die bevestigde uitsnede in Drive. Werk daarna de
