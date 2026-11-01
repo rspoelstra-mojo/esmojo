@@ -42,10 +42,8 @@ export function createShowProfile(panel, { show } = {}) {
       header.append(glyph, intro, node('span', 'profile-category-count', `${category.questions.length} analyses`)); card.append(header);
       for (const entry of entries.filter(entry => entry.category === category)) {
         const button = node('button', 'visitor-analysis-summary'); button.type = 'button'; button.id = `analysis-open-${entry.number}`; button.disabled = !loaded;
-        button.classList.toggle('is-current', selected === entry.number);
-        const glyph = node('span', 'analysis-question-icon'); glyph.innerHTML = icon(category.icon);
         const title = node('span', 'analysis-row-title', entry.question), arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
-        button.append(glyph, title, badgeFor(entry.number), arrow); button.onclick = () => openEditor(entry.number);
+        button.append(title, badgeFor(entry.number), arrow); button.onclick = () => openEditor(entry.number);
         const row = node('div', 'visitor-analysis'); row.append(button); card.append(row);
       }
       categories.append(card);
@@ -81,18 +79,28 @@ export function createShowProfile(panel, { show } = {}) {
     text.oninput = () => { drafts.set(number, text.value); counter.textContent = `${text.value.length} / 400`; text.setCustomValidity(''); };
     summaryCard.append(label, text, counter);
     const aiCard = node('section', 'analysis-editor-card'); aiCard.append(node('h3', '', 'AI-analyse'));
-    const aiSummary = node('div', 'analysis-ai-summary', 'Nog geen AI-analyse beschikbaar.');
+    const aiSummary = node('div', 'analysis-ai-summary');
+    const aiText = node('div', 'analysis-ai-text', 'Nog geen AI-analyse beschikbaar.');
+    const adopt = node('button', 'analysis-adopt', 'Tekst overnemen'); adopt.type = 'button'; adopt.disabled = true;
+    let availableText = '';
+    aiSummary.append(aiText, adopt);
+    adopt.onclick = () => {
+      if (!availableText || busy || !ready) return;
+      text.value = availableText; text.oninput(); text.focus();
+      if (text.value.length > 400) error.textContent = 'De overgenomen tekst is langer dan 400 tekens. Kort hem in voordat je opslaat.';
+    };
     const full = node('details', 'analysis-research-details'), fullTitle = node('summary', '', 'Volledige analyse'), answer = node('div', 'analysis-research-answer'); full.append(fullTitle, answer);
     const sources = node('details', 'analysis-research-details'), sourcesTitle = node('summary', '', 'Bronnen (0)'), sourceList = node('ul', ''); sources.append(sourcesTitle, sourceList);
     aiCard.append(aiSummary, full, sources);
     const error = message(''), actions = node('div', 'analysis-editor-actions'), draft = node('button', 'secondary-button', 'Opslaan als concept'), complete = node('button', 'analysis-complete', 'Afronden');
-    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(summaryCard, aiCard, error, actions); section.append(back, header, form); title.focus();
+    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(aiCard, summaryCard, error, actions); section.append(back, header, form); title.focus();
     back.onclick = () => { if (!busy) { drafts.set(number, text.value); renderOverview(number); } };
     let ready = false; text.disabled = true;
-    const lock = value => { busy = value; back.disabled = value; draft.disabled = value || !ready; complete.disabled = value || !ready; text.disabled = value || !ready; form.setAttribute('aria-busy', String(value)); };
+    const lock = value => { busy = value; back.disabled = value; draft.disabled = value || !ready; complete.disabled = value || !ready; text.disabled = value || !ready; adopt.disabled = value || !ready || !availableText; form.setAttribute('aria-busy', String(value)); };
     lock(false);
     async function save(status) {
       if (busy || !ready) return;
+      if (text.value.length > 400) { text.setCustomValidity('Kort je samenvatting in tot maximaal 400 tekens.'); text.reportValidity(); return; }
       if (status === 'completed' && !text.value.trim()) { text.setCustomValidity('Vul een samenvatting in voordat je de analyse afrondt.'); text.reportValidity(); return; }
       lock(true); error.textContent = '';
       try { const data = await request({ operation: 'save', questionNumber: number, status, summary: text.value, revision }); if (disposed) return; records = data.analyses; revision = data.revision; drafts.delete(number); busy = false; renderOverview(number); }
@@ -108,7 +116,7 @@ export function createShowProfile(panel, { show } = {}) {
       ready = true; lock(false);
       const research = data.research;
       if (research) {
-        aiSummary.textContent = research.answer.split(/\n\s*\n/)[0]; answer.textContent = research.answer;
+        availableText = research.answer.split(/\n\s*\n/)[0]; aiText.textContent = availableText; answer.textContent = research.answer; adopt.disabled = !availableText;
         for (const source of research.sources || []) { if (!/^https:\/\//.test(source.url)) continue; const li = node('li', ''), link = node('a', '', source.title); link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; li.append(link); sourceList.append(li); }
         sourcesTitle.textContent = `Bronnen (${sourceList.children.length})`;
       } else answer.textContent = 'Nog geen AI-analyse beschikbaar.';
