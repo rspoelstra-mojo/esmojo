@@ -30,3 +30,5 @@ jobs:
           node --test server/ticket-data.test.js src/lib/research-view.test.js src/lib/show-photo-cache.test.js server/mojo-photo.test.js server/mojo-agenda.test.js server/github-identity.test.js server/shows-store.test.js server/shows-api.test.js
           node server/research.test.js
           node tools/research/client.test.mjs
+          node server/mcp.test.js
+          node .agents/skills/esmojo-concertonderzoek/scripts/workflow.test.mjs

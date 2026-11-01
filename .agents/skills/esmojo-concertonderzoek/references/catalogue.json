@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "promptVersion": "2026-11-01",
+  "sourceArchive": "ESMOJO_11_onderzoeksprompts.zip",
+  "prompts": [
+    {
+      "number": 1,
+      "title": "Man/vrouw-verhouding",
+      "file": "../../../onderzoeksprompts/01_man_vrouw_verhouding.md",
+      "sha256": "2364e690031c28834541d6beff65c0b4bc9fad89e57ee4afb92fa278b93c4197"
+    },
+    {
+      "number": 2,
+      "title": "Leeftijdsrange",
+      "file": "../../../onderzoeksprompts/02_leeftijdsrange.md",
+      "sha256": "e10fb04b8023e2df8d5012206b1ffadf989c3d42ecfdf10e7ba7644c312e9e87"
+    },
+    {
+      "number": 3,
+      "title": "Aankomstprofiel",
+      "file": "../../../onderzoeksprompts/03_aankomstprofiel.md",
+      "sha256": "ffc80fdcf47553aaf0e1b8e07be18c807f962286c88a8561c350b6052c713e60"
+    },
+    {
+      "number": 4,
+      "title": "Typische kenmerken bezoekers",
+      "file": "../../../onderzoeksprompts/04_typische_kenmerken.md",
+      "sha256": "79fd2489592be6bf4534806ab6d9cea56e8a510e1543bf42579e29118da42de5"
+    },
+    {
+      "number": 5,
+      "title": "Artiest",
+      "file": "../../../onderzoeksprompts/05_artiest.md",
+      "sha256": "d3d13cc72c655414e3272672769702b8e91d18ab7e761e529c27df226b63bafa"
+    },
+    {
+      "number": 6,
+      "title": "Routing",
+      "file": "../../../onderzoeksprompts/06_routing.md",
+      "sha256": "92d72bd771e2057420107d60a26c49c26a4dc1ee6f704c6b17d42b3afe851883"
+    },
+    {
+      "number": 7,
+      "title": "Showkarakter",
+      "file": "../../../onderzoeksprompts/07_show_karakter.md",
+      "sha256": "6e745f769afea341d49d5c65dba3a7b0f3de11ebfee2b9cc04c47b2b644a0350"
+    },
+    {
+      "number": 8,
+      "title": "Curfew / eindtijddiscipline",
+      "file": "../../../onderzoeksprompts/08_curfew.md",
+      "sha256": "a2f587528690f073dad9ab7b9d6be02a39f39423919948c4dfccce7bed4a4f83"
+    },
+    {
+      "number": 9,
+      "title": "Populariteit en ticketmarkt",
+      "file": "../../../onderzoeksprompts/09_populariteit.md",
+      "sha256": "750793b77a9e8b156c59c80f47898f200489fee4f6c40077f9127a80713b1832"
+    },
+    {
+      "number": 10,
+      "title": "Maatschappelijke gevoeligheid",
+      "file": "../../../onderzoeksprompts/10_maatschappelijke_gevoeligheid.md",
+      "sha256": "16c20028229a319b584a4bd868648bc0c4701e2302645f68f285215df8a2dcc6"
+    },
+    {
+      "number": 11,
+      "title": "Bijzonderheden",
+      "file": "../../../onderzoeksprompts/11_bijzonderheden.md",
+      "sha256": "671854dd34abb83d3e1859cc3dadc507193d6c892e9c4196e4f5dfe87f63370c"
+    }
+  ]
+}

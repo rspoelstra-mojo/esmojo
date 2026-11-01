@@ -12,6 +12,12 @@ function string(value, max) {
 }
 export function validateResearchRequest(input) {
   if (!object(input) || Buffer.byteLength(JSON.stringify(input), 'utf8') > 40000) reject();
+  if (input.operation === 'date') {
+    keys(input, ['operation', 'date']);
+    const date = string(input.date, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) reject();
+    return { operation: 'date', date };
+  }
   if (input.operation === 'resolve') {
     keys(input, ['operation', 'artist', 'venue']);
     return { operation: 'resolve', artist: string(input.artist, 160).trim(), venue: string(input.venue, 160).trim() };

@@ -173,6 +173,14 @@ toestemming tot vertrouwelijke gegevens.
 
 ## Onderzoeksbrug
 
+Voor de OAuth MCP-koppeling heeft de gebruiker op 1 november 2026 expliciet
+toestemming gegeven: technische clientregistraties, toestemmingscodes en
+toegangstokens zijn Vertrouwelijk, uitsluitend Drive-opslag en Vercel-verwerking,
+geen logs of onderzoeksbestanden. Bewaar alleen token-/codehashes in het aparte
+rootregister _esmojo_mcp_oauth_v1.json. MCP-toestemming vereist een actieve
+beheerder met MFA; controleer de rol bij ieder MCP-verzoek. Geen vrije Drive-
+of accounttoegang. Zie docs/mcp-research.md voor scope, intrekken en tests.
+
 De elf onderzoeksantwoorden, bronlinks en onderzoeksdatum zijn expliciet Openbaar.
 De brug wordt voorbereid volgens docs/research-bridge.md; live activatie is nog
 niet bevestigd. Gebruik .agents/skills/esmojo-onderzoek/SKILL.md bij onderzoek.
