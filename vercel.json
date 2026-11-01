@@ -1,0 +1,18 @@
+{
+  "functions": {
+    "api/mcp.js": {
+      "includeFiles": "{onderzoeksprompts/**,.agents/skills/esmojo-concertonderzoek/references/catalogue.json}"
+    }
+  },
+  "headers": [
+    {
+      "source": "/.well-known/:path*",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ]
+}

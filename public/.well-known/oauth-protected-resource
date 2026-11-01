@@ -1,0 +1,1 @@
+{"resource":"https://esmojo.nl/api/mcp","authorization_servers":["https://esmojo.nl"],"scopes_supported":["esmojo.research"],"bearer_methods_supported":["header"],"resource_name":"ESMOJO concertonderzoek"}

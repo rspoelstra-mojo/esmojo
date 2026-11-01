@@ -30,9 +30,15 @@ jobs:
         with:
           node-version: '22'
       - name: Check script and publication safety
+        # MCP-auth tests also import the existing Supabase/MFA verifier.
+        # Install repository dependencies before running those offline tests.
+        # No environment credentials are supplied to this step.
+        run: npm ci --no-audit --no-fund
+      - name: Run script and publication checks
         run: |
           node server/apps-script.test.js
           node --test tools/apps-script/deploy.test.mjs
+          node server/mcp.test.js
       - name: Install pinned publication tool
         run: npm ci --prefix tools/apps-script --no-audit --no-fund
       - name: Update existing webapp
