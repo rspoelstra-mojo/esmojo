@@ -8,7 +8,9 @@ GitHub garandeert geen uitvoering op de seconde: drukte kan de start vertragen.
 
 De workflow vraagt een kortlevend GitHub OIDC-token aan. Vercel accepteert alleen
 een geldig RS256-token van GitHub voor de vaste repository, main, workflow en
-audience. Er is geen nieuwe gedeelde sleutel. Daarna haalt Vercel zelf de vaste
+audience. Het immutable subject en de vaste eigenaar-/repository-ID's worden
+eveneens gecontroleerd; hergebruik van alleen de namen verleent geen toegang.
+Er is geen nieuwe gedeelde sleutel. Daarna haalt Vercel zelf de vaste
 MOJO-agenda op; de aanroeper kan geen bron-URL's of gegevens aanbieden. Alle
 paginering bij `query=Gashouder` wordt gevolgd. De lokale locatiefilter vereist
 Gashouder én Amsterdam, ongeacht interpunctie. De agenda-h3 bevat de artiest;

@@ -11,7 +11,8 @@ export async function verifyImportIdentity(token, { request = fetch, now = Date.
     if (header.alg !== 'RS256' || typeof header.kid !== 'string'
         || claims.iss !== 'https://token.actions.githubusercontent.com'
         || claims.aud !== 'https://esmojo.nl/api/shows-sync'
-        || claims.sub !== 'repo:rspoelstra-mojo/esmojo:ref:refs/heads/main'
+        || claims.sub !== 'repo:rspoelstra-mojo@350283629/esmojo@1439724175:ref:refs/heads/main'
+        || claims.repository_id !== '1439724175' || claims.repository_owner_id !== '350283629'
         || claims.repository !== 'rspoelstra-mojo/esmojo' || claims.ref !== 'refs/heads/main'
         || claims.workflow_ref !== 'rspoelstra-mojo/esmojo/.github/workflows/mojo-shows.yml@refs/heads/main'
         || !['schedule', 'workflow_dispatch'].includes(claims.event_name)
