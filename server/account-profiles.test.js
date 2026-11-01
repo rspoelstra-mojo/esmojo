@@ -79,6 +79,26 @@ test('serveradapter ondertekent ook de payload en actor', async () => {
   const request = createProfiles({ env: { GOOGLE_DRIVE_SCRIPT_URL: 'https://script.google.com/macros/s/test/exec', GOOGLE_DRIVE_SHARED_SECRET: secret }, request: async (_, options) => Response.json(h.send(JSON.parse(options.body))) });
   assert.equal((await request('self', admin)).id, admin); await assert.rejects(request('list', user));
 });
+test('Drive laat een gebruiker alleen de eigen foto wijzigen en behoudt de andere velden', () => {
+  const h = harness(); const before = h.state().profiles[1];
+  const result = h.send(signed({ operation: 'photo', actor: user, photo: 'data:image/jpeg;base64,AAAA' }));
+  assert.equal(result.ok, true); assert.equal(result.data.id, user);
+  assert.deepEqual(h.state().profiles[1], { ...before, photo: 'data:image/jpeg;base64,AAAA' });
+  assert.equal(h.state().profiles[0].photo, undefined);
+});
+test('Drive weigert gerichte foto-aanpassingen van een ander en rolwijzigingen', () => {
+  for (const extra of [{ id: admin }, { role: 'beheerder' }, { profile: { role: 'beheerder' } }]) {
+    const h = harness(); assert.equal(h.send(signed({ operation: 'photo', actor: user, photo: 'data:image/jpeg;base64,AAAA', ...extra })).ok, false);
+    assert.equal(h.writes(), 0);
+  }
+});
+test('Drive weigert SVG, te grote fotos en niet-geactiveerde profielen', () => {
+  for (const photo of ['data:image/svg+xml;base64,AAAA', 'x'.repeat(100001)]) {
+    const h = harness(); assert.equal(h.send(signed({ operation: 'photo', actor: user, photo })).ok, false); assert.equal(h.writes(), 0);
+  }
+  const h = harness([{ ...profile(user, 'gebruiker'), activated: false }]);
+  assert.equal(h.send(signed({ operation: 'photo', actor: user, photo: 'data:image/jpeg;base64,AAAA' })).ok, false);
+});
 test('editorinstelling ondertekent het profiel, verwijdert tijdelijke invoer en logt geen persoonsgegevens', () => {
   for (const ok of [true, false]) {
     const input = profile(admin);
