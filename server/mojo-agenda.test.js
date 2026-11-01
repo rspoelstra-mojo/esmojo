@@ -1,0 +1,44 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseAgenda, scrapeMojo, upcomingArtists, calendarDate, addDays, concertId } from './mojo-agenda.js';
+
+const item = (name, day, venue = 'Gashouder &#x2014; Amsterdam') => `<li class="c-agenda-item agenda-item--has-image"><a href="/concerten/test" class="agenda-item__link"><span class="agenda-item__date-day">${day}</span><h3 class="agenda-item__title u-h5">${name}</h3><div class="agenda-item__subtitle u-text--small">${venue}</div></a></li>`;
+const page = (items, next = '', month = 'november 2026') => `<div js-hook-async-content="agenda-list"><h2 class="agenda-list__title">${month}</h2>${items}</div>${next ? `<a class="pagination__arrow pagination__arrow--next" href="${next}">volgende</a>` : ''}`;
+
+test('Gashouder Amsterdam wordt herkend ondanks interpunctie; andere zalen en steden niet', () => {
+  for (const location of ['Gashouder, Amsterdam', 'Gashouder - Amsterdam', 'GASHOUDER — AMSTERDAM', 'Gashouder (Westergas), Amsterdam', 'Amsterdam / Gashouder']) assert.equal(parseAgenda(page(item('Artiest', 4, location))).records.length, 1);
+  for (const location of ['Paradiso, Amsterdam', 'Gashouder, Rotterdam', 'AFAS Live, Amsterdam']) assert.equal(parseAgenda(page(item('Artiest', 4, location))).records.length, 0);
+});
+test('gebruikt alleen de artiesttitel en decodeert speciale tekens, niet svg of andere tekst', () => {
+  const row = parseAgenda(page(item('Artiest &amp; Band<svg><path/></svg>', 4) + '<p>Een lange wereldtour</p>')).records[0];
+  assert.equal(row.artist, 'Artiest & Band'); assert.equal(row.concertId, 'Artiest-&-Band_Gashouder_04112026');
+  assert.equal(concertId('Jean-Michel Jarre', '2027-10-06'), 'Jean-Michel-Jarre_Gashouder_06102027');
+});
+test('volgt alle paginering en maand/jaargrenzen; ontdubbelt concerten', async () => {
+  const seen = [];
+  const result = await scrapeMojo({ now: new Date('2026-11-01T10:00:00Z'), request: async url => {
+    seen.push(url);
+    return new Response(seen.length === 1 ? page(item('A', 4), '?query=Gashouder&amp;page=2') : page(item('B', 3), '', 'januari 2027'));
+  } });
+  assert.equal(result.pages, 2); assert.equal(result.concerts.length, 2); assert.equal(result.concerts[1].date, '2027-01-03'); assert.match(seen[1], /page=2/);
+  const duplicate = await scrapeMojo({ now: new Date('2026-11-01T10:00:00Z'), request: async () => new Response(page(item('A', 4) + item('A', 4))) });
+  assert.equal(duplicate.concerts.length, 1);
+});
+test('365 dagen import en 90 dagen menu zijn Nederlandse kalendergrenzen, inclusief vandaag', async () => {
+  const now = new Date('2026-11-01T10:00:00Z');
+  const html = page(item('Verleden', 31), '', 'oktober 2026') + page(item('Vandaag', 1)) + page(item('Dag364', 31), '', 'oktober 2027') + page(item('Dag365', 1), '', 'november 2027');
+  const result = await scrapeMojo({ now, request: async () => new Response(html) });
+  assert.deepEqual(result.concerts.map(row => row.artist), ['Vandaag', 'Dag364']);
+  const row = { artist: 'A', venue: 'Gashouder', city: 'Amsterdam' };
+  assert.deepEqual(upcomingArtists([{ ...row, date: addDays('2026-11-01', 89) }, { ...row, artist: 'B', date: addDays('2026-11-01', 90) }, { ...row, artist: 'C', date: '2026-10-31' }, { ...row, date: '2026-11-01' }, { ...row, artist: 'D', date: '2026-11-02', venue: 'Paradiso' }], now), [{ key: 'a', name: 'A' }]);
+  assert.equal(calendarDate(new Date('2026-10-31T23:30:00Z')), '2026-11-01');
+  assert.equal(addDays('2027-03-27', 2), '2027-03-29');
+});
+test('lege agenda is geldig, gewijzigde HTML, netwerkfouten en onveilige paginering niet', async () => {
+  assert.deepEqual(parseAgenda('<div js-hook-async-content="agenda-list">We hebben geen resultaten gevonden</div>').records, []);
+  assert.throws(() => parseAgenda('<html>storing</html>'), /MOJO_FORMAT/);
+  assert.throws(() => parseAgenda(page(item('A', 31), '', 'februari 2027')), /MOJO_DATE/);
+  await assert.rejects(scrapeMojo({ request: async () => new Response('failure', { status: 503 }) }), /MOJO_UNAVAILABLE/);
+  await assert.rejects(scrapeMojo({ request: async () => new Response(page(item('A', 4), 'https://evil.invalid/agenda')) }), /MOJO_PAGINATION/);
+  await assert.rejects(scrapeMojo({ request: async () => new Response(page(item('A', 4), '?query=Gashouder')) }), /MOJO_PAGINATION/);
+});

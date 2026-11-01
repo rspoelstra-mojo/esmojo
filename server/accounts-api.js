@@ -2,8 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
 import { sendEmail } from './email.js';
 import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCookie } from './session-cookie.js';
+import { createShowsStore } from './shows-store.js';
+import { upcomingArtists } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, shows = createShowsStore({ env }) } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -84,6 +86,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if (action === 'shows' && req.method === 'GET') {
+        const data = await shows('list');
+        if (!data.checkedAt) return reply(503, { error: 'De concertagenda is nog niet geïmporteerd.' });
+        return reply(200, { artists: upcomingArtists(data.concerts), checkedAt: data.checkedAt });
+      }
       if (action === 'photo' && req.method === 'PATCH') {
         const input = req.body;
         if (!input || Object.keys(input).length !== 1 || !Object.hasOwn(input, 'photo') || !input.photo) throw new Error('VALIDATION');

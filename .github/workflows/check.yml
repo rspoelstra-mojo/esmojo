@@ -27,3 +27,4 @@ jobs:
           node server/apps-script.test.js
           node server/google-drive.test.js
           node tools/apps-script/deploy.test.mjs
+          node --test server/mojo-agenda.test.js server/github-identity.test.js server/shows-store.test.js server/shows-api.test.js
