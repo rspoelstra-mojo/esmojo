@@ -16,7 +16,17 @@ export function createShowsSubmenu(navigation, selected = '') {
   const loading = createSubmenuLoading(placeholder, navigation), finish = loading.start();
   loadArtists().then(({ artists }) => {
     if (disposed) return;
-    const links = artists.map(artist => {
+    const links = [];
+    for (const [group, title] of [['week', 'Komende week'], ['period', 'Komende periode']]) {
+      const heading = document.createElement('h3'); heading.className = 'submenu-group-heading';
+      heading.textContent = title; heading.dataset.submenuGroupHeading = group;
+      links.push(heading);
+      const members = artists.filter(artist => (artist.group || 'period') === group);
+      if (!members.length) {
+        const empty = document.createElement('p'); empty.className = 'submenu-group-empty';
+        empty.textContent = 'Geen concerten'; empty.dataset.submenuGroupEmpty = group; links.push(empty);
+      }
+      for (const artist of members) {
       const link = document.createElement('button'); link.type = 'button'; link.className = 'submenu-link';
       link.textContent = artist.name; link.dataset.submenuTitle = artist.name;
       // Alleen een menukeuze, geen nieuwe pagina of inhoud aanmaken.
@@ -25,8 +35,9 @@ export function createShowsSubmenu(navigation, selected = '') {
         navigation.querySelectorAll('[aria-current]').forEach(item => item.removeAttribute('aria-current'));
         link.setAttribute('aria-current', 'page');
       });
-      return link;
-    });
+      link.dataset.submenuGroup = group; links.push(link);
+      }
+    }
     navigation.replaceChildren(...links);
   }).catch(() => {
     if (disposed) return;

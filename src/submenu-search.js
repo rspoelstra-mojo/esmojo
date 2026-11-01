@@ -11,6 +11,11 @@ export function createSubmenuSearch({ heading, input, toggle, navigation, empty,
       link.hidden = query !== '' && !title.includes(query);
       if (!link.hidden) visible++;
     }
+    for (const heading of navigation.querySelectorAll('[data-submenu-group-heading]')) {
+      const group = heading.dataset.submenuGroupHeading;
+      heading.hidden = Boolean(query) && !entries.some(({ link }) => link.dataset.submenuGroup === group && !link.hidden);
+    }
+    for (const message of navigation.querySelectorAll('[data-submenu-group-empty]')) message.hidden = Boolean(query);
     empty.hidden = !query || visible > 0;
     status.textContent = query ? `${visible} submenu-items gevonden.` : '';
   }
