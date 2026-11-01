@@ -1,0 +1,776 @@
+[
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "VOORBEELDARTIEST",
+    "x": 50,
+    "baseline": 782.3271308593751,
+    "size": 9,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Gashouder · 14-11-2026 · v1.0 · 1 / 2",
+    "x": 50,
+    "baseline": 798.3271308593751,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Dit document is strikt vertrouwelijk en mag niet verspreid worden zonder",
+    "x": 50,
+    "baseline": 810.3271308593751,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "nadrukkelijke toestemming van MOJO Concerts.",
+    "x": 50,
+    "baseline": 820.947130859375,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Voorbeeldartiest",
+    "x": 50,
+    "baseline": 51.7208,
+    "size": 23.76,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "14 november 2026 - Gashouder",
+    "x": 50,
+    "baseline": 83.73955291666667,
+    "size": 10.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Dit showprofiel is naar alle zorgvuldigheid opgesteld door Voorbeeld ESM,",
+    "x": 50,
+    "baseline": 115.77967880208334,
+    "size": 11,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "als Event Safety manager betrokken bij de voorbereiding van deze show.",
+    "x": 50,
+    "baseline": 128.75967880208333,
+    "size": 11,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Documentversie 1.0 · Definitief afgerond",
+    "x": 50,
+    "baseline": 161.34326171875,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Op basis van opgeslagen gegevens van 30-10-2026, 13:00",
+    "x": 50,
+    "baseline": 175.34326171875,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Bezoekersanalyse",
+    "x": 50,
+    "baseline": 246.75,
+    "size": 23,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "panel",
+    "x": 50,
+    "top": 269.75,
+    "width": 495,
+    "height": 95.125,
+    "radius": 6
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Man/vrouw verhouding",
+    "x": 66,
+    "baseline": 293.75,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 66,
+    "baseline": 319.75,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "gender_ratio.",
+    "x": 66,
+    "baseline": 333.91,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Leeftijdscategorie",
+    "x": 313.5,
+    "baseline": 293.75,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 313.5,
+    "baseline": 319.75,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "age_range.",
+    "x": 313.5,
+    "baseline": 333.91,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "panel",
+    "x": 50,
+    "top": 382.875,
+    "width": 495,
+    "height": 95.125,
+    "radius": 6
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Aankomstprofiel",
+    "x": 66,
+    "baseline": 406.875,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 66,
+    "baseline": 432.875,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "arrival.",
+    "x": 66,
+    "baseline": 447.035,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Typische kenmerken",
+    "x": 313.5,
+    "baseline": 406.875,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 313.5,
+    "baseline": 432.875,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "typical_traits.",
+    "x": 313.5,
+    "baseline": 447.035,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "panel",
+    "x": 50,
+    "top": 496,
+    "width": 495,
+    "height": 114,
+    "radius": 6
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Verkochte tickets",
+    "x": 66,
+    "baseline": 520,
+    "size": 11,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "4.500",
+    "x": 66,
+    "baseline": 555,
+    "size": 26,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "10% buitenlands",
+    "x": 66,
+    "baseline": 583.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Top 3 landen",
+    "x": 231,
+    "baseline": 520,
+    "size": 11,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "België",
+    "x": 231,
+    "baseline": 543.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "5%",
+    "x": 351.07666015625,
+    "baseline": 543.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Duitsland",
+    "x": 231,
+    "baseline": 563.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "3%",
+    "x": 351.07666015625,
+    "baseline": 563.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Frankrijk",
+    "x": 231,
+    "baseline": 583.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "2%",
+    "x": 351.07666015625,
+    "baseline": 583.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Top 3 provincies",
+    "x": 396,
+    "baseline": 520,
+    "size": 11,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Noord-Holland",
+    "x": 396,
+    "baseline": 543.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "50%",
+    "x": 511.001953125,
+    "baseline": 543.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Zuid-Holland",
+    "x": 396,
+    "baseline": 563.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "30%",
+    "x": 511.001953125,
+    "baseline": 563.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Utrecht",
+    "x": 396,
+    "baseline": 583.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "20%",
+    "x": 511.001953125,
+    "baseline": 583.5,
+    "size": 9.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "panel",
+    "x": 50,
+    "top": 628,
+    "width": 495,
+    "height": 128,
+    "radius": 6
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Conclusie bezoekersanalyse",
+    "x": 65,
+    "baseline": 651,
+    "size": 13,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "4 / 10",
+    "x": 468,
+    "baseline": 652,
+    "size": 18,
+    "font": "heading"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "Voorbeeld van een door de ESM bevestigde samenvatting. Uitsluitend bedoeld voor de",
+    "x": 65,
+    "baseline": 680,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "opmaakcontrole.",
+    "x": 65,
+    "baseline": 694.16,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "1 = Rustig publiek met hoge naleving van instructies.",
+    "x": 65,
+    "baseline": 730.44,
+    "size": 8.5,
+    "font": "body"
+  },
+  {
+    "page": 1,
+    "kind": "text",
+    "text": "10 = Extreem energiek publiek met verhoogde kans op ongehoorzaamheid en incidenten.",
+    "x": 65,
+    "baseline": 740.47,
+    "size": 8.5,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "VOORBEELDARTIEST",
+    "x": 50,
+    "baseline": 777.3271308593751,
+    "size": 9,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Gashouder · 14-11-2026 · v1.0 · 2 / 2",
+    "x": 50,
+    "baseline": 793.3271308593751,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit document is strikt vertrouwelijk en mag niet verspreid worden zonder",
+    "x": 50,
+    "baseline": 805.3271308593751,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "nadrukkelijke toestemming van MOJO Concerts.",
+    "x": 50,
+    "baseline": 815.947130859375,
+    "size": 9,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Artiestanalyse",
+    "x": 50,
+    "baseline": 63,
+    "size": 23,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "panel",
+    "x": 50,
+    "top": 86,
+    "width": 495,
+    "height": 118.53999999999999,
+    "radius": 6
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Artiest",
+    "x": 66,
+    "baseline": 110,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 66,
+    "baseline": 136,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "artist_description.",
+    "x": 66,
+    "baseline": 150.16,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Routing",
+    "x": 313.5,
+    "baseline": 110,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 313.5,
+    "baseline": 136,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "tour_route.",
+    "x": 313.5,
+    "baseline": 150.16,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "panel",
+    "x": 50,
+    "top": 222.54,
+    "width": 495,
+    "height": 118.53999999999999,
+    "radius": 6
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Show karakter",
+    "x": 66,
+    "baseline": 246.54,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 66,
+    "baseline": 272.53999999999996,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "movement.",
+    "x": 66,
+    "baseline": 286.7,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Curfew",
+    "x": 313.5,
+    "baseline": 246.54,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 313.5,
+    "baseline": 272.53999999999996,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "punctuality.",
+    "x": 313.5,
+    "baseline": 286.7,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "panel",
+    "x": 50,
+    "top": 359.08,
+    "width": 495,
+    "height": 118.53999999999999,
+    "radius": 6
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Populariteit",
+    "x": 66,
+    "baseline": 383.08,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 66,
+    "baseline": 409.08,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "popularity.",
+    "x": 66,
+    "baseline": 423.24,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Maatschappelijke gevoeligheid",
+    "x": 313.5,
+    "baseline": 383.08,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor",
+    "x": 313.5,
+    "baseline": 409.08,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "social_sensitivity.",
+    "x": 313.5,
+    "baseline": 423.24,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "panel",
+    "x": 50,
+    "top": 495.62,
+    "width": 495,
+    "height": 104.38,
+    "radius": 6
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Bijzonderheden",
+    "x": 66,
+    "baseline": 519.62,
+    "size": 12,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Dit is synthetische voorbeeldtekst voor special_notes.",
+    "x": 66,
+    "baseline": 545.62,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "panel",
+    "x": 50,
+    "top": 618,
+    "width": 495,
+    "height": 128,
+    "radius": 6
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Conclusie artiestanalyse",
+    "x": 65,
+    "baseline": 641,
+    "size": 13,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "4 / 10",
+    "x": 468,
+    "baseline": 642,
+    "size": 18,
+    "font": "heading"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "Voorbeeld van een door de ESM bevestigde samenvatting. Uitsluitend bedoeld voor de",
+    "x": 65,
+    "baseline": 670,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "opmaakcontrole.",
+    "x": 65,
+    "baseline": 684.16,
+    "size": 12,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "1 = Statische, voorspelbare productie.",
+    "x": 65,
+    "baseline": 720.44,
+    "size": 8.5,
+    "font": "body"
+  },
+  {
+    "page": 2,
+    "kind": "text",
+    "text": "10 = Intensieve show met veel dynamiek en onvoorspelbaar artiestgedrag.",
+    "x": 65,
+    "baseline": 730.47,
+    "size": 8.5,
+    "font": "body"
+  }
+]
