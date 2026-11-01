@@ -1,4 +1,5 @@
 import { access } from './auth.js';
+import { loadShowPhoto } from './show-photo.js';
 import { createShowPage, formatShowDates } from './show-page.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 
@@ -30,6 +31,10 @@ export function createShowsSubmenu(navigation, selected = '', content = null) {
       for (const artist of members) {
         const link = document.createElement('a'); link.href = `#/shows/${encodeURIComponent(artist.key)}`; link.className = 'submenu-link';
         link.textContent = artist.name; link.dataset.submenuTitle = artist.name;
+        const warmPhoto = () => {
+          if (!navigator.connection?.saveData && !['slow-2g', '2g'].includes(navigator.connection?.effectiveType)) void loadShowPhoto(artist.key);
+        };
+        for (const event of ['pointerenter', 'focus', 'pointerdown']) link.addEventListener(event, warmPhoto, { passive: true });
         if (artist.key === selected) link.setAttribute('aria-current', 'page');
         if (shows.filter(show => show.name === artist.name).length > 1) {
           const date = document.createElement('small'); date.className = 'show-menu-date'; date.textContent = formatShowDates(artist.dates);
