@@ -11,8 +11,11 @@ function esmojoShows_(input) {
   let difference = 0;
   for (let i = 0; i < expected.length; i++) difference |= expected.charCodeAt(i) ^ input.signature.charCodeAt(i);
   if (difference) return esmojoReply_({ ok: false, code: 'FORBIDDEN' });
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
+  // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
+  // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
+  // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
+  const lock = JSON.parse(input.body).operation === 'sync' ? LockService.getUserLock() : null;
+  if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
     if (!['list', 'sync'].includes(request.operation)) throw new Error();
@@ -118,7 +121,7 @@ function esmojoShows_(input) {
     esmojoWriteShowJson_(root, indexFile, '_esmojo_shows_v1.json', updated);
     return esmojoReply_({ ok: true, data: { concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
   } catch (_) { return esmojoReply_({ ok: false, code: 'SHOWS_UNAVAILABLE' }); }
-  finally { lock.releaseLock(); }
+  finally { if (lock) lock.releaseLock(); }
 }
 
 function esmojoArtistKey_(name) { return name.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim(); }

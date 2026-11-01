@@ -34,7 +34,7 @@ function harness() {
   const drive = fakeDrive(), nonces = new Map(); let lastEnvelope;
   const context = vm.createContext({ console, PropertiesService: { getScriptProperties: () => ({ getProperty: () => secret }) },
     Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (algo, body) => [...createHash(algo).update(body).digest()], computeHmacSha256Signature: (message, key) => [...createHmac('sha256', key).update(message).digest()], newBlob: (content, type, name) => ({ content, type, name }), formatDate: date => calendarDate(date) },
-    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) }, CacheService: { getScriptCache: () => ({ get: key => nonces.get(key), put: (key, value) => nonces.set(key, value) }) },
+    LockService: { getScriptLock: () => { throw new Error('Import mag accountverkeer niet vergrendelen'); }, getUserLock: () => ({ tryLock: () => true, releaseLock: () => {} }) }, CacheService: { getScriptCache: () => ({ get: key => nonces.get(key), put: (key, value) => nonces.set(key, value) }) },
     DriveApp: drive.DriveApp, ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
   for (const name of ['Code.gs', 'Shows.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
