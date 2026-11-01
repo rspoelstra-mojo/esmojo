@@ -3,7 +3,7 @@ import { createProfiles, validateProfile, validatePhoto } from './account-profil
 import { sendEmail } from './email.js';
 import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCookie } from './session-cookie.js';
 import { createShowsStore } from './shows-store.js';
-import { upcomingArtists } from './mojo-agenda.js';
+import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
 export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, shows = createShowsStore({ env }) } = {}) {
   return async function handler(req, res) {
@@ -89,7 +89,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (action === 'shows' && req.method === 'GET') {
         const data = await shows('list');
         if (!data.checkedAt) return reply(503, { error: 'De concertagenda is nog niet geïmporteerd.' });
-        return reply(200, { artists: upcomingArtists(data.concerts), checkedAt: data.checkedAt });
+        return reply(200, { artists: upcomingArtists(data.concerts), shows: upcomingShows(data.concerts), checkedAt: data.checkedAt });
       }
       if (action === 'photo' && req.method === 'PATCH') {
         const input = req.body;

@@ -49,7 +49,11 @@ function renderPage() {
   document.querySelector('#submenu-title').textContent = title;
   document.title = `${title} · ESMOJO`;
   const submenu = document.querySelector('#submenu-navigation'); submenu.replaceChildren();
-  if (root === 'shows') disposePage = createShowsSubmenu(submenu);
+  if (root === 'shows') {
+    let selected = '';
+    try { selected = decodeURIComponent(route.split('/')[1] || ''); } catch { selected = 'invalid'; }
+    disposePage = createShowsSubmenu(submenu, selected, content);
+  }
   if (root === 'beheerder') {
     if (profile.role !== 'beheerder') { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
     const link = document.createElement('a'); link.href = '#/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
