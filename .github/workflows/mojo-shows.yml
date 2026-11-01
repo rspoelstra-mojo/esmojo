@@ -1,0 +1,39 @@
+name: Import MOJO shows
+on:
+  schedule:
+    # Nederland is UTC+2 in de zomer en UTC+1 in de winter.
+    - cron: '0 10,11 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: mojo-shows-production
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Daily noon import (or manual first run)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          node --input-type=module <<'JS'
+          const hour = new Intl.DateTimeFormat('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', hourCycle: 'h23' }).format(new Date());
+          if (process.env.EVENT_NAME === 'schedule' && hour !== '12') {
+            console.log('Geen Nederlandse middagrun; zomer-/wintertijd wordt gerespecteerd.');
+            process.exit(0);
+          }
+          const identityUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+          identityUrl.searchParams.set('audience', 'https://esmojo.nl/api/shows-sync');
+          const identity = await fetch(identityUrl, { headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` } });
+          if (!identity.ok) throw new Error('Workflow-identiteit kon niet worden verkregen.');
+          const { value } = await identity.json();
+          console.log(`::add-mask::${value}`);
+          const result = await fetch('https://esmojo.nl/api/shows-sync', { method: 'POST', headers: { Authorization: `Bearer ${value}` }, signal: AbortSignal.timeout(310000) });
+          if (!result.ok) throw new Error(`Import mislukt (HTTP ${result.status}); zie de importcontrole, niet de tokens.`);
+          const data = await result.json();
+          if (!data.ok) throw new Error('Import niet bevestigd.');
+          console.log(JSON.stringify(data));
+          JS

@@ -28,6 +28,8 @@ button:disabled { opacity: .55; cursor: wait; }
 @keyframes submenu-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .submenu-spinner { animation: none; } }
 .submenu-link[aria-current="page"] { background: var(--active); }
+button.submenu-link { width: 100%; border: 0; font-family: inherit; font-size: 14px; color: var(--text); background: transparent; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+button.submenu-link:hover { background: var(--hover); }
 .submenu-heading { position: relative; min-height: 24px; }
 .submenu-heading h2 { line-height: 24px; transition: opacity .16s; }
 .submenu-heading.has-search h2 { padding-right: 32px; }

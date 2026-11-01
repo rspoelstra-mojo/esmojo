@@ -76,6 +76,22 @@ en vraag goedkeuring voordat je de tragere uitvoering bouwt.
 
 ## Gegevensclassificatie
 
+MOJO-concertgegevens (artiest, locatie, datum, concert-ID en openbare bronlink)
+zijn expliciet Openbaar verklaard. Bewaar deze import in ESMOJO/Productie:
+artiestmap / artiestnaam_Gashouder_DDMMYYYY. Spaties in het concert-ID worden
+koppeltekens; de artiestmap behoudt de naam. Importeer vanaf vandaag 365 dagen
+(einddatum exclusief), toon in Shows unieke artiesten binnen 90 dagen. Geen
+nieuwe concertpagina's zonder verzoek. Alle concertdocumenten staan in hun
+concertmap; alleen de technische routingindex staat in Productie zelf.
+Algemene informatie staat één keer in algemeen.json bij de eerste datum van
+een aaneengesloten reeks. concert.json verwijst daarnaar; analyses en incidenten
+blijven bij de eigen showdatum. Historische mappen/documenten nooit opruimen
+omdat een concert niet meer in de agenda voorkomt. Bij twijfel over opslag vragen.
+De vaste workflow mojo-shows.yml controleert dagelijks rond 12.00 Nederlandse
+tijd, automatisch met zomer-/wintertijd. GitHub kan geplande jobs vertragen.
+Import alleen via de geverifieerde GitHub OIDC-identiteit op main, niet via een
+anonieme schrijfroute. Het Shows-menu vereist de bestaande account- en MFA-check.
+
 De gebruiker heeft verzocht maximaal 72 uur ingelogd te blijven, ook na
 browserherstart. Alleen het noodzakelijke sessiegeheim mag versleuteld in een
 HttpOnly/Secure/SameSite-cookie worden bewaard. Profielgegevens en tokens blijven
