@@ -12,11 +12,22 @@
 De server ondersteunt stateless Streamable HTTP/JSON, MCP 2025-03-26,
 2025-06-18 en 2025-11-25. Geen tunnel, nieuw Google-account of ruwe token invoeren.
 OAuth-clientregistratie verloopt via de beveiligde protocolflow (DCR), met PKCE
-S256 verplicht, resourcebinding en exacte vooraf toegestane callback-URLs:
-https://chatgpt.com/connector_platform/oauth_redirect en de gelijknamige
-https://chat.openai.com-route. Geen URL-wildcards of vrij aangeleverde hosts.
+S256 verplicht, resourcebinding en de exacte huidige OpenAI-callback-URL:
+https://chatgpt.com/connector_platform_oauth_redirect. Deze schrijfwijze gebruikt
+underscores, niet /connector_platform/oauth_redirect. De twee eerder opgenomen
+exacte /connector_platform/oauth_redirect-paden op chatgpt.com en chat.openai.com
+blijven alleen voor compatibiliteit met bestaande registraties toegestaan.
+Geen URL-wildcards of vrij aangeleverde hosts.
 Als het platform een andere callback gebruikt: meld de exacte niet-geheime URL;
 verruim de lijst niet zonder een gecontroleerde wijziging.
+
+Bij deze metadata met issuer-identificatie hoort de stabiele callback hierboven.
+Het callback-ID-specifieke alternatief /connector/oauth/{callback_id} wordt niet
+zonder de exacte geverifieerde callbackregistratie aan de allowlist toegevoegd.
+Bron: https://developers.openai.com/apps-sdk/build/auth/ (1 november 2026).
+In de ChatGPT-builder kunnen de automatisch gevonden eindpunten blijven staan;
+kies DCR, laat OIDC uit en selecteer esmojo.research. De melding dat CIMD niet
+beschikbaar is, is geen fout zolang DCR is gekozen en ondersteund.
 
 ChatGPT opent de toestemmingspagina van ESMOJO. Log in ESMOJO in met een actief
 beheerdersaccount en authenticator. Keer terug naar het toestemmingstabblad en
