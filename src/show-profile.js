@@ -19,12 +19,6 @@ export function createShowProfile(panel, status = 'pending') {
   const total = analysisCategories.reduce((count, category) => count + category.questions.length, 0);
   const completed = state === 'completed' ? total : 0;
   const section = node('section', 'show-profile');
-  const header = node('header', 'profile-header');
-  const intro = node('div', 'profile-intro'); intro.append(node('h2', 'profile-title', 'Showprofiel'), node('p', 'profile-subtitle', '11 analyses voor publiek, artiest en productie.'));
-  const progress = node('div', 'profile-progress'); progress.append(node('h3', '', 'Voortgang analyses'));
-  const progressRow = node('div', 'profile-progress-row');
-  const track = node('progress', 'profile-progress-track'); track.max = total; track.value = completed; track.setAttribute('aria-label', 'Afgeronde analyses');
-  progressRow.append(track, node('span', '', `${completed} van ${total} afgerond`)); progress.append(progressRow); header.append(intro, progress);
   const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
   const overview = node('section', 'profile-overview'); overview.append(node('h3', '', 'Analyse in beeld'));
   const overviewBody = node('div', 'profile-overview-body');
@@ -71,5 +65,5 @@ export function createShowProfile(panel, status = 'pending') {
     categories.append(card);
   }
   view.addEventListener('click', () => { selectedBlock.open = true; selectedSummary.focus(); selectedBlock.scrollIntoView({ block: 'nearest', behavior: 'auto' }); });
-  layout.append(categories, aside); section.append(header, layout); panel.append(section);
+  layout.append(categories, aside); section.append(layout); panel.append(section);
 }
