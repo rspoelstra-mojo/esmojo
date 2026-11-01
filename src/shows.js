@@ -21,9 +21,9 @@ export function createShowsSubmenu(navigation, selected = '', content = null) {
         empty.textContent = 'Geen concerten'; empty.dataset.submenuGroupEmpty = group; links.push(empty);
       }
       for (const artist of members) {
-        const previous=existing.get(`#/shows/${encodeURIComponent(artist.key)}`);
+        const previous=existing.get(`/shows/${encodeURIComponent(artist.key)}`);
         if(previous){previous.dataset.submenuGroup=group;links.push(previous);continue;}
-        const link = document.createElement('a'); link.href = `#/shows/${encodeURIComponent(artist.key)}`; link.className = 'submenu-link';
+        const link = document.createElement('a'); link.href = `/shows/${encodeURIComponent(artist.key)}`; link.className = 'submenu-link';
         link.textContent = artist.name; link.dataset.submenuTitle = artist.name;
         const warmPhoto = () => {
           if (!navigator.connection?.saveData && !['slow-2g', '2g'].includes(navigator.connection?.effectiveType)) void loadShowPhoto(artist.key);

@@ -1,3 +1,4 @@
+import { installRouter, pageRoute } from './lib/router.js';
 import './style.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
 import { startAuth } from './auth.js';
@@ -33,14 +34,14 @@ document.querySelector('#admin-icon').innerHTML = icon('settings');
 document.querySelector('#navigation').innerHTML = [
   ['', 'home', 'Homepage'], ['shows', 'music', 'Shows'], ['artiest', 'person', 'Artiest'],
   ['statistieken', 'chart', 'Statistieken'],
-].map(([route, glyph, label]) => `<a class="rail-item" href="#/${route}" data-page="${route}" aria-label="${label}">${icon(glyph)}<span class="tooltip" role="tooltip">${label}</span></a>`).join('');
+].map(([route, glyph, label]) => `<a class="rail-item" href="/${route}" data-page="${route}" aria-label="${label}">${icon(glyph)}<span class="tooltip" role="tooltip">${label}</span></a>`).join('');
 
 function renderPage() {
   disposePage(); disposePage = () => {};
   const content = document.querySelector('.content-box');
   content.replaceChildren();
   if (!profile) return;
-  const route = location.hash.replace(/^#\/?/, '');
+  const route = pageRoute(location);
   const root = route.split('/')[0];
   const title = pages[root] || 'Pagina niet gevonden';
   const hasSubmenu = route !== '';
@@ -56,7 +57,7 @@ function renderPage() {
   }
   if (root === 'beheerder') {
     if (profile.role !== 'beheerder') { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
-    const link = document.createElement('a'); link.href = '#/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
+    const link = document.createElement('a'); link.href = '/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
     if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');
     submenu.append(link);
     link.dataset.submenuTitle = 'Accounts';
@@ -89,7 +90,7 @@ document.querySelector('#theme-toggle').addEventListener('click', () => {
   try { localStorage.setItem('esmojo-theme', theme); } catch { /* Theme still works without storage. */ }
   renderTheme();
 });
-window.addEventListener('hashchange', renderPage);
+installRouter({onNavigate:renderPage});
 renderPage();
 renderTheme();
 startAuth({
