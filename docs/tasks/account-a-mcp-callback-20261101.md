@@ -18,3 +18,9 @@ Nieuwe OAuth-koppeling zelf wordt door gebruiker vanuit ChatGPT gestart.
 
 Bron: https://developers.openai.com/apps-sdk/build/auth/ — geraadpleegd
 1 november 2026. Publicatie via main en bestaande Apps Script-deployment.
+
+Regressie: volledige lokale DCR → PKCE → tokenflow draait nu met de officiële
+underscore-callback door zowel Vercel-handler als gesimuleerde Apps Script-store.
+Extra test weigert slashvarianten met toevoegingen, query/fragment, HTTP en
+lookalike-hosts. Vijftien MCP/OAuth-tests, bestaande research/Apps Script/publicatie-
+tests, build en diffcontrole geslaagd; geen echte client of onderzoeksdata geschreven.

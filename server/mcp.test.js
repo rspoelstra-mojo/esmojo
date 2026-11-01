@@ -11,7 +11,8 @@ import { createResearchService } from './research-service.js';
 import { loadPrompt } from '../.agents/skills/esmojo-concertonderzoek/scripts/workflow.mjs';
 
 const actor = '11111111-1111-4111-8111-111111111111', secret = 'only-a-local-test-'.repeat(4), env = { GOOGLE_DRIVE_SHARED_SECRET: secret, GOOGLE_DRIVE_SCRIPT_URL: 'https://script.google.com/macros/s/test/exec' };
-const callback = 'https://chatgpt.com/connector_platform/oauth_redirect';
+// Exact stable callback from the current official OpenAI auth documentation.
+const callback = 'https://chatgpt.com/connector_platform_oauth_redirect';
 function response() { return { headers: {}, setHeader(k,v){this.headers[k]=v;}, status(v){this.code=v;return this;}, json(v){this.data=v;return this;}, send(v){this.html=v;return this;}, end(){return this;} }; }
 function storeHarness() {
   let time = Date.now(), reads = 0, content = null, locked = false;
@@ -93,6 +94,16 @@ test('geen open redirect, geen client SSRF, vereiste S256/resource, CSRF en same
   assert.equal((await h.call('approve',{csrf:p.pending.csrf},{origin:'https://evil.invalid','content-type':'application/json',cookie:p.cookie})).code,403);
   assert.equal(openConsent({headers:{cookie:p.cookie+'x'}},env,h.now()),null);
   h.advance(610000);assert.equal(openConsent({headers:{cookie:p.cookie}},env,h.now()),null);
+});
+test('officiële callback werkt door beide lagen; exacte oudere callbacks blijven compatibel, varianten niet',async()=>{
+  const h=oauthHarness();
+  for (const uri of [callback,'https://chatgpt.com/connector_platform/oauth_redirect','https://chat.openai.com/connector_platform/oauth_redirect']) {
+    const r=await h.call('register',{client_name:'ChatGPT callback regression',redirect_uris:[uri],token_endpoint_auth_method:'none'});
+    assert.equal(r.code,201);assert.deepEqual((await h.store({operation:'client',clientId:r.data.client_id})).redirectUris,[uri]);
+  }
+  for (const uri of [callback+'/',callback+'?next=https://evil.invalid',callback+'#fragment','https://chatgpt.com.evil.invalid/connector_platform_oauth_redirect','http://chatgpt.com/connector_platform_oauth_redirect']) {
+    assert.equal((await h.call('register',{redirect_uris:[uri],token_endpoint_auth_method:'none'})).code,400);
+  }
 });
 test('code-replay trekt grant in; code vervalt; beheerder kan eigen verbindingen intrekken',async()=>{
   const h=oauthHarness(),p=await connect(h),body={grant_type:'authorization_code',client_id:p.client.client_id,redirect_uri:callback,code:p.code,code_verifier:p.verifier,resource:RESOURCE};
