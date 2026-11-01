@@ -77,6 +77,12 @@ en vraag goedkeuring voordat je de tragere uitvoering bouwt.
 
 ## Gegevensclassificatie
 
+De gebruiker heeft op 1 november 2026 eigen Showprofiel-samenvattingen expliciet
+Openbaar verklaard. Sla samenvatting, concept/afgerond-status en wijzigingsdatum
+op in showprofiel.json in de bestaande algemene concert/reeksmap in Drive.
+Bestaande account/MFA, servervalidatie en revisiecontrole blijven vereist.
+Onderzoeksbestanden blijven afzonderlijk en worden hierdoor niet overschreven.
+
 MOJO-concertgegevens (artiest, locatie, datum, concert-ID en openbare bronlink)
 zijn expliciet Openbaar verklaard. Bewaar deze import in ESMOJO/Productie:
 artiestmap / artiestnaam_Gashouder_DDMMYYYY. Spaties in het concert-ID worden

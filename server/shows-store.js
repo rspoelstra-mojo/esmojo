@@ -12,7 +12,7 @@ export function createShowsStore({ env = process.env, request = fetch } = {}) {
     const response = await request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shows', timestamp, nonce, signature, body }), signal: AbortSignal.timeout(operation === 'sync' ? 240000 : 25000) });
     if (!response.ok) throw new Error('SHOWS_UNAVAILABLE');
     const result = await response.json();
-    if (!result.ok) throw new Error('SHOWS_UNAVAILABLE');
+    if (!result.ok) throw new Error(result.code === 'PROFILE_CONFLICT' ? 'PROFILE_CONFLICT' : 'SHOWS_UNAVAILABLE');
     return result.data;
   };
 }

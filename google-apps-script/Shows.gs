@@ -14,10 +14,18 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = JSON.parse(input.body).operation === 'sync' ? LockService.getUserLock() : null;
+  const lock = ['sync', 'profile-save'].includes(JSON.parse(input.body).operation) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if (['profile-read', 'profile-save'].includes(request.operation)) {
+      if (request.operation === 'profile-save') {
+        const cache = CacheService.getScriptCache(), key = 'shows:' + input.nonce;
+        if (cache.get(key)) throw new Error('FORBIDDEN');
+        cache.put(key, '1', 180);
+      }
+      return esmojoReply_({ ok: true, data: esmojoShowProfile_(request) });
+    }
     if (!['list', 'sync'].includes(request.operation)) throw new Error();
     const esmojo = DriveApp.getFolderById(ESMOJO_FOLDER_ID);
     if (esmojo.isTrashed()) throw new Error();
@@ -94,6 +102,7 @@ function esmojoShows_(input) {
       const generalFolder = DriveApp.getFolderById(first.folderId);
       const oldGeneral = group.find(row => row.generalFileId);
       if (oldGeneral && oldGeneral.concertId !== first.concertId && typeof esmojoMoveResearch_ === 'function') {
+        esmojoMoveShowProfile_(DriveApp.getFolderById(oldGeneral.folderId), generalFolder, oldGeneral.concertId, first.concertId);
         esmojoMoveResearch_(DriveApp.getFolderById(oldGeneral.folderId), generalFolder, oldGeneral.concertId, first.concertId);
       }
       let generalFile = esmojoShowFile_(generalFolder, 'algemeen.json');
@@ -123,7 +132,7 @@ function esmojoShows_(input) {
     const updated = { version: 1, concerts: rows, active: Array.from(incoming), checkedAt: snapshot.checkedAt };
     esmojoWriteShowJson_(root, indexFile, '_esmojo_shows_v1.json', updated);
     return esmojoReply_({ ok: true, data: { concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
-  } catch (_) { return esmojoReply_({ ok: false, code: 'SHOWS_UNAVAILABLE' }); }
+  } catch (error) { return esmojoReply_({ ok: false, code: error.message === 'PROFILE_CONFLICT' ? 'PROFILE_CONFLICT' : 'SHOWS_UNAVAILABLE' }); }
   finally { if (lock) lock.releaseLock(); }
 }
 
