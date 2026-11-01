@@ -17,12 +17,15 @@ function doGet() {
 function doPost(event) {
   try {
     const raw = event && event.postData && event.postData.contents;
-    if (raw && raw.length <= 120000) {
+    if (raw && raw.length <= 3000000) {
       const envelope = JSON.parse(raw);
-      if (envelope.action === 'accounts') return esmojoAccounts_(envelope);
+      // PDF-bytes vallen onder de eigen HMAC- en inhoudsgrenzen van Shows.gs.
       if (envelope.action === 'shows') return esmojoShows_(envelope);
-      if (envelope.action === 'research') return esmojoResearch_(envelope);
-      if (envelope.action === 'mcp-auth') return esmojoMcpAuth_(envelope);
+      if (raw.length <= 120000) {
+        if (envelope.action === 'accounts') return esmojoAccounts_(envelope);
+        if (envelope.action === 'research') return esmojoResearch_(envelope);
+        if (envelope.action === 'mcp-auth') return esmojoMcpAuth_(envelope);
+      }
     }
     if (!raw || raw.length > 4096) return esmojoReply_({ ok: false, error: 'Geen toegang.' });
     const input = JSON.parse(raw);

@@ -58,3 +58,14 @@ test('verschillende Google-antwoorden leveren veilige diagnosecodes op', async (
     await assert.rejects(checkAppsScriptConnection({env,request:async()=>Response.json(payload)}), error => error.code === code && !error.message.includes('private information'));
   }
 });
+
+test('alleen Shows krijgt ruimte voor de PDF-envelop; andere routes behouden hun oude grens',()=>{
+ const {context,reads}=script(),calls=[];
+ context.esmojoShows_=envelope=>{calls.push(envelope.action);return{ok:true};};
+ for(const action of ['accounts','research','mcp-auth'])context[action==='accounts'?'esmojoAccounts_':action==='research'?'esmojoResearch_':'esmojoMcpAuth_']=()=>{throw Error('Grote andere routes mogen niet worden doorgegeven');};
+ const request=(action,length)=>context.doPost({postData:{contents:JSON.stringify({action,body:'x'.repeat(length)})}});
+ assert.equal(request('shows',2800000).ok,true);assert.deepEqual(calls,['shows']);
+ assert.equal(request('shows',3000000).ok,false);assert.equal(calls.length,1);
+ for(const action of ['accounts','research','mcp-auth'])assert.equal(request(action,120001).ok,false);
+ assert.equal(reads(),0);
+});
