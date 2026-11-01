@@ -28,10 +28,11 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon}) {
     finally{pending.delete(field);if(!disposed)refresh();}})();pending.set(field,task);return task;
   }
   function refresh(){
-    for(const [field,card]of cards){const final=Boolean(stored(field)?.completed_at);card.badge.textContent=final?'Beoordeeld':'Nog niet beoordeeld';card.badge.dataset.status=final?'completed':'pending';card.button.textContent=final?'Opnieuw bewerken':field==='ticket_sales'?'Aantal bevestigen':'Gegevens bevestigen';
+    for(const [field,card]of cards){const final=Boolean(stored(field)?.completed_at);card.badge.textContent=final?'Afgerond':'Nog niet afgerond';card.badge.dataset.status=final?'completed':'pending';card.button.textContent=final?'Opnieuw bewerken':field==='ticket_sales'?'Aantal bevestigen':'Gegevens bevestigen';
       card.button.disabled=!ready||busy||(field!=='ticket_sales'&&Boolean(workflow.visitors.completed_at))||(!final&&(locked(field)||!held(field)||!validTicketContent(field,card.content(),shows)));
       card.retry.hidden=!card.conflict;card.reload.hidden=!card.conflict;for(const input of card.inputs)input.readOnly=locked(field);for(const combo of card.combos)combo.refresh();
     }
+    const allDone=fields.every(([field])=>Boolean(stored(field)?.completed_at));headerBadge.textContent=allDone?'Afgerond':'Handmatig invoeren';headerBadge.dataset.status=allDone?'completed':'pending';
     back.disabled=busy;
   }
   async function save(field){
@@ -47,7 +48,7 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon}) {
   const back=node('button','profile-back','← Terug naar overzicht');back.type='button';back.onclick=()=>{if(!busy)onBack();};
   const header=node('div','analysis-editor-header'),glyph=node('span','profile-category-icon');glyph.innerHTML=categoryIcon;
   const intro=node('div','analysis-editor-intro'),title=node('h2','','Aantallen en herkomst');title.tabIndex=-1;
-  intro.append(title,node('p','','Bezoekersanalyse'));header.append(glyph,intro,node('span','analysis-status','Handmatig invoeren'));
+  const headerBadge=node('span','analysis-status','Handmatig invoeren');intro.append(title,node('p','','Bezoekersanalyse'));header.append(glyph,intro,headerBadge);
   const grid=node('div','ticket-grid'),error=node('p','profile-message');error.setAttribute('role','alert');section.replaceChildren(back,header,error,grid);
   title.focus({preventScroll:true});window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   function buildCards(){cards.clear();grid.replaceChildren();
