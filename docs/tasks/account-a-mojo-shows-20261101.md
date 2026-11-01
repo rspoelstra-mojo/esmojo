@@ -11,3 +11,11 @@ Vul alleen het Shows-submenu met unieke artiesten binnen 90 dagen, geen pagina's
 Verwachte scope: scraper/importcode, ondertekende Apps Script Drive-opslag,
 Shows-submenu, tests en documentatie. Geen wijzigingen aan Supabase-schema,
 accountprofielen of secrets. Concertgegevens zijn expliciet Openbaar verklaard.
+
+Toevoeging gebruiker: dagelijkse controle om 12.00 Nederlandse tijd. Gebruik de
+vaste GitHub Actions-workflow met OIDC-authenticatie richting Vercel, bestaande
+HMAC-richting Drive en zomer-/wintertijdselectie. Geen nieuwe secrets of Google
+OAuth-scopes. GitHub-schedules kunnen enkele minuten vertraging hebben.
+
+Aanvulling: alle artiestmappen en de technische concertindex komen uitsluitend
+onder ESMOJO/Productie. Die map wordt hergebruikt of eenmalig aangemaakt.
