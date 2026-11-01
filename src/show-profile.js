@@ -93,7 +93,8 @@ export function createShowProfile(panel, { show } = {}) {
     const sources = node('details', 'analysis-research-details'), sourcesTitle = node('summary', '', 'Bronnen (0)'), sourceList = node('ul', ''); sources.append(sourcesTitle, sourceList);
     aiCard.append(aiSummary, full, sources);
     const error = message(''), actions = node('div', 'analysis-editor-actions'), draft = node('button', 'secondary-button', 'Opslaan als concept'), complete = node('button', 'analysis-complete', 'Afronden');
-    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(aiCard, summaryCard, error, actions); section.append(back, header, form); title.focus();
+    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(aiCard, summaryCard, error, actions); section.append(back, header, form); title.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, left: window.scrollX, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     back.onclick = () => { if (!busy) { drafts.set(number, text.value); renderOverview(number); } };
     let ready = false; text.disabled = true;
     const lock = value => { busy = value; back.disabled = value; draft.disabled = value || !ready; complete.disabled = value || !ready; text.disabled = value || !ready; adopt.disabled = value || !ready || !availableText; form.setAttribute('aria-busy', String(value)); };
