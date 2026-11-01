@@ -39,7 +39,7 @@ function esmojoShows_(input) {
     if (state.version !== 1 || !Array.isArray(state.concerts) || !Array.isArray(state.active)) throw new Error();
     if (request.operation === 'list') {
       const active = new Set(state.active);
-      return esmojoReply_({ ok: true, data: { checkedAt: state.checkedAt, concerts: state.concerts.filter(row => active.has(row.concertId)).map(row => ({ concertId: row.concertId, artist: row.artist, date: row.date, venue: 'Gashouder', city: 'Amsterdam' })) } });
+      return esmojoReply_({ ok: true, data: { checkedAt: state.checkedAt, concerts: state.concerts.filter(row => active.has(row.concertId)).map(row => ({ concertId: row.concertId, artist: row.artist, date: row.date, venue: 'Gashouder', city: 'Amsterdam', sourceUrl: row.sourceUrl })) } });
     }
     // HMAC bindt de payload; herhalingen binnen het tijdvenster worden geweigerd.
     const cache = CacheService.getScriptCache(), nonceKey = 'shows:' + input.nonce;
