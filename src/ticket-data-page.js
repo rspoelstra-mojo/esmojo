@@ -2,11 +2,11 @@ import './ticket-data.css';
 import { access } from './auth.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 import { suggestionInput } from './lib/suggestion-input.js';
-import { foreignCountries, provinces, emptyVisitorOrigins, emptyDomesticOrigins, parseTicketSales, validSaleCount, validTicketContent, normalizedTicketSales, fullShowDate } from '../shared/ticket-data.js';
+import { foreignCountries, provinces, emptyVisitorOrigins, emptyDomesticOrigins, parseTicketSales, validSaleCount, validTicketContent, normalizedTicketSales } from '../shared/ticket-data.js';
 const fields=[['ticket_sales','Huidige kaartverkoopstand'],['visitor_origins','Top 3 buitenlandse bezoekers'],['domestic_origins','Top 3 binnenlandse herkomst']];
 const node=(tag,cls,text)=>{const el=document.createElement(tag);el.className=cls;if(text!==undefined)el.textContent=text;return el;};
-export function createTicketDataPage(section,{show,state,onBack}) {
-  let disposed=false,workflow={visitors:{fields:{}}},shows=[],busy=false,expanded=false,ready=false;
+export function createTicketDataPage(section,{show,state,onBack,categoryIcon}) {
+  let disposed=false,workflow={visitors:{fields:{}}},shows=[],busy=false,expanded=true,ready=false;
   const leases=new Map(),pending=new Map(),cards=new Map();
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
   const request=body=>access('ticket-data',{method:'POST',body:{concertId:show.key,...body}});
@@ -45,9 +45,10 @@ export function createTicketDataPage(section,{show,state,onBack}) {
   }
   function draft(field,value){if(locked(field))return;base(field);state.drafts[field]=value;void reserve(field);cards.get(field).error.textContent='';refresh();}
   const back=node('button','profile-back','← Terug naar overzicht');back.type='button';back.onclick=()=>{if(!busy)onBack();};
-  const title=node('h2','ticket-page-title','Aantallen en herkomst');title.tabIndex=-1;
-  const intro=node('p','ticket-page-intro','Vul de gegevens in en bevestig ieder blok afzonderlijk.');
-  const grid=node('div','ticket-grid'),error=node('p','profile-message');error.setAttribute('role','alert');section.replaceChildren(back,title,intro,error,grid);
+  const header=node('div','analysis-editor-header'),glyph=node('span','profile-category-icon');glyph.innerHTML=categoryIcon;
+  const intro=node('div','analysis-editor-intro'),title=node('h2','','Aantallen en herkomst');title.tabIndex=-1;
+  intro.append(title,node('p','','Bezoekersanalyse'));header.append(glyph,intro,node('span','analysis-status','Handmatig invoeren'));
+  const grid=node('div','ticket-grid'),error=node('p','profile-message');error.setAttribute('role','alert');section.replaceChildren(back,header,error,grid);
   title.focus({preventScroll:true});window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   function buildCards(){cards.clear();grid.replaceChildren();
     for(const[field,label]of fields){
@@ -66,7 +67,7 @@ export function createTicketDataPage(section,{show,state,onBack}) {
         const parsed=parseTicketSales(raw,true),rows=shows.map(s=>({...s,count:parsed?.find(r=>r.date===s.date&&r.time===s.time)?.count??(shows.length===1&&validSaleCount(raw)?raw:'')}));
         getContent=()=>shows.length===1?rows[0]?.count||'':JSON.stringify(rows);
         const labels=node('div','ticket-column-headings');labels.append(node('span','','Showdatum'),node('span','','Verkoopstand'));area.append(labels);
-        rows.forEach((r,i)=>{const date=fullShowDate(r.date)+(shows.filter(s=>s.date===r.date).length>1?' · '+r.time:'');const input=node('input','');input.type='text';input.inputMode='numeric';input.pattern='[0-9]*';input.maxLength=9;input.value=r.count;input.oninput=()=>{if(input.value!==''&&!validSaleCount(input.value)){input.value=rows[i].count;return;}rows[i].count=input.value;draft(field,getContent());};row(date,input,'Verkoopstand '+date);});
+        rows.forEach((r,i)=>{const date=new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'long',timeZone:'Europe/Amsterdam'}).format(new Date(r.date+'T12:00:00Z'))+(shows.filter(s=>s.date===r.date).length>1?' · '+r.time:'');const input=node('input','');input.type='text';input.inputMode='numeric';input.pattern='[0-9]*';input.maxLength=9;input.value=r.count;input.oninput=()=>{if(input.value!==''&&!validSaleCount(input.value)){input.value=rows[i].count;return;}rows[i].count=input.value;draft(field,getContent());};row(date,input,'Verkoopstand '+date);});
         if(shows.length>5)area.append(node('p','','Er kunnen maximaal vijf shows per showprofiel worden vastgelegd.'));
         if(shows.length>1&&validSaleCount(raw))area.append(node('p','','Bestaande verkoopstand: '+raw+'. Vul per show de juiste stand in.'));
       }else{

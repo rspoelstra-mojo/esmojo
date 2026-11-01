@@ -53,8 +53,8 @@ export function createShowProfile(panel, { show } = {}) {
       if (category.title === 'Bezoekersanalyse') {
         const row = node('div', 'visitor-analysis'), button = node('button', 'visitor-analysis-summary'); button.type = 'button';
         const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
-        button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'), node('span','analysis-status','Handmatig'),arrow);
-        button.onclick = () => { ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,state:ticketState,onBack:()=>renderOverview()}); };
+        button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'), node('span','analysis-status','Handmatig invoeren'),arrow);
+        button.onclick = () => { ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,state:ticketState,categoryIcon:icon('people'),onBack:()=>renderOverview()}); };
         row.append(button);card.append(row);
       }
       categories.append(card);

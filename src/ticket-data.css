@@ -1,5 +1,3 @@
-.ticket-page-title { margin: 0 0 8px; font-size: 24px; line-height: 1.3; }
-.ticket-page-intro { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
 .ticket-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
 .ticket-card { min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; }
 .ticket-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; padding: 18px; border: 0; border-radius: 12px; background: transparent; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
