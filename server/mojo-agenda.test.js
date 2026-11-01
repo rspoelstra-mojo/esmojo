@@ -30,7 +30,7 @@ test('365 dagen import en 90 dagen menu zijn Nederlandse kalendergrenzen, inclus
   const result = await scrapeMojo({ now, request: async () => new Response(html) });
   assert.deepEqual(result.concerts.map(row => row.artist), ['Vandaag', 'Dag364']);
   const row = { artist: 'A', venue: 'Gashouder', city: 'Amsterdam' };
-  assert.deepEqual(upcomingArtists([{ ...row, date: addDays('2026-11-01', 89) }, { ...row, artist: 'B', date: addDays('2026-11-01', 90) }, { ...row, artist: 'C', date: '2026-10-31' }, { ...row, date: '2026-11-01' }, { ...row, artist: 'D', date: '2026-11-02', venue: 'Paradiso' }], now), [{ key: 'a', name: 'A' }]);
+  assert.deepEqual(upcomingArtists([{ ...row, date: addDays('2026-11-01', 89) }, { ...row, artist: 'B', date: addDays('2026-11-01', 90) }, { ...row, artist: 'C', date: '2026-10-31' }, { ...row, date: '2026-11-01' }, { ...row, artist: 'D', date: '2026-11-02', venue: 'Paradiso' }], now), [{ key: 'a', name: 'A', group: 'week' }]);
   assert.equal(calendarDate(new Date('2026-10-31T23:30:00Z')), '2026-11-01');
   assert.equal(addDays('2027-03-27', 2), '2027-03-29');
 });
@@ -41,4 +41,12 @@ test('lege agenda is geldig, gewijzigde HTML, netwerkfouten en onveilige paginer
   await assert.rejects(scrapeMojo({ request: async () => new Response('failure', { status: 503 }) }), /MOJO_UNAVAILABLE/);
   await assert.rejects(scrapeMojo({ request: async () => new Response(page(item('A', 4), 'https://evil.invalid/agenda')) }), /MOJO_PAGINATION/);
   await assert.rejects(scrapeMojo({ request: async () => new Response(page(item('A', 4), '?query=Gashouder')) }), /MOJO_PAGINATION/);
+});
+
+test('week is vandaag t/m dag 6, periode start op dag 7; artiest komt maar eenmaal voor', () => {
+  const row = (artist, date) => ({ artist, date, venue: 'Gashouder', city: 'Amsterdam' });
+  const result = upcomingArtists([row('A', '2026-11-20'), row('Vandaag', '2026-11-01'), row('Dag6', '2026-11-07'), row('Dag7', '2026-11-08'), row('A', '2026-11-03'), row('Verleden', '2026-10-31'), row('Dag90', '2027-01-30')], new Date('2026-10-31T23:30:00Z'));
+  assert.deepEqual(result, [{ key: 'a', name: 'A', group: 'week' }, { key: 'dag6', name: 'Dag6', group: 'week' }, { key: 'dag7', name: 'Dag7', group: 'period' }, { key: 'vandaag', name: 'Vandaag', group: 'week' }]);
+  const dst = upcomingArtists([row('Dag6', '2027-04-02'), row('Dag7', '2027-04-03')], new Date('2027-03-26T23:30:00Z'));
+  assert.deepEqual(dst.map(a => a.group), ['week', 'period']);
 });

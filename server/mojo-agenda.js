@@ -73,10 +73,11 @@ export async function scrapeMojo({ request = fetch, now = new Date() } = {}) {
 }
 
 export function upcomingArtists(concerts, now = new Date()) {
-  const from = calendarDate(now), until = addDays(from, 90), names = new Map();
+  const from = calendarDate(now), until = addDays(from, 90), weekUntil = addDays(from, 7), names = new Map();
   for (const row of concerts) if (row.date >= from && row.date < until && row.venue === 'Gashouder' && row.city === 'Amsterdam') {
     const key = artistKey(row.artist);
-    if (!names.has(key)) names.set(key, { key, name: row.artist });
+    if (!names.has(key)) names.set(key, { key, name: row.artist, group: row.date < weekUntil ? 'week' : 'period' });
+    else if (row.date < weekUntil) names.get(key).group = 'week';
   }
   return [...names.values()].sort((a, b) => a.name.localeCompare(b.name, 'nl'));
 }
