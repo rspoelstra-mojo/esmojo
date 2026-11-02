@@ -122,6 +122,7 @@ function esmojoShows_(input) {
       if (oldGeneral && oldGeneral.concertId !== first.concertId && typeof esmojoMoveResearch_ === 'function') {
         if(typeof esmojoMoveShowProfilePdf_==='function')esmojoMoveShowProfilePdf_(DriveApp.getFolderById(oldGeneral.folderId),generalFolder,oldGeneral.concertId,first.concertId);
         if (typeof esmojoMoveAnalysisFinal_ === 'function') esmojoMoveAnalysisFinal_(DriveApp.getFolderById(oldGeneral.folderId),generalFolder,oldGeneral.concertId,first.concertId);
+        if(typeof esmojoMoveProductionRisks_==='function')esmojoMoveProductionRisks_(DriveApp.getFolderById(oldGeneral.folderId),generalFolder,oldGeneral.concertId,first.concertId);
         if (typeof esmojoMoveTicketData_ === 'function') esmojoMoveTicketData_(DriveApp.getFolderById(oldGeneral.folderId), generalFolder, oldGeneral.concertId, first.concertId);
         esmojoMoveShowProfile_(DriveApp.getFolderById(oldGeneral.folderId), generalFolder, oldGeneral.concertId, first.concertId);
         esmojoMoveResearch_(DriveApp.getFolderById(oldGeneral.folderId), generalFolder, oldGeneral.concertId, first.concertId);

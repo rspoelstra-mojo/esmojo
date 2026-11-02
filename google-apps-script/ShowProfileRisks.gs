@@ -1,7 +1,6 @@
-// Vertrouwelijk. Alleen via OAuth/MFA-beheerder op Vercel en ondertekende shows-route.
+// Vertrouwelijk. Alleen via account/MFA of beheerder-OAuth op Vercel en ondertekende shows-route.
 // Geen vrij Drive-pad, bestands-ID of toegang via het openbare onderzoekstoken.
-function esmojoRiskSource_(concertId, source, current) {
-  const target = esmojoResearchTarget_(concertId);
+function esmojoRiskSource_(concertId, source, current, target=esmojoResearchTarget_(concertId)) {
   const register = esmojoReadPdfRegister_(esmojoShowFile_(target.folder,'showprofiel-pdf.json'),target.primary.concertId);
   if(!Object.keys(register.reports).length)throw Error('REPORT_NOT_READY');
   const revision = current ? esmojoPdfSnapshot_(concertId,target).revision : source.revision;
@@ -38,7 +37,7 @@ function esmojoRiskStatus_(concertId) {
     analysis:{exists:Boolean(document),filename,promptVersion:RISK_PROMPT_VERSION}};
 }
 function esmojoShowProfileRisks_(request) {
-  const op=request.operation.slice(5),allowed={pending:['operation','after'],status:['operation','concertId'],pdf:['operation','concertId','source'],read:['operation','concertId','source'],save:['operation','concertId','source','result']}[op];
+  const op=request.operation.slice(5),allowed={pending:['operation','after'],status:['operation','concertId'],view:['operation','concertId'],'production-save':['operation','concertId','field','value','revision','actor'],pdf:['operation','concertId','source'],read:['operation','concertId','source'],save:['operation','concertId','source','result']}[op];
   if(!allowed)throw Error('VALIDATION');riskKeys(request,allowed);
   if(op==='pending'){
     if(request.after!==undefined)riskText(request.after,240);
@@ -55,6 +54,15 @@ function esmojoShowProfileRisks_(request) {
   }
   riskText(request.concertId,240);if(/[\x00-\x1f/\\]/.test(request.concertId))throw Error('VALIDATION');
   if(op==='status')return esmojoRiskStatus_(request.concertId);
+  if(op==='production-save')return esmojoSaveProductionRisk_(request,esmojoResearchTarget_(request.concertId));
+  if(op==='view'){
+    const target=esmojoResearchTarget_(request.concertId),production=esmojoProductionRiskState_(esmojoReadProductionRisks_(target).document);
+    let source;
+    try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return{state:'not-ready',risks:[],production};throw error;}
+    const document=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
+    // Browser krijgt alleen de gevraagde definitie; geen PDF-bytes, ticketdata of Drive-IDs.
+    return {state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production};
+  }
   validateRiskReference(request.source);if(op==='save')validateRiskResult(request.result);
   // Nieuwe analyse uitsluitend voor de huidige definitieve PDF. Oude analyses blijven leesbaar.
   const source=esmojoRiskSource_(request.concertId,request.source,op!=='read');

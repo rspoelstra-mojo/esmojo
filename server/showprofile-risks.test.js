@@ -21,7 +21,8 @@ function harness(){
     constructor(folder,name,content,type='application/json'){this.folder=folder;this.name=name;this.content=content;this.type=type;this.id='file'+(++next);all.set(this.id,this);}
     getId(){return this.id;}getName(){return this.name;}getMimeType(){return this.type;}isTrashed(){return false;}getParents(){return iterator([this.folder]);}
     getBlob(){return{getBytes:()=>[...Buffer.from(this.content)],getDataAsString:()=>this.content.toString()};}
-    setContent(){throw Error('Geen overschrijven toegestaan');}
+    setContent(content){if(this.name!=='productionele-risicos.json')throw Error('Geen overschrijven toegestaan');this.content=content;writes++;}
+    moveTo(folder){this.folder.files=this.folder.files.filter(f=>f!==this);folder.files.push(this);this.folder=folder;}
   }
   class Folder{
     constructor(name,parent,id='folder'+(++next)){this.name=name;this.parent=parent;this.id=id;this.files=[];this.folders=[];all.set(id,this);if(parent)parent.folders.push(this);}
@@ -43,7 +44,7 @@ function harness(){
     Utilities:{Charset:{UTF_8:'utf8'},DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(a,b)=>[...createHash(a).update(typeof b==='string'?b:Buffer.from(b)).digest()],computeHmacSha256Signature:(b,k)=>[...createHmac('sha256',k).update(b).digest()],base64Encode:b=>Buffer.from(b).toString('base64'),newBlob:(content,type,name)=>({content,type,name})},
     LockService:{getUserLock:()=>({tryLock:()=>!blocked,releaseLock(){}})},CacheService:{getScriptCache:()=>({get:k=>nonces.get(k),put:(k,v)=>nonces.set(k,v)})},
     DriveApp:{getFolderById:id=>all.get(id),getFileById:id=>all.get(id)},ContentService:{MimeType:{JSON:'json'},createTextOutput:s=>({setMimeType:()=>JSON.parse(s)})}});
-  for(const name of ['Code.gs','Shows.gs','Research.gs','ShowProfile.gs','TicketData.gs','TicketValidators.gs','FinalValidators.gs','AnalysisFinal.gs','ShowProfilePdf.gs','RiskValidators.gs','ShowProfileRisks.gs'])vm.runInContext(readFileSync(new URL('../google-apps-script/'+name,import.meta.url),'utf8'),ctx);
+  for(const name of ['Code.gs','Shows.gs','Research.gs','ShowProfile.gs','TicketData.gs','TicketValidators.gs','FinalValidators.gs','AnalysisFinal.gs','ShowProfilePdf.gs','RiskValidators.gs','ProductionRiskValidators.gs','ProductionRisks.gs','ShowProfileRisks.gs'])vm.runInContext(readFileSync(new URL('../google-apps-script/'+name,import.meta.url),'utf8'),ctx);
   // De PDF-generator en accountflow hebben hun eigen bestaande integratietests.
   // Varieer hier de actuele revisie om races tussen lezen en bewaren te testen.
   const realSnapshot=ctx.esmojoPdfSnapshot_;
@@ -73,6 +74,37 @@ test('Ondertekende workflow slaat canoniek en vertrouwelijk op; readback, retry,
   await assert.rejects(h.service({operation:'save',...input,result:{...result,limitations:['Andere inhoud']}}),/CONFLICT/);
   assert.equal((await h.service({operation:'pending'})).pending.length,0);
   assert.equal(h.folder.files.filter(f=>f.name.startsWith('onderzoek_')).length,0);
+});
+
+test('Websiteweergave leest alleen risico-definities voor de actuele PDF, zonder bytes of historie',async()=>{
+  const h=harness();
+  assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'pending',risks:[],production:{revision:0,choices:{}}});
+  await h.service({operation:'save',concertId:h.concertId,source:reference,result});
+  const view=await h.shows('risk-view',{concertId:h.laterId});
+  assert.deepEqual(view,{state:'ready',risks:result.risks.map(({id,title,description,consequence})=>({id,title,description,consequence})),production:{revision:0,choices:{}}});
+  assert.equal(h.writes(),1);
+  h.ctx.esmojoPdfSnapshot_=()=>({revision:'b'.repeat(64)});
+  assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'not-ready',risks:[],production:{revision:0,choices:{}}});assert.equal(h.writes(),1);
+});
+
+test('Handmatige productionele keuzes zijn vertrouwelijk, revisiegecontroleerd, geverifieerd en gedeeld binnen de reeks',async()=>{
+  const h=harness(),base={concertId:h.laterId,actor:'local-test-user',field:'lasers',value:true,revision:0};
+  assert.deepEqual(await h.shows('risk-production-save',base),{revision:1,choices:{lasers:true}});assert.equal(h.writes(),1);
+  assert.deepEqual((await h.shows('risk-view',{concertId:h.concertId})).production,{revision:1,choices:{lasers:true}});
+  await h.shows('risk-production-save',base);assert.equal(h.writes(),1);
+  await assert.rejects(h.shows('risk-production-save',{...base,value:false}),/CONFLICT/);assert.equal(h.writes(),1);
+  assert.deepEqual(await h.shows('risk-production-save',{...base,value:false,revision:1}),{revision:2,choices:{lasers:false}});
+  const file=h.folder.files.find(f=>f.name==='productionele-risicos.json'),doc=JSON.parse(file.content);
+  assert.equal(doc.classification,'vertrouwelijk');assert.equal(doc.concertId,h.concertId);assert.equal(doc.history.length,2);assert.equal(doc.history[1].before,true);assert.equal(doc.history[1].after,false);
+  const view=await h.shows('risk-view',{concertId:h.concertId});assert.equal(JSON.stringify(view).includes('local-test-user'),false);
+  for(const change of [{field:'arbitrary'},{value:'ja'},{revision:-1},{source:reference}])await assert.rejects(h.shows('risk-production-save',{...base,...change}));
+  const destination=new h.folder.constructor('Test_Gashouder_05112026',h.artist);
+  h.ctx.esmojoMoveProductionRisks_(h.folder,destination,h.concertId,destination.name);
+  assert.equal(h.folder.files.some(f=>f.name==='productionele-risicos.json'),false);assert.equal(JSON.parse(destination.files[0].content).concertId,destination.name);assert.equal(JSON.parse(destination.files[0].content).revision,2);
+});
+
+test('Productionele validator op server en Apps Script is identiek',()=>{
+  assert.equal(readFileSync(new URL('../google-apps-script/ProductionRiskValidators.gs',import.meta.url),'utf8'),'// Gegenereerd uit shared/production-risks.js: alleen export-keywords verwijderd.\n'+readFileSync(new URL('../shared/production-risks.js',import.meta.url),'utf8').replaceAll('export ',''));
 });
 test('Bewijscitaten, pagina’s, actuele revisie, bytes en parentketen worden gecontroleerd vóór opslag',async()=>{
   for(const evidence of [{page:1,quote:'Niet in deze PDF'},{page:20,quote:result.risks[0].evidence[0].quote}]){const h=harness();await assert.rejects(h.service({operation:'save',concertId:h.concertId,source:reference,result:{...result,risks:[{...result.risks[0],evidence:[evidence]}]}}),/EVIDENCE_MISMATCH/);assert.equal(h.writes(),0);}
