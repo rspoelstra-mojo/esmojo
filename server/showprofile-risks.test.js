@@ -125,7 +125,10 @@ test('Echte invoersnapshot sluit heropende of gewijzigde profielen uit; geen oud
   h.ctx.esmojoPdfSnapshot_=h.realSnapshot;
   const revision=h.realSnapshot(h.concertId).revision;
   const register=JSON.parse(h.registerFile.content);register.reports[revision]=register.reports[reference.revision];h.registerFile.content=JSON.stringify(register);
+  const resolve=h.ctx.esmojoResearchTarget_;let resolutions=0;
+  h.ctx.esmojoResearchTarget_=id=>{resolutions++;return resolve(id);};
   assert.equal((await h.service({operation:'status',concertId:h.concertId})).state,'ready');
+  assert.equal(resolutions,1);
   profile.analyses['1'].status='draft';p.content=JSON.stringify(profile);
   assert.equal((await h.service({operation:'status',concertId:h.concertId})).state,'not-ready');
   profile.analyses['1'].status='completed';profile.revision++;p.content=JSON.stringify(profile);

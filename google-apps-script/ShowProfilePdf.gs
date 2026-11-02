@@ -3,8 +3,8 @@ const ESMOJO_PDF_LAYOUT = 'gashouder-showprofile-v6-confidential-footer';
 const ESMOJO_PDF_SOURCE = 'eb2fa1a532267d7963f3d2358308c04b3bf8cfe6';
 function esmojoPdfHash_(value){const bytes=typeof value==='string'?Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,value,Utilities.Charset.UTF_8):Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,value);return bytes.map(b=>('0'+((b+256)%256).toString(16)).slice(-2)).join('');}
 function esmojoPdfFileName_(show){const part=value=>value.replace(/[<>:"/\\|?*]/g,'_').replace(/\s+/g,'_').replace(/_+/g,'_').replace(/^_+|_+$/g,'');const [y,m,d]=show.date.split('-');return 'SP_'+part(show.artist)+'_'+part(show.venue)+'_'+d+m+y+'.pdf';}
-function esmojoPdfSnapshot_(concertId){
-  const target=esmojoResearchTarget_(concertId),profile=esmojoReadShowProfile_(esmojoShowFile_(target.folder,'showprofiel.json'),target.primary.concertId),state=esmojoAnalysisFinalState_(target,profile);
+function esmojoPdfSnapshot_(concertId,target=esmojoResearchTarget_(concertId)){
+  const profile=esmojoReadShowProfile_(esmojoShowFile_(target.folder,'showprofiel.json'),target.primary.concertId),state=esmojoAnalysisFinalState_(target,profile);
   if(!state.categories.visitors.completedAt||!state.categories.artist.completedAt||(target.primary.venue&&target.primary.venue!=='Gashouder'))throw Error('REPORT_NOT_READY');
   const final=esmojoReadAnalysisFinal_(esmojoShowFile_(target.folder,'analyseafronding.json'),target.primary.concertId),ticketData=esmojoReadTicketData_(esmojoShowFile_(target.folder,'bezoekersdata.json'),target.primary.concertId),tickets=JSON.parse(ticketData.workflow_json).visitors.fields;
   const visitorIds=['gender_ratio','age_range','arrival','typical_traits'],artistIds=['artist_description','tour_route','movement','punctuality','popularity','social_sensitivity','special_notes'];
