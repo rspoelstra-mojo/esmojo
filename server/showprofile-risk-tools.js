@@ -1,3 +1,4 @@
+import { RISK_SCOPE } from './mcp-oauth.js';
 const object=(properties,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
 const text=maxLength=>({type:'string',minLength:1,maxLength});
 const hash={type:'string',pattern:'^[a-f0-9]{64}$'};
@@ -6,7 +7,8 @@ const concertId=text(240), ref={concertId,source};
 const result=object({promptVersion:{type:'integer',const:1},analysedAt:{type:'string',format:'date-time'},
   risks:{type:'array',maxItems:30,items:object({id:{type:'string',pattern:'^R[0-9]{2}$'},title:text(120),description:text(800),consequence:text(600),basis:{type:'string',enum:['explicit','inferred']},evidence:{type:'array',minItems:1,maxItems:3,items:object({page:{type:'integer',minimum:1,maximum:20},quote:text(400)})}})},
   limitations:{type:'array',maxItems:10,items:text(300)}});
-const tool=(name,description,inputSchema,readOnlyHint=true)=>({name,description,inputSchema,annotations:{readOnlyHint,destructiveHint:false,idempotentHint:true,openWorldHint:false}});
+const securitySchemes=[{type:'oauth2',scopes:[RISK_SCOPE]}];
+const tool=(name,description,inputSchema,readOnlyHint=true)=>({name,description,inputSchema,securitySchemes,_meta:{securitySchemes},annotations:{readOnlyHint,destructiveHint:false,idempotentHint:true,openWorldHint:false}});
 export const riskTools=[
   tool('pending_showprofile_analyses','Zoek definitieve actuele PDF-versies zonder risicoanalyse. Vertrouwelijk. Volg nextAfter tot null, ook bij lege pending. Dit is een gepagineerde controle, geen automatische trigger of scheduler.',object({after:text(240)},[])),
   tool('get_final_showprofile','Lees status en exacte source (revision/sha256) van de huidige definitieve PDF. state=not-ready betekent dat nog geen actuele definitieve PDF beschikbaar is. Geen vrije Drive-IDs.',object({concertId})),
