@@ -226,6 +226,16 @@ vaste contentbox; hoofdmenu en submenu blijven zichtbaar en bereikbaar.
 
 ## Definitief Showprofiel-PDF
 
+Op 2 november 2026 heeft de gebruiker de risicoanalyse uit definitieve
+showprofiel-PDF's expliciet Vertrouwelijk verklaard. Ieder potentieel risico
+is een afzonderlijk onderbouwd item. Opslag uitsluitend als eigen versiegebonden
+JSON in de canonieke Drive-showmap, naast de elf openbare onderzoeksbestanden.
+Verwerking via bestaande Vercel-server en het gekoppelde ChatGPT-account;
+geen inhoud in logs, Supabase, analytics of persistente browseropslag.
+De extra OAuth-scope esmojo.showprofile_risks vereist nieuwe expliciete
+toestemming; bestaande onderzoeksgrants krijgen geen extra rechten. Resultaten
+blijven AI-concept voor ESM-beoordeling. Zie docs/showprofile-risks.md.
+
 Na beide definitieve categoriebeoordelingen genereert ESMOJO automatisch het
 Showprofiel-PDF met uitsluitend bevestigde gebruikerssamenvattingen, handmatige
 ticket-/herkomstgegevens en eigen eindcijfers/toelichtingen. Nooit AI-zijbalken,

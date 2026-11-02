@@ -17,7 +17,7 @@ function esmojoMcpAuth_(input) {
     const text = (v, max) => { if (typeof v !== 'string' || !v || v.length > max || /[\x00-\x1f]/.test(v)) fail('FORBIDDEN'); return v; };
     const digest = v => { if (!/^[a-f0-9]{64}$/.test(v || '')) fail('FORBIDDEN'); return v; };
     const resource = 'https://esmojo.nl/api/mcp';
-    const scope = 'esmojo.research';
+    const supportedScopes = ['esmojo.research', 'esmojo.showprofile_risks', 'esmojo.research esmojo.showprofile_risks'];
     if (!['register', 'client', 'grant', 'exchange', 'refresh', 'verify', 'revoke-all', 'grants'].includes(p.operation)) fail('FORBIDDEN');
     const writing = !['client', 'verify', 'grants'].includes(p.operation);
     if (writing) {
@@ -60,9 +60,9 @@ function esmojoMcpAuth_(input) {
       result = client();
     } else if (p.operation === 'grant') {
       const c = client(); actor(); digest(p.codeHash);
-      if (!c.redirectUris.includes(p.redirectUri) || !/^[\w-]{43}$/.test(p.challenge || '') || p.resource !== resource || p.scope !== scope || state.codes.length >= 100) fail('INVALID_GRANT');
+      if (!c.redirectUris.includes(p.redirectUri) || !/^[\w-]{43}$/.test(p.challenge || '') || p.resource !== resource || !supportedScopes.includes(p.scope) || state.codes.length >= 100) fail('INVALID_GRANT');
       state.codes.push({ codeHash: p.codeHash, clientId: c.id, redirectUri: p.redirectUri, challenge: p.challenge,
-        actor: p.actor, resource, scope, expiresAt: now + 300000 });
+        actor: p.actor, resource, scope: p.scope, expiresAt: now + 300000 });
       result = { ok: true };
     } else if (p.operation === 'exchange') {
       client(); digest(p.codeHash); digest(p.accessHash); digest(p.refreshHash); text(p.grantId, 100);
@@ -72,24 +72,24 @@ function esmojoMcpAuth_(input) {
         if (replay) { replay.revoked = true; save(); }
         fail('INVALID_GRANT');
       }
-      if (code.expiresAt <= now || code.clientId !== p.clientId || code.redirectUri !== p.redirectUri || code.challenge !== p.challenge || p.resource !== resource || state.grants.length >= 50) fail('INVALID_GRANT');
+      if (code.expiresAt <= now || code.clientId !== p.clientId || code.redirectUri !== p.redirectUri || code.challenge !== p.challenge || p.resource !== resource || !supportedScopes.includes(code.scope) || (p.scope && p.scope !== code.scope) || state.grants.length >= 50) fail('INVALID_GRANT');
       state.codes = state.codes.filter(x => x !== code);
-      state.grants.push({ id: p.grantId, actor: code.actor, clientId: code.clientId, codeHash: p.codeHash, resource, scope,
+      state.grants.push({ id: p.grantId, actor: code.actor, clientId: code.clientId, codeHash: p.codeHash, resource, scope: code.scope,
         accessHash: p.accessHash, accessExpiresAt: now + 3600000, refreshHash: p.refreshHash, usedRefresh: [], createdAt: now, expiresAt: now + 90 * 86400000, revoked: false });
-      result = { expiresIn: 3600, scope };
+      result = { expiresIn: 3600, scope: code.scope };
     } else if (p.operation === 'refresh') {
       client(); digest(p.refreshHash); digest(p.accessHash); digest(p.nextRefreshHash);
       const grant = state.grants.find(x => x.clientId === p.clientId && (x.refreshHash === p.refreshHash || x.usedRefresh.includes(p.refreshHash)));
-      if (!grant || grant.revoked || grant.expiresAt <= now || p.resource !== grant.resource) fail('INVALID_GRANT');
+      if (!grant || grant.revoked || grant.expiresAt <= now || p.resource !== grant.resource || !supportedScopes.includes(grant.scope) || (p.scope && p.scope !== grant.scope)) fail('INVALID_GRANT');
       if (grant.refreshHash !== p.refreshHash) { grant.revoked = true; save(); fail('INVALID_GRANT'); }
       grant.usedRefresh.push(grant.refreshHash); grant.usedRefresh = grant.usedRefresh.slice(-128);
       grant.refreshHash = p.nextRefreshHash; grant.accessHash = p.accessHash; grant.accessExpiresAt = Math.min(now + 3600000, grant.expiresAt);
-      result = { expiresIn: Math.floor((grant.accessExpiresAt - now) / 1000), scope };
+      result = { expiresIn: Math.floor((grant.accessExpiresAt - now) / 1000), scope: grant.scope };
     } else if (p.operation === 'verify') {
       digest(p.accessHash);
       const grant = state.grants.find(x => x.accessHash === p.accessHash && !x.revoked && x.accessExpiresAt > now && x.expiresAt > now);
-      if (!grant || grant.resource !== resource || grant.scope !== scope) fail('INVALID_TOKEN');
-      result = { actor: grant.actor, grantId: grant.id, scope, resource };
+      if (!grant || grant.resource !== resource || !supportedScopes.includes(grant.scope)) fail('INVALID_TOKEN');
+      result = { actor: grant.actor, grantId: grant.id, scope: grant.scope, resource };
     } else if (p.operation === 'grants') {
       actor();
       result = { grants: state.grants.filter(x => x.actor === p.actor && x.expiresAt > now && !x.revoked).map(x => ({ id: x.id, createdAt: x.createdAt, expiresAt: x.expiresAt })) };
