@@ -4,6 +4,8 @@ import { validateFinalRequest } from '../shared/analysis-finalization.js';
 import { validateTicketRequest } from './ticket-data.js';
 import { getMojoPhoto } from './mojo-photo.js';
 import { validateShowProfile } from './show-profile.js';
+import { validateRiskViewRequest } from './show-risks.js';
+import { validateProductionRiskSelection } from '../shared/production-risks.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
 import { sendEmail } from './email.js';
@@ -94,6 +96,18 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
       const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
       const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
+      if (action === 'show-risks' && req.method === 'POST') {
+        try { return reply(200, await shows('risk-view', validateRiskViewRequest(req.body))); }
+        catch (error) { return reply(error.message === 'VALIDATION' ? 400 : 503, {
+          error: error.message === 'VALIDATION' ? 'Ongeldige show.' : 'Risicoanalyse laden is niet gelukt. Probeer opnieuw.',
+        }); }
+      }
+      if (action === 'production-risks' && req.method === 'POST') {
+        try { return reply(200,await shows('risk-production-save',{...validateProductionRiskSelection(req.body),actor})); }
+        catch(error){return reply(error.message==='VALIDATION'?400:error.message==='CONFLICT'?409:503,{
+          error:error.message==='CONFLICT'?'De keuzes zijn intussen gewijzigd. Laad de risicoanalyse opnieuw.':'De keuze kon niet worden opgeslagen. Laad de risicoanalyse opnieuw en probeer het nogmaals.',
+        });}
+      }
       if(action==='show-profile-pdf'&&req.method==='POST'){
         try{const input=validatePdfRequest(req.body);if(input.operation==='download')return reply(200,await pdfService.download(input.concertId));const status=await pdfService.status(input.concertId);
           if((input.operation==='ensure'&&status.state==='pending')||(input.operation==='retry'&&['pending','failed'].includes(status.state))){schedulePdf(pdfService.ensure(input.concertId,pdfManager()).catch(()=>{}));return reply(200,{state:'generating'});}return reply(200,status);
