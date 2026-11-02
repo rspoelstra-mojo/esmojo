@@ -1,5 +1,13 @@
 # ESMOJO Onderzoek — OAuth MCP-koppeling
 
+De bestaande openbare onderzoeksscope blijft beperkt tot de elf vragen.
+Voor vertrouwelijke definitieve showprofiel-PDF's en afzonderlijke risicoanalyses
+is op 2 november 2026 een extra, optionele scope toegevoegd:
+`esmojo.showprofile_risks`. Hiervoor moet de gebruiker opnieuw verbinden en
+uitdrukkelijk toestemming geven. Oude tokens en refresh-tokens worden niet
+opgewaardeerd. Zie [Risicoanalyse van showprofielen](showprofile-risks.md)
+voor de zes aanvullende acties, opslag en de test in het gekoppelde account.
+
 ## Toevoegen in het andere ChatGPT-account
 
 - Naam: ESMOJO Onderzoek

@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/mcp.js": {
-      "includeFiles": "{onderzoeksprompts/**,.agents/skills/esmojo-concertonderzoek/references/catalogue.json}"
+      "includeFiles": "{onderzoeksprompts/**,.agents/skills/esmojo-concertonderzoek/references/catalogue.json}",
+      "maxDuration": 300
     },
     "api/access.js": {
       "includeFiles": "server/report-original/**",
