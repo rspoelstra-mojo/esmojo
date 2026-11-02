@@ -1,5 +1,7 @@
 import './show-profile.css';
 import './risk-analysis.css';
+import {createBarrierLayoutPage} from './barrier-layout-page.js';
+import {createFloorPressurePage} from './floor-pressure-page.js';
 import { access } from './auth.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 import { productionRiskGroups, validateProductionRiskState } from '../shared/production-risks.js';
@@ -15,7 +17,9 @@ const badge = () => { const el=node('span','analysis-status','AI-concept');el.da
 
 export function createRiskAnalysis(panel, { show, request = body => access('show-risks', { method:'POST', body }), saveSelection = body => access('production-risks', {method:'POST',body}) } = {}) {
   let disposed=false, loaded=false, loadingNow=false, risks=[], state='pending', error='', view='overview';
-  let production={revision:0,choices:{}},productionReady=false,saving=false;
+  let production={revision:0,choices:{}},productionReady=false,saving=false,assessments={},disposeDetail=null;
+  function closeDetail(){const cleanup=disposeDetail;disposeDetail=null;return cleanup?.();}
+  function backFromAssessment(id){productionReady=false;const pending=closeDetail();overview(null,id);Promise.resolve(pending).then(()=>{if(!disposed&&view==='overview')void load();});}
   const section=node('section','show-profile risk-analysis');panel.append(section);
   const menuLink=document.querySelector('#submenu-navigation [aria-current="page"]');
   const loading=menuLink?createSubmenuLoading(menuLink,panel):null;
@@ -39,7 +43,10 @@ export function createRiskAnalysis(panel, { show, request = body => access('show
       for(const entry of group.items){
         const row=node('div','production-risk-row'),frame=node('div','visitor-analysis'),button=node('button','visitor-analysis-summary');button.type='button';button.dataset.productionId=entry.id;
         button.disabled=Boolean(entry.conditional&&(!productionReady||saving||production.choices[entry.id]!==true));
-        button.append(node('span','analysis-row-title',entry.title),glyph('chevron','analysis-chevron'));
+        button.append(node('span','analysis-row-title',entry.title));
+        const assessment=assessments[entry.id==='barrier_layout'?'barrier':entry.id==='floor_pressure'?'floor':''];
+        if(assessment?.revision){const status=node('span','analysis-status',assessment.completed?'Afgerond':'Concept');status.dataset.status=assessment.completed?'completed':'draft';button.append(status);}
+        button.append(glyph('chevron','analysis-chevron'));
         button.onclick=()=>{if(!button.disabled)productionDetail(entry,group);};frame.append(button);row.append(frame);
         if(entry.conditional){
           const choice=node('div','production-risk-choice');choice.setAttribute('role','group');choice.setAttribute('aria-label',`Is ${entry.title} van toepassing?`);
@@ -69,7 +76,11 @@ export function createRiskAnalysis(panel, { show, request = body => access('show
     if(productionId)[...section.querySelectorAll('[data-production-id]')].find(button=>button.dataset.productionId===productionId)?.focus({preventScroll:true});
   }
   function productionDetail(entry,group){
-    if(disposed)return;view='production';section.replaceChildren();
+    if(disposed)return;closeDetail();view='production';section.replaceChildren();
+    if(['barrier_layout','floor_pressure'].includes(entry.id)){
+      const options={show,onBack:()=>backFromAssessment(entry.id),onBarrier:()=>productionDetail(productionRiskGroups[0].items[0],productionRiskGroups[0])};
+      disposeDetail=entry.id==='barrier_layout'?createBarrierLayoutPage(section,options):createFloorPressurePage(section,options);return;
+    }
     const back=node('button','profile-back','← Terug naar overzicht');back.type='button';back.onclick=()=>overview(null,entry.id);
     const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro'),title=node('h2','',entry.title);title.tabIndex=-1;
     intro.append(title,node('p','',`Productionele risico's · ${group.title}`));header.append(glyph('production','profile-category-icon'),intro);section.append(back,header);title.focus({preventScroll:true});
@@ -106,10 +117,10 @@ export function createRiskAnalysis(panel, { show, request = body => access('show
       if(!['ready','pending','not-ready'].includes(data.state)||!Array.isArray(data.risks)||data.risks.length>30)throw Error('Invalid response');
       const ids=new Set();
       for(const risk of data.risks){if(!risk||!/^R\d{2}$/.test(risk.id)||ids.has(risk.id)||['title','description','consequence'].some(key=>typeof risk[key]!=='string'||!risk[key].trim()))throw Error('Invalid risk');ids.add(risk.id);}
-      validateProductionRiskState(data.production);production=data.production;productionReady=true;state=data.state;risks=data.risks;loaded=true;
+      validateProductionRiskState(data.production);production=data.production;assessments=data.assessments||{};productionReady=true;state=data.state;risks=data.risks;loaded=true;
     }catch{if(!disposed){loaded=false;risks=[];error='Risicoanalyse laden is niet gelukt. Probeer opnieuw.';}}
     finally{loadingNow=false;finish?.();panel.removeAttribute('aria-busy');if(!disposed&&view==='overview')overview();}
   }
   overview();
-  return { activate(){if(!loaded&&!loadingNow)void load();}, dispose(){disposed=true;risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
+  return { activate(){if(!loaded&&!loadingNow)void load();}, dispose(){disposed=true;closeDetail();risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
 }

@@ -1,0 +1,45 @@
+.production-assessment { --profile-blue: #083ade; min-width: 0; }
+.assessment-block { border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+.barrier-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: stretch; }
+.assessment-fields { display: grid; gap: 18px; align-content: start; min-width: 0; }
+.assessment-field { display: grid; gap: 8px; min-width: 0; }
+.assessment-field > label, .assessment-risk-group legend { font-size: 14px; line-height: 1.5; font-weight: 600; }
+.assessment-field select, .assessment-field input, .assessment-field textarea, .floor-table input { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); color: var(--text); font: inherit; font-size: 14px; line-height: 1.5; }
+.assessment-field textarea { min-height: 110px; resize: vertical; }
+.assessment-risk-group { min-width: 0; padding: 0; margin: 0; border: 0; }
+.assessment-risk-group legend { margin-bottom: 10px; }
+.assessment-risk-option span { width: auto; min-width: 58px; padding: 8px 12px; height: auto; min-height: 38px; font-size: 13px; }
+.assessment-preview { min-width: 0; display: grid; grid-template-rows: auto minmax(260px, 1fr); gap: 8px; align-content: start; }
+.assessment-preview-label { margin: 0; font-size: 13px; color: var(--muted); }
+.assessment-preview-box { height: 320px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 16px; text-align: center; overflow: hidden; }
+.assessment-preview-box img { width: 100%; min-height: 0; flex: 1; object-fit: contain; }
+.assessment-preview-box p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.assessment-preview-box a { color: var(--profile-blue); font-size: 14px; }
+.assessment-preview-box .assessment-pdf-icon { font-size: 14px; font-weight: 650; border: 1px solid var(--line); border-radius: 8px; padding: 14px; color: var(--text); }
+.assessment-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 22px; border-top: 1px solid var(--line); padding-top: 18px; }
+.production-assessment .analysis-complete { background: #083ade; border-color: #083ade; }
+.assessment-status, .assessment-upload-status { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.assessment-completed { color: #28734d; font-weight: 600; }
+:root[data-theme="dark"] .assessment-completed { color: #86d9a6; }
+.assessment-upload-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.assessment-note { margin: 12px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.floor-ticket-line { margin: 0 0 5px; font-size: 14px; }
+.floor-ticket-line strong { font-size: 17px; }
+.floor-ticket-detail { margin: 0 0 18px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.floor-table-wrap { overflow-x: auto; }
+.floor-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+.floor-table th { text-align: left; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); padding: 10px 8px; }
+.floor-table td { vertical-align: top; padding: 12px 8px; border-bottom: 1px solid var(--line); }
+.floor-table th:first-child { width: 42%; }
+.floor-table th:nth-child(2) { width: 25%; }
+.floor-table label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; }
+.floor-table output { display: block; padding-top: 7px; font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.floor-row-name { margin-bottom: 7px; }
+.floor-row-remove { margin-top: 7px; border: 0; background: transparent; color: var(--muted); padding: 0; font: inherit; font-size: 12px; cursor: pointer; }
+.floor-add { margin: 14px 0; }
+.floor-total { margin: 14px 0 20px; font-size: 13px; line-height: 1.6; }
+.floor-total p { margin: 6px 0; }
+.floor-review { display: grid; gap: 18px; }
+@container (max-width: 620px) { .barrier-columns { grid-template-columns: minmax(0,1fr); } .assessment-preview-box { height: 280px; } }
+
+.assessment-page-title{font-size:24px;margin:0 0 24px;font-weight:600;}

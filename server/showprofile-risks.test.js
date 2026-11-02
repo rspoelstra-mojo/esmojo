@@ -78,13 +78,13 @@ test('Ondertekende workflow slaat canoniek en vertrouwelijk op; readback, retry,
 
 test('Websiteweergave leest alleen risico-definities voor de actuele PDF, zonder bytes of historie',async()=>{
   const h=harness();
-  assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'pending',risks:[],production:{revision:0,choices:{}}});
+  assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'pending',risks:[],production:{revision:0,choices:{}},assessments:{barrier:null,floor:null}});
   await h.service({operation:'save',concertId:h.concertId,source:reference,result});
   const view=await h.shows('risk-view',{concertId:h.laterId});
-  assert.deepEqual(view,{state:'ready',risks:result.risks.map(({id,title,description,consequence})=>({id,title,description,consequence})),production:{revision:0,choices:{}}});
+  assert.deepEqual(view,{state:'ready',risks:result.risks.map(({id,title,description,consequence})=>({id,title,description,consequence})),production:{revision:0,choices:{}},assessments:{barrier:null,floor:null}});
   assert.equal(h.writes(),1);
   h.ctx.esmojoPdfSnapshot_=()=>({revision:'b'.repeat(64)});
-  assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'not-ready',risks:[],production:{revision:0,choices:{}}});assert.equal(h.writes(),1);
+  assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'not-ready',risks:[],production:{revision:0,choices:{}},assessments:{barrier:null,floor:null}});assert.equal(h.writes(),1);
 });
 
 test('Handmatige productionele keuzes zijn vertrouwelijk, revisiegecontroleerd, geverifieerd en gedeeld binnen de reeks',async()=>{

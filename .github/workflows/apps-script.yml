@@ -40,6 +40,7 @@ jobs:
           node --test tools/apps-script/deploy.test.mjs
           node server/mcp.test.js
           node server/showprofile-risks.test.js
+          node server/production-assessments.test.js
       - name: Install pinned publication tool
         run: npm ci --prefix tools/apps-script --no-audit --no-fund
       - name: Update existing webapp

@@ -1,3 +1,4 @@
+import {clearAssessmentSaves} from './production-assessment-ui.js';
 import { clearProfileSaves } from './lib/profile-saves.js';
 import { installRouter, pageRoute } from './lib/router.js';
 import './style.css';
@@ -92,7 +93,7 @@ startAuth({
     renderPage();
   },
   onSignedOut() {
-    clearProfileSaves();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
+    clearProfileSaves();clearAssessmentSaves();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
     profile = null; disposePage(); disposePage = () => {};
     document.querySelector('.content-box').replaceChildren();
