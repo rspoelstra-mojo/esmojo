@@ -236,6 +236,15 @@ De extra OAuth-scope esmojo.showprofile_risks vereist nieuwe expliciete
 toestemming; bestaande onderzoeksgrants krijgen geen extra rechten. Resultaten
 blijven AI-concept voor ESM-beoordeling. Zie docs/showprofile-risks.md.
 
+De gebruiker heeft op 2 november 2026 de handmatige Ja/Nee-keuzes voor
+productionele risico's expliciet Vertrouwelijk verklaard en Drive-opslag per
+show/reeks gevraagd. Bewaar keuzes, revisie en wijzigingshistorie uitsluitend
+in productionele-risicos.json in de canonieke showmap. Account/MFA en
+revisiecontrole blijven vereist. Detailpagina's voor voorwaardelijke onderwerpen
+worden pas actief na bevestigde opslag van Ja; Nee schakelt ze weer uit.
+De website toont afzonderlijke operationele risico's uit de opgeslagen analyse
+van de actuele definitieve PDF; oudere versies nooit stilzwijgend als actueel.
+
 Na beide definitieve categoriebeoordelingen genereert ESMOJO automatisch het
 Showprofiel-PDF met uitsluitend bevestigde gebruikerssamenvattingen, handmatige
 ticket-/herkomstgegevens en eigen eindcijfers/toelichtingen. Nooit AI-zijbalken,
