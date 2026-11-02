@@ -137,3 +137,48 @@ validatie wordt nooit over aanroepen heen gecachet.
 
 Authenticatieprotocol: https://developers.openai.com/apps-sdk/reference/
 (error tool result, mcp/www_authenticate).
+
+## Risicoanalyse in de ingelogde website
+
+Het bestaande showtabblad Risicoanalyse bevat Productionele risico's en
+Operationele risico's. De operationele blokken komen uitsluitend uit het
+gevalideerde analysebestand voor de actuele definitieve PDF. Iedere definitie
+opent een eigen detailweergave met titel, beschrijving, mogelijk gevolg en
+Terug naar overzicht. Ze zijn gemarkeerd als AI-concept. Geen bewerking of
+beoordeling toegevoegd. Een ontbrekende PDF, ontbrekende analyse of lege
+risicolijst wordt niet vervangen door een oudere versie of voorbeeldrisico's.
+
+De website leest dit via POST /api/access?action=show-risks met uitsluitend
+concertId, na de bestaande geactiveerde account-, MFA- en sessiecontrole.
+De ondertekende Apps Script-actie risk-view kiest zelf de canonieke map en de
+actuele bron. Alleen id, titel, beschrijving en mogelijk gevolg gaan naar de
+browser, geen PDF-bytes, bronbestanden, ticketgegevens, Drive-IDs of historie.
+Laden gebeurt pas bij openen van het tabblad. Gegevens blijven uitsluitend in
+het geheugen van die pagina en verdwijnen bij navigatie/afmelden.
+
+Productionele groepen en onderwerpen:
+
+- Zaalindeling: Barrieropstelling, Vloerdruk, Vluchtweg beperkingen.
+- Special effects: Vuurwerk, Open vuur, Lasers, Drones.
+
+Barrieropstelling en Vloerdruk zijn direct toegankelijk. De overige vijf hebben
+rechts Ja/Nee. Onbeantwoorde keuzes zijn niet vooraf als Nee ingevuld. Een
+onderwerp is pas toegankelijk na bevestigde Ja-opslag; Nee vergrendelt het weer.
+De detailweergaven bevatten voor deze eerste fase alleen titel en terugknop.
+
+De gebruiker heeft deze handmatige keuzes op 2 november 2026 expliciet
+Vertrouwelijk verklaard en bewaren per show gevraagd. Ze staan apart in
+productionele-risicos.json bij de canonieke show/reeksmap. Het bestand heeft
+managedBy=ESMOJO/ProductionRisks-v1, classification=vertrouwelijk, concertId,
+revision, choices en history. Alleen de vijf vaste booleaanse velden zijn
+beschrijfbaar; geen vrije bestandsnamen of inhoudelijke productiebeoordelingen.
+
+POST /api/access?action=production-risks vereist dezelfde account/MFA-checks en
+ontvangt concertId, field, value en revision. Alleen de server voegt de actor toe.
+De gedeelde UserLock serialiseert writes; revisieconflicten worden geweigerd.
+Identieke herpogingen zijn veilig. Iedere write wordt teruggelezen en vergeleken.
+Bij een fout blijft een onderwerp vergrendeld totdat de laatste keuzes opnieuw
+zijn geladen. Historie en actor blijven uitsluitend in Drive. De keuzes volgen
+bij een nieuw toegevoegde eerdere reeksdatum de canonieke map, zonder conflicten
+stilzwijgend samen te voegen. Deze bestanden veranderen het bron-PDF en de
+ChatGPT-analyses niet. De MCP-tools krijgen geen nieuwe handmatige schrijfactie.

@@ -1,6 +1,7 @@
 import './show-page.css';
 import { loadShowPhoto } from './show-photo.js';
 import { createShowProfile } from './show-profile.js';
+import { createRiskAnalysis } from './risk-analysis.js';
 
 export function formatShowDates(dates) {
   return dates.map(date => new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Amsterdam' }).format(new Date(`${date}T12:00:00Z`))).join(' · ');
@@ -24,6 +25,7 @@ export function createShowPage(content, show) {
   const panels = document.createElement('div'); panels.className = 'show-panels';
   const buttons = [], views = [];
   let disposeProfile = () => {};
+  let riskAnalysis = null;
   let active = 0;
   function position() {
     const button = buttons[active];
@@ -34,12 +36,14 @@ export function createShowPage(content, show) {
     active = index;
     buttons.forEach((button, i) => { button.setAttribute('aria-selected', String(i === index)); button.tabIndex = i === index ? 0 : -1; views[i].hidden = i !== index; });
     position(); if (focus) buttons[index].focus();
+    if(tabs[index]==='Risicoanalyse')riskAnalysis?.activate();
   }
   tabs.forEach((label, index) => {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'show-tab'; button.textContent = label;
     button.id = `show-tab-${index}`; button.setAttribute('role', 'tab'); button.setAttribute('aria-controls', `show-panel-${index}`);
     const panel = document.createElement('section'); panel.id = `show-panel-${index}`; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', button.id); panel.tabIndex = 0;
     if (label === 'Showprofiel') disposeProfile = createShowProfile(panel, { show });
+    if (label === 'Risicoanalyse') riskAnalysis = createRiskAnalysis(panel, { show });
     button.addEventListener('click', () => select(index));
     button.addEventListener('keydown', event => {
       let next;
@@ -69,5 +73,5 @@ export function createShowPage(content, show) {
   select(0);
   const observer = new ResizeObserver(position); observer.observe(bar);
   const frame = requestAnimationFrame(() => bar.classList.add('show-tabs-ready'));
-  return () => { disposed = true; image.onerror = null; disposeProfile(); observer.disconnect(); cancelAnimationFrame(frame); };
+  return () => { disposed = true; image.onerror = null; disposeProfile(); riskAnalysis?.dispose(); observer.disconnect(); cancelAnimationFrame(frame); };
 }
