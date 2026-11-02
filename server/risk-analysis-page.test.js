@@ -57,7 +57,7 @@ test('Productionele pagina’s openen direct of uitsluitend na bevestigd Ja; Nee
 test('Bewaarde Ja-keuze wordt hersteld; late laadreactie overschrijft een al geopende productionele pagina niet',async()=>{
   let resolve;const h=harness(()=>new Promise(done=>resolve=done));h.page.activate();h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='barrier_layout').onclick();
   resolve({state:'pending',risks:[],production:{revision:3,choices:{lasers:true}}});await tick();assert.ok(h.text().includes('Barrieropstelling'));assert.ok(!h.text().includes("Operationele risico's"));
-  h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,false);h.page.dispose();
+  h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,true);await tick();resolve({state:'pending',risks:[],production:{revision:3,choices:{lasers:true}}});await tick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,false);h.page.dispose();
 });
 test('Mislukte opslag activeert een productionele pagina niet en vereist opnieuw laden',async()=>{
   const h=harness(async()=>({state:'pending',risks:[],production:{revision:0,choices:{}}}),async()=>{throw Error('CONFLICT private body');});h.page.activate();await tick();
