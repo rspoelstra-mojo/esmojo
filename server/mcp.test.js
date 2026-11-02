@@ -129,7 +129,7 @@ test('MCP initialize/list/date/prompt/readback en idempotente save; geen vrije D
   const handler=makeMcpHandler({auth:async()=>({actor}),owner:{active:async()=>actor},research});
   const call=async(method,params)=>{const res=response();await handler({method:'POST',headers:{authorization:'Bearer '+opaque('esm_mcp'),'content-type':'application/json'},body:{jsonrpc:'2.0',id:1,method,params}},res);return res.data.result;};
   assert.equal((await call('initialize',{protocolVersion:'2025-06-18'})).protocolVersion,'2025-06-18');
-  assert.equal((await call('tools/list')).tools.length,6);
+  assert.equal((await call('tools/list')).tools.length,12);
   assert.equal((await call('tools/call',{name:'research_prompt',arguments:{questionNumber:5}})).structuredContent.questionNumber,5);
   assert.equal((await call('tools/call',{name:'concerts_on_date',arguments:{date:'2026-12-16'}})).structuredContent.date,'2026-12-16');
   assert.equal((await call('tools/call',{name:'concerts_on_date',arguments:{date:'2026-02-30'}})).isError,true);
@@ -189,10 +189,33 @@ test('Vertrouwelijke PDF-scope vereist nieuwe toestemming; refresh kan bestaande
     const handler=makeMcpHandler({auth:h.store,owner:h.owner,risks:async()=>({tested:true})});
     const call=async(method,params)=>{const r=response();await handler({method:'POST',headers:{authorization:'Bearer '+token.access_token,'content-type':'application/json'},body:{jsonrpc:'2.0',id:1,method,params}},r);return r;};
     const list=await call('tools/list');const names=list.data.result.tools.map(t=>t.name);
-    assert.equal(names.includes('read_showprofile_pdf'),scope.includes(RISK_SCOPE));
+    assert.equal(names.includes('read_showprofile_pdf'),true);
     const read=await call('tools/call',{name:'get_final_showprofile',arguments:{concertId:'test'}});
-    if(scope.includes(RISK_SCOPE))assert.equal(read.data.result.structuredContent.tested,true);else assert.equal(read.data.error.code,-32602);
+    if(scope.includes(RISK_SCOPE))assert.equal(read.data.result.structuredContent.tested,true);
+    else {
+      assert.equal(read.code,403);
+      assert.equal(read.data.error,'insufficient_scope');
+      assert.match(read.headers['WWW-Authenticate'],/error="insufficient_scope"/);
+      assert.ok(read.headers['WWW-Authenticate'].includes(SCOPE+' '+RISK_SCOPE));
+    }
     const elevated=await h.call('token',{grant_type:'refresh_token',client_id:p.client.client_id,refresh_token:token.refresh_token,resource:RESOURCE,scope:SCOPE+' '+RISK_SCOPE});
     assert.equal(elevated.code,scope===SCOPE+' '+RISK_SCOPE?200:400);
+  }
+});
+
+test('Stabiele tooldiscovery biedt stap-voor-stap OAuth zonder vertrouwelijke actie met oude grant',async()=>{
+  for(const scope of [SCOPE,RISK_SCOPE]){
+    let riskCalls=0,researchCalls=0;
+    const handler=makeMcpHandler({auth:async()=>({actor,scope}),owner:{active:async()=>actor},
+      risks:async()=>{riskCalls++;return{};},research:async()=>{researchCalls++;return{};}});
+    const call=async(method,params,headers={})=>{const r=response();await handler({method:'POST',headers:{authorization:'Bearer '+opaque('esm_mcp'),'content-type':'application/json',...headers},body:{jsonrpc:'2.0',id:1,method,params}},r);return r;};
+    const list=await call('tools/list');assert.equal(list.code,200);assert.equal(list.data.result.tools.length,12);
+    for(const name of scope===SCOPE?['pending_showprofile_analyses','get_final_showprofile','showprofile_analysis_prompt','read_showprofile_pdf','save_showprofile_analysis','read_showprofile_analysis']:['concerts_on_date','research_prompt','save_research']){
+      const denied=await call('tools/call',{name,arguments:{}});assert.equal(denied.code,403);assert.equal(denied.data.error,'insufficient_scope');
+      assert.ok(denied.headers['WWW-Authenticate'].includes(SCOPE+' '+RISK_SCOPE));
+    }
+    assert.equal(riskCalls,0);assert.equal(researchCalls,0);
+    const anonymous=await call('tools/list',{}, {authorization:''});assert.equal(anonymous.code,401);
+    assert.ok(anonymous.headers['WWW-Authenticate'].includes(SCOPE+' '+RISK_SCOPE));
   }
 });
