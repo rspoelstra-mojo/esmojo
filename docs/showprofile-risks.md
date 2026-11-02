@@ -14,8 +14,11 @@ uitdrukkelijk het lezen van vertrouwelijke PDF-tekst door het gekoppelde
 ChatGPT-account en het maken van vertrouwelijke AI-risicoconcepten.
 Alle geauthenticeerde actieve beheerders zien dezelfde twaalf toolbeschrijvingen,
 ook met een oude grant. De werkelijke acties vereisen afzonderlijk de passende
-scope: ontbrekende toestemming geeft HTTP 403 met een OAuth
-insufficient_scope-challenge. De client kan daarmee nieuwe toestemming vragen.
+scope: ontbrekende toestemming geeft een MCP-error-toolresultaat met
+`_meta["mcp/www_authenticate"]` en een insufficient_scope-challenge.
+ChatGPT kan daarmee de OAuth-toestemming starten. Elke tool vermeldt zijn
+OAuth-scope in securitySchemes en de compatibele _meta-kopie.
+Een gewone toestemmingsklik voor een tool geeft op zichzelf geen extra OAuth-scope.
 De eerste aanmeldchallenge noemt beide ondersteunde scopes.
 Een research-only token blijft uitsluitend openbaar onderzoek doen. Refresh
 kan geen extra scope toevoegen. Bestaande grants hoeven niet ingetrokken te
@@ -118,3 +121,19 @@ daadwerkelijk de MCP-tools kunnen gebruiken, ook voor schrijven. Dit is niet
 bewezen door een handmatige test. Nog geen geplande taak in dat account ingericht.
 Het controle-interval bepaalt de vertraging; er is geen onmiddellijke pushtrigger.
 API-uitvoering buiten het gekoppelde account zou een afzonderlijke oplossing zijn.
+
+## Vastlopende uitvoering onderzoeken
+
+De UI-actietitels bewijzen niet of een serveraanroep is voltooid. Test eerst
+uitsluitend showprofile_analysis_prompt en vraag promptVersion/classification
+terug; die actie leest geen PDF of showmappen. Test daarna uitsluitend
+get_final_showprofile met een eerder geverifieerd concert-ID. Pas vervolgens
+de gepagineerde pending-scan of volledige analyse uitvoeren. Deel bij een
+fout alleen de veilige foutcode, geen tokens, headers of documentinhoud.
+
+De broncontrole hergebruikt binnen dezelfde Apps Script-aanroep het al
+gevalideerde Drive-doel. Dit voorkomt een tweede index-/parentketenlezing;
+validatie wordt nooit over aanroepen heen gecachet.
+
+Authenticatieprotocol: https://developers.openai.com/apps-sdk/reference/
+(error tool result, mcp/www_authenticate).

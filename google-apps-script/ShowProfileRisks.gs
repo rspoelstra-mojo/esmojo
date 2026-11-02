@@ -4,7 +4,7 @@ function esmojoRiskSource_(concertId, source, current) {
   const target = esmojoResearchTarget_(concertId);
   const register = esmojoReadPdfRegister_(esmojoShowFile_(target.folder,'showprofiel-pdf.json'),target.primary.concertId);
   if(!Object.keys(register.reports).length)throw Error('REPORT_NOT_READY');
-  const revision = current ? esmojoPdfSnapshot_(concertId).revision : source.revision;
+  const revision = current ? esmojoPdfSnapshot_(concertId,target).revision : source.revision;
   if (source && revision !== source.revision) throw Error('SOURCE_CHANGED');
   const row = register.reports[revision];
   if (!row) throw Error('REPORT_NOT_READY');
