@@ -12,6 +12,11 @@ verbinden de scopes `esmojo.research esmojo.showprofile_risks`, eventueel met
 `offline_access` wanneer de client dat vraagt. De toestemmingspagina benoemt
 uitdrukkelijk het lezen van vertrouwelijke PDF-tekst door het gekoppelde
 ChatGPT-account en het maken van vertrouwelijke AI-risicoconcepten.
+Alle geauthenticeerde actieve beheerders zien dezelfde twaalf toolbeschrijvingen,
+ook met een oude grant. De werkelijke acties vereisen afzonderlijk de passende
+scope: ontbrekende toestemming geeft HTTP 403 met een OAuth
+insufficient_scope-challenge. De client kan daarmee nieuwe toestemming vragen.
+De eerste aanmeldchallenge noemt beide ondersteunde scopes.
 Een research-only token blijft uitsluitend openbaar onderzoek doen. Refresh
 kan geen extra scope toevoegen. Bestaande grants hoeven niet ingetrokken te
 worden voor compatibiliteit; voor nieuwe acties is nieuwe toestemming nodig.
@@ -30,7 +35,9 @@ Het oudere ESMOJO_RESEARCH_TOKEN krijgt geen PDF- of risicoanalysetoegang.
 | save_showprofile_analysis | Valideer schema en citaten; maak append-only resultaat en lees volledig terug. |
 | read_showprofile_analysis | Lees de analyse voor exact de opgegeven geregistreerde PDF-versie. Ook eerdere versies blijven leesbaar. |
 
-Alle acties zijn uitsluitend toegankelijk met de nieuwe OAuth-scope. Geen
+De gegevensacties voor risicoanalyse zijn uitsluitend toegankelijk met de nieuwe
+OAuth-scope; alleen hun toolbeschrijvingen zijn zichtbaar voor beheerders met
+een bestaande onderzoekskoppeling. Geen
 vrij aangeleverde Drive-IDs, paden, bestandsnamen, accounts of URL-downloads.
 De server resolveert de hele Drive-parentketen via de bestaande index.
 Historische geïmporteerde concertmappen blijven in de scan; alleen bij elkaar
