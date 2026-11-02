@@ -193,10 +193,12 @@ test('Vertrouwelijke PDF-scope vereist nieuwe toestemming; refresh kan bestaande
     const read=await call('tools/call',{name:'get_final_showprofile',arguments:{concertId:'test'}});
     if(scope.includes(RISK_SCOPE))assert.equal(read.data.result.structuredContent.tested,true);
     else {
-      assert.equal(read.code,403);
-      assert.equal(read.data.error,'insufficient_scope');
-      assert.match(read.headers['WWW-Authenticate'],/error="insufficient_scope"/);
-      assert.ok(read.headers['WWW-Authenticate'].includes(SCOPE+' '+RISK_SCOPE));
+      assert.equal(read.code,200);
+      assert.equal(read.data.result.isError,true);
+      assert.equal(read.data.result.structuredContent.code,'insufficient_scope');
+      const challenge=read.data.result._meta['mcp/www_authenticate'][0];
+      assert.match(challenge,/error="insufficient_scope"/);
+      assert.ok(challenge.includes(SCOPE+' '+RISK_SCOPE));
     }
     const elevated=await h.call('token',{grant_type:'refresh_token',client_id:p.client.client_id,refresh_token:token.refresh_token,resource:RESOURCE,scope:SCOPE+' '+RISK_SCOPE});
     assert.equal(elevated.code,scope===SCOPE+' '+RISK_SCOPE?200:400);
@@ -211,11 +213,26 @@ test('Stabiele tooldiscovery biedt stap-voor-stap OAuth zonder vertrouwelijke ac
     const call=async(method,params,headers={})=>{const r=response();await handler({method:'POST',headers:{authorization:'Bearer '+opaque('esm_mcp'),'content-type':'application/json',...headers},body:{jsonrpc:'2.0',id:1,method,params}},r);return r;};
     const list=await call('tools/list');assert.equal(list.code,200);assert.equal(list.data.result.tools.length,12);
     for(const name of scope===SCOPE?['pending_showprofile_analyses','get_final_showprofile','showprofile_analysis_prompt','read_showprofile_pdf','save_showprofile_analysis','read_showprofile_analysis']:['concerts_on_date','research_prompt','save_research']){
-      const denied=await call('tools/call',{name,arguments:{}});assert.equal(denied.code,403);assert.equal(denied.data.error,'insufficient_scope');
-      assert.ok(denied.headers['WWW-Authenticate'].includes(SCOPE+' '+RISK_SCOPE));
+      const denied=await call('tools/call',{name,arguments:{}});assert.equal(denied.code,200);assert.equal(denied.data.result.isError,true);assert.equal(denied.data.result.structuredContent.code,'insufficient_scope');
+      assert.ok(denied.data.result._meta['mcp/www_authenticate'][0].includes(SCOPE+' '+RISK_SCOPE));
     }
     assert.equal(riskCalls,0);assert.equal(researchCalls,0);
     const anonymous=await call('tools/list',{}, {authorization:''});assert.equal(anonymous.code,401);
     assert.ok(anonymous.headers['WWW-Authenticate'].includes(SCOPE+' '+RISK_SCOPE));
   }
+});
+
+test('ChatGPT OAuth-toolmetadata en foutresultaat leiden naar nieuwe consent zonder oude grant te verruimen',async()=>{
+  const h=oauthHarness(),old=await connect(h),exchange=async p=>(await h.call('token',{grant_type:'authorization_code',client_id:p.client.client_id,redirect_uri:callback,code:p.code,code_verifier:p.verifier,resource:RESOURCE})).data;
+  const oldToken=await exchange(old);let calls=0;
+  const handler=makeMcpHandler({auth:h.store,owner:h.owner,risks:async()=>{calls++;return{promptVersion:1,classification:'vertrouwelijk'};}});
+  const call=async(access,method,params)=>{const r=response();await handler({method:'POST',headers:{authorization:'Bearer '+access,'content-type':'application/json'},body:{jsonrpc:'2.0',id:1,method,params}},r);return r.data.result;};
+  const tools=(await call(oldToken.access_token,'tools/list')).tools;
+  for(const tool of tools){const scope=tool.name.includes('showprofile')?RISK_SCOPE:SCOPE;assert.deepEqual(tool.securitySchemes,[{type:'oauth2',scopes:[scope]}]);assert.deepEqual(tool._meta.securitySchemes,tool.securitySchemes);}
+  const params={name:'showprofile_analysis_prompt',arguments:{}};
+  const denied=await call(oldToken.access_token,'tools/call',params);assert.equal(denied.isError,true);assert.equal(denied.structuredContent.verified,false);assert.equal(calls,0);
+  const challenge=denied._meta['mcp/www_authenticate'][0],scope=/scope="([^"]+)"/.exec(challenge)[1];
+  const consent=await connect(h,'none',scope),token=await exchange(consent);
+  assert.equal((await call(token.access_token,'tools/call',params)).structuredContent.promptVersion,1);assert.equal(calls,1);
+  assert.equal((await call(oldToken.access_token,'tools/call',params)).isError,true);assert.equal(calls,1);
 });
