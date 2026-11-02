@@ -56,12 +56,13 @@ function esmojoShowProfileRisks_(request) {
   if(op==='status')return esmojoRiskStatus_(request.concertId);
   if(op==='production-save')return esmojoSaveProductionRisk_(request,esmojoResearchTarget_(request.concertId));
   if(op==='view'){
-    const target=esmojoResearchTarget_(request.concertId),production=esmojoProductionRiskState_(esmojoReadProductionRisks_(target).document);
+    const target=esmojoResearchTarget_(request.concertId),productionDocument=esmojoReadProductionRisks_(target).document,production=esmojoProductionRiskState_(productionDocument);
+    const assessments={barrier:typeof esmojoBarrierSummary_==='function'?esmojoBarrierSummary_(productionDocument):null,floor:typeof esmojoFloorSummary_==='function'?esmojoFloorSummary_(productionDocument):null};
     let source;
-    try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return{state:'not-ready',risks:[],production};throw error;}
+    try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return{state:'not-ready',risks:[],production,assessments};throw error;}
     const document=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
     // Browser krijgt alleen de gevraagde definitie; geen PDF-bytes, ticketdata of Drive-IDs.
-    return {state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production};
+    return {state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production,assessments};
   }
   validateRiskReference(request.source);if(op==='save')validateRiskResult(request.result);
   // Nieuwe analyse uitsluitend voor de huidige definitieve PDF. Oude analyses blijven leesbaar.
