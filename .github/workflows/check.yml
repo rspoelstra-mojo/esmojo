@@ -36,4 +36,5 @@ jobs:
           node server/research.test.js
           node tools/research/client.test.mjs
           node server/mcp.test.js
+          node server/showprofile-risks.test.js
           node .agents/skills/esmojo-concertonderzoek/scripts/workflow.test.mjs

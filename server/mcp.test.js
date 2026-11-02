@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { createHash, createHmac } from 'node:crypto';
-import { makeMcpOAuthHandler, sealConsent, openConsent, authorizationMetadata, protectedMetadata, RESOURCE, SCOPE } from './mcp-oauth.js';
+import { makeMcpOAuthHandler, sealConsent, openConsent, authorizationMetadata, protectedMetadata, RESOURCE, SCOPE, RISK_SCOPE } from './mcp-oauth.js';
 import { makeMcpHandler } from './mcp-api.js';
 import { createMcpAuthStore, digest, opaque } from './mcp-auth-store.js';
 import { createMcpOwnerCheck } from './mcp-owner.js';
@@ -34,11 +34,11 @@ function oauthHarness(h=storeHarness()) {
   const call=async(action,body,headers={},query={})=>{const res=response();await handler({method:body===undefined?'GET':'POST',query:{action,...query},headers,body},res);return res;};
   return {...h,owner,handler,call};
 }
-async function connect(h,method='none') {
+async function connect(h,method='none',scope=SCOPE) {
   const registration=await h.call('register',{client_name:'ChatGPT',redirect_uris:[callback],token_endpoint_auth_method:method});
   assert.equal(registration.code,201);
   const client=registration.data,verifier='v'.repeat(43),challenge=createHash('sha256').update(verifier).digest('base64url');
-  const query={response_type:'code',client_id:client.client_id,redirect_uri:callback,resource:RESOURCE,code_challenge:challenge,code_challenge_method:'S256',scope:SCOPE,state:'state-123'};
+  const query={response_type:'code',client_id:client.client_id,redirect_uri:callback,resource:RESOURCE,code_challenge:challenge,code_challenge_method:'S256',scope,state:'state-123'};
   const authorize=await h.call('authorize',undefined,{},query);assert.equal(authorize.code,200);
   const cookie=authorize.headers['Set-Cookie'].split(';')[0],pending=openConsent({headers:{cookie}},env,h.now());assert.ok(pending);
   const approved=await h.call('approve',{csrf:pending.csrf},{origin:'https://esmojo.nl','content-type':'application/json',cookie});assert.equal(approved.code,200);
@@ -176,4 +176,23 @@ test('access vervalt na een uur; grant na 90 dagen; refresh verlengt de absolute
   assert.equal(next.code,200);assert.equal(JSON.parse(h.content()).grants[0].expiresAt,before);
   h.advance(90*86400000);
   assert.equal((await h.call('token',{grant_type:'refresh_token',client_id:p.client.client_id,refresh_token:next.data.refresh_token,resource:RESOURCE})).code,400);
+});
+
+
+test('Vertrouwelijke PDF-scope vereist nieuwe toestemming; refresh kan bestaande grant niet uitbreiden',async()=>{
+  for(const scope of [SCOPE,SCOPE+' '+RISK_SCOPE,RISK_SCOPE]){
+    const h=oauthHarness(),p=await connect(h,'none',scope);
+    const consentPage=await h.call('authorize',undefined,{},p.query);
+    assert.equal(consentPage.html.includes('Vertrouwelijke definitieve showprofiel'),scope.includes(RISK_SCOPE));
+    const token=(await h.call('token',{grant_type:'authorization_code',client_id:p.client.client_id,redirect_uri:callback,code:p.code,code_verifier:p.verifier,resource:RESOURCE})).data;
+    assert.equal(token.scope,scope);
+    const handler=makeMcpHandler({auth:h.store,owner:h.owner,risks:async()=>({tested:true})});
+    const call=async(method,params)=>{const r=response();await handler({method:'POST',headers:{authorization:'Bearer '+token.access_token,'content-type':'application/json'},body:{jsonrpc:'2.0',id:1,method,params}},r);return r;};
+    const list=await call('tools/list');const names=list.data.result.tools.map(t=>t.name);
+    assert.equal(names.includes('read_showprofile_pdf'),scope.includes(RISK_SCOPE));
+    const read=await call('tools/call',{name:'get_final_showprofile',arguments:{concertId:'test'}});
+    if(scope.includes(RISK_SCOPE))assert.equal(read.data.result.structuredContent.tested,true);else assert.equal(read.data.error.code,-32602);
+    const elevated=await h.call('token',{grant_type:'refresh_token',client_id:p.client.client_id,refresh_token:token.refresh_token,resource:RESOURCE,scope:SCOPE+' '+RISK_SCOPE});
+    assert.equal(elevated.code,scope===SCOPE+' '+RISK_SCOPE?200:400);
+  }
 });

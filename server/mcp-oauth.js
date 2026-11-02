@@ -5,6 +5,14 @@ import { createMcpOwnerCheck } from './mcp-owner.js';
 export const ISSUER = 'https://esmojo.nl';
 export const RESOURCE = `${ISSUER}/api/mcp`;
 export const SCOPE = 'esmojo.research';
+export const RISK_SCOPE = 'esmojo.showprofile_risks';
+export function requestedScopes(value) {
+  if (value === undefined || value === '') return SCOPE;
+  if (typeof value !== 'string' || value.length > 200) throw Error('FORBIDDEN');
+  const scopes=[...new Set(value.split(' '))];
+  if(scopes.some(x=>![SCOPE,RISK_SCOPE,'offline_access'].includes(x)) || !scopes.some(x=>x!== 'offline_access')) throw Error('FORBIDDEN');
+  return scopes.filter(x=>x!=='offline_access').sort().join(' ');
+}
 const endpoint = action => `${ISSUER}/api/mcp-oauth?action=${action}`;
 const cookieName = '__Host-esmojo-mcp-consent';
 // Current OpenAI stable redirect (RFC 9207); keep the earlier exact paths for
@@ -32,16 +40,16 @@ export function openConsent(req, env, now = Date.now()) {
     return Number.isSafeInteger(p.until) && p.until > now ? p : null;
   } catch { return null; }
 }
-export const protectedMetadata = { resource: RESOURCE, authorization_servers: [ISSUER], scopes_supported: [SCOPE], bearer_methods_supported: ['header'], resource_name: 'ESMOJO concertonderzoek' };
+export const protectedMetadata = { resource: RESOURCE, authorization_servers: [ISSUER], scopes_supported: [SCOPE, RISK_SCOPE], bearer_methods_supported: ['header'], resource_name: 'ESMOJO concertonderzoek' };
 export const authorizationMetadata = { issuer: ISSUER, authorization_endpoint: endpoint('authorize'), token_endpoint: endpoint('token'),
   registration_endpoint: endpoint('register'), response_types_supported: ['code'], grant_types_supported: ['authorization_code', 'refresh_token'],
-  code_challenge_methods_supported: ['S256'], token_endpoint_auth_methods_supported: ['none', 'client_secret_post', 'client_secret_basic'], scopes_supported: [SCOPE, 'offline_access'], authorization_response_iss_parameter_supported: true };
+  code_challenge_methods_supported: ['S256'], token_endpoint_auth_methods_supported: ['none', 'client_secret_post', 'client_secret_basic'], scopes_supported: [SCOPE, RISK_SCOPE, 'offline_access'], authorization_response_iss_parameter_supported: true };
 
-function page(client, csrf, nonce, management = false) {
+function page(client, csrf, nonce, management = false, scope = SCOPE) {
   return `<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>ESMOJO onderzoekskoppeling</title>
 <style nonce="${nonce}">body{font:16px system-ui;max-width:650px;margin:60px auto;padding:24px;color:#182137;background:#f7f8fc}button,a{font:inherit}button{padding:12px;margin:8px 0;cursor:pointer}#message{white-space:pre-wrap}</style>
 <h1>ESMOJO onderzoekskoppeling</h1><p>${management ? 'Beheer de onderzoeksverbindingen van jouw beheerdersaccount.' : `Je koppelt <strong>${safe(client)}</strong> aan ESMOJO.`}</p>
-<p>Toegang: openbare concerten zoeken en uitsluitend de elf onderzoeksantwoorden lezen/aanmaken. Geen accountgegevens, vrije Drive-bestanden, overschrijven of verwijderen via de onderzoeksverbinding.</p>
+<p>Toegang: ${scope.split(' ').includes(SCOPE) ? 'openbare concerten zoeken en de elf onderzoeksantwoorden lezen/aanmaken. ' : ''}${scope.split(' ').includes(RISK_SCOPE) ? '<strong>Vertrouwelijke definitieve showprofiel-PDF’s lezen en als tekst aan dit gekoppelde ChatGPT-account verstrekken; afzonderlijke vertrouwelijke risicoanalyses als concept lezen/aanmaken in de bestaande Drive-showmap.</strong> ' : ''}Geen accountgegevens, vrije Drive-bestanden, overschrijven of verwijderen. Bestaande verbindingen krijgen geen extra rechten zonder nieuwe toestemming.</p>
 <p>Alleen een actief ESMOJO-beheerdersaccount met afgeronde tweestapsverificatie kan toestemming geven. De koppeling kan tot 90 dagen werken; dit verlengt niet je websitesessie van 72 uur.</p>
 <p><a href="/" target="_blank" rel="noopener noreferrer">Open ESMOJO om in te loggen</a>. Keer daarna terug naar dit tabblad.</p>
 <button id="approve">${management ? 'Mijn koppelingen bekijken' : 'Toestemming geven en verbinden'}</button>
@@ -81,21 +89,22 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
       if (req.headers.origin && req.headers.origin !== ISSUER && ['register', 'token'].includes(action)) { res.setHeader('Access-Control-Allow-Origin', req.headers.origin); res.setHeader('Vary', 'Origin'); }
       if (req.method === 'GET' && ['metadata', 'resource'].includes(action)) return json(200, action === 'metadata' ? authorizationMetadata : protectedMetadata);
       if (req.method === 'GET' && ['authorize', 'manage'].includes(action)) {
-        let client = '', csrf = '';
+        let client = '', csrf = '', scope = SCOPE;
         if (action === 'authorize') {
           const q = req.query;
           if (q.response_type !== 'code' || typeof q.client_id !== 'string' || q.client_id.length > 100 || q.code_challenge_method !== 'S256'
             || !/^[\w-]{43}$/.test(q.code_challenge || '') || q.resource !== RESOURCE || (q.state !== undefined && (typeof q.state !== 'string' || q.state.length > 1500))
-            || (q.scope && (typeof q.scope !== 'string' || q.scope.split(' ').some(x => ![SCOPE, 'offline_access'].includes(x))))) return error('invalid_request');
+            || (q.scope && (typeof q.scope !== 'string' || q.scope.split(' ').some(x => ![SCOPE, RISK_SCOPE, 'offline_access'].includes(x))))) return error('invalid_request');
+          scope = requestedScopes(q.scope);
           const c = await store({ operation: 'client', clientId: q.client_id });
           if (!c.redirectUris.includes(q.redirect_uri) || !redirectUris.includes(q.redirect_uri)) return error('invalid_request');
           csrf = opaque('csrf'); client = c.name;
-          const value = sealConsent({ clientId: c.id, redirectUri: q.redirect_uri, challenge: q.code_challenge, state: q.state || '', csrf, until: now() + 600000 }, env);
+          const value = sealConsent({ clientId: c.id, redirectUri: q.redirect_uri, challenge: q.code_challenge, state: q.state || '', scope, csrf, until: now() + 600000 }, env);
           res.setHeader('Set-Cookie', `${cookieName}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
         }
         const nonce = randomBytes(18).toString('base64');
         res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`);
-        res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.status(200).send(page(client, csrf, nonce, action === 'manage'));
+        res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.status(200).send(page(client, csrf, nonce, action === 'manage', scope));
       }
       if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST, OPTIONS'); return error('invalid_request', 405); }
       let p = req.body;
@@ -112,7 +121,7 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
         const id = opaque('client'), method = p.token_endpoint_auth_method || 'client_secret_basic', clientSecret = method === 'none' ? null : opaque('secret');
         await store({ operation: 'register', clientId: id, name: p.client_name || 'ChatGPT ESMOJO', redirectUris: [...new Set(p.redirect_uris)], authMethod: method, secretHash: clientSecret ? digest(clientSecret) : null });
         return json(201, { client_id: id, client_id_issued_at: Math.floor(now() / 1000), client_name: p.client_name || 'ChatGPT ESMOJO', redirect_uris: p.redirect_uris,
-          ...(clientSecret ? { client_secret: clientSecret, client_secret_expires_at: 0 } : {}), token_endpoint_auth_method: method, grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], scope: SCOPE });
+          ...(clientSecret ? { client_secret: clientSecret, client_secret_expires_at: 0 } : {}), token_endpoint_auth_method: method, grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], scope: SCOPE + ' ' + RISK_SCOPE });
       }
       if (['approve', 'revoke', 'grants'].includes(action)) {
         if (req.headers.origin !== ISSUER || !(req.headers['content-type'] || '').startsWith('application/json')) return error('access_denied', 403);
@@ -121,7 +130,7 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
         const consent = openConsent(req, env, now());
         if (!consent || typeof p.csrf !== 'string' || p.csrf !== consent.csrf) return error('access_denied', 403);
         const code = opaque('code');
-        await store({ operation: 'grant', actor, clientId: consent.clientId, redirectUri: consent.redirectUri, challenge: consent.challenge, codeHash: digest(code), resource: RESOURCE, scope: SCOPE });
+        await store({ operation: 'grant', actor, clientId: consent.clientId, redirectUri: consent.redirectUri, challenge: consent.challenge, codeHash: digest(code), resource: RESOURCE, scope: requestedScopes(consent.scope) });
         const redirect = new URL(consent.redirectUri); redirect.searchParams.set('code', code); redirect.searchParams.set('iss', ISSUER);
         if (consent.state) redirect.searchParams.set('state', consent.state);
         res.setHeader('Set-Cookie', `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
@@ -138,7 +147,8 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
         p.client_id = id; method = 'client_secret_basic';
       }
       if (typeof p.client_id !== 'string' || p.client_id.length > 100 || p.resource !== RESOURCE
-        || (p.scope && p.scope !== SCOPE && p.scope !== `${SCOPE} offline_access`)) return error('invalid_request');
+        || (p.scope && typeof p.scope !== 'string')) return error('invalid_request');
+      const tokenScope = p.scope ? requestedScopes(p.scope) : undefined;
       const registered = await store({ operation: 'client', clientId: p.client_id });
       if (registered.authMethod !== method || (method !== 'none' && (typeof suppliedSecret !== 'string' || suppliedSecret.length > 150
         || !timingSafeEqual(Buffer.from(digest(suppliedSecret), 'hex'), Buffer.from(registered.secretHash, 'hex'))))) return error('invalid_client', 401);
@@ -148,10 +158,10 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
         if (typeof p.code !== 'string' || p.code.length > 150 || !/^[A-Za-z0-9._~-]{43,128}$/.test(p.code_verifier || '') || !redirectUris.includes(p.redirect_uri)) return error('invalid_grant');
         const challenge = createHash('sha256').update(p.code_verifier).digest('base64url');
         output = await store({ operation: 'exchange', clientId: p.client_id, codeHash: digest(p.code), redirectUri: p.redirect_uri, challenge, resource: RESOURCE,
-          accessHash: digest(access), refreshHash: digest(refresh), grantId: opaque('grant') });
+          accessHash: digest(access), refreshHash: digest(refresh), grantId: opaque('grant'), ...(tokenScope ? { scope: tokenScope } : {}) });
       } else if (p.grant_type === 'refresh_token') {
         if (typeof p.refresh_token !== 'string' || !/^esm_refresh_[\w-]{43}$/.test(p.refresh_token)) return error('invalid_grant');
-        output = await store({ operation: 'refresh', clientId: p.client_id, refreshHash: digest(p.refresh_token), nextRefreshHash: digest(refresh), accessHash: digest(access), resource: RESOURCE });
+        output = await store({ operation: 'refresh', clientId: p.client_id, refreshHash: digest(p.refresh_token), nextRefreshHash: digest(refresh), accessHash: digest(access), resource: RESOURCE, ...(tokenScope ? { scope: tokenScope } : {}) });
       } else return error('unsupported_grant_type');
       return json(200, { access_token: access, token_type: 'Bearer', expires_in: output.expiresIn, refresh_token: refresh, scope: output.scope });
     } catch (failure) {
