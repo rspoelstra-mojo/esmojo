@@ -14,11 +14,15 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['sync', 'profile-save'].includes(JSON.parse(input.body).operation) || /^(ticket-|final-|report-|risk-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['sync', 'profile-save'].includes(JSON.parse(input.body).operation) || /^(ticket-|final-|report-|risk-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
-    if(request.operation!=='report-commit'&&input.body.length>110000)throw Error('VALIDATION');
+    if(!['report-commit','barrier-upload'].includes(request.operation)&&input.body.length>110000)throw Error('VALIDATION');
+    if(/^(barrier-|floor-)/.test(request.operation)){
+      const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
+      return esmojoReply_({ok:true,data:request.operation.startsWith('barrier-')?esmojoBarrierLayout_(request):esmojoFloorPressure_(request)});
+    }
     if(request.operation.startsWith('risk-')){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
       return esmojoReply_({ok:true,data:esmojoShowProfileRisks_(request)});
@@ -154,7 +158,7 @@ function esmojoShows_(input) {
     const updated = { version: 1, concerts: rows, active: Array.from(incoming), checkedAt: snapshot.checkedAt };
     esmojoWriteShowJson_(root, indexFile, '_esmojo_shows_v1.json', updated);
     return esmojoReply_({ ok: true, data: { concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
-  } catch (error) { return esmojoReply_({ ok: false, code: ['TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
+  } catch (error) { return esmojoReply_({ ok: false, code: ['TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
   finally { if (lock) lock.releaseLock(); }
 }
 

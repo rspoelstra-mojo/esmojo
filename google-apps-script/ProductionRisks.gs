@@ -27,5 +27,6 @@ function esmojoMoveProductionRisks_(from,to,oldId,newId){
   if(source&&destination)throw Error('CONFLICT');const file=source||destination;if(!file)return;
   const current=JSON.parse(file.getBlob().getDataAsString('UTF-8')).concertId;if(![oldId,newId].includes(current))throw Error('CONFLICT');
   const {document}=esmojoReadProductionRisks_({folder:source?from:to,primary:{concertId:current}});document.concertId=newId;
+  if(typeof esmojoMoveBarrierFiles_==='function')esmojoMoveBarrierFiles_(document,from,to);
   file.setContent(JSON.stringify(document,null,2));if(source)file.moveTo(to);
 }

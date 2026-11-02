@@ -308,3 +308,15 @@ SPA-navigatie onderbreekt writes niet; afmelden wist wachtrijen en conceptgeheug
 Een bestaand definitief PDF toont direct gereed/download met stille statuscontrole;
 zichtbare voortgang uitsluitend bij daadwerkelijke generatie, geen render op iedere
 paginaopening. Download blijft aan de server gecontroleerd, zonder PDF-prefetch.
+
+## Barrieropstelling en Vloerdruk
+
+De gebruiker heeft op 2 november 2026 beide beoordelingen, toelichtingen,
+beheersmaatregelen, publieksvakken, bezoekersaantallen en netto-oppervlakten
+expliciet Vertrouwelijk verklaard, inclusief geüploade PNG/PDF-plattegronden.
+Bewaar beoordelingen en historie in het bestaande productionele-risicos.json;
+losse bijlagen uitsluitend als private bestanden in dezelfde canonieke Drive-showmap.
+Account/MFA, servervalidatie en revisiecontrole blijven vereist. Alleen referenties
+in beoordelingen; geen bestandsinhoud in JSON, logs of persistente browseropslag.
+Standaard-PNG’s worden later aangeleverd in src/assets/barrier-layouts; geen
+vervangende afbeeldingen zoeken of genereren. Zie docs/production-assessments.md.

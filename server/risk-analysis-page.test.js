@@ -15,7 +15,8 @@ function harness(request,saveSelection){
     focus(){focused=this;}remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this);}
   }
   const panel=new Element('section'),menu=new Element('a');
-  const context=vm.createContext({document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
+  const openAssessment=(section,{onBack})=>{section.replaceChildren();const back=new Element('button');back.textContent='Terug';back.onclick=onBack;const title=new Element('h2');title.textContent='Barrieropstelling';section.append(back,title);return()=>{};};
+  const context=vm.createContext({Promise,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
   for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
   const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection});
   return{page,panel,menu,focused:()=>focused,buttons:()=>panel.querySelectorAll('[data-risk-id]'),text:()=>panel.textContent};
@@ -56,7 +57,7 @@ test('Productionele pagina’s openen direct of uitsluitend na bevestigd Ja; Nee
 test('Bewaarde Ja-keuze wordt hersteld; late laadreactie overschrijft een al geopende productionele pagina niet',async()=>{
   let resolve;const h=harness(()=>new Promise(done=>resolve=done));h.page.activate();h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='barrier_layout').onclick();
   resolve({state:'pending',risks:[],production:{revision:3,choices:{lasers:true}}});await tick();assert.ok(h.text().includes('Barrieropstelling'));assert.ok(!h.text().includes("Operationele risico's"));
-  h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,false);h.page.dispose();
+  h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,true);await tick();resolve({state:'pending',risks:[],production:{revision:3,choices:{lasers:true}}});await tick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,false);h.page.dispose();
 });
 test('Mislukte opslag activeert een productionele pagina niet en vereist opnieuw laden',async()=>{
   const h=harness(async()=>({state:'pending',risks:[],production:{revision:0,choices:{}}}),async()=>{throw Error('CONFLICT private body');});h.page.activate();await tick();
