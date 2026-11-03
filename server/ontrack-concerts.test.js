@@ -65,3 +65,9 @@ test('Extra locaties alleen in Showrapportage: afzonderlijke catalogus, exacte o
  await assert.rejects(service.send(own,{...request,templateId:'normal'}),/EMAIL_SHOW_NOT_FOUND/);assert.equal(sent.length,1);
  unavailable=true;const fallback=await service.catalog(own,true);assert.equal(fallback.ontrackAvailable,false);assert.deepEqual(fallback.ontrackShows,[gash]);await assert.rejects(service.send(own,request),/UNAVAILABLE/);assert.equal(sent.length,1);
 });
+
+test('MOJO-comedy/festivalbron blijft dezelfde toegestane host; externe bron en onjuiste IDs blokkeren opslag',async()=>{
+ const {validateMailingSnapshot}=await import('./ontrack-concert-validation.js');
+ const f=harness(),row={...concert(),sourceUrl:'https://www.mojo.nl/comedy/officiele-fixture'};assert.equal(validateMailingSnapshot(snapshot([row])).concerts.length,1);assert.equal((await f.store('sync',null,{snapshot:snapshot([row])})).imported,1);
+ assert.throws(()=>validateMailingSnapshot(snapshot([{...row,sourceUrl:'https://evil.invalid/comedy/test'}])),/MAILING_SNAPSHOT_SOURCE/);assert.throws(()=>validateMailingSnapshot(snapshot([{...row,concertId:'wrong'}])),/MAILING_SNAPSHOT_ID/);assert.throws(()=>validateMailingSnapshot({...snapshot([]),venues:[]}),/MAILING_SNAPSHOT_COVERAGE/);
+});
