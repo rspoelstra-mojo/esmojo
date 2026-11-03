@@ -1,18 +1,14 @@
-import {readFile} from 'node:fs/promises';
 import fontkit from '@pdf-lib/fontkit';
 import {PDFDocument,PDFName,PDFDict,PDFArray,PDFString,rgb} from 'pdf-lib';
 import {displayValue,REPORT_TIMEZONE} from './data.js';
 import {emailContext} from '../email-template.js';
-export const SHOW_REPORT_LAYOUT='ontrack-showreport-v1';
-export const ONTRACK_LOGIN='https://app.ontrack.co/auth/login';
+import {SHOW_REPORT_LAYOUT,ONTRACK_LOGIN} from './contract.js';
+import {showReportAssets} from './assets.js';
+export {SHOW_REPORT_LAYOUT,ONTRACK_LOGIN} from './contract.js';
+export {showReportAssets} from './assets.js';
 const W=595.2,H=841.92,M=50,GAP=12,CW=(W-2*M-GAP)/2;
 const color=hex=>rgb(...hex.match(/\w\w/g).map(v=>parseInt(v,16)/255));
 const BLUE=color('0047BA'),NAVY=color('081830'),TEXT=color('1F2938'),MUTED=color('5C697A'),LIGHT=color('F5F7FA'),BORDER=color('D9E0E8'),RED=color('FFF0F0'),WHITE=rgb(1,1,1);
-export async function showReportAssets(){
- const directory=new URL('../report-original/assets/',import.meta.url);
- const [body,heading,footer,icon]=await Promise.all([readFile(new URL('body-font.ttf',directory)),readFile(new URL('heading-font.otf',directory)),readFile(new URL('watermark.png',directory)),readFile(new URL('./assets/ontrack-icon.png',import.meta.url)).catch(error=>{if(error.code==='ENOENT')return null;throw error;})]);
- return{body,heading,footer,icon};
-}
 const rounded=(w,h,r)=>{const k=r*.5522847498;return`M ${r} 0 L ${w-r} 0 C ${w-r+k} 0 ${w} ${r-k} ${w} ${r} L ${w} ${h-r} C ${w} ${h-r+k} ${w-r+k} ${h} ${w-r} ${h} L ${r} ${h} C ${r-k} ${h} 0 ${h-r+k} 0 ${h-r} L 0 ${r} C 0 ${r-k} ${r-k} 0 ${r} 0 Z`;};
 export function wrapPdfText(value,width,font,size){
  const lines=[];for(const paragraph of String(value).replace(/\r\n?/g,'\n').split('\n')){let line='';for(const word of paragraph.trim().split(/\s+/).filter(Boolean)){
@@ -27,7 +23,9 @@ export async function createShowReportPdf(data,{show,version='1.0',status='Defin
  const body=await doc.embedFont(assets.body,{subset:true}),head=await doc.embedFont(assets.heading,{subset:false}),footerImage=await doc.embedPng(assets.footer),icon=assets.icon?await doc.embedPng(assets.icon):null;
  const geometry={dashboard:[],incidents:[],pages:[],iconLink:null},date=show.dates[0],shortDate=date.split('-').reverse().join('-'),longDate=new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'long',year:'numeric',timeZone:REPORT_TIMEZONE}).format(new Date(date+'T12:00:00Z'));
  const generated=new Intl.DateTimeFormat('nl-NL',{timeZone:REPORT_TIMEZONE,day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(data.exportGeneratedAt));
- function line(page,value,x,baseline,size=9,font=body,fill=TEXT){page.drawText(String(value),{x,y:H-baseline,size,font,color:fill});}
+ const headInk=fontkit.create(assets.heading),bodyInk=fontkit.create(assets.body);
+ const charsets=new Map([[body,new Set(body.getCharacterSet())],[head,new Set(head.getCharacterSet())]]);
+ function line(page,value,x,baseline,size=9,font=body,fill=TEXT){if([...String(value)].some(character=>!charsets.get(font).has(character.codePointAt(0))))throw Error('REPORT_GLYPH');page.drawText(String(value),{x,y:H-baseline,size,font,color:fill});}
  function right(page,value,x,baseline,size=9,font=body,fill=TEXT){line(page,value,x-font.widthOfTextAtSize(String(value),size),baseline,size,font,fill);}
  function lines(page,values,x,top,{size=9,font=body,fill=TEXT,leading=size*1.2}={}){values.forEach((value,i)=>line(page,value,x,top+size+i*leading,size,font,fill));}
  function card(page,x,top,width,height,fill=LIGHT){page.drawSvgPath(rounded(width,height,11.5),{x,y:H-top,color:fill});}
@@ -42,11 +40,11 @@ export async function createShowReportPdf(data,{show,version='1.0',status='Defin
   p.drawImage(footerImage,{x:0,y:0,width:W,height:91.92});
   const rows=footerArtist.map((value,i)=>({value,baseline:791-(footerArtist.length-1-i)*11,font:head,fill:NAVY})),meta=footerMeta(`${index} / ${total}`);
   meta.forEach((value,i)=>rows.push({value,baseline:807+i*10.62,font:body,fill:MUTED}));notice.forEach((value,i)=>rows.push({value,baseline:819+(meta.length-1+i)*10.62,font:body,fill:MUTED}));
-  const headInk=fontkit.create(assets.heading),bodyInk=fontkit.create(assets.body),bounds=rows.map(row=>{const ink=row.font===head?headInk:bodyInk,boxes=ink.layout(row.value).glyphs.map(g=>g.bbox),scale=9/ink.unitsPerEm;return{top:row.baseline-Math.max(...boxes.map(b=>b.maxY))*scale,bottom:row.baseline-Math.min(...boxes.map(b=>b.minY))*scale};});
+  const bounds=rows.map(row=>{const ink=row.font===head?headInk:bodyInk,boxes=ink.layout(row.value).glyphs.map(g=>g.bbox),scale=9/ink.unitsPerEm;return{top:row.baseline-Math.max(...boxes.map(b=>b.maxY))*scale,bottom:row.baseline-Math.min(...boxes.map(b=>b.minY))*scale};});
   const shift=(756+H-Math.min(...bounds.map(b=>b.top))-Math.max(...bounds.map(b=>b.bottom)))/2;
   rows.forEach(row=>line(p,row.value,50,row.baseline+shift,9,row.font,row.fill));
  }
- const first=page(),artistLines=wrapPdfText(show.name,icon?420:495,head,25),dateLines=wrapPdfText(`${longDate} - ${show.venue}`,420,body,11);
+ const first=page(),artistLines=wrapPdfText(show.name,420,head,25),dateLines=wrapPdfText(`${longDate} - ${show.venue}`,420,body,11);
  const headerHeight=143+(artistLines.length-1)*28+(dateLines.length-1)*13;
  if(headerHeight>190)throw Error('REPORT_HEADER_LAYOUT');
  first.drawRectangle({x:0,y:H-headerHeight,width:W,height:headerHeight,color:BLUE});lines(first,artistLines,M,24,{size:25,font:head,fill:WHITE,leading:28});const dateTop=62+(artistLines.length-1)*28;
@@ -57,8 +55,9 @@ export async function createShowReportPdf(data,{show,version='1.0',status='Defin
  }
  const dashboardTop=headerHeight+66,rowHeights=[154,140,190],bottom=dashboardTop+rowHeights.reduce((a,b)=>a+b,0)+2*GAP;
  if(bottom>bodyEnd)throw Error('REPORT_DASHBOARD_LAYOUT');
- const titleGroupHeight=40,titleTop=headerHeight+(dashboardTop-headerHeight-titleGroupHeight)/2;
- line(first,'Showrapportage',M,titleTop+22,22,head,NAVY);line(first,'Medische en beveiligingsincidenten',M,titleTop+40,10,body,MUTED);
+ const titleRows=[{text:'Showrapportage',baseline:22,size:22,font:head,ink:headInk,fill:NAVY},{text:'Medische en beveiligingsincidenten',baseline:40,size:10,font:body,ink:bodyInk,fill:MUTED}];
+ const titleBounds=titleRows.map(row=>{const boxes=row.ink.layout(row.text).glyphs.map(g=>g.bbox),scale=row.size/row.ink.unitsPerEm;return{top:row.baseline-Math.max(...boxes.map(b=>b.maxY))*scale,bottom:row.baseline-Math.min(...boxes.map(b=>b.minY))*scale};}),titleTop=Math.min(...titleBounds.map(b=>b.top)),titleBottom=Math.max(...titleBounds.map(b=>b.bottom)),titleShift=(headerHeight+dashboardTop-titleTop-titleBottom)/2;
+ titleRows.forEach(row=>line(first,row.text,M,titleShift+row.baseline,row.size,row.font,row.fill));geometry.titleGroup={top:titleTop+titleShift,bottom:titleBottom+titleShift,headerBottom:headerHeight,cardsTop:dashboardTop};
  function panel(column,row,title){const x=M+column*(CW+GAP),top=dashboardTop+rowHeights.slice(0,row).reduce((a,b)=>a+b,0)+row*GAP,h=rowHeights[row];card(first,x,top,CW,h);line(first,title,x+15,top+25,12,head,NAVY);geometry.dashboard.push({title,x,top,width:CW,height:h});return{x,top,w:CW,h};}
  function kpi(column,title,total,values){const p=panel(column,0,title);right(first,total,p.x+p.w-16,p.top+44,32,head,BLUE);rule(first,p.x+15,p.top+58,p.w-30);const blockHeight=values.length*14,start=p.top+58+(p.h-58-blockHeight)/2;values.forEach(([label,value],i)=>{line(first,label,p.x+15,start+10+i*14,8.5);right(first,value,p.x+p.w-16,start+10+i*14,9,body,NAVY);});}
  const med=data.kpis.medical,sec=data.kpis.security;

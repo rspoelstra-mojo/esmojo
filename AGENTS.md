@@ -460,11 +460,19 @@ Beheer vereist actieve beheerder/MFA, ook controle in de ondertekende Drive-brug
 Ontvangerkeuze verwijst naar bestaande actieve accounts, met revisiecontrole.
 Geen CSV-inhoud, rapportinhoud of ontvangers in logs/persistente browseropslag.
 
-De inhoudelijke rapportageprompt/PDF-opmaak wordt nog door de gebruiker aangeleverd.
-Tot die tijd alleen CSV-metadata inventariseren, tellen en ontvangers opslaan;
-geen eigen rapportageregels, automatische verwerking of echte rapportmails maken.
-Vinkje uitsluitend bij bevestigde verzending. Toekomstige OnTrack-mail gebruikt
-de centrale emailstandaard en automatische templatecatalogus; Showrapportage is show-specifiek en gebruikt de bevestigde artiest/locatie/datumregel.
+De gebruiker heeft ESMOJO_Codex_overdracht_showrapportage.md als volledige
+specificatie aangeleverd. Gebruik de pure CSV-/rekenlaag en afzonderlijke
+PDF-generator in server/ontrack-report. De bestaande showprofielgenerator blijft
+intact. Exact 17 headers/volgorde, Affected Person enkelvoud, Resolution Note,
+strenge lokale tijden in Europe/Amsterdam en uitsluitend de opgegeven filters.
+Geen vervangende ON-logo’s of fonts. Origineel ON-icoon moet in
+server/ontrack-report/assets/ontrack-icon.png staan; zonder dit asset blijft de
+productie-worker geblokkeerd. De goedgekeurde SCOOTER-referentie-PDF en het icoon
+zijn nog niet aangeleverd. De bestaande gevalideerde productiefonts/MOJO-footer
+worden ongewijzigd hergebruikt. Een expliciete lokale layoutproef zonder icoon
+is duidelijk PROEF en wordt niet als productierapport opgeslagen/verzonden.
+Vinkje uitsluitend bij bevestigde verzending; Showrapportage gebruikt de centrale
+mailstandaard en de bevestigde artiest-/locatie-/datumregel.
 
 De gebruiker heeft de show-specifieke mail Showrapportage toegevoegd, met tekst
 “Hierbij ontvang je de showrapportage van [artiestnaam] op [showdatum] in de
@@ -474,7 +482,9 @@ De echte mail vereist de werkelijk gegenereerde PDF als bijlage en gekoppelde
 showmetadata. Geen mail zonder PDF of ontbrekende concertgegevens. De expliciete
 mailtest gebruikt een duidelijk gemarkeerde test-PDF; geen echte rapportverwerking.
 PDF-bijlagen gaan uitsluitend in servergeheugen naar Resend, maximaal 10 MB;
-geen URL, lokaal pad of bijlage-inhoud in browser/records/logs.
+geen vrij URL/lokaal pad of bijlage-inhoud in records/logs/mailtestrequests.
+Uitsluitend een bewuste beveiligde PDF-download mag bytes tijdelijk in het
+browsergeheugen gebruiken; daarna de blob-URL opruimen.
 
 ## Extra MOJO-locaties uitsluitend voor OnTrack-mailings
 
@@ -497,3 +507,44 @@ mailcatalogus. Beheerder/MFA en extra Drive-profielcontrole blijven verplicht.
 Andere mailtypen houden de gewone showbron. Extra concertgegevens uitsluitend
 in beheerder-mailkeuzes tonen; niet in Shows of andere siteonderdelen. Gebruik
 uitsluitend de exacte gekozen concertkoppeling voor de mailmetadata.
+
+## Automatische OnTrack-rapportworkflow
+
+De vaste ontrack-reports.yml controleert iedere 30 minuten de private CSV-map
+via eigen OIDC-audience/workflow, zonder CSV/PDF, tellers of afleverdetails naar GitHub te kopiëren. Verwerking
+vindt uitsluitend in Vercel-geheugen plaats; PDF en status staan in het bestaande
+OnTrack-Drive-register/map. Eén unieke inhoud+concert+layout hergebruikt dezelfde
+rapportidentiteit, ook bij dubbele Drive-bestanden. Nieuwe inhoud/layout/context
+krijgt een nieuwe versie; leases, gedeelde generatiereservering en bronhashes
+beschermen gelijktijdig werk. Oude rapporten/sourcebestanden blijven behouden.
+
+Concertmetadata komt uitsluitend uit opgeslagen canonieke concertrecords. De
+bestandsnaam mag alleen als unieke matchhint dienen; nooit artiest/zaal/datum
+verzinnen of SCOOTER-voorbeelddata als productieconstant gebruiken. Bij ontbreken
+of ambiguïteit kiest de beheerder een echte concertkoppeling; CSV-showdatum wordt
+ook gecontroleerd. Historische shows van vóór de eerste inventaris worden niet
+stilzwijgend verzonnen. De echte SCOOTER-CSV is uitsluitend lokaal getest, nooit
+in Git/CI/artifacts/logs opnemen. Voorbeeldcijfers mogen alleen in acceptatietests.
+
+Locatietellingen gebruiken voorlopig eerste voorkomen in de oorspronkelijke CSV
+als beslisregel bij gelijke aantallen (door de overdracht toegestaan); dit wijkt
+bij gedeelde plaatsen af van de genoemde voorbeeldlijst. De gebruiker is om de
+voorkeur gevraagd. Tijdstippen in het dubbele wintertijduur gebruiken de vroegste
+werkelijke occurrence en geven een waarschuwing; niet-bestaande zomertijdtijden
+worden geweigerd. De grafiek gebruikt uitsluitend eerste datum >17:00 plus de
+eerstvolgende datum. Latere datums blijven volledig in de incidenten en worden
+als grafiekwaarschuwing geregistreerd.
+
+Ontvangers worden per rapport vastgelegd vanuit de actuele actieve accounts.
+Nieuwe selectie geldt voor nieuwe rapporten. Een rapport zonder ontvangers kan
+na selectie bewust met Rapport mailen worden aangeboden; geen automatische
+inhaalmail bij alleen een selectiewijziging. Iedere persoonlijke mail krijgt de
+eigen betrouwbare voornaam en de PDF als verplichte bijlage. Resend-idempotentie,
+ontvangerlease, bevroren mailinhoud en maximaal drie pogingen voorkomen dubbelen.
+Na 23 uur onzekerheid uitsluitend controle/review, geen automatische nieuwe mail
+na het 24-uursvenster. Markeer sent alleen na positieve providerbevestiging.
+
+Technische grenzen: CSV maximaal 2 MB, gegenereerde PDF maximaal 3 MB vanwege de
+bestaande Vercel/JSON-downloadroute; overschrijding of een onmogelijke opmaak geeft
+een zichtbare fout met behoud van bron/eerdere rapporten. De legacy API-grenzen
+blijven intact; alleen de nieuwe signed OnTrack-PDF-route heeft de grotere envelop.

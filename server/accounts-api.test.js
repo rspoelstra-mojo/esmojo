@@ -23,6 +23,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({ env: configuration, clientFactory,
+    ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
     shows:async(operation,input)=>{calls.push(['shows',operation,input]);return operation==='list'?{shows:[]}:{record:{revision:0}};},
@@ -163,4 +164,11 @@ test('OnTrack vereist beheerder/MFA en verstuurt nooit mail via status of ontvan
  const write=await run({action:'ontrack',method:'PATCH',body:{revision:0,recipientIds:[other]}});assert.equal(write.response.code,200);assert.deepEqual(write.calls[1],['ontrack','recipients',id,{revision:0,recipientIds:[other]}]);
  for(const options of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{origin:'https://evil.invalid'}]){const r=await run({action:'ontrack',...options});assert.ok([401,403].includes(r.response.code));assert.equal(r.calls.some(c=>c[0]==='ontrack'),false);}
  const invalid=await run({action:'ontrack',method:'PATCH',body:{revision:0,recipientIds:[other],folderId:'arbitrary'}});assert.equal(invalid.response.code,400);assert.equal(invalid.calls.some(c=>c[0]==='ontrack'),false);assert.equal((await run({action:'ontrack',method:'POST'})).response.code,405);
+});
+
+test('Rapportacties zijn beheerder/MFA-only en accepteren geen eigen showmetadata, bijlage of ontvanger',async()=>{
+ const body={operation:'link',sourceId:'csv_source',concertId:'canonieke-show',revision:0};
+ for(const options of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{origin:'https://evil.invalid'}]){const r=await run({action:'ontrack-report',method:'POST',body,...options});assert.ok([401,403].includes(r.response.code));assert.equal(r.calls.some(c=>c[0]==='ontrack-report'),false);}
+ for(const extra of [{show:{name:'Vrije artiest'}},{to:'other@example.invalid'},{pdfBase64:'vrije bijlage'},{actor:other},{operation:'reserve'}]){const r=await run({action:'ontrack-report',method:'POST',body:{...body,...extra}});assert.equal(r.response.code,400);assert.equal(r.calls.some(c=>c[0]==='ontrack-report'),false);}
+ assert.equal((await run({action:'ontrack-report',method:'GET'})).response.code,405);
 });
