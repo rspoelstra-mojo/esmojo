@@ -18,3 +18,5 @@
 .production-risk-option[aria-pressed="true"][data-choice="true"] { background: #e7f5ed; color: #28734d; font-weight: 650; }
 .production-risk-option[aria-pressed="true"][data-choice="false"] { background: #f5a9b8; color: #242424; font-weight: 650; }
 .production-risk-option:focus-visible { outline: 2px solid var(--profile-blue); outline-offset: -3px; }
+
+.production-risk-note { font-size: 11px; font-weight: 400; }
