@@ -7,3 +7,8 @@ het originele aangeleverde PNG-bestand behouden. Geen rekenregels, verzendmoment
 of bestaande rapportbestanden wijzigen. Bestanden: rapportgenerator, projectafspraken,
 taaknotitie en websiteversie V1.26. Lokale PDF-proef, build en gerichte PDF-tests.
 Publicatie via bestaande PR/main-workflow, geen echte mails zelfstandig versturen.
+
+Gecontroleerd: twee PDF-tests geslaagd inclusief ON-link; lokale SCOOTER-proef
+vijf pagina’s met volledige KPI-/incidentcontroles. Eerste pagina gerasterd en
+visueel gecontroleerd: geen rechthoekige witte buitenrand, grijze tegel afgerond.
+Build en diffcontrole geslaagd. Originele PNG ongewijzigd.

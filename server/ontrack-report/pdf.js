@@ -1,5 +1,5 @@
 import fontkit from '@pdf-lib/fontkit';
-import {PDFDocument,PDFName,PDFDict,PDFArray,PDFString,rgb} from 'pdf-lib';
+import {PDFDocument,PDFName,PDFDict,PDFArray,PDFString,rgb,pushGraphicsState,popGraphicsState,moveTo,lineTo,appendBezierCurve,closePath,clip,endPath} from 'pdf-lib';
 import {displayValue,REPORT_TIMEZONE} from './data.js';
 import {emailContext} from '../email-template.js';
 import {SHOW_REPORT_LAYOUT,ONTRACK_LOGIN} from './contract.js';
@@ -50,8 +50,11 @@ export async function createShowReportPdf(data,{show,version='1.0',status='Defin
  first.drawRectangle({x:0,y:H-headerHeight,width:W,height:headerHeight,color:BLUE});lines(first,artistLines,M,24,{size:25,font:head,fill:WHITE,leading:28});const dateTop=62+(artistLines.length-1)*28;
  lines(first,dateLines,M,dateTop,{size:11,fill:WHITE,leading:13});const metaTop=dateTop+dateLines.length*13+12;
  line(first,`Documentversie ${version} · ${!icon?'PROEF — ON-icoon ontbreekt':status}`,M,metaTop+9,9,body,WHITE);line(first,`Op basis van geexporteerde gegevens van ${generated}`,M,metaTop+24,8.5,body,WHITE);
- if(icon){const tile={x:W-M-48,top:29,w:48,h:48},ratio=icon.width/icon.height,w=ratio>=1?48:48*ratio,h=ratio>=1?48/ratio:48;
-  first.drawImage(icon,{x:tile.x+(48-w)/2,y:H-tile.top-48+(48-h)/2,width:w,height:h});const annotation=doc.context.obj({Type:'Annot',Subtype:'Link',Rect:[tile.x,H-tile.top-48,tile.x+48,H-tile.top],Border:[0,0,0],A:{Type:'Action',S:'URI',URI:PDFString.of(ONTRACK_LOGIN)}});first.node.addAnnot(doc.context.register(annotation));geometry.iconLink=tile;
+ if(icon){const tile={x:W-M-48,top:29,w:48,h:48},x=tile.x,y=H-tile.top-48,r=10.2,k=r*.5522847498;
+  // Alleen de presentatie uitsnijden: het originele PNG-bestand blijft intact.
+  // De grijze tegel in de aangeleverde 1254px-PNG ligt binnen (60,75,1130,1130).
+  first.pushOperators(pushGraphicsState(),moveTo(x+r,y),lineTo(x+48-r,y),appendBezierCurve(x+48-r+k,y,x+48,y+r-k,x+48,y+r),lineTo(x+48,y+48-r),appendBezierCurve(x+48,y+48-r+k,x+48-r+k,y+48,x+48-r,y+48),lineTo(x+r,y+48),appendBezierCurve(x+r-k,y+48,x,y+48-r+k,x,y+48-r),lineTo(x,y+r),appendBezierCurve(x,y+r-k,x+r-k,y,x+r,y),closePath(),clip(),endPath());
+  const scale=48/1130;first.drawImage(icon,{x:x-60*scale,y:y-49*scale,width:1254*scale,height:1254*scale});first.pushOperators(popGraphicsState());const annotation=doc.context.obj({Type:'Annot',Subtype:'Link',Rect:[tile.x,H-tile.top-48,tile.x+48,H-tile.top],Border:[0,0,0],A:{Type:'Action',S:'URI',URI:PDFString.of(ONTRACK_LOGIN)}});first.node.addAnnot(doc.context.register(annotation));geometry.iconLink=tile;
  }
  const dashboardTop=headerHeight+66,rowHeights=[154,140,190],bottom=dashboardTop+rowHeights.reduce((a,b)=>a+b,0)+2*GAP;
  if(bottom>bodyEnd)throw Error('REPORT_DASHBOARD_LAYOUT');
