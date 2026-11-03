@@ -49,7 +49,7 @@ function persons(value,row){
 }
 const nextDate=date=>new Date(Date.parse(date+'T12:00:00Z')+86400000).toISOString().slice(0,10);
 function groups(rows,field){
-  const counts=new Map();for(const row of rows){const name=displayValue(row[field]);if(!counts.has(name))counts.set(name,{name,count:0,first:row.position});counts.get(name).count++;}
+  const counts=new Map();for(const row of rows){const name=displayValue(row[field]);if(!counts.has(name))counts.set(name,{name,count:0,first:row.position});counts.get(name).count++;counts.get(name).first=Math.min(counts.get(name).first,row.position);}
   return [...counts.values()].sort((a,b)=>b.count-a.count||a.first-b.first).map(({name,count})=>({name,count}));
 }
 export function calculateReport(input,{generatedAt=new Date().toISOString()}={}){
