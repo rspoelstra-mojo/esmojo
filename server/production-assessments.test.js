@@ -8,7 +8,7 @@ import {emptyFloorSections,validateFloorData,floorDensity,parseFloorArea,parseVi
 const actor='local-test-user',uploadId='11111111-1111-4111-8111-111111111111';
 const barrier=(h,operation,payload={})=>h.shows('barrier-'+operation,{concertId:h.laterId,actor,...payload});
 const floor=(h,operation,payload={})=>h.shows('floor-'+operation,{concertId:h.laterId,actor,...payload});
-const data=(barrierType,riskLevel=null)=>({barrierType,riskLevel,notes:barrierType==='custom'?'Maatregelen lokale fixture':null,uploadId:null});
+const data=(barrierType,riskLevel=null)=>({barrierType,riskLevel,notes:barrierType==='custom'?'Maatregelen lokale fixture':null,uploadId:null,riskNote:riskLevel&&riskLevel!=='low'?'Handmatige beoordeling lokale fixture':''});
 const change=async(h,type)=>{let {record}=await barrier(h,'read');if(record.completed)({record}=await barrier(h,'reopen',{revision:record.revision}));return barrier(h,'draft',{revision:record.revision,data:data(type)});};
 test('Gedeelde validators zijn identiek op frontend, server en Apps Script',()=>{
  for(const [source,target]of [['barrier-layout','BarrierValidators'],['floor-pressure','FloorPressureValidators']])assert.equal(readFileSync(new URL('../google-apps-script/'+target+'.gs',import.meta.url),'utf8'),'// Gegenereerd uit shared/'+source+'.js; imports en export-keywords verwijderd.\n'+readFileSync(new URL('../shared/'+source+'.js',import.meta.url),'utf8').split('\n').filter(l=>!l.startsWith('import ')).join('\n').replaceAll('export ',''));
@@ -74,4 +74,25 @@ test('Conceptwachtrij voorkomt blur-duplicaten, bewaart laatste invoer en stopt 
  const queue=createAssessmentQueue({snapshot:()=>value,send:async(op,payload)=>{writes.push(payload.data.n);await new Promise(done=>resolve=done);return payload;},stored:r=>stored.push(r.data.n),changed(){},error(){}});
  queue.save();assert.equal(writes.length,0);value={n:1};queue.save();queue.save();value={n:2};queue.save();const done=queue.dispose();resolve();await new Promise(r=>setImmediate(r));assert.deepEqual(writes,[1,2]);resolve();await done;assert.deepEqual(stored,[1,2]);
  let failures=0;const bad=createAssessmentQueue({snapshot:()=>value,send:async()=>{failures++;throw Error('Onzeker');},stored(){},changed(){},error(){}});value={n:3};bad.save();await new Promise(r=>setImmediate(r));value={n:4};bad.save();assert.equal(failures,1);assert.equal(bad.failed,true);clearAssessmentSaves();await bad.dispose();
+});
+
+test('Barrierbeoordeling vereist aparte toelichting of beheersmaatregel; Laag wist verborgen tekst',async()=>{
+ for(const level of ['none','medium','high']){
+  const h=harness();const {record}=await change(h,'end_stage_no_gc');const input=data('end_stage_no_gc',level);
+  for(const riskNote of ['', '   ',null,'x'.repeat(4001)]){
+   assert.throws(()=>validateBarrierRequest({operation:'complete',concertId:h.concertId,revision:record.revision,data:{...input,riskNote}}),/VALIDATION/);
+   await assert.rejects(barrier(h,'complete',{revision:record.revision,data:{...input,riskNote}}),/VALIDATION/);
+  }
+  const saved=await barrier(h,'complete',{revision:record.revision,data:{...input,riskNote:'  Bewuste beoordeling  '}});assert.equal(saved.record.riskNote,'Bewuste beoordeling');assert.equal(saved.record.notes,null);assert.equal(saved.record.completed,true);
+  const writes=h.writes();await barrier(h,'complete',{revision:record.revision,data:{...input,riskNote:'  Bewuste beoordeling  '}});assert.equal(h.writes(),writes);
+ }
+ const h=harness();const {record}=await change(h,'end_stage_no_gc');const saved=await barrier(h,'complete',{revision:record.revision,data:{...data('end_stage_no_gc','low'),riskNote:'Niet meenemen'}});assert.equal(saved.record.riskNote,'');
+});
+
+test('Historische afgeronde barrierbeoordelingen blijven leesbaar; nieuwe afronding vereist de nieuwe toelichting',async()=>{
+ const h=harness();await change(h,'end_stage_gc');const file=h.folder.files.find(f=>f.name==='productionele-risicos.json'),doc=JSON.parse(file.content);
+ delete doc.barrier.riskNote;Object.assign(doc.barrier,{riskLevel:'none',completed:true,completedBy:actor,completedAt:'2026-11-03T12:00:00Z'});file.content=JSON.stringify(doc);
+ const writes=h.writes();let {record}=await barrier(h,'read');assert.equal(record.completed,true);assert.equal(h.writes(),writes);assert.equal((await h.shows('risk-view',{concertId:h.concertId})).assessments.barrier.active,false);
+ ({record}=await barrier(h,'reopen',{revision:record.revision}));const input=data('end_stage_gc','none');delete input.riskNote;await assert.rejects(barrier(h,'complete',{revision:record.revision,data:input}),/VALIDATION/);
+ const saved=await barrier(h,'complete',{revision:record.revision,data:{...input,riskNote:'Veilig beoordeeld'}});assert.equal(saved.record.riskNote,'Veilig beoordeeld');
 });

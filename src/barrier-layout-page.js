@@ -3,11 +3,12 @@ import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 import {barrierTypes,barrierData,validateBarrierData,barrierUploadLimit} from '../shared/barrier-layout.js';
 import {barrierImages} from './barrier-images.js';
-import {assessmentNode as node,riskRadioGroup,createAssessmentQueue} from './production-assessment-ui.js';
+import {createRiskReviewCard} from './risk-review-card.js';
+import {assessmentNode as node,createAssessmentQueue} from './production-assessment-ui.js';
 
 export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},request=body=>access('barrier-layout',{method:'POST',body})}){
   let disposed=false,ready=false,record=null,queue=null,reading=false,preparing=false,previewUrl=null,previewSequence=0,awaitingPreview=false;
-  let type=null,riskLevel=null,custom={notes:'',attachment:null};
+  let type=null,riskLevel=null,riskNote='',custom={notes:'',attachment:null};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
   section.replaceChildren();const root=node('section','production-assessment');
   const back=node('button','profile-back','← Terug naar overzicht');back.type='button';
@@ -20,19 +21,25 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   const customFields=node('div','assessment-fields'),uploadField=node('div','assessment-field'),uploadLabel=node('label','','Afwijkende barrieropstelling uploaden'),upload=node('input','');upload.type='file';upload.id='barrier-upload';upload.accept='.png,.pdf,image/png,application/pdf';uploadLabel.htmlFor=upload.id;
   const uploadStatus=node('p','assessment-upload-status','PNG of PDF, maximaal 2 MB.'),uploadActions=node('div','assessment-upload-actions'),remove=node('button','secondary-button','Bestand verwijderen');remove.type='button';uploadActions.append(remove);uploadField.append(uploadLabel,upload,uploadStatus,uploadActions);
   const notesField=node('div','assessment-field'),notesLabel=node('label','','Toelichting en/of beheersmaatregelen'),notes=node('textarea','');notes.id='barrier-notes';notesLabel.htmlFor=notes.id;notes.rows=5;notes.maxLength=4000;notesField.append(notesLabel,notes);customFields.append(uploadField,notesField);
-  const risk=riskRadioGroup('barrier-risk',value=>{riskLevel=value;queue.save();update();});fields.append(typeField,customFields,risk.element);
+  fields.append(typeField,customFields);
   const previewLabel=node('p','assessment-preview-label','Schematische weergave'),previewBox=node('div','assessment-preview-box');preview.append(previewLabel,previewBox);columns.append(fields,preview);
   const status=node('p','assessment-status'),error=node('p','profile-message');error.setAttribute('role','alert');
   const reload=node('button','secondary-button','Actuele beoordeling laden');reload.type='button';reload.hidden=true;
-  const actions=node('div','assessment-actions'),edit=node('button','secondary-button','Barrieropstelling bewerken'),complete=node('button','analysis-complete','Barrieropstelling afronden');edit.type='button';complete.type='submit';actions.append(edit,complete);block.append(columns,status,error,reload,actions);root.append(back,title,block);section.append(root);
-  const snapshot=()=>({barrierType:type,riskLevel,notes:type==='custom'?custom.notes:null,uploadId:type==='custom'?custom.attachment?.uploadId||null:null});
+  const review=createRiskReviewCard({name:'barrier-risk',editLabel:'Barrieropstelling bewerken',
+    onChange:(value,note,field)=>{riskLevel=value;riskNote=note;if(field==='note')queue.later();else queue.save();update();},
+    onSave:()=>{if(valid()&&block.reportValidity())void queue.action('complete',{data:snapshot()});},
+    onEdit:()=>queue.action('reopen'),
+  });
+  const layout=node('div','barrier-assessment-layout');block.append(columns,status,error,reload);layout.append(block,review.element);root.append(back,title,layout);section.append(root);
+  const snapshot=()=>({barrierType:type,riskLevel,notes:type==='custom'?custom.notes:null,uploadId:type==='custom'?custom.attachment?.uploadId||null:null,riskNote:riskLevel==='low'?'':riskNote});
   const call=(operation,payload={})=>request({operation,concertId:show.key,...payload});
   const valid=()=>{try{validateBarrierData(snapshot(),true);return true;}catch{return false;}};
   function update(){
     if(disposed)return;const locked=!ready||reading||preparing||queue?.exclusive||record?.completed;
-    select.disabled=locked;customFields.hidden=type!=='custom';notes.disabled=locked;notes.required=type==='custom';risk.update(riskLevel,locked);
+    select.disabled=locked;customFields.hidden=type!=='custom';notes.disabled=locked;notes.required=type==='custom';
+    review.update({riskLevel,riskNote:riskLevel==='low'?'':riskNote,disabled:locked,busy:queue?.busy,failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
     upload.disabled=locked||queue?.busy;remove.hidden=!custom.attachment;remove.disabled=locked||queue?.busy;
-    back.disabled=preparing||Boolean(queue?.exclusive);complete.hidden=Boolean(record?.completed);complete.disabled=locked||queue?.busy||queue?.failed||!valid();edit.hidden=!record?.completed;edit.disabled=reading||queue?.busy;
+    back.disabled=preparing||Boolean(queue?.exclusive);
     status.textContent=record?.completed?'✓ Barrieropstelling afgerond':queue?.failed?'Opslag niet bevestigd':queue?.busy?'Concept wordt opgeslagen…':record?.revision?'Concept opgeslagen':'';status.classList.toggle('assessment-completed',Boolean(record?.completed));
     if(custom.attachment)uploadStatus.textContent=custom.attachment.fileName+' · Upload opgeslagen in Drive';else if(!preparing)uploadStatus.textContent='PNG of PDF, maximaal 2 MB.';
   }
@@ -58,7 +65,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   }
   function accept(data,replace){
     if(!data?.record||!Number.isSafeInteger(data.record.revision))throw Error('Onvolledige opslagbevestiging.');record=data.record;
-    if(!disposed){if(replace){type=record.barrierType;riskLevel=record.riskLevel;select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();onStored(record,data);update();}
+    if(!disposed){if(replace){type=record.barrierType;riskLevel=record.riskLevel;riskNote=record.riskNote||'';select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();onStored(record,data);update();}
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();
@@ -66,7 +73,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
     catch(failure){if(!disposed){error.textContent=failure.message;reload.hidden=false;}}
     finally{reading=false;finish?.();update();}
   }
-  select.onchange=()=>{type=select.value||null;riskLevel=null;if(type==='custom')notes.value=custom.notes;queue.save();void renderPreview();update();};
+  select.onchange=()=>{type=select.value||null;riskLevel=null;riskNote='';if(type==='custom')notes.value=custom.notes;queue.save();void renderPreview();update();};
   notes.oninput=()=>{custom.notes=notes.value;queue.later();update();};notes.onblur=()=>{if(ready&&!record.completed&&!queue.failed)queue.save();};
   upload.onchange=async()=>{
     const file=upload.files?.[0];if(!file||!ready||queue.busy||queue.failed)return;
@@ -77,8 +84,8 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
     finally{preparing=false;if(!disposed)upload.value='';update();}
   };
   remove.onclick=()=>queue.action('remove-upload',{uploadId:custom.attachment.uploadId});
-  edit.onclick=()=>queue.action('reopen');reload.onclick=load;
-  block.onsubmit=event=>{event.preventDefault();if(complete.disabled||!block.reportValidity())return;void queue.action('complete',{data:snapshot()});};
+  reload.onclick=load;
+  block.onsubmit=event=>event.preventDefault();
   back.onclick=()=>{if(!back.disabled)onBack();};placeholderPreview('Schematische afbeelding nog niet beschikbaar');update();void load();title.focus({preventScroll:true});
   return()=>{disposed=true;const pending=queue?.dispose();loading?.dispose();resetPreview();return pending;};
 }

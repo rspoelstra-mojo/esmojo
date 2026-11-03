@@ -16,18 +16,23 @@ function assessmentKeys(value,keys){if(!value||typeof value!=='object'||Array.is
 function assessmentConcert(value){if(typeof value!=='string'||!value.trim()||value.length>240||/[\x00-\x1f/\\]/.test(value))throw Error('VALIDATION');}
 function assessmentRevision(value){if(!Number.isSafeInteger(value)||value<0)throw Error('VALIDATION');}
 function validUploadId(value){return typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value);}
-function validateBarrierData(value,complete=false){
-  assessmentKeys(value,['barrierType','riskLevel','notes','uploadId']);
+function validateBarrierData(value,complete=false,requireRiskNote=true){
+  const keys=['barrierType','riskLevel','notes','uploadId'];
+  if(value&&Object.prototype.hasOwnProperty.call(value,'riskNote'))keys.push('riskNote');
+  assessmentKeys(value,keys);
+  const riskNote=keys.includes('riskNote')?value.riskNote:'';
+  if(typeof riskNote!=='string'||riskNote.length>4000||/\x00/.test(riskNote))throw Error('VALIDATION');
   if(value.barrierType!==null&&!barrierTypes.some(row=>row.value===value.barrierType))throw Error('VALIDATION');
   if(value.riskLevel!==null&&!productionRiskLevels.some(row=>row.value===value.riskLevel))throw Error('VALIDATION');
   if(value.barrierType==='custom'){
     if(typeof value.notes!=='string'||value.notes.length>4000||/\x00/.test(value.notes)||(value.uploadId!==null&&!validUploadId(value.uploadId)))throw Error('VALIDATION');
   }else if(value.notes!==null||value.uploadId!==null)throw Error('VALIDATION');
   if(complete&&(!value.barrierType||!value.riskLevel||(value.barrierType==='custom'&&(!value.notes.trim()||!value.uploadId))))throw Error('VALIDATION');
-  return {barrierType:value.barrierType,riskLevel:value.riskLevel,notes:value.notes,uploadId:value.uploadId};
+  if(complete&&requireRiskNote&&['none','medium','high'].includes(value.riskLevel)&&!riskNote.trim())throw Error('VALIDATION');
+  return {barrierType:value.barrierType,riskLevel:value.riskLevel,notes:complete&&value.barrierType==='custom'?value.notes.trim():value.notes,uploadId:value.uploadId,riskNote:value.riskLevel==='low'?'':complete?riskNote.trim():riskNote};
 }
-function emptyBarrier(){return {revision:0,barrierType:null,riskLevel:null,notes:null,attachment:null,completed:false,completedBy:null,completedAt:null};}
-function barrierData(record){return {barrierType:record.barrierType,riskLevel:record.riskLevel,notes:record.barrierType==='custom'?record.notes||'':null,uploadId:record.barrierType==='custom'?record.attachment?.uploadId||null:null};}
+function emptyBarrier(){return {revision:0,barrierType:null,riskLevel:null,notes:null,attachment:null,riskNote:'',completed:false,completedBy:null,completedAt:null};}
+function barrierData(record){return {barrierType:record.barrierType,riskLevel:record.riskLevel,notes:record.barrierType==='custom'?record.notes||'':null,uploadId:record.barrierType==='custom'?record.attachment?.uploadId||null:null,riskNote:record.riskNote??''};}
 function barrierSignature(record){return JSON.stringify([record.barrierType,record.barrierType==='custom'?record.attachment?.sha256||null:null]);}
 function attachmentSignatureValid(bytes,mime){
   const b=Array.from(bytes,x=>(x+256)%256);

@@ -17,3 +17,11 @@ Verwachte bestanden: nieuwe UI-module/CSS, barrierpagina/layout, gedeelde valida
 en gegenereerde Apps Script-kopie, barrieropslag/servervalidatie, risicokaartbadge,
 relevante tests, documentatie en index.html (V1.16). Doorlopende live-toestemming
 en bestaande classificatie voor beoordelingen/toelichtingen blijven gelden.
+
+Uitgevoerd: herbruikbare UI-module en gescheiden layout, canonicalisatie van
+riskNote op server/Apps Script, verplichte validatie en historische leesbaarheid.
+Getest: bestaande productie-/show-tests plus nieuwe backendgevallen voor
+lege/ongeldige tekst, Laag zonder tekst, opslag/trimmen/retry en historische
+beoordelingen. Browser: exacte zijkaartbreedte op 1280/1440/1920/2560px, 2×2 kleuren,
+alle risicoklassen, Opslaan/Bewerken/foutbehoud, eigen-ontwerpvereisten, light/dark,
+smalle vensters zonder overflow, ongewijzigde Vloerdruk en de grijze Gashouder-badge.

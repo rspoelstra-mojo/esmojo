@@ -4,7 +4,7 @@ export function validateBarrierRequest(input){
   const fields={read:[],download:['uploadId'],draft:['revision','data'],complete:['revision','data'],reopen:['revision'],'remove-upload':['revision','uploadId'],upload:['revision','uploadId','fileName','mime','base64']}[input?.operation];
   if(!fields)throw Error('VALIDATION');assessmentKeys(input,['operation','concertId',...fields]);assessmentConcert(input.concertId);
   if(fields.includes('revision'))assessmentRevision(input.revision);
-  if(fields.includes('data'))validateBarrierData(input.data,input.operation==='complete');
+  if(fields.includes('data'))input={...input,data:validateBarrierData(input.data,input.operation==='complete')};
   if(fields.includes('uploadId')&&!validUploadId(input.uploadId))throw Error('VALIDATION');
   if(input.operation==='upload'){
     if(!['image/png','application/pdf'].includes(input.mime)||typeof input.fileName!=='string'||!input.fileName.trim()||input.fileName.length>180||/[\x00-\x1f/\\]/.test(input.fileName)
