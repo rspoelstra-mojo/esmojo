@@ -467,8 +467,8 @@ intact. Exact 17 headers/volgorde, Affected Person enkelvoud, Resolution Note,
 strenge lokale tijden in Europe/Amsterdam en uitsluitend de opgegeven filters.
 Geen vervangende ON-logo’s of fonts. Origineel ON-icoon moet in
 server/ontrack-report/assets/ontrack-icon.png staan; zonder dit asset blijft de
-productie-worker geblokkeerd. De goedgekeurde SCOOTER-referentie-PDF en het icoon
-zijn nog niet aangeleverd. De bestaande gevalideerde productiefonts/MOJO-footer
+productie-worker geblokkeerd. Het originele ON-icoon is op 3 november 2026 als ZIP aangeleverd en ongewijzigd
+geplaatst; alleen de goedgekeurde volledige SCOOTER-referentie-PDF ontbreekt nog. De bestaande gevalideerde productiefonts/MOJO-footer
 worden ongewijzigd hergebruikt. Een expliciete lokale layoutproef zonder icoon
 is duidelijk PROEF en wordt niet als productierapport opgeslagen/verzonden.
 Vinkje uitsluitend bij bevestigde verzending; Showrapportage gebruikt de centrale
@@ -548,3 +548,16 @@ Technische grenzen: CSV maximaal 2 MB, gegenereerde PDF maximaal 3 MB vanwege de
 bestaande Vercel/JSON-downloadroute; overschrijding of een onmogelijke opmaak geeft
 een zichtbare fout met behoud van bron/eerdere rapporten. De legacy API-grenzen
 blijven intact; alleen de nieuwe signed OnTrack-PDF-route heeft de grotere envelop.
+
+Op 3 november 2026 verduidelijkte de gebruiker dat het concert-ID altijd in de
+incidents-CSV-bestandsnaam staat. Gebruik incidents_<concert-ID>.csv tegen de
+opgeslagen canonieke key; eerst letterlijk, daarna uitsluitend unieke match op
+hoofdletters en spatie/koppelteken/underscore. Geen ID-reconstructie uit zichtbare
+artiest-/zaallabels en geen gedeeltelijke/fuzzy ID-match. De gevraagde uitbreiding
+tot één maand terug is vervolgens expliciet ingetrokken; venster en gewone Shows
+blijven ongewijzigd. Het originele ON-icoon is daarna als ZIP aangeleverd en byte-identiek geplaatst
+in server/ontrack-report/assets/ontrack-icon.png. Bron-SHA256:
+a40789fde3886ed38cde64f02adff922909c340f6e12f00cb3707705ab4e9870.
+Geen nabewerking, reconstructie of ander icoon gebruiken. De bestaande
+assetblokkade vervalt door aanwezigheid van dit originele bestand; verwerking
+blijft wel afhankelijk van een geldige CSV en opgeslagen concertkoppeling.
