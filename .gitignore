@@ -7,3 +7,6 @@ dist/
 .clasprc.json
 .clasp.json
 clasp-credentials*.json
+
+# Gegenereerde witte variant; originele logoasset blijft de bron.
+public/brand/ESMOJO-logo-wit-email.png

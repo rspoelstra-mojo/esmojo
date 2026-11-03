@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeAccountsHandler } from './accounts-api.js';
 import { validateProfile } from './account-profiles.js';
+import {renderEmailTemplate} from './email-template.js';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
@@ -9,13 +10,13 @@ const profile = { id, firstName: 'Test', lastName: 'Account', jobTitle: 'Tester'
 const env = { VITE_SUPABASE_URL: 'https://project.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SECRET_KEY: 'server-test', RESEND_API_KEY: 'mail-test' };
 const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, confirmedAt = '2026-10-31' } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
     admin: {
       createUser: async input => { calls.push(['createAuth', input]); return { data: { user: { id: other } } }; },
-      getUserById: async value => ({ data: { user: { id: value, email_confirmed_at: '2026-10-31' } } }),
+      getUserById: async value => ({ data: { user: { id: value, email_confirmed_at: confirmedAt } } }),
       generateLink: async input => { calls.push(['invite', input]); return { data: { user: { id: other }, properties: { hashed_token: 'private-token' } } }; },
       deleteUser: async value => { calls.push(['deleteAuth', value]); return failDelete ? { error: new Error('failure') } : {}; },
       updateUserById: async (...args) => { calls.push(['password', ...args]); return {}; },
@@ -26,8 +27,8 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     profiles: async (operation, actor, input) => {
       calls.push([operation, actor, input]);
       if (operation === failOperation) throw new Error('FORBIDDEN');
-      return operation === 'self' ? own : operation === 'list' ? [{ ...profile, id: other, activated: false }] : { ok: true };
-    }, mail: async input => { calls.push(['mail', input]); if (failMail) throw new Error('private-response'); },
+      return operation === 'self' ? own : operation === 'list' ? [targetProfile || { ...profile, id: other, activated: false }] : { ok: true };
+    }, mail: async input => { calls.push(['mail', {...input,...renderEmailTemplate(input)}]); if (failMail) throw new Error('private-response'); },
   });
   const response = { headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(value) { this.code = value; return this; }, json(value) { this.data = value; return this; } };
   await handler({ method, body, headers: { ...(auth ? { authorization: `Bearer ${token(aal, sub)}` } : {}), ...(origin ? { origin } : {}) }, query: { action } }, response);
@@ -54,11 +55,11 @@ test('activering vereist een lang wachtwoord en slaat dat niet in Drive op', asy
   const result = await run({ method: 'POST', action: 'complete', own: { ...profile, activated: false }, body: { password: 'strong-password-test' } });
   assert.equal(result.response.code, 200); assert.deepEqual(result.calls.map(call => call[0]), ['self', 'password', 'activate']); assert.equal(JSON.stringify(result.calls.filter(call => call[0] === 'activate')).includes('strong-password'), false);
 });
-test('account aanmaken bewaart profiel in Drive en mailt alleen een activatielink', async () => {
+test('account aanmaken bewaart profiel in Drive en mailt de centrale activatiemail', async () => {
   const { response, calls } = await run({ method: 'POST', body: profile });
   assert.equal(response.code, 201); assert.deepEqual(calls.map(call => call[0]), ['self', 'createAuth', 'invite', 'create', 'mail']);
   assert.deepEqual(calls.find(call => call[0] === 'invite')[1], { type: 'invite', email: profile.email });
-  const mail = calls.find(call => call[0] === 'mail')[1]; assert.match(mail.text, /#\/activeren\?token=/); assert.equal(mail.text.includes(profile.firstName), false);
+  const mail = calls.find(call => call[0] === 'mail')[1]; assert.match(mail.text, /#\/activeren\?token=/); assert.match(mail.text, /Beste Test,/); assert.match(mail.html, /Account activeren/); assert.match(mail.html, /#0046f2/); assert.equal(calls.filter(call=>call[0]==='mail').length,1);
   assert.equal(JSON.stringify(response.data).includes('private-token'), false);
 });
 test('mislukte Drive-opslag ruimt de nieuw gemaakte identiteit op', async () => {
@@ -114,4 +115,25 @@ test('Nieuwe productionele routes vereisen account/MFA en gebruiken uitsluitend 
   const success=await run({action,method:'POST',body});assert.equal(success.response.code,200);assert.equal(success.calls.find(c=>c[0]==='shows')[2].actor,id);
   assert.equal((await run({action,method:'POST',body:{...body,actor:other}})).response.code,400);
  }
+});
+
+test('accountmail gebruikt de afzonderlijke voornaam van de ontvanger, nooit de beheerder of overige profielvelden',async()=>{
+ const body={...profile,firstName:'Anne Marie',lastName:'NietInDeMail',jobTitle:'AlleenInDrive',email:'ontvanger@example.invalid'};
+ const {response,calls}=await run({method:'POST',own:{...profile,firstName:'Beheerder'},body});
+ assert.equal(response.code,201);const mail=calls.find(c=>c[0]==='mail')[1];
+ assert.equal(mail.to,body.email);assert.match(mail.html,/Beste Anne Marie,/);assert.match(mail.text,/Beste Anne Marie,/);
+ for(const value of ['Beste Beheerder,','NietInDeMail','AlleenInDrive'])assert.equal(mail.html.includes(value)||mail.text.includes(value),false);
+ assert.equal(mail.actions[0].url,'https://esmojo.nl/#/activeren?token=private-token');assert.equal(calls.filter(c=>c[0]==='mail').length,1);
+});
+test('opnieuw uitnodigen gebruikt de doelaccountnaam en behoudt invite/recovery zonder extra mail',async()=>{
+ for(const confirmedAt of [null,'2026-10-31']){
+  const {response,calls}=await run({method:'PATCH',own:{...profile,firstName:'Beheerder'},body:{id:other,operation:'invite'},confirmedAt,targetProfile:{...profile,id:other,activated:false,firstName:'Jan Pieter',email:'doel@example.invalid'}});
+  assert.equal(response.code,200);const mail=calls.find(c=>c[0]==='mail')[1];assert.equal(mail.to,'doel@example.invalid');assert.match(mail.text,/Beste Jan Pieter,/);
+  assert.equal(mail.actions[0].url,'https://esmojo.nl/#/activeren?token=private-token&type='+(confirmedAt?'recovery':'invite'));
+  assert.equal(calls.filter(c=>c[0]==='mail').length,1);
+ }
+});
+test('ontbrekende betrouwbare doelvoornaam gebruikt Beste collega zonder een naam uit het mailadres af te leiden',async()=>{
+ const {calls,response}=await run({method:'PATCH',body:{id:other,operation:'invite'},targetProfile:{...profile,id:other,activated:false,firstName:undefined,email:'gedeeld@example.invalid'}});
+ assert.equal(response.code,200);const mail=calls.find(c=>c[0]==='mail')[1];assert.match(mail.html,/Beste collega,/);assert.match(mail.text,/Beste collega,/);assert.equal(mail.text.includes('Beste gedeeld,'),false);
 });

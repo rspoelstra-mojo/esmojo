@@ -4,7 +4,9 @@
 
 Gebruiker heeft bevestigd: profielvelden en foto zijn vertrouwelijk en blijven
 in Google Drive. Supabase Auth mag e-mailadres, wachtwoordbeveiliging en TOTP
-beheren. Resend mag e-mailadres en activatielink verwerken voor uitnodigingen.
+beheren. Resend mag e-mailadres en activatielink verwerken voor uitnodigingen, en sinds
+het expliciete verzoek van 3 november 2026 de afzonderlijke voornaam voor de
+persoonlijke aanhef. Overige profielvelden blijven uitsluitend in Drive.
 Wachtwoorden en TOTP-secrets komen niet in Drive of profielen terecht.
 
 De browser bewaart de actieve Supabase-sessie in geheugen. Een versleutelde
