@@ -9,7 +9,8 @@ function fixture(){
  const content=new Element('main'),menu=new Element('a'),network=deferred(),profile=deferred(),risks=deferred();let cleaned=0,calls=0;
  const context=vm.createContext({document:{createElement:tag=>new Element(tag),querySelector:()=>menu},Intl,Date,URL,Promise,setTimeout,clearTimeout,requestAnimationFrame:()=>1,cancelAnimationFrame(){},ResizeObserver:class{observe(){}disconnect(){}},access(){},loadShowPhoto(){},createShowData:()=>({request(){},version:()=>0,dispose(){cleaned++;}}),createShowProfile:()=>{const dispose=()=>{cleaned++;};dispose.ready=profile.promise;return dispose;},createRiskAnalysis:()=>({prepare:()=>risks.promise,activate(){},dispose(){cleaned++;}})});
  for(const name of ['src/lib/submenu-loading.js','src/show-page.js'])vm.runInContext(readFileSync(new URL('../'+name,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
- const dispose=context.createShowPage(content,{key:'Fixture',name:'Testshow',dates:['2026-11-06'],venue:'Gashouder',city:'Amsterdam'},{request:()=>{calls++;return network.promise;},loadPhoto:async()=>null});
+ const memory={acquire(){calls++;let released=false;return{view:{tab:0},ready:network.promise.then(()=>({request(){},version:()=>0})),release(){if(!released){released=true;cleaned++;}}};}};
+  const dispose=context.createShowPage(content,{key:'Fixture',name:'Testshow',dates:['2026-11-06'],venue:'Gashouder',city:'Amsterdam'},{memory,request:()=>network.promise,loadPhoto:async()=>null});
  return{content,menu,network,profile,risks,dispose,calls:()=>calls,cleaned:()=>cleaned};
 }
 test('Show verschijnt één keer, pas na bundel én beide gereedmeldingen; submenu blijft tot dan bezig',async()=>{
