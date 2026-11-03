@@ -1,3 +1,4 @@
+import {validateMailingSnapshot,MAILING_SNAPSHOT_CODES} from './ontrack-concert-validation.js';
 import {createHash,createHmac,randomBytes} from 'node:crypto';
 import {scrapeMojo,calendarDate,addDays} from './mojo-agenda.js';
 import {MAILING_VENUES} from './mojo-venues.js';
@@ -28,7 +29,7 @@ export function makeMailingConcertsSyncHandler({identify=token=>verifyImportIden
     if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Niet toegestaan.'});}
     try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1]);}catch{return res.status(403).json({error:'Geen toegang.',code:'IMPORT_IDENTITY'});}
     let stage='source';
-    try{const snapshot=await scrape();stage='storage';const result=await store('sync',null,{snapshot});return res.status(200).json({ok:true,...result,checkedAt:snapshot.checkedAt,pages:snapshot.pages});}
-    catch(error){const codes=['MOJO_FORMAT','MOJO_DATE','MOJO_PAGINATION','MOJO_ID_COLLISION','MOJO_UNAVAILABLE','MOJO_NETWORK','FORBIDDEN','MAILING_CONCERTS_FOLDER','MAILING_CONCERTS_REGISTER','MAILING_CONCERTS_SNAPSHOT','MAILING_CONCERTS_WRITE'];return res.status(503).json({error:'OnTrack-concertimport mislukt. De vorige inventaris blijft beschikbaar.',stage,code:codes.includes(error.message)?error.message:'MAILING_CONCERTS_UNAVAILABLE',...(MAILING_VENUES.some(v=>v.id===error.venue)?{venue:error.venue}:{}),...(Number.isInteger(error.sourceStatus)?{sourceStatus:error.sourceStatus}:{})});}
+    try{const snapshot=await scrape();stage='validation';validateMailingSnapshot(snapshot);stage='storage';const result=await store('sync',null,{snapshot});return res.status(200).json({ok:true,...result,checkedAt:snapshot.checkedAt,pages:snapshot.pages});}
+    catch(error){const codes=[...MAILING_SNAPSHOT_CODES,'MOJO_FORMAT','MOJO_DATE','MOJO_PAGINATION','MOJO_ID_COLLISION','MOJO_UNAVAILABLE','MOJO_NETWORK','FORBIDDEN','MAILING_CONCERTS_FOLDER','MAILING_CONCERTS_REGISTER','MAILING_CONCERTS_SNAPSHOT','MAILING_CONCERTS_WRITE'];return res.status(503).json({error:'OnTrack-concertimport mislukt. De vorige inventaris blijft beschikbaar.',stage,code:codes.includes(error.message)?error.message:'MAILING_CONCERTS_UNAVAILABLE',...(MAILING_VENUES.some(v=>v.id===error.venue)?{venue:error.venue}:{}),...(Number.isInteger(error.sourceStatus)?{sourceStatus:error.sourceStatus}:{})});}
   };
 }
