@@ -16,5 +16,5 @@ test('Interne klik gebruikt History; terug/vooruit en legacywijziging renderen; 
  location=new URL('https://esmojo.nl/#/shows');events.hashchange();assert.equal(location.hash,'');assert.equal(rendered,3);dispose();assert.equal(Object.keys(handlers).length,0);
 });
 test('Hostingfallbacks omvatten alleen applicatiepaden en laten API/discovery/assets ongemoeid',()=>{
- const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));for(const rule of config.rewrites){assert.equal(rule.destination,'/index.html');assert.ok(isAppPath(rule.source.replace('/:path*','')));assert.ok(!rule.source.startsWith('/api'));}assert.equal(config.rewrites.length,6);
+ const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));for(const rule of config.rewrites.filter(rule=>rule.source!=='/test/fluid-layout')){assert.equal(rule.destination,'/index.html');assert.ok(isAppPath(rule.source.replace('/:path*','')));assert.ok(!rule.source.startsWith('/api'));}assert.equal(config.rewrites.length,7);assert.deepEqual(config.rewrites.at(-1),{source:'/test/fluid-layout',destination:'/index.html'});assert.equal(isAppPath('/test/fluid-layout'),true);assert.equal(isAppPath('/test/other'),false);
 });

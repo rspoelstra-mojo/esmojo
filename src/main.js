@@ -1,3 +1,6 @@
+import {enableFluidLayout} from './layouts/fluid-layout.js';
+import {createFluidPreviewPage} from './fluid-preview/page.js';
+import previewShows from './data/show-menu.json';
 import {showMemory} from './show-memory.js';
 import {clearAssessmentSaves} from './production-assessment-ui.js';
 import { clearProfileSaves } from './lib/profile-saves.js';
@@ -11,7 +14,7 @@ import { createSubmenuSearch } from './submenu-search.js';
 import { createShowsSubmenu, refreshShowsMenu } from './shows.js';
 
 let profile = null, menuRefreshTimer=null;
-let disposePage = () => {};
+let disposePage = () => {}, disposeLayout = () => {};
 const submenuSearch = createSubmenuSearch({
   heading: document.querySelector('.submenu-heading'), input: document.querySelector('#submenu-search-input'),
   toggle: document.querySelector('#submenu-search-toggle'), navigation: document.querySelector('#submenu-navigation'),
@@ -40,12 +43,14 @@ document.querySelector('#navigation').innerHTML = [
 ].map(([route, glyph, label]) => `<a class="rail-item" href="/${route}" data-page="${route}" aria-label="${label}">${icon(glyph)}<span class="tooltip" role="tooltip">${label}</span></a>`).join('');
 
 function renderPage() {
-  disposePage(); disposePage = () => {};
+  disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
   const content = document.querySelector('.content-box');
   content.replaceChildren();
   if (!profile) return;
   const route = pageRoute(location);
-  const root = route.split('/')[0];
+  const fluidPreview=__ESMOJO_FLUID_PREVIEW__&&route==='test/fluid-layout';
+  const root = fluidPreview?'shows':route.split('/')[0];
+  if (!fluidPreview) disposeLayout = enableFluidLayout(content, {variant: root === 'shows' ? 'show' : 'page'});
   const title = pages[root] || 'Pagina niet gevonden';
   const hasSubmenu = route !== '';
   document.querySelector('.workspace').classList.toggle('has-submenu', hasSubmenu);
@@ -56,7 +61,13 @@ function renderPage() {
   if (root === 'shows') {
     let selected = '';
     try { selected = decodeURIComponent(route.split('/')[1] || ''); } catch { selected = 'invalid'; }
-    disposePage = createShowsSubmenu(submenu, selected, content);
+    if(fluidPreview){
+      if(profile.role!=='beheerder'){content.textContent='Geen toegang tot deze testpagina.';return;}
+      selected=previewShows.shows.find(show=>show.name.toLowerCase()==='puscifer')?.key||'';
+      let disposeMenu=createShowsSubmenu(submenu,selected,null);
+      const disposeTest=createFluidPreviewPage(content,{onShow:show=>{if(show.key!==selected){disposeMenu();submenu.replaceChildren();selected=show.key;disposeMenu=createShowsSubmenu(submenu,selected,null);}}});
+      disposePage=()=>{disposeTest();disposeMenu();};
+    }else disposePage = createShowsSubmenu(submenu, selected, content);
   }
   if (root === 'beheerder') {
     if (profile.role !== 'beheerder') { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
@@ -97,7 +108,7 @@ startAuth({
   onSignedOut() {
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
-    profile = null; disposePage(); disposePage = () => {};
+    profile = null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
     document.querySelector('.content-box').replaceChildren();
     document.querySelector('.avatar').replaceChildren();
     document.querySelector('.rail').hidden = true;

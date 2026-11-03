@@ -1,5 +1,5 @@
 import './show-profile.css';
-import { profileSaves } from './lib/profile-saves.js';
+import { profileSaves,createProfileSaveQueue } from './lib/profile-saves.js';
 import { createShowProfilePdfWidget } from './showprofile-pdf.js';
 import { openAnalysisFinalization } from './analysis-finalization.js';
 import { createTicketDataPage } from './ticket-data-page.js';
@@ -21,11 +21,11 @@ const paths = {
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
 const node = (tag, className, text) => { const el = document.createElement(tag); el.className = className; if (text !== undefined) el.textContent = text; return el; };
-export function createShowProfile(panel, { show,requestAccess=access } = {}) {
+export function createShowProfile(panel, { show,requestAccess=access,readOnly=false } = {}) {
   const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
   const request = body => requestAccess('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
-  const saves=profileSaves(show.key,request),drafts=saves.drafts;
+  const saves=readOnly?createProfileSaveQueue(request):profileSaves(show.key,request),drafts=saves.drafts;
   let firstPdfGeneration=false;
   const ticketState = { drafts: {}, base: {} }; let disposeTickets = () => {}, ticketOpen = false;
   let disposePdf = () => {};
@@ -73,7 +73,7 @@ export function createShowProfile(panel, { show,requestAccess=access } = {}) {
         const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
         const ticketBadge=node('span','analysis-status',finalization?.ticketsReady?'Afgerond':'Handmatig invoeren');ticketBadge.dataset.status=finalization?.ticketsReady?'completed':'pending';
         button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'),ticketBadge,arrow);
-        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,requestAccess,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();if(ticketState.changed){ticketState.changed=false;void refreshFinalization();}}}); };
+        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,requestAccess,readOnly,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();if(ticketState.changed){ticketState.changed=false;void refreshFinalization();}}}); };
         row.append(button);card.append(row);
       }
       categories.append(card);
@@ -81,7 +81,7 @@ export function createShowProfile(panel, { show,requestAccess=access } = {}) {
     for(const [key,label]of [['visitors','Bezoekersanalyse afronden'],['artist','Artiestanalyse afronden']]) {
       if(loaded&&!saves.pending.size&&!saves.errors.size&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
     }
-    if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,requestAccess,onStale:()=>refreshFinalization(true),firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
+    if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,requestAccess,readOnly,onStale:()=>refreshFinalization(true),firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
     const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
     const info = node('div', ''), view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button'; view.disabled = !loaded; view.onclick = () => openEditor(selected);
     info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || researchView(researchByNumber?.[selected]).summaryText || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(highlight);

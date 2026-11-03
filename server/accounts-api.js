@@ -1,3 +1,5 @@
+import {createFluidPreviewSource} from './fluid-preview-source.js';
+import {isFluidPreview,fluidPreviewOrigin,fluidAccountRead,createFluidPreviewService} from './fluid-preview.js';
 import {validateBarrierRequest} from './barrier-layout.js';
 import {validateFloorRequest} from './floor-pressure.js';
 import { waitUntil } from '@vercel/functions';
@@ -15,7 +17,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -25,7 +27,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const publicKey = env.VITE_SUPABASE_PUBLISHABLE_KEY;
       if (!url || !publicKey || !env.SUPABASE_SECRET_KEY) return reply(503, { error: 'Accountbeheer is nog niet geconfigureerd.' });
       const origin = req.headers.origin;
-      if (origin && origin !== 'https://esmojo.nl' && origin !== env.APP_ORIGIN) return reply(403, { error: 'Geen toegang.' });
+      if (origin && origin !== 'https://esmojo.nl' && origin !== env.APP_ORIGIN && !fluidPreviewOrigin(origin,env)) return reply(403, { error: 'Geen toegang.' });
       const action = req.query.action;
       if (action === 'forget' && req.method === 'POST') { clearSessionCookie(res); return reply(200, { ok: true }); }
       let token = /^Bearer ([A-Za-z0-9._-]+)$/.exec(req.headers.authorization || '')?.[1];
@@ -60,8 +62,13 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(403, { error: 'Rond eerst de 2-stapsverificatie af.', code: 'MFA_REQUIRED' });
       }
       const actor = data.user.id;
+      const previewReads=isFluidPreview(env)?(previewSource||createFluidPreviewSource({token})):null;
+      let previewDeadline=null;
       const ownProfile = async () => {
-        try { return await profiles('self', actor); }
+        try {
+          if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
+          return await profiles('self', actor);
+        }
         catch (failure) {
           if (failure.message === 'FORBIDDEN') throw new Error('ACCOUNT_DISABLED');
           throw failure;
@@ -69,7 +76,12 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       };
       // Drive controleert de actuele rol opnieuw; gebruikersmetadata is geen autorisatiebron.
       const own = await ownProfile();
+      if(isFluidPreview(env)){
+        if(own.role!=='beheerder'||!own.activated)return reply(403,{error:'Deze testomgeving vereist een geactiveerd beheerderaccount met MFA.'});
+        if(!fluidAccountRead(action,req.method,req.body))return reply(403,{error:'Deze testomgeving is uitsluitend alleen-lezen.'});
+      }
       let expiresAt = sessionDeadline(claims);
+      if(previewDeadline)expiresAt=Math.min(expiresAt||0,previewDeadline);
       if (remembered) expiresAt = Math.min(expiresAt || 0, remembered.expiresAt);
       if (own.activated && (!expiresAt || expiresAt <= Date.now())) return expired();
       if (action === 'session' && req.method === 'GET') return reply(200, { profile: own, expiresAt });
@@ -96,6 +108,13 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if(previewReads&&action==='shows'&&req.method==='GET')return reply(200,await previewReads.menu());
+      if(previewReads&&action==='show-photo'&&req.method==='POST'){const input=validateRiskViewRequest(req.body);return reply(200,await previewReads.photo(input.concertId));}
+      if(action==='fluid-preview'){
+        if(!isFluidPreview(env))return reply(404,{error:'Niet beschikbaar.'});
+        try{return reply(200,await createFluidPreviewService({shows:previewReads.shows,pdfService:createShowProfilePdfService({shows:previewReads.shows})})(req.body,actor));}
+        catch(error){return reply(error.message==='VALIDATION'?400:503,{error:error.message==='VALIDATION'?'Ongeldig testverzoek.':'De bestaande Puscifer-gegevens konden niet worden gelezen.'});}
+      }
       const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
       const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
       if(action==='show-open'&&req.method==='POST'){
@@ -225,6 +244,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       res.setHeader('Allow', 'GET, POST, PATCH, DELETE');
       return reply(405, { error: 'Niet toegestaan.' });
     } catch (error) {
+      if(isFluidPreview(env)&&error.message==='PREVIEW_AUTH_REQUIRED'){clearSessionCookie(res);return reply(401,{error:'Log opnieuw in op de preview.',code:'SESSION_EXPIRED'});}
+      if(isFluidPreview(env)&&error.message==='PREVIEW_SOURCE_UNAVAILABLE')return reply(503,{error:'De preview kan de bestaande ESMOJO-accountdienst niet bereiken. Probeer opnieuw.',code:'PREVIEW_SOURCE_UNAVAILABLE'});
       if (error.message === 'ACCOUNT_DISABLED') { clearSessionCookie(res); return reply(403, { error: 'Dit account heeft geen toegang. Neem contact op met je beheerder.', code: 'ACCOUNT_DISABLED' }); }
       const status = { FORBIDDEN: 403, CONFLICT: 409, VALIDATION: 400 }[error.message] || 503;
       return reply(status, { error: { 403: 'Geen toegang tot dit account.', 409: 'Deze wijziging is niet toegestaan. Je kunt jezelf of de laatste beheerder niet verwijderen of degraderen.', 400: 'Controleer de ingevulde velden en profielfoto.' }[status] || 'De accountdienst is tijdelijk niet beschikbaar.' });
