@@ -16,7 +16,7 @@ function harness(request,saveSelection){
   }
   const panel=new Element('section'),menu=new Element('a');
   const openAssessment=(section,{onBack})=>{section.replaceChildren();const back=new Element('button');back.textContent='Terug';back.onclick=onBack;const title=new Element('h2');title.textContent='Barrieropstelling';section.append(back,title);return()=>{};};
-  const context=vm.createContext({Promise,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
+  const context=vm.createContext({access:async()=>{throw Error("Unexpected API request");},Promise,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
   for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
   const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection});
   return{page,panel,menu,focused:()=>focused,buttons:()=>panel.querySelectorAll('[data-risk-id]'),text:()=>panel.textContent};

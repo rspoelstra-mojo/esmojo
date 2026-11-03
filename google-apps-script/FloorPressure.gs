@@ -22,14 +22,14 @@ function esmojoSyncFloor_(document,barrier,actor){
 }
 function esmojoFloorData_(record){return {rows:record.rows.map(({id,name,visitors,area})=>({id,name,visitors,area})),riskLevel:record.riskLevel,note:record.note};}
 function esmojoFloorSummary_(document){const r=document.floorPressure;return r?{revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,active:r.completed&&r.riskLevel!=='none'}:null;}
-function esmojoFloorPressure_(request){
+function esmojoFloorPressure_(request,openTarget){
   const op=request.operation.slice(6),fields={read:[],draft:['revision','basis','data'],complete:['revision','basis','data'],reopen:['revision','basis']}[op];
   if(!fields)throw Error('VALIDATION');riskKeys(request,['operation','concertId','actor',...fields]);assessmentConcert(request.concertId);
   if(typeof request.actor!=='string'||!request.actor||request.actor.length>100)throw Error('VALIDATION');
-  const target=esmojoResearchTarget_(request.concertId),storage=esmojoReadProductionRisks_(target),document=storage.document,barrier=esmojoBarrierRecord_(document),tickets=esmojoFloorTickets_(target);
+  const target=openTarget||esmojoResearchTarget_(request.concertId),storage=esmojoReadProductionRisks_(target),document=storage.document,barrier=esmojoBarrierRecord_(document),tickets=esmojoFloorTickets_(target);
   if(esmojoSyncFloor_(document,barrier,request.actor)){document.revision++;esmojoWriteAssessmentDocument_(target,storage);}
   const record=document.floorPressure||null,basis={barrierSignature:barrierSignature(barrier),ticketVersion:tickets.ticketVersion};
-  const response=()=>({record:document.floorPressure||null,barrierType:barrier.barrierType,basis,tickets});
+  const response=()=>({record:document.floorPressure||null,barrierType:barrier.barrierType,basis,tickets,overview:esmojoAssessmentOverview_(document)});
   if(op==='read')return response();
   assessmentRevision(request.revision);assessmentKeys(request.basis,['barrierSignature','ticketVersion']);
   if(!record||request.basis.barrierSignature!==basis.barrierSignature||record.barrierSignature!==basis.barrierSignature)throw Error('ASSESSMENT_CONFLICT');

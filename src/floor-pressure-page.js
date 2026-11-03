@@ -67,7 +67,7 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
     if(disposed)return;
     if(replace){rows=(record?.rows||[]).map(({id,name,visitors,area})=>({id,name,visitors,area}));riskLevel=record?.riskLevel||null;note=record?.note||'';notes.value=note;renderRows();}
     const text=floorTicketText(tickets);ticketValue.textContent=text.main;ticketDetail.textContent=text.detail;
-    onStored(record);update();
+    onStored(record,data);update();
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();

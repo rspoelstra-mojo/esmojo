@@ -38,5 +38,7 @@ jobs:
           node server/mcp.test.js
           node server/showprofile-risks.test.js
           node server/production-assessments.test.js
+          node server/show-open.test.js
+          node server/show-page.test.js
           node server/risk-analysis-page.test.js
           node .agents/skills/esmojo-concertonderzoek/scripts/workflow.test.mjs

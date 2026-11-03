@@ -5,11 +5,11 @@ import { suggestionInput } from './lib/suggestion-input.js';
 import { foreignCountries, provinces, emptyVisitorOrigins, emptyDomesticOrigins, parseTicketSales, validSaleCount, validTicketContent, normalizedTicketSales } from '../shared/ticket-data.js';
 const fields=[['ticket_sales','Huidige kaartverkoopstand'],['visitor_origins','Top 3 buitenlandse bezoekers'],['domestic_origins','Top 3 binnenlandse herkomst']];
 const node=(tag,cls,text)=>{const el=document.createElement(tag);el.className=cls;if(text!==undefined)el.textContent=text;return el;};
-export function createTicketDataPage(section,{show,state,onBack,categoryIcon}) {
+export function createTicketDataPage(section,{show,state,onBack,categoryIcon,requestAccess=access}) {
   let disposed=false,workflow={visitors:{fields:{}}},shows=[],busy=false,expanded=true,ready=false;
   const leases=new Map(),pending=new Map(),cards=new Map();
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
-  const request=body=>access('ticket-data',{method:'POST',body:{concertId:show.key,...body}});
+  const request=body=>requestAccess('ticket-data',{method:'POST',body:{concertId:show.key,...body}});
   const stored=field=>workflow.visitors.fields[field];
   const version=field=>state.base[field]??stored(field)?.version??0;
   function base(field){if(state.base[field]===undefined)state.base[field]=stored(field)?.version||0;}
@@ -40,7 +40,7 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon}) {
     if(final&&!await reserve(field))return;
     const lease=leases.get(field);if(!lease||!held(field))return;
     busy=true;refresh();card.error.textContent='';
-    try{const data=await request({operation:final?'reopen':'review',field,token:lease.token,expectedVersion:version(field),...(final?{}:{content:field==='ticket_sales'?normalizedTicketSales(card.content(),shows):card.content()})});if(disposed)return;workflow=data.workflow;delete state.drafts[field];delete state.base[field];leases.delete(field);buildCards();}
+    try{const data=await request({operation:final?'reopen':'review',field,token:lease.token,expectedVersion:version(field),...(final?{}:{content:field==='ticket_sales'?normalizedTicketSales(card.content(),shows):card.content()})});if(disposed)return;workflow=data.workflow;state.changed=true;delete state.drafts[field];delete state.base[field];leases.delete(field);buildCards();}
     catch(error){if(!disposed)card.error.textContent=error.message||'Opslaan is niet gelukt. Je invoer is behouden.';}
     finally{busy=false;if(!disposed)refresh();}
   }
