@@ -29,7 +29,8 @@ geen nieuwe CSS-regels. Bestaande fonts, maten, kleuren en interacties blijven i
 
 De show-variant hergebruikt `createShowPage`, `createShowProfile`, de risicoanalyse,
 analysedetails, tabjes en de blauwe indicator. De bestaande foto blijft maximaal
-340 px breed. De header krijgt een subtiel verloop. Lange analyses blijven op
+340 px breed. De header heeft een effen witte achtergrond in lichte modus en de bestaande
+effen kaartkleur in donkere modus; tekst, foto, tabjes en indeling blijven gelijk. Lange analyses blijven op
 maximaal 72ch; inhoud wordt niet vervangen of verzonnen. Lege bestaande tabjes
 blijven leeg. Andere productiepagina's worden niet overgezet.
 

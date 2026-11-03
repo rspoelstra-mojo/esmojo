@@ -32,3 +32,10 @@ Account/rol/sessie en showgegevens lopen via een vaste, alleen-lezen serveradapt
 naar de bestaande API op esmojo.nl. Geen cookies/refresh-tokens, mutaties of vrije
 URL's worden doorgestuurd. Productie blijft ongewijzigd. Nieuwe regressietests en
 een volledige browser-aanmeldflow met ontbrekende preview-Drive-config slagen.
+
+## Headerachtergrond
+
+Op het laatste verzoek van de gebruiker is uitsluitend het verloop in de header
+vervangen door een effen witte kaartachtergrond (lichte modus). Donkere modus
+gebruikt de bestaande effen kaartkleur voor leesbaarheid. Foto, tekst, typografie,
+tabjes en geometrie zijn behouden. Deze wijziging blijft uitsluitend in de preview.
