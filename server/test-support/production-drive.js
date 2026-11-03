@@ -18,6 +18,7 @@ export function harness(){
   class Folder{
     constructor(name,parent,id='folder'+(++next)){this.name=name;this.parent=parent;this.id=id;this.files=[];this.folders=[];all.set(id,this);if(parent)parent.folders.push(this);}
     getId(){return this.id;}getName(){return this.name;}isTrashed(){return false;}getParents(){return iterator(this.parent?[this.parent]:[]);}
+    getFiles(){return iterator(this.files.filter(f=>!f.isTrashed()));}
     getFoldersByName(name){return iterator(this.folders.filter(f=>f.name===name));}
     getFilesByName(name){return iterator(this.files.filter(f=>f.name===name&&!f.isTrashed()));}
     createFile(blob){writes++;const f=new File(this,blob.name,blob.content,blob.type);this.files.push(f);return f;}
@@ -35,7 +36,7 @@ export function harness(){
     Utilities:{Charset:{UTF_8:'utf8'},DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(a,b)=>[...createHash(a).update(typeof b==='string'?b:Buffer.from(b)).digest()],computeHmacSha256Signature:(b,k)=>[...createHmac('sha256',k).update(b).digest()],base64Encode:b=>Buffer.from(b).toString('base64'),base64Decode:b=>[...Buffer.from(b,'base64')],newBlob:(content,type,name)=>({content:Array.isArray(content)?Buffer.from(content):content,type,name})},
     LockService:{getUserLock:()=>({tryLock:()=>!blocked,releaseLock(){}})},CacheService:{getScriptCache:()=>({get:k=>nonces.get(k),put:(k,v)=>nonces.set(k,v)})},
     DriveApp:{getFolderById:id=>all.get(id),getFileById:id=>all.get(id)},ContentService:{MimeType:{JSON:'json'},createTextOutput:s=>({setMimeType:()=>JSON.parse(s)})}});
-  for(const name of ['Code.gs','Shows.gs','Research.gs','ShowProfile.gs','TicketData.gs','TicketValidators.gs','FinalValidators.gs','AnalysisFinal.gs','ShowProfilePdf.gs','RiskValidators.gs','ProductionRiskValidators.gs','ProductionRisks.gs','BarrierValidators.gs','FloorPressureValidators.gs','BarrierLayout.gs','FloorPressure.gs','ShowProfileRisks.gs'])vm.runInContext(readFileSync(new URL('../../google-apps-script/'+name,import.meta.url),'utf8'),ctx);
+  for(const name of ['Code.gs','Shows.gs','Research.gs','ShowProfile.gs','TicketData.gs','TicketValidators.gs','FinalValidators.gs','AnalysisFinal.gs','ShowProfilePdf.gs','RiskValidators.gs','ProductionRiskValidators.gs','ProductionRisks.gs','BarrierValidators.gs','FloorPressureValidators.gs','BarrierLayout.gs','FloorPressure.gs','ShowProfileRisks.gs','ShowOpen.gs'])vm.runInContext(readFileSync(new URL('../../google-apps-script/'+name,import.meta.url),'utf8'),ctx);
   // De PDF-generator en accountflow hebben hun eigen bestaande integratietests.
   // Varieer hier de actuele revisie om races tussen lezen en bewaren te testen.
   const realSnapshot=ctx.esmojoPdfSnapshot_;
