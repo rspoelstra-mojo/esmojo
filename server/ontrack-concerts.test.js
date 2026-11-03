@@ -42,8 +42,8 @@ test('Eigen signed Drive-register is geïsoleerd; complete snapshot, historie, a
  const result=await f.store('sync',null,{snapshot:snapshot([row,other])});assert.equal(result.imported,2);assert.deepEqual((await f.store('list',admin)).concerts,[row,other].sort((a,b)=>a.concertId.localeCompare(b.concertId)));assert.equal(f.writes,1);
  const state=JSON.parse(f.stored),past=concert(MAILING_VENUES[2],addDays(calendarDate(),-1));state.concerts.push(past);f.setState(state);
  await f.store('sync',null,{snapshot:snapshot([{...row,sourceUrl:'https://www.mojo.nl/concerten/gewijzigd'}])});const list=await f.store('list',admin);assert.ok(list.concerts.some(r=>r.concertId===past.concertId));assert.equal(list.concerts.some(r=>r.concertId===other.concertId),false);assert.equal(JSON.parse(f.stored).concerts.length,3);
- const before=f.stored;await assert.rejects(f.store('sync',null,{snapshot:snapshot([{...row,venue:'Gashouder'}])}),/UNAVAILABLE/);assert.equal(f.stored,before);
- await assert.rejects(f.store('sync',null,{snapshot:{...snapshot([]),venues:['ziggo-dome']}}),/UNAVAILABLE/);assert.equal(f.stored,before);
+ const before=f.stored;await assert.rejects(f.store('sync',null,{snapshot:snapshot([{...row,venue:'Gashouder'}])}),/MAILING_CONCERTS_SNAPSHOT/);assert.equal(f.stored,before);
+ await assert.rejects(f.store('sync',null,{snapshot:{...snapshot([]),venues:['ziggo-dome']}}),/MAILING_CONCERTS_SNAPSHOT/);assert.equal(f.stored,before);
  f.profile.role='gebruiker';await assert.rejects(f.store('list',admin),/FORBIDDEN/);f.profile.role='beheerder';f.profile.disabled=true;await assert.rejects(f.store('list',admin),/FORBIDDEN/);
  assert.equal(f.context.esmojoOnTrackConcerts_({body:'{}',timestamp:Date.now(),nonce:'a'.repeat(32),signature:'0'.repeat(64)}).ok,false);
 });

@@ -36,8 +36,8 @@ jobs:
               const { value } = await identity.json();
               console.log(`::add-mask::${value}`);
               const result = await fetch(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${value}` }, signal: AbortSignal.timeout(310000) });
-              if (!result.ok) throw new Error(`Import mislukt (HTTP ${result.status}).`);
               const data = await result.json();
+              if (!result.ok) { console.log(JSON.stringify({endpoint,status:result.status,code:data.code,stage:data.stage,venue:data.venue,sourceStatus:data.sourceStatus})); throw new Error('Import mislukt.'); }
               if (!data.ok) throw new Error('Import niet bevestigd.');
               console.log(JSON.stringify({endpoint,...data}));
             } catch { failures.push(endpoint); console.log('Import niet bevestigd: '+endpoint+'; bestaande inventaris blijft behouden.'); }
