@@ -19,6 +19,7 @@ const badge = () => { const el=node('span','analysis-status','AI-concept');el.da
 export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=access, request = body => requestAccess('show-risks', { method:'POST', body }), choices, saveSelection = body => requestAccess('production-risks', {method:'POST',body}) } = {}) {
   let disposed=false, loaded=false, loadingNow=false, risks=[], state='pending', error='', view='overview';
   let loadedVersion=-1;
+  const entranceNotApplicable=show?.venue?.trim().toLocaleLowerCase('nl-NL')==='gashouder';
   let production={revision:0,choices:{}},productionReady=false,assessments={},disposeDetail=null;
   const choiceError='De keuzes zijn nog niet bevestigd. Je invoer is behouden. Probeer de opslag opnieuw.';
   const choiceControls=new Map();
@@ -65,8 +66,11 @@ export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=a
       const block=node('div','production-risk-group');
       for(const entry of group.items){
         const row=node('div','production-risk-row'),frame=node('div','visitor-analysis'),button=node('button','visitor-analysis-summary');button.type='button';button.dataset.productionId=entry.id;
-        button.disabled=Boolean(entry.conditional&&(!productionReady||choices.pending(entry.id)||production.choices[entry.id]!==true));
-        button.append(node('span','analysis-row-title',entry.title));
+        const notApplicable=entry.id==='entrance_process'&&entranceNotApplicable;
+        button.disabled=notApplicable||Boolean(entry.conditional&&(!productionReady||choices.pending(entry.id)||production.choices[entry.id]!==true));
+        const title=node('span','analysis-row-title',entry.title);
+        if(notApplicable){title.append(node('small','production-risk-note',' (Nvt bij Gashouder shows)'));button.dataset.applicability='not-applicable';}
+        button.append(title);
         const assessment=assessments[entry.id==='barrier_layout'?'barrier':entry.id==='floor_pressure'?'floor':''];
         if(assessment?.revision){const status=node('span','analysis-status',assessment.completed?'Afgerond':'Concept');status.dataset.status=assessment.completed?'completed':'draft';button.append(status);}
         button.append(glyph('chevron','analysis-chevron'));
@@ -100,7 +104,7 @@ export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=a
     if(productionId)[...section.querySelectorAll('[data-production-id]')].find(button=>button.dataset.productionId===productionId)?.focus({preventScroll:true});
   }
   function productionDetail(entry,group){
-    if(disposed)return;closeDetail();view='production';section.replaceChildren();
+    if(disposed||(entry.id==='entrance_process'&&entranceNotApplicable))return;closeDetail();view='production';section.replaceChildren();
     if(['barrier_layout','floor_pressure'].includes(entry.id)){
       const action=entry.id==='barrier_layout'?'barrier-layout':'floor-pressure';
       const options={show,request:body=>requestAccess(action,{method:'POST',body}),onStored:(_record,data)=>{if(data?.overview){production=data.overview.production;assessments=data.overview.assessments;}},onBack:()=>backFromAssessment(entry.id),onBarrier:()=>productionDetail(productionRiskGroups[0].items.find(item=>item.id==='barrier_layout'),productionRiskGroups[0])};

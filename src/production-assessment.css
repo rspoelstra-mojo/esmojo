@@ -13,6 +13,9 @@
 .assessment-preview-label { margin: 0; font-size: 13px; color: var(--muted); }
 .assessment-preview-box { height: 320px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 16px; text-align: center; overflow: hidden; }
 .assessment-preview-box img { width: 100%; min-height: 0; flex: 1; object-fit: contain; }
+.assessment-preview[data-layout="schematic"] { width: min(100%, 320px); justify-self: center; align-self: start; grid-template-rows: auto auto; }
+.assessment-preview[data-layout="schematic"] .assessment-preview-box { height: auto; aspect-ratio: 1; padding: 0; }
+.assessment-preview[data-layout="schematic"] .assessment-preview-box img { display: block; height: 100%; flex: none; border-radius: inherit; }
 .assessment-preview-box p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .assessment-preview-box a { color: var(--profile-blue); font-size: 14px; }
 .assessment-preview-box .assessment-pdf-icon { font-size: 14px; font-weight: 650; border: 1px solid var(--line); border-radius: 8px; padding: 14px; color: var(--text); }
@@ -30,10 +33,13 @@
 .floor-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
 .floor-table th { text-align: left; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); padding: 10px 8px; }
 .floor-table td { vertical-align: top; padding: 12px 8px; border-bottom: 1px solid var(--line); }
+.floor-table .floor-section-heading td { padding-bottom: 7px; border-bottom: 0; }
+.floor-table .floor-section-heading + tr > td { padding-top: 0; }
+.floor-table .floor-section-heading label, .floor-table .floor-section-heading .floor-row-name { margin: 0; }
 .floor-table th:first-child { width: 42%; }
 .floor-table th:nth-child(2) { width: 25%; }
 .floor-table label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; }
-.floor-table output { display: block; padding-top: 7px; font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.floor-table output { display: block; padding-top: 11px; font-size: 14px; line-height: 1.5; font-weight: 650; overflow-wrap: anywhere; }
 .floor-row-name { margin-bottom: 7px; }
 .floor-row-remove { margin-top: 7px; border: 0; background: transparent; color: var(--muted); padding: 0; font: inherit; font-size: 12px; cursor: pointer; }
 .floor-add { margin: 14px 0; }

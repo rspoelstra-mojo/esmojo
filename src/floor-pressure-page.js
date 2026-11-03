@@ -22,6 +22,7 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
   const block=node('form','assessment-block'),source=node('p','assessment-note'),ticketLine=node('p','floor-ticket-line','Verkochte tickets: '),ticketValue=node('strong',''),ticketDetail=node('p','floor-ticket-detail');ticketLine.append(ticketValue);
   const tableWrap=node('div','floor-table-wrap'),table=node('table','floor-table'),head=node('thead',''),headRow=node('tr','');
   for(const text of ['Publieksvak / bezoekers','Aantal m²','Vloerdruk']){const th=node('th','',text);th.scope='col';headRow.append(th);}head.append(headRow);const body=node('tbody','');table.append(head,body);tableWrap.append(table);
+  const seatedVisitors=node('input','floor-seated-count');seatedVisitors.type='text';seatedVisitors.readOnly=true;seatedVisitors.tabIndex=-1;seatedVisitors.id='floor-seated-visitors';seatedVisitors.setAttribute('aria-label','Bezoekers Zitplaatsen (automatisch)');
   const add=node('button','secondary-button floor-add','+ Publieksvak toevoegen');add.type='button';
   const total=node('div','floor-total'),review=node('div','floor-review'),risk=riskRadioGroup('floor-risk',value=>{if(riskLevel)noteDrafts[riskLevel]=note;riskLevel=value;note=noteDrafts[value]||'';notes.value=note;queue.save();update();}),noteField=node('div','assessment-field'),noteLabel=node('label','','Toelichting'),notes=node('textarea','');notes.id='floor-notes';notes.rows=4;notes.maxLength=4000;noteLabel.htmlFor=notes.id;noteField.append(noteLabel,notes);review.append(risk.element,noteField);
   const status=node('p','assessment-status'),error=node('p','profile-message');error.setAttribute('role','alert');const reload=node('button','secondary-button','Actuele beoordeling laden');reload.type='button';reload.hidden=true;
@@ -35,7 +36,8 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
     body.replaceChildren();rowControls=[];
     for(const [index,row]of rows.entries()){
       const tr=node('tr',''),visitorsCell=node('td',''),areaCell=node('td',''),resultCell=node('td',''),rowId='floor-'+row.id;
-      if(type==='custom'&&index>0){const name=node('input','floor-row-name');name.value=row.name;name.maxLength=120;name.required=true;name.setAttribute('aria-label','Naam publieksvak');name.oninput=()=>{row.name=name.value;queue.later();update();};visitorsCell.append(name);rowControls.push(name);}else visitorsCell.append(node('label','',row.name));
+      const labelRow=node('tr','floor-section-heading'),labelCell=node('td','');labelRow.append(labelCell,node('td',''),node('td',''));body.append(labelRow);
+      if(type==='custom'&&index>0){const name=node('input','floor-row-name');name.value=row.name;name.maxLength=120;name.required=true;name.setAttribute('aria-label','Naam publieksvak');name.oninput=()=>{row.name=name.value;queue.later();update();};labelCell.append(name);rowControls.push(name);}else {const label=node('label','',row.name);label.htmlFor=rowId+'-visitors';labelCell.append(label);}
       const visitors=node('input','');visitors.type='text';visitors.inputMode='numeric';visitors.required=true;visitors.id=rowId+'-visitors';visitors.value=row.visitors===null?'':numbers.format(row.visitors);visitors.setAttribute('aria-label',`Bezoekers ${row.name||'publieksvak'}`);
       const area=node('input','');area.type='text';area.inputMode='decimal';area.required=true;area.id=rowId+'-area';area.value=row.area===null?'':new Intl.NumberFormat('nl-NL',{maximumFractionDigits:20,useGrouping:false}).format(row.area);area.setAttribute('aria-label',`Netto oppervlakte in m² ${row.name||'publieksvak'}`);
       const output=node('output','');output.setAttribute('for',visitors.id+' '+area.id);
@@ -45,13 +47,18 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
       visitorsCell.append(visitors);areaCell.append(area);resultCell.append(output);tr.append(visitorsCell,areaCell,resultCell);body.append(tr);rowControls.push(visitors,area);rowControls.push({output,row});
       if(type==='custom'&&index>0){const remove=node('button','floor-row-remove','Publieksvak verwijderen');remove.type='button';remove.setAttribute('aria-label',`Verwijder ${row.name||'publieksvak'}`);remove.onclick=()=>{rows=rows.filter(item=>item.id!==row.id);renderRows();queue.save();update();};visitorsCell.append(remove);rowControls.push(remove);}
     }
+    const seatedHeading=node('tr','floor-section-heading'),seatedLabelCell=node('td',''),seatedLabel=node('label','','Zitplaatsen');seatedLabel.htmlFor=seatedVisitors.id;seatedLabelCell.append(seatedLabel);seatedHeading.append(seatedLabelCell,node('td',''),node('td',''));
+    const seatedRow=node('tr','floor-seated-row'),seatedCell=node('td','');seatedCell.append(seatedVisitors);seatedRow.append(seatedCell,node('td',''),node('td',''));body.append(seatedHeading,seatedRow);
     calculate();
   }
   function calculate(){
     for(const item of rowControls)if(item.output){const value=floorDensity(item.row.visitors,item.row.area);item.output.textContent=value===null?'—':densityFormat.format(value)+' bezoekers/m²';}
-    const filled=rows.every(row=>row.visitors!==null),sum=filled?rows.reduce((n,row)=>n+row.visitors,0):null;total.replaceChildren();
-    total.append(node('p','',`Totaal ingevoerd: ${sum===null?'—':numbers.format(sum)} bezoekers · Verkochte tickets: ${tickets?.soldTickets===null||tickets?.soldTickets===undefined?'niet beschikbaar':numbers.format(tickets.soldTickets)}`));
-    if(sum!==null&&tickets?.soldTickets!==null&&tickets?.soldTickets!==undefined&&sum!==tickets.soldTickets)total.append(node('p','assessment-note',`Let op: ${numbers.format(sum)} bezoekers ingevoerd tegenover ${numbers.format(tickets.soldTickets)} verkochte tickets.`));
+    const filled=rows.every(row=>row.visitors!==null),standing=rows.reduce((n,row)=>n+(row.visitors??0),0),sold=tickets?.soldTickets;
+    const seated=Number.isSafeInteger(sold)&&sold>=0?Math.max(0,sold-standing):null;
+    seatedVisitors.value=seated===null?'':numbers.format(seated);seatedVisitors.placeholder=seated===null?'Ticketgegevens ontbreken':'';
+    const sum=filled?standing+(seated??0):null;total.replaceChildren();
+    total.append(node('p','',`Totaal: ${sum===null?'—':numbers.format(sum)} bezoekers · Verkochte tickets: ${sold===null||sold===undefined?'niet beschikbaar':numbers.format(sold)}`));
+    if(Number.isSafeInteger(sold)&&standing>sold)total.append(node('p','assessment-note',`Let op: ${numbers.format(standing)} bezoekers ingevoerd tegenover ${numbers.format(sold)} verkochte tickets.`));
   }
   function update(){
     if(disposed)return;const seated=type==='seated',available=Boolean(type)&&!seated,locked=!ready||reading||queue?.exclusive||record?.completed;
@@ -66,7 +73,7 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
     if(!data||!data.basis||!data.tickets)throw Error('Onvolledige opslagbevestiging.');record=data.record;basis=data.basis;tickets=data.tickets;type=data.barrierType;
     if(disposed)return;
     if(replace){rows=(record?.rows||[]).map(({id,name,visitors,area})=>({id,name,visitors,area}));riskLevel=record?.riskLevel||null;note=record?.note||'';notes.value=note;renderRows();}
-    const text=floorTicketText(tickets);ticketValue.textContent=text.main;ticketDetail.textContent=text.detail;
+    const text=floorTicketText(tickets);ticketValue.textContent=text.main;ticketDetail.textContent=text.detail;calculate();
     onStored(record,data);update();
   }
   async function load(){
