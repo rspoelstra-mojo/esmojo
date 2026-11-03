@@ -1,3 +1,4 @@
+import {createMailingConcertsStore} from './ontrack-concerts.js';
 import {createOnTrackStore,validateOnTrackRecipients} from './ontrack-store.js';
 import {createFluidPreviewSource} from './fluid-preview-source.js';
 import {isFluidPreview,fluidPreviewOrigin,fluidAccountRead,createFluidPreviewService} from './fluid-preview.js';
@@ -20,7 +21,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -192,7 +193,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }catch(error){const status=error.message==='VALIDATION'?400:error.message==='CONFLICT'?409:error.message==='FORBIDDEN'?403:503;return reply(status,{error:status===400?'Selecteer geldige ontvangeraccounts.':status===409?'De ontvangers zijn intussen gewijzigd. Je selectie is behouden; laad de actuele instellingen voordat je opnieuw opslaat.':'OnTrack kon niet worden geladen of opgeslagen. Je selectie is behouden. Probeer opnieuw.'});}
       }
       if(action==='email'){
-        const service=createEmailTestService({mail,shows});
+        const service=createEmailTestService({mail,shows,mailingConcerts});
         try{
           if(req.method==='GET')return reply(200,await service.catalog(own,Boolean(env.RESEND_API_KEY)));
           if(req.method==='POST'){

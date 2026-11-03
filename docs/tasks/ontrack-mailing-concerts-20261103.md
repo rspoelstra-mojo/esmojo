@@ -16,3 +16,14 @@ de beheerder-mailkeuze, zonder nieuwe showpagina’s of mailverzending.
 Verwachte bestanden: parametriseerbare scraper/venueconfig, afzonderlijke
 server-/Drive-catalogus, vaste workflowkoppeling, emailtestcatalogus, tests/docs.
 Publiceer en voer de eerste import uit na alle passende controles. V1.21.
+
+Gebouwd: vaste venueconfig, hergebruikte parser en IDs met zaalnaam, eigen
+OIDC-import/Drive-register, dagelijkse workflow met beide bronnen, aparte
+Showrapportage-concertkeuze en servervalidatie. Geen gewone showindex, menu-seed
+of artiestmap aangepast. De extra bron blijft serverzijdig en beheerder/MFA-only.
+
+Controles: bestaande Gashouderparser (7), eigen inventaris/isolatie (5), OIDC (4),
+account-API (26), mailservice (4), bestaande Drive/showroutes/OnTrack/Apps Script-
+controles, build en browserfixtures. Browser controleert extra locatie en datum
+uitsluitend bij Showrapportage, geen extra Shows-items, reset bij ander mailtype
+en behoud normale mailtests bij tijdelijke inventarisfout. Geen echte mails.
