@@ -1,0 +1,24 @@
+.ontrack-view { min-width: 0; }
+.ontrack-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.ontrack-toolbar h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.5px; }
+.ontrack-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.ontrack-card { min-width: 0; padding: 20px; background: var(--fluid-card,var(--canvas)); border: 1px solid var(--line); border-radius: 12px; }
+.ontrack-card h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
+.ontrack-stat .ontrack-value { margin: 0; font-size: 28px; font-weight: 600; }
+.ontrack-muted { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.ontrack-notice { font-size: 14px; }
+.ontrack-notice:empty { display: none; }
+.ontrack-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.ontrack-table th, .ontrack-table td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; vertical-align: top; }
+.ontrack-table th:first-child { width: 42%; }
+.ontrack-sent { color: #178067; }
+.ontrack-form { display: grid; gap: 16px; }
+.ontrack-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 12px; }
+.ontrack-recipient { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; cursor: pointer; overflow-wrap: anywhere; }
+.ontrack-recipient input { margin: 3px 0 0; accent-color: #083ADE; flex-shrink: 0; }
+.ontrack-recipient span { min-width: 0; }
+.ontrack-recipient small { display: block; }
+.ontrack-form > button { justify-self: start; }
+@container fluid (max-width: 760px) { .ontrack-grid { grid-template-columns: minmax(0,1fr); } }
+
+.ontrack-form > .primary-button { background: #083ADE; border-color: #083ADE; color: #fff; }

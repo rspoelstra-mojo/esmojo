@@ -447,3 +447,22 @@ Ontwikkelcontroles gebruiken uitsluitend fictieve gegevens en gemockte verzendin
 
 Bezoekersanalyse en Artiestanalyse hebben gelijke kolombreedtes wanneer ze naast
 elkaar staan; behoud de bestaande responsive herschikking en aparte zijbalk.
+
+## OnTrack
+
+Op 3 november 2026 heeft de gebruiker OnTrack als afzonderlijk systeem onder
+Beheerder gevraagd. CSV’s, rapport-PDF’s, verwerkingsstatus en ontvangerinstellingen
+zijn expliciet Vertrouwelijk; opslag in de opgegeven Drive-map
+1V5lw-IicMW_bkphtjD4HIEejCpsOapps, verwerking via ESMOJO/Vercel en rapportverzending
+via de bestaande Resend-voorziening zijn bevestigd. Eigen register
+_esmojo_ontrack_v1.json, geen koppeling aan show-/risicodata of Supabase-opslag.
+Beheer vereist actieve beheerder/MFA, ook controle in de ondertekende Drive-brug.
+Ontvangerkeuze verwijst naar bestaande actieve accounts, met revisiecontrole.
+Geen CSV-inhoud, rapportinhoud of ontvangers in logs/persistente browseropslag.
+
+De inhoudelijke rapportageprompt/PDF-opmaak wordt nog door de gebruiker aangeleverd.
+Tot die tijd alleen CSV-metadata inventariseren, tellen en ontvangers opslaan;
+geen eigen rapportageregels, automatische verwerking of echte rapportmails maken.
+Vinkje uitsluitend bij bevestigde verzending. Toekomstige OnTrack-mail gebruikt
+de centrale emailstandaard en automatische templatecatalogus; de niet-showregel
+onder de mailtitel moet nog expliciet met de gebruiker afgestemd worden.
