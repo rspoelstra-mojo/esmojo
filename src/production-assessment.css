@@ -13,7 +13,7 @@
 .assessment-preview-label { margin: 0; font-size: 13px; color: var(--muted); }
 .assessment-preview-box { height: 320px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 16px; text-align: center; overflow: hidden; }
 .assessment-preview-box img { width: 100%; min-height: 0; flex: 1; object-fit: contain; }
-.assessment-preview[data-layout="schematic"] { width: min(100%, 320px); justify-self: center; align-self: start; grid-template-rows: auto auto; }
+.assessment-preview[data-layout="schematic"] { width: min(100%, 320px); justify-self: end; align-self: start; grid-template-rows: auto auto; }
 .assessment-preview[data-layout="schematic"] .assessment-preview-box { height: auto; aspect-ratio: 1; padding: 0; }
 .assessment-preview[data-layout="schematic"] .assessment-preview-box img { display: block; height: 100%; flex: none; border-radius: inherit; }
 .assessment-preview-box p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }

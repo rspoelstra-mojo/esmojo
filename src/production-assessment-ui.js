@@ -21,10 +21,10 @@ export function createAssessmentQueue({snapshot,send,stored,changed,error}){
     catch(failure){failed=true;if(!disposed)error(failure.message);}
     finally{running=false;notify();}
   }
-  const queue=()=>{if(failed)return;const value=snapshot(),key=JSON.stringify(value);if(key===lastSnapshot){notify();return;}lastSnapshot=key;pending=structuredClone(value);void pump();};
+  const queue=(force=false)=>{if(failed)return;const value=snapshot(),key=JSON.stringify(value);if(key===lastSnapshot&&!force){notify();return;}lastSnapshot=key;pending=structuredClone(value);void pump();};
   return{
     get busy(){return running||pending!==null||timer!==null;},get exclusive(){return exclusive;},get failed(){return failed;},
-    save(){if(timer){clearTimeout(timer);timer=null;}queue();},
+    save(force=false){if(timer){clearTimeout(timer);timer=null;}queue(force);},
     later(){if(failed)return;if(timer)clearTimeout(timer);timer=setTimeout(()=>{timer=null;queue();},600);notify();},
     async action(operation,payload={}){
       if(running||pending||timer||failed)return null;running=true;exclusive=true;notify();

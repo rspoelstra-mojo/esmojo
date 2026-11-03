@@ -77,7 +77,7 @@ test('Conceptwachtrij voorkomt blur-duplicaten, bewaart laatste invoer en stopt 
 });
 
 test('Barrierbeoordeling vereist aparte toelichting of beheersmaatregel; Laag wist verborgen tekst',async()=>{
- for(const level of ['none','medium','high']){
+ for(const level of ['medium','high']){
   const h=harness();const {record}=await change(h,'end_stage_no_gc');const input=data('end_stage_no_gc',level);
   for(const riskNote of ['', '   ',null,'x'.repeat(4001)]){
    assert.throws(()=>validateBarrierRequest({operation:'complete',concertId:h.concertId,revision:record.revision,data:{...input,riskNote}}),/VALIDATION/);
@@ -91,8 +91,20 @@ test('Barrierbeoordeling vereist aparte toelichting of beheersmaatregel; Laag wi
 
 test('Historische afgeronde barrierbeoordelingen blijven leesbaar; nieuwe afronding vereist de nieuwe toelichting',async()=>{
  const h=harness();await change(h,'end_stage_gc');const file=h.folder.files.find(f=>f.name==='productionele-risicos.json'),doc=JSON.parse(file.content);
- delete doc.barrier.riskNote;Object.assign(doc.barrier,{riskLevel:'none',completed:true,completedBy:actor,completedAt:'2026-11-03T12:00:00Z'});file.content=JSON.stringify(doc);
- const writes=h.writes();let {record}=await barrier(h,'read');assert.equal(record.completed,true);assert.equal(h.writes(),writes);assert.equal((await h.shows('risk-view',{concertId:h.concertId})).assessments.barrier.active,false);
- ({record}=await barrier(h,'reopen',{revision:record.revision}));const input=data('end_stage_gc','none');delete input.riskNote;await assert.rejects(barrier(h,'complete',{revision:record.revision,data:input}),/VALIDATION/);
+ delete doc.barrier.riskNote;Object.assign(doc.barrier,{riskLevel:'medium',completed:true,completedBy:actor,completedAt:'2026-11-03T12:00:00Z'});file.content=JSON.stringify(doc);
+ const writes=h.writes();let {record}=await barrier(h,'read');assert.equal(record.completed,true);assert.equal(h.writes(),writes);assert.equal((await h.shows('risk-view',{concertId:h.concertId})).assessments.barrier.active,true);
+ ({record}=await barrier(h,'reopen',{revision:record.revision}));const input=data('end_stage_gc','medium');delete input.riskNote;await assert.rejects(barrier(h,'complete',{revision:record.revision,data:input}),/VALIDATION/);
  const saved=await barrier(h,'complete',{revision:record.revision,data:{...input,riskNote:'Veilig beoordeeld'}});assert.equal(saved.record.riskNote,'Veilig beoordeeld');
+});
+
+test('Alle vijf standaardopstellingen mogen als Geen risico zonder toelichting afronden; custom houdt verplichte toelichting',async()=>{
+ for(const type of barrierTypes.filter(row=>row.value!=='custom').map(row=>row.value)){
+  const h=harness();const input={operation:'complete',concertId:h.laterId,revision:0,data:{...data(type,'none'),riskNote:''}};
+  assert.doesNotThrow(()=>validateBarrierRequest(input));const {record}=await barrier(h,'complete',{revision:0,data:input.data});
+  assert.equal(record.completed,true);assert.equal(record.riskLevel,'none');assert.equal(record.riskNote,'');assert.equal(record.completedBy,actor);assert.ok(Date.parse(record.completedAt));
+  const writes=h.writes();await barrier(h,'complete',{revision:0,data:input.data});assert.equal(h.writes(),writes);await barrier(h,'read');assert.equal(h.writes(),writes);
+  const view=await floor(h,'read');if(type==='seated'){assert.equal(view.record.completed,true);assert.equal(view.record.riskLevel,'none');}else assert.equal(view.record.completed,false);
+ }
+ const custom={...data('custom','none'),uploadId,riskNote:''};assert.throws(()=>validateBarrierRequest({operation:'complete',concertId:'Test',revision:0,data:custom}),/VALIDATION/);
+ assert.throws(()=>validateBarrierData({...custom,riskNote:'   '},true),/VALIDATION/);assert.doesNotThrow(()=>validateBarrierData({...custom,riskNote:'Handmatig beoordeeld'},true));
 });
