@@ -561,3 +561,8 @@ a40789fde3886ed38cde64f02adff922909c340f6e12f00cb3707705ab4e9870.
 Geen nabewerking, reconstructie of ander icoon gebruiken. De bestaande
 assetblokkade vervalt door aanwezigheid van dit originele bestand; verwerking
 blijft wel afhankelijk van een geldige CSV en opgeslagen concertkoppeling.
+
+Op expliciet verzoek is de witte buitenrand van het ON-icoon op 3 november 2026
+in de PDF-weergave verwijderd met een afgeronde uitsnede van de grijze tegel.
+Deze toestemming geldt voor die presentatie; het oorspronkelijke PNG-bestand
+blijft byte-identiek bewaard. De ON-lettervormen, kleur en klikbare link behouden.
