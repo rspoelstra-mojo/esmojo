@@ -12,3 +12,14 @@ bij afmelden en gebruikt bestaande vertrouwelijke Drive-opslag. Geen nieuwe gege
 
 Verwachte bestanden: risico-UI, gedeelde configuratie plus gegenereerde kopie,
 showcontext/wachtrij, relevante tests/workflow en websiteversie (V1.14).
+
+Uitvoering: createProductionChoiceQueue in de bestaande showcontext; DOM-knoppen
+blijven staan tijdens opslag, focus wordt niet verplaatst. Detailtoegang wacht
+alleen op bevestiging van de eigen rij. Showcache wacht op de volledige wachtrij
+bij terugkeer; afmelden annuleert resterende writes. De 24-uursmelding is een
+UI-tekstwijziging, geen wijziging aan het analyseproces.
+
+Verificatie: nieuwe wachtrijtests (snel klikken, revisies, fout/herpoging, verloren
+antwoord, annuleren), showgeheugen- en UI-tests, productiebuild en browsercontrole
+op 1280/1440/1920/2560/700/390px. Drie Ja/Nee-keuzes tijdens SPA-navigatie opgeslagen
+met maximaal één gelijktijdige write; geen tweede show-open, geen overflow.
