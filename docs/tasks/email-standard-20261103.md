@@ -22,3 +22,10 @@ mails versturen. Alleen offline preview en bestaande mock-verzendtests.
 Verwachte bestanden: centraal emailtemplate/renderer, accountmailbuilder, bestaande
 verzendmodule/accounts-handler, tests/CI, logo-export, previewtool, documentatie en
 websiteversie V1.18. Livegang volgens bestaande doorlopende toestemming.
+
+Uitwerking: centrale gestructureerde renderer en één bestaande accountbuilder,
+serverzijdige tekst-/linkvalidatie en HTML/plain-textversies. De oorspronkelijke
+transparante logoasset blijft intact; een witte proportionele PNG wordt bij de
+build geëxporteerd. De bestaande persoonlijke voornaam is expliciet toegestaan.
+Tests gebruiken uitsluitend fixtures en een gemockte Resend-transportfunctie.
+Preview/Chrome-controle draait in de bestaande CI; er is geen publiek mailendpoint.
