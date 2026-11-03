@@ -1,6 +1,6 @@
 // Vertrouwelijke barrierbeoordeling en losse bijlagen in de bestaande showmap.
 function esmojoBarrierRecord_(document){
-  const record=document.barrier||emptyBarrier();assessmentRevision(record.revision);validateBarrierData(barrierData(record),record.completed===true);
+  const record=document.barrier||emptyBarrier();assessmentRevision(record.revision);validateBarrierData(barrierData(record),record.completed===true,Object.prototype.hasOwnProperty.call(record,'riskNote'));
   if(typeof record.completed!=='boolean'||(record.completed&&(!record.completedBy||!Number.isFinite(Date.parse(record.completedAt)))))throw Error('CONFLICT');
   return record;
 }
@@ -37,7 +37,7 @@ function esmojoBarrierLayout_(request,openTarget){
     if(current.attachment?.uploadId!==request.uploadId)throw Error('ATTACHMENT_INVALID');
     const {bytes}=esmojoBarrierFile_(target,current.attachment);return {attachment:current.attachment,base64:Utilities.base64Encode(bytes)};
   }
-  if(['draft','complete'].includes(op))validateBarrierData(request.data,op==='complete');
+  if(['draft','complete'].includes(op))request.data=validateBarrierData(request.data,op==='complete');
   if(current.completed){
     if(op==='complete'&&JSON.stringify(barrierData(current))===JSON.stringify(request.data))return {record:current,overview:esmojoAssessmentOverview_(document)};
     if(op!=='reopen')throw Error('ASSESSMENT_COMPLETED');
@@ -75,7 +75,7 @@ function esmojoBarrierLayout_(request,openTarget){
     try{if(!historical)file.setTrashed(true);}catch{/* Ontkoppeling is bevestigd; een achtergebleven privébestand geeft geen app-toegang. */}
     return result;
   }
-  const data=request.data;record.barrierType=data.barrierType;record.riskLevel=data.riskLevel;record.notes=data.barrierType==='custom'?data.notes:null;record.attachment=null;
+  const data=request.data;record.barrierType=data.barrierType;record.riskLevel=data.riskLevel;record.notes=data.barrierType==='custom'?data.notes:null;record.riskNote=data.riskNote;record.attachment=null;
   if(data.barrierType==='custom'&&data.uploadId){
     const attachment=ledger[data.uploadId];if(!attachment||attachment.removedAt)throw Error('ATTACHMENT_INVALID');
     const {uploadId,fileId,fileName,mime,size,sha256}=attachment;record.attachment={uploadId,fileId,fileName,mime,size,sha256};esmojoBarrierFile_(target,record.attachment);

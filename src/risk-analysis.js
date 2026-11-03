@@ -69,8 +69,9 @@ export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=a
         const notApplicable=entry.id==='entrance_process'&&entranceNotApplicable;
         button.disabled=notApplicable||Boolean(entry.conditional&&(!productionReady||choices.pending(entry.id)||production.choices[entry.id]!==true));
         const title=node('span','analysis-row-title',entry.title);
-        if(notApplicable){title.append(node('small','production-risk-note',' (Nvt bij Gashouder shows)'));button.dataset.applicability='not-applicable';}
+        if(notApplicable)button.dataset.applicability='not-applicable';
         button.append(title);
+        if(notApplicable){const status=node('span','analysis-status','NVT bij Gashouder');status.dataset.status='not-applicable';button.append(status);}
         const assessment=assessments[entry.id==='barrier_layout'?'barrier':entry.id==='floor_pressure'?'floor':''];
         if(assessment?.revision){const status=node('span','analysis-status',assessment.completed?'Afgerond':'Concept');status.dataset.status=assessment.completed?'completed':'draft';button.append(status);}
         button.append(glyph('chevron','analysis-chevron'));
