@@ -18,3 +18,16 @@ van dezelfde testaanvraag. Geen echte mails sturen vanuit de ontwikkeltests.
 Bestanden: registry/service, accounttemplate-module/compatibiliteitsexport, API,
 admin-UI/router, mailtransport, relevante tests en documentatie. Versie V1.19.
 Publicatie volgens de doorlopende expliciete toestemming in AGENTS.md.
+
+Aanvullend verzoek: Bezoekersanalyse en Artiestanalyse krijgen exact gelijke
+breedtes wanneer ze naast elkaar staan. Wijzig alleen de 1:1.15-verhouding in
+de fluid-showprofielkolommen naar 1:1; zijbalk, lettertypen en breakpoints behouden.
+Extra bestand: src/layouts/fluid-layout.css.
+
+Controles: accounts-API 25 tests, centrale renderer/transport 7 tests, automatisch
+register/testservice 3 tests en productiebuild geslaagd. Browser met uitsluitend
+fictieve API-fixtures: automatisch extra template, showkeuze, geen verzending bij
+openen, expliciete enkele verzending/dubbelklikblokkering en eigen ontvanger.
+Geen overflow op 390/1280/1920px. Analysekaarten op 1280/1440/1920/2560px exact
+even breed (618/778/599/919px); laatste twee naast elkaar, eerste twee gestapeld.
+Geen echte e-mails verzonden tijdens ontwikkeling.
