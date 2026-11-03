@@ -13,6 +13,7 @@ import { validateProductionRiskSelection } from '../shared/production-risks.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
 import { sendEmail } from './email.js';
+import {createEmailTestService} from './email-tests.js';
 import { accountActivationEmail } from './account-email.js';
 import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCookie } from './session-cookie.js';
 import { createShowsStore } from './shows-store.js';
@@ -182,6 +183,20 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (own.role !== 'beheerder') return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='email'){
+        const service=createEmailTestService({mail,shows});
+        try{
+          if(req.method==='GET')return reply(200,await service.catalog(own,Boolean(env.RESEND_API_KEY)));
+          if(req.method==='POST'){
+            if(!env.RESEND_API_KEY)return reply(503,{error:'E-mailverzending is nog niet geconfigureerd.'});
+            return reply(200,await service.send(own,req.body));
+          }
+          res.setHeader('Allow','GET, POST');return reply(405,{error:'Niet toegestaan.'});
+        }catch(error){
+          const status=error.message==='VALIDATION'?400:['EMAIL_TEMPLATE_NOT_FOUND','EMAIL_SHOW_NOT_FOUND'].includes(error.message)?404:503;
+          return reply(status,{error:status===400?'Kies een geldig template en, indien nodig, een concert.':status===404?'Dit template of concert is niet beschikbaar.':'De e-mailtemplates konden niet worden geladen of de testmail kon niet worden verstuurd. Probeer opnieuw.'});
+        }
+      }
       if (action !== 'accounts') return reply(404, { error: 'Niet gevonden.' });
       if (req.method === 'GET') return reply(200, { accounts: await profiles('list', actor) });
       const input = req.body;

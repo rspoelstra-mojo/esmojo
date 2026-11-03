@@ -5,7 +5,7 @@
       "maxDuration": 300
     },
     "api/access.js": {
-      "includeFiles": "{server/report-original/**,server/email/template.html}",
+      "includeFiles": "{server/report-original/**,server/email/template.html,server/email-templates/**}",
       "maxDuration": 300
     }
   },
