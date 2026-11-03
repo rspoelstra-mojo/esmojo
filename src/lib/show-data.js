@@ -21,7 +21,7 @@ export function createShowData(bundle,request){
     async request(action,options){
       const body=options.body||{},read=isRead(action,body);
       if(read&&disposed)throw Error('Show gesloten.');
-      if(read&&values.has(action)){
+      if(read&&!options.refresh&&values.has(action)){
         const data=values.get(action);
         if(action==='show-profile-pdf'&&['pending','generating'].includes(data.state))values.delete(action);
         return structuredClone(data);
@@ -33,6 +33,7 @@ export function createShowData(bundle,request){
       }
       if(!disposed){
         if(read){remember(action,data);overview(data);}
+        else if(action==='show-profile-pdf'&&body.operation!=='download')remember(action,data);
         else if(action==='production-risks')overview({overview:{production:data}});
         else if(['show-profile','analysis-finalization','ticket-data','barrier-layout','floor-pressure'].includes(action)){
           if(body.operation==='download')return data;

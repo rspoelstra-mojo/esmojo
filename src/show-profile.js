@@ -41,9 +41,9 @@ export function createShowProfile(panel, { show,requestAccess=access } = {}) {
     catch(error) { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.';if(strict===true)throw error; }
     finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed && !ticketOpen) renderOverview(); }
   }
-  async function refreshFinalization() {
+  async function refreshFinalization(force=false) {
     const sequence=++statusSequence;
-    try { const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
+    try { const data=await requestAccess('analysis-finalization',{method:'POST',refresh:force===true,body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
     catch { /* Geen afrondknop tonen met een onzekere status. */ if(!disposed&&sequence===statusSequence){finalization=null;finalizationError='Afrondstatus laden is niet gelukt.';if(!ticketOpen&&editorNumber===null)renderOverview();} }
   }
   function completeCategory(category) {
@@ -81,7 +81,7 @@ export function createShowProfile(panel, { show,requestAccess=access } = {}) {
     for(const [key,label]of [['visitors','Bezoekersanalyse afronden'],['artist','Artiestanalyse afronden']]) {
       if(loaded&&!saves.pending.size&&!saves.errors.size&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
     }
-    if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,requestAccess,onStale:refreshFinalization,firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
+    if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,requestAccess,onStale:()=>refreshFinalization(true),firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
     const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
     const info = node('div', ''), view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button'; view.disabled = !loaded; view.onclick = () => openEditor(selected);
     info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || researchView(researchByNumber?.[selected]).summaryText || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(highlight);

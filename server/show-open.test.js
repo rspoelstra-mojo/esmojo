@@ -33,6 +33,8 @@ test('Writes blijven echt; nieuwe gegevens vervangen snapshots en fouten verplic
 test('PDF-status is direct beschikbaar; voortgang blijft actueel en downloaden wordt nooit vooraf opgehaald',async()=>{
  const bundle=await openFixture();bundle.pdf={state:'generating'};let calls=0;const data=createShowData(bundle,async()=>{calls++;return{state:'ready'};});
  assert.equal((await data.request('show-profile-pdf',{body:{operation:'status'}})).state,'generating');assert.equal(calls,0);assert.equal((await data.request('show-profile-pdf',{body:{operation:'status'}})).state,'ready');assert.equal(calls,1);await data.request('show-profile-pdf',{body:{operation:'status'}});assert.equal(calls,1);await data.request('show-profile-pdf',{body:{operation:'download'}});assert.equal(calls,2);
+ bundle.pdf={state:'failed'};let retries=0;const retry=createShowData(bundle,async(action,options)=>{retries++;return{state:options.body.operation==='retry'?'generating':'ready'};});
+ assert.equal((await retry.request('show-profile-pdf',{body:{operation:'status'}})).state,'failed');assert.equal(retries,0);await retry.request('show-profile-pdf',{body:{operation:'retry'}});assert.equal((await retry.request('show-profile-pdf',{body:{operation:'status'}})).state,'ready');assert.equal(retries,2);
 });
 test('Een heropende show bindt bestaande conceptwachtrij aan de nieuwe laadcontext',async()=>{
  const {profileSaves,clearProfileSaves}=await import('../src/lib/profile-saves.js');let old=0,fresh=0;
