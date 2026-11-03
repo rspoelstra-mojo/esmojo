@@ -447,3 +447,31 @@ Ontwikkelcontroles gebruiken uitsluitend fictieve gegevens en gemockte verzendin
 
 Bezoekersanalyse en Artiestanalyse hebben gelijke kolombreedtes wanneer ze naast
 elkaar staan; behoud de bestaande responsive herschikking en aparte zijbalk.
+
+## OnTrack
+
+Op 3 november 2026 heeft de gebruiker OnTrack als afzonderlijk systeem onder
+Beheerder gevraagd. CSV’s, rapport-PDF’s, verwerkingsstatus en ontvangerinstellingen
+zijn expliciet Vertrouwelijk; opslag in de opgegeven Drive-map
+1V5lw-IicMW_bkphtjD4HIEejCpsOapps, verwerking via ESMOJO/Vercel en rapportverzending
+via de bestaande Resend-voorziening zijn bevestigd. Eigen register
+_esmojo_ontrack_v1.json, geen koppeling aan show-/risicodata of Supabase-opslag.
+Beheer vereist actieve beheerder/MFA, ook controle in de ondertekende Drive-brug.
+Ontvangerkeuze verwijst naar bestaande actieve accounts, met revisiecontrole.
+Geen CSV-inhoud, rapportinhoud of ontvangers in logs/persistente browseropslag.
+
+De inhoudelijke rapportageprompt/PDF-opmaak wordt nog door de gebruiker aangeleverd.
+Tot die tijd alleen CSV-metadata inventariseren, tellen en ontvangers opslaan;
+geen eigen rapportageregels, automatische verwerking of echte rapportmails maken.
+Vinkje uitsluitend bij bevestigde verzending. Toekomstige OnTrack-mail gebruikt
+de centrale emailstandaard en automatische templatecatalogus; Showrapportage is show-specifiek en gebruikt de bevestigde artiest/locatie/datumregel.
+
+De gebruiker heeft de show-specifieke mail Showrapportage toegevoegd, met tekst
+“Hierbij ontvang je de showrapportage van [artiestnaam] op [showdatum] in de
+[showlocatie].” Persoonlijke aanhef via eigen voornaam en afsluiting met
+Event Safety Mobility Operations. Gebruik server/email-templates/show-report.js.
+De echte mail vereist de werkelijk gegenereerde PDF als bijlage en gekoppelde
+showmetadata. Geen mail zonder PDF of ontbrekende concertgegevens. De expliciete
+mailtest gebruikt een duidelijk gemarkeerde test-PDF; geen echte rapportverwerking.
+PDF-bijlagen gaan uitsluitend in servergeheugen naar Resend, maximaal 10 MB;
+geen URL, lokaal pad of bijlage-inhoud in browser/records/logs.

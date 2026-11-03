@@ -1,3 +1,4 @@
+import {createOnTrackAdminView} from './ontrack-admin.js';
 import {enableFluidLayout} from './layouts/fluid-layout.js';
 import {createFluidPreviewPage} from './fluid-preview/page.js';
 import previewShows from './data/show-menu.json';
@@ -80,6 +81,9 @@ function renderPage() {
     const emailLink=document.createElement('a');emailLink.href='/beheerder/email';emailLink.className='submenu-link';emailLink.textContent='Email';emailLink.dataset.submenuTitle='Email';
     if(route==='beheerder/email')emailLink.setAttribute('aria-current','page');submenu.append(emailLink);
     if(route==='beheerder/email')disposePage=createEmailAdminView(content,emailLink);
+    const ontrackLink=document.createElement('a');ontrackLink.href='/beheerder/ontrack';ontrackLink.className='submenu-link';ontrackLink.textContent='OnTrack';ontrackLink.dataset.submenuTitle='OnTrack';
+    if(route==='beheerder/ontrack')ontrackLink.setAttribute('aria-current','page');submenu.append(ontrackLink);
+    if(route==='beheerder/ontrack')disposePage=createOnTrackAdminView(content,ontrackLink);
   }
   if (root === 'account') {
     disposePage = createProfileView(content, profile, updated => {

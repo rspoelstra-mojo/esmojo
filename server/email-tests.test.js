@@ -22,8 +22,8 @@ test('Een nieuw geldig modulebestand verschijnt automatisch in hetzelfde catalog
 });
 
 test('Huidige accounttemplate-test heeft uitsluitend de eigen ontvanger en geen echte activatielink',async()=>{
- const sent=[],service=createEmailTestService({registry:emailTemplates,mail:async(...args)=>sent.push(args),shows:async()=>{throw Error('Onnodige showread');}});
- const own={email:'zelf@example.invalid',firstName:'Anne Marie'},catalog=await service.catalog(own,true);assert.equal(catalog.templates.length,1);assert.equal(sent.length,0);assert.deepEqual(catalog.shows,[]);
+ const sent=[],service=createEmailTestService({registry:emailTemplates,mail:async(...args)=>sent.push(args),shows:async()=>({shows:[]})});
+ const own={email:'zelf@example.invalid',firstName:'Anne Marie'},catalog=await service.catalog(own,true);assert.equal(catalog.templates.length,2);assert.equal(sent.length,0);assert.deepEqual(catalog.shows,[]);
  await service.send(own,{templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'});
  assert.equal(sent.length,1);const message=sent[0][0],rendered=renderEmailTemplate(message);assert.match(rendered.subject,/^\[TEST\]/);assert.equal(message.to,own.email);assert.match(rendered.text,/Beste Anne Marie,/);assert.equal(rendered.html.includes('test-only-not-an-activation'),false);assert.equal(message.actions[0].url,'https://esmojo.nl/');
 });
@@ -35,4 +35,21 @@ test('Toekomstige showtemplates testen met werkelijk gekozen concert en alle sho
  const own={email:'zelf@example.invalid',firstName:'Eigen naam'},base={templateId:template.id,requestId:'11111111-1111-4111-8111-111111111111'};
  assert.equal((await service.catalog(own,true)).shows[0].key,show.key);await assert.rejects(service.send(own,base),/VALIDATION/);await assert.rejects(service.send(own,{...base,concertId:'Onbekend'}),/EMAIL_SHOW_NOT_FOUND/);
  await service.send(own,{...base,concertId:show.key});const rendered=renderEmailTemplate(sent);assert.equal(sent.to,own.email);assert.ok(rendered.text.includes('Fixture artiest · Gashouder · 6 november 2026 · 7 november 2026'));assert.equal(rendered.text.includes('Niet gebruiken'),false);
+});
+
+test('Showrapportage verschijnt automatisch en verzendt exact de gekoppelde showtekst met verplichte PDF-bijlage',async()=>{
+ const {showReportEmail}=await import('./email-templates/show-report.js'),{sendEmail}=await import('./email.js'),{PDFDocument}=await import('pdf-lib');
+ const show={key:'rapport-fixture',name:'Fixture & artiest',venue:'Gashouder',dates:['2026-11-14']};
+ let payload,calls=0;
+ const service=createEmailTestService({registry:emailTemplates,shows:async()=>({shows:[show]}),mail:async(message,options)=>sendEmail(message,{...options,env:{RESEND_API_KEY:'fixture'},fetchImpl:async(url,request)=>{calls++;payload=JSON.parse(request.body);return{ok:true,json:async()=>({id:'mock-only'})};}})});
+ assert.ok((await service.catalog({email:'zelf@example.invalid'},true)).templates.some(t=>t.id==='show-report'&&t.label==='Showrapportage'&&t.requiresShow));
+ await service.send({email:'zelf@example.invalid',firstName:'Anne Marie'},{templateId:'show-report',concertId:show.key,requestId:'11111111-1111-4111-8111-111111111111'});
+ assert.equal(calls,1);assert.equal(payload.to,'zelf@example.invalid');assert.equal(payload.subject,'[TEST] Showrapportage');assert.ok(payload.text.includes('Beste Anne Marie,'));assert.ok(payload.text.includes('Hierbij ontvang je de showrapportage van Fixture & artiest op 14 november 2026 in de Gashouder.'));assert.ok(payload.html.includes('Fixture &amp; artiest'));assert.ok(payload.text.includes('Met vriendelijke groet,\nEvent Safety Mobility Operations'));
+ assert.equal(payload.attachments.length,1);assert.equal(payload.attachments[0].filename,'TEST-Showrapportage.pdf');const bytes=Buffer.from(payload.attachments[0].content,'base64');assert.equal((await PDFDocument.load(bytes)).getPageCount(),1);
+ assert.throws(()=>showReportEmail({to:'zelf@example.invalid',show}),/PDF is verplicht/);assert.throws(()=>showReportEmail({show:{...show,dates:[]}}),/Showdatums ontbreken/);
+ await assert.rejects(sendEmail({to:'zelf@example.invalid',subject:'Showrapportage',preheader:'Fixture',title:'Showrapportage',context:{kind:'show',show},paragraphs:['Fixture'],requirePdfAttachment:true,attachments:[]},{fetchImpl:()=>{throw Error('Mag niet verzenden');}}),/PDF is verplicht/);assert.equal(calls,1);
+ const invalid={filename:'../rapport.pdf',content:bytes,contentType:'application/pdf'};
+ assert.throws(()=>renderEmailTemplate({to:'zelf@example.invalid',subject:'Fixture',preheader:'Fixture',title:'Fixture',context:{kind:'show',show},paragraphs:['Fixture'],attachments:[invalid]}),/Ongeldige PDF/);
+ assert.throws(()=>showReportEmail({show,pdf:{filename:'Rapport.pdf',content:Buffer.from('geen pdf')}}),/Ongeldige PDF/);
+ const production=showReportEmail({to:'zelf@example.invalid',firstName:'Anne Marie',show,pdf:{filename:'Showrapportage.pdf',content:bytes}});assert.equal(production.attachments[0].filename,'Showrapportage.pdf');assert.ok(!renderEmailTemplate(production).text.includes('[artiestnaam]'));
 });

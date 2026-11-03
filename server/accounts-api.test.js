@@ -23,7 +23,8 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({ env: configuration, clientFactory,
-    shows:async(operation,input)=>{calls.push(['shows',operation,input]);return {record:{revision:0}};},
+    ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
+    shows:async(operation,input)=>{calls.push(['shows',operation,input]);return operation==='list'?{shows:[]}:{record:{revision:0}};},
     profiles: async (operation, actor, input) => {
       calls.push([operation, actor, input]);
       if (operation === failOperation) throw new Error('FORBIDDEN');
@@ -140,7 +141,7 @@ test('ontbrekende betrouwbare doelvoornaam gebruikt Beste collega zonder een naa
 
 const emailTestBody={templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'};
 test('Email-beheer toont automatisch beschikbare templates; alleen expliciete POST verstuurt één test naar de ingelogde beheerder',async()=>{
- const catalog=await run({action:'email'});assert.equal(catalog.response.code,200);assert.deepEqual(catalog.response.data.templates,[{id:'account-activation',label:'Account activeren',requiresShow:false}]);assert.equal(catalog.response.data.recipient,profile.email);assert.equal(catalog.calls.some(c=>c[0]==='mail'),false);
+ const catalog=await run({action:'email'});assert.equal(catalog.response.code,200);assert.deepEqual(catalog.response.data.templates,[{id:'account-activation',label:'Account activeren',requiresShow:false},{id:'show-report',label:'Showrapportage',requiresShow:true}]);assert.equal(catalog.response.data.recipient,profile.email);assert.equal(catalog.calls.some(c=>c[0]==='mail'),false);
  const {response,calls}=await run({action:'email',method:'POST',body:emailTestBody});assert.equal(response.code,200);assert.equal(response.data.ok,true);assert.deepEqual(calls.map(c=>c[0]),['self','mail']);
  const sent=calls.find(c=>c[0]==='mail');assert.equal(sent[1].to,profile.email);assert.match(sent[1].subject,/^\[TEST\]/);assert.match(sent[1].text,/Beste Test,/);assert.equal(sent[1].text.includes('test-only-not-an-activation'),false);assert.equal(sent[1].html.includes('/activeren?token='),false);assert.ok(sent[1].html.includes('ESMOJO openen'));assert.equal(sent[2].idempotencyKey,'esmojo-test-'+emailTestBody.requestId);
 });
@@ -154,4 +155,11 @@ test('Testmail bewaart geen geheime providerfout; ontbrekende mailconfiguratie m
  const missing=await run({action:'email',configuration:{...env,RESEND_API_KEY:''}});assert.equal(missing.response.data.canSend,false);
  const blocked=await run({action:'email',method:'POST',body:emailTestBody,configuration:{...env,RESEND_API_KEY:''}});assert.equal(blocked.response.code,503);assert.equal(blocked.calls.some(c=>c[0]==='mail'),false);
  const failed=await run({action:'email',method:'POST',body:emailTestBody,failMail:true});assert.equal(failed.response.code,503);assert.equal(JSON.stringify(failed.response.data).includes('private-response'),false);assert.equal(failed.calls.filter(c=>c[0]==='mail').length,1);
+});
+
+test('OnTrack vereist beheerder/MFA en verstuurt nooit mail via status of ontvangerkeuze',async()=>{
+ const read=await run({action:'ontrack'});assert.equal(read.response.code,200);assert.deepEqual(read.calls.map(c=>c[0]),['self','ontrack']);assert.equal(read.calls[1][1],'status');
+ const write=await run({action:'ontrack',method:'PATCH',body:{revision:0,recipientIds:[other]}});assert.equal(write.response.code,200);assert.deepEqual(write.calls[1],['ontrack','recipients',id,{revision:0,recipientIds:[other]}]);
+ for(const options of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{origin:'https://evil.invalid'}]){const r=await run({action:'ontrack',...options});assert.ok([401,403].includes(r.response.code));assert.equal(r.calls.some(c=>c[0]==='ontrack'),false);}
+ const invalid=await run({action:'ontrack',method:'PATCH',body:{revision:0,recipientIds:[other],folderId:'arbitrary'}});assert.equal(invalid.response.code,400);assert.equal(invalid.calls.some(c=>c[0]==='ontrack'),false);assert.equal((await run({action:'ontrack',method:'POST'})).response.code,405);
 });

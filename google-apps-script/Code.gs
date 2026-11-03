@@ -22,6 +22,7 @@ function doPost(event) {
       // PDF-bytes vallen onder de eigen HMAC- en inhoudsgrenzen van Shows.gs.
       if (envelope.action === 'shows') return esmojoShows_(envelope);
       if (raw.length <= 120000) {
+        if (envelope.action === 'ontrack') return esmojoOnTrack_(envelope);
         if (envelope.action === 'accounts') return esmojoAccounts_(envelope);
         if (envelope.action === 'research') return esmojoResearch_(envelope);
         if (envelope.action === 'mcp-auth') return esmojoMcpAuth_(envelope);
