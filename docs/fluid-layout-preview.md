@@ -1,3 +1,9 @@
+> Status 3 november 2026: de gebruiker heeft de fluid-layout goedgekeurd voor
+> productie (V1.12). Gewone pagina’s gebruiken nu dezelfde centrale wrapper;
+> showpagina’s gebruiken de showvariant. Onderstaande isolatie en alleen-lezen
+> beperkingen gelden uitsluitend voor de afzonderlijke testpagina. De eerdere
+> instructie om niet uit te rollen is door deze expliciete goedkeuring vervangen.
+
 # Fluid-layoutproef — uitsluitend preview, NIET MERGEN
 
 De opdracht van 3 november 2026 staat alleen ontwikkeling en beoordeling in een

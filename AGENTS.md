@@ -335,3 +335,16 @@ Account/MFA, servervalidatie en revisiecontrole blijven vereist. Alleen referent
 in beoordelingen; geen bestandsinhoud in JSON, logs of persistente browseropslag.
 Standaard-PNG’s worden later aangeleverd in src/assets/barrier-layouts; geen
 vervangende afbeeldingen zoeken of genereren. Zie docs/production-assessments.md.
+
+## Fluid-designstandaard
+
+Op 3 november 2026 heeft de gebruiker de fluid-layout met effen witte showheader
+expliciet goedgekeurd voor de live website en als designstandaard voor alle
+volgende pagina’s. Gebruik centraal src/layouts/fluid-layout.js en de bijbehorende
+CSS: benut de beschikbare breedte rechts van de bestaande menu’s, herschik inhoud
+met Grid/Flexbox en container queries, en behoud vaste lettergroottes en een
+comfortabele tekstbreedte. Nieuwe en aangepaste pagina’s sluiten hierop aan; geen
+nieuwe vaste 1000px-hoofdcontainer. Houd het ontwerp clean en minimalistisch, met
+witte kaarten, subtiele randen en bestaande accenten. De showheader heeft geen
+verloop; donkere modus gebruikt een effen donkere kaartkleur voor leesbaarheid.
+Hoofdmenu, submenu, logo, functionaliteit en gegevensarchitectuur blijven intact.
