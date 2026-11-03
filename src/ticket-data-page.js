@@ -5,7 +5,7 @@ import { suggestionInput } from './lib/suggestion-input.js';
 import { foreignCountries, provinces, emptyVisitorOrigins, emptyDomesticOrigins, parseTicketSales, validSaleCount, validTicketContent, normalizedTicketSales } from '../shared/ticket-data.js';
 const fields=[['ticket_sales','Huidige kaartverkoopstand'],['visitor_origins','Top 3 buitenlandse bezoekers'],['domestic_origins','Top 3 binnenlandse herkomst']];
 const node=(tag,cls,text)=>{const el=document.createElement(tag);el.className=cls;if(text!==undefined)el.textContent=text;return el;};
-export function createTicketDataPage(section,{show,state,onBack,categoryIcon,requestAccess=access}) {
+export function createTicketDataPage(section,{show,state,onBack,categoryIcon,requestAccess=access,readOnly=false}) {
   let disposed=false,workflow={visitors:{fields:{}}},shows=[],busy=false,expanded=true,ready=false;
   const leases=new Map(),pending=new Map(),cards=new Map();
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
@@ -13,10 +13,10 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
   const stored=field=>workflow.visitors.fields[field];
   const version=field=>state.base[field]??stored(field)?.version??0;
   function base(field){if(state.base[field]===undefined)state.base[field]=stored(field)?.version||0;}
-  const locked=field=>!ready||busy||Boolean(stored(field)?.completed_at)||Boolean(workflow.visitors.completed_at)||Boolean(cards.get(field)?.conflict);
+  const locked=field=>readOnly||!ready||busy||Boolean(stored(field)?.completed_at)||Boolean(workflow.visitors.completed_at)||Boolean(cards.get(field)?.conflict);
   const held=field=>leases.get(field)?.expiresAt>Date.now();
   async function reserve(field,renew=false){
-    if(disposed||!ready)return false;
+    if(readOnly||disposed||!ready)return false;
     if(pending.has(field))return pending.get(field);
     if(!renew&&held(field))return true;
     base(field);const token=leases.get(field)?.token||crypto.randomUUID();
@@ -29,7 +29,7 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
   }
   function refresh(){
     for(const [field,card]of cards){const final=Boolean(stored(field)?.completed_at);card.badge.textContent=final?'Afgerond':'Nog niet afgerond';card.badge.dataset.status=final?'completed':'pending';card.button.textContent=final?'Opnieuw bewerken':field==='ticket_sales'?'Aantal bevestigen':'Gegevens bevestigen';
-      card.button.disabled=!ready||busy||(field!=='ticket_sales'&&Boolean(workflow.visitors.completed_at))||(!final&&(locked(field)||!held(field)||!validTicketContent(field,card.content(),shows)));
+      card.button.disabled=readOnly||!ready||busy||(field!=='ticket_sales'&&Boolean(workflow.visitors.completed_at))||(!final&&(locked(field)||!held(field)||!validTicketContent(field,card.content(),shows)));
       card.retry.hidden=!card.conflict;card.reload.hidden=!card.conflict;for(const input of card.inputs)input.readOnly=locked(field);for(const combo of card.combos)combo.refresh();
     }
     const allDone=fields.every(([field])=>Boolean(stored(field)?.completed_at));headerBadge.textContent=allDone?'Afgerond':'Handmatig invoeren';headerBadge.dataset.status=allDone?'completed':'pending';

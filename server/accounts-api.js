@@ -1,3 +1,4 @@
+import {isFluidPreview,fluidPreviewOrigin,fluidAccountRead,createFluidPreviewService} from './fluid-preview.js';
 import {validateBarrierRequest} from './barrier-layout.js';
 import {validateFloorRequest} from './floor-pressure.js';
 import { waitUntil } from '@vercel/functions';
@@ -25,7 +26,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const publicKey = env.VITE_SUPABASE_PUBLISHABLE_KEY;
       if (!url || !publicKey || !env.SUPABASE_SECRET_KEY) return reply(503, { error: 'Accountbeheer is nog niet geconfigureerd.' });
       const origin = req.headers.origin;
-      if (origin && origin !== 'https://esmojo.nl' && origin !== env.APP_ORIGIN) return reply(403, { error: 'Geen toegang.' });
+      if (origin && origin !== 'https://esmojo.nl' && origin !== env.APP_ORIGIN && !fluidPreviewOrigin(origin,env)) return reply(403, { error: 'Geen toegang.' });
       const action = req.query.action;
       if (action === 'forget' && req.method === 'POST') { clearSessionCookie(res); return reply(200, { ok: true }); }
       let token = /^Bearer ([A-Za-z0-9._-]+)$/.exec(req.headers.authorization || '')?.[1];
@@ -69,6 +70,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       };
       // Drive controleert de actuele rol opnieuw; gebruikersmetadata is geen autorisatiebron.
       const own = await ownProfile();
+      if(isFluidPreview(env)){
+        if(own.role!=='beheerder'||!own.activated)return reply(403,{error:'Deze testomgeving vereist een geactiveerd beheerderaccount met MFA.'});
+        if(!fluidAccountRead(action,req.method,req.body))return reply(403,{error:'Deze testomgeving is uitsluitend alleen-lezen.'});
+      }
       let expiresAt = sessionDeadline(claims);
       if (remembered) expiresAt = Math.min(expiresAt || 0, remembered.expiresAt);
       if (own.activated && (!expiresAt || expiresAt <= Date.now())) return expired();
@@ -96,6 +101,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      if(action==='fluid-preview'){
+        if(!isFluidPreview(env))return reply(404,{error:'Niet beschikbaar.'});
+        try{return reply(200,await createFluidPreviewService({shows,pdfService})(req.body,actor));}
+        catch(error){return reply(error.message==='VALIDATION'?400:503,{error:error.message==='VALIDATION'?'Ongeldig testverzoek.':'De bestaande Puscifer-gegevens konden niet worden gelezen.'});}
+      }
       const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
       const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
       if(action==='show-open'&&req.method==='POST'){
