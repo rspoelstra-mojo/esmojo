@@ -41,6 +41,7 @@ jobs:
           node server/show-open.test.js
           node server/show-page.test.js
           node src/lib/show-memory.test.js
+          node --test src/lib/production-choice-saves.test.js
           node server/fluid-preview.test.js
           node server/fluid-preview-source.test.js
           node server/fluid-interactions.test.js

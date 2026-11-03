@@ -49,7 +49,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
         const button=document.createElement('button');button.type='button';button.className='show-tab';button.textContent=label;button.id=`show-tab-${index}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`show-panel-${index}`);
         const panel=document.createElement('section');panel.id=`show-panel-${index}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);panel.tabIndex=0;
         if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
-        if(label==='Risicoanalyse')risks=createRiskAnalysis(panel,{show,requestAccess,version:data.version});
+        if(label==='Risicoanalyse')risks=createRiskAnalysis(panel,{show,requestAccess,version:data.version,choices:data.productionChoices});
         button.addEventListener('click',()=>select(index));button.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();select(next,true);}});
         buttons.push(button);views.push(panel);bar.append(button);panels.append(panel);
       });

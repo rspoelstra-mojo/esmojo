@@ -16,8 +16,8 @@ function harness(request,saveSelection){
   }
   const panel=new Element('section'),menu=new Element('a');
   const openAssessment=(section,{onBack})=>{section.replaceChildren();const back=new Element('button');back.textContent='Terug';back.onclick=onBack;const title=new Element('h2');title.textContent='Barrieropstelling';section.append(back,title);return()=>{};};
-  const context=vm.createContext({access:async()=>{throw Error("Unexpected API request");},Promise,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
-  for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
+  const context=vm.createContext({access:async()=>{throw Error("Unexpected API request");},Promise,structuredClone,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{addEventListener(){},scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
+  for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
   const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection});
   return{page,panel,menu,focused:()=>focused,buttons:()=>panel.querySelectorAll('[data-risk-id]'),text:()=>panel.textContent};
 }
@@ -25,14 +25,14 @@ const risks=[{id:'R01',title:'Eerste risico',description:'Beschrijving één',co
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 test('Risico’s laden pas bij tabselectie, krijgen ieder eigen pagina en terugknop zonder extra verzoek',async()=>{
   let calls=0,resolve;const h=harness(body=>{assert.equal(body.concertId,'Test');calls++;return new Promise(done=>resolve=done);});
-  assert.deepEqual(h.panel.querySelectorAll('h3').map(el=>el.textContent),['Zaalindeling','Special effects',"Operationele risico's"]);assert.match(h.text(),/Operationele risico's/);assert.equal(calls,0);
+  assert.deepEqual(h.panel.querySelectorAll('h3').map(el=>el.textContent),['Zaalindeling',"Operationele risico's",'Special effects']);assert.match(h.text(),/Operationele risico's/);assert.equal(calls,0);
   h.page.activate();h.page.activate();assert.equal(calls,1);assert.equal(h.panel.attributes['aria-busy'],'true');
   resolve({state:'ready',risks,production:{revision:0,choices:{}}});await tick();assert.equal(h.buttons().length,2);assert.equal(h.panel.attributes['aria-busy'],undefined);
   for(const risk of risks){h.buttons().find(b=>b.dataset.riskId===risk.id).onclick();assert.ok(h.text().includes(risk.title));assert.ok(h.text().includes(risk.description));assert.ok(h.text().includes(risk.consequence));assert.equal(h.panel.querySelectorAll('textarea').length,0);h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.buttons().length,2);assert.equal(h.focused().dataset.riskId,risk.id);}
   h.page.activate();assert.equal(calls,1);h.page.dispose();assert.equal(h.text(),'');assert.equal(h.menu.children.length,0);
 });
 test('Ontbrekende analyse, nul risico’s en laadfout hebben verschillende uitkomsten met veilige herpoging',async()=>{
-  for(const [state,text]of [['pending','Nog geen operationele risicoanalyse beschikbaar.'],['not-ready','Nog geen operationele risicoanalyse beschikbaar.'],['ready',"Er zijn geen operationele risico's gedefinieerd."]]){const h=harness(async()=>({state,risks:[],production:{revision:0,choices:{}}}));h.page.activate();await tick();assert.ok(h.text().includes(text));h.page.dispose();}
+  for(const state of ['pending','not-ready','ready']){const h=harness(async()=>({state,risks:[],production:{revision:0,choices:{}}}));h.page.activate();await tick();assert.ok(h.text().includes("Operationele risico's worden binnen 24 uur beschikbaar nadat het showprofiel is afgerond"));h.page.dispose();}
   let calls=0;const h=harness(async()=>{if(++calls===1)throw Error('private provider body');return{state:'ready',risks,production:{revision:0,choices:{}}};});h.page.activate();await tick();assert.ok(h.text().includes('Opnieuw laden'));assert.ok(!h.text().includes('private provider body'));h.panel.querySelectorAll('button').find(b=>b.textContent==='Opnieuw laden').onclick();await tick();assert.equal(h.buttons().length,2);h.page.dispose();
 });
 test('Late vertrouwelijke antwoorden na navigatie worden niet gerenderd; risico-inhoud is uitsluitend tekst',async()=>{
@@ -48,10 +48,10 @@ test('Productionele pagina’s openen direct of uitsluitend na bevestigd Ja; Nee
   assert.equal(h.panel.querySelectorAll('[data-production-id]').length,8);assert.equal(button('barrier_layout').disabled,false);assert.equal(button('escape_routes').disabled,true);
   assert.equal(button('entrance_process').disabled,false);button('entrance_process').onclick();assert.ok(h.text().includes('Entreeproces'));assert.ok(h.text().includes("Productionele risico's · Zaalindeling"));h.panel.querySelectorAll('button')[0].onclick();
   h.page.activate();await tick();assert.equal(choice('escape_routes',false).attributes['aria-pressed'],'false');
-  choice('escape_routes',true).onclick();assert.equal(button('escape_routes').disabled,true);assert.equal(writes.length,1);assert.equal(writes[0].revision,0);
+  choice('escape_routes',true).onclick();await tick();assert.equal(button('escape_routes').disabled,true);assert.equal(writes.length,1);assert.equal(writes[0].revision,0);
   save({revision:1,choices:{escape_routes:true}});await tick();assert.equal(button('escape_routes').disabled,false);
   button('escape_routes').onclick();assert.ok(h.text().includes('Vluchtweg beperkingen'));assert.equal(h.panel.querySelectorAll('textarea').length,0);h.panel.querySelectorAll('button')[0].onclick();
-  choice('escape_routes',false).onclick();save({revision:2,choices:{escape_routes:false}});await tick();assert.equal(button('escape_routes').disabled,true);button('escape_routes').onclick();assert.ok(h.text().includes("Operationele risico's"));
+  choice('escape_routes',false).onclick();await tick();save({revision:2,choices:{escape_routes:false}});await tick();assert.equal(button('escape_routes').disabled,true);button('escape_routes').onclick();assert.ok(h.text().includes("Operationele risico's"));
   for(const id of ['fireworks','open_fire','lasers','drones'])assert.equal(button(id).disabled,true);
   h.page.dispose();
 });
@@ -63,5 +63,26 @@ test('Bewaarde Ja-keuze wordt hersteld; late laadreactie overschrijft een al geo
 test('Mislukte opslag activeert een productionele pagina niet en vereist opnieuw laden',async()=>{
   const h=harness(async()=>({state:'pending',risks:[],production:{revision:0,choices:{}}}),async()=>{throw Error('CONFLICT private body');});h.page.activate();await tick();
   h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').onclick();await tick();
-  assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,true);assert.ok(h.text().includes('De keuze is niet bevestigd'));assert.ok(!h.text().includes('private body'));h.page.dispose();
+  assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,true);assert.ok(h.text().includes('De keuzes zijn nog niet bevestigd'));assert.ok(!h.text().includes('private body'));h.page.dispose();
+});
+
+test('Ja/Nee op meerdere rijen blijft direct bedienbaar en behoudt dezelfde knoppen tijdens opslag',async()=>{
+  const writes=[],waiting=[];
+  const h=harness(async()=>({state:'pending',risks:[],production:{revision:0,choices:{}}}),body=>{writes.push(body);return new Promise(done=>waiting.push(done));});
+  h.page.activate();await tick();
+  const choice=(field,value)=>h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field===field&&b.dataset.choice===String(value));
+  const first=choice('lasers',true),second=choice('drones',false);first.onclick();
+  assert.equal(first.attributes['aria-pressed'],'true');assert.equal(second.disabled,false);assert.equal(h.panel.attributes['aria-busy'],undefined);
+  second.onclick();assert.equal(second.attributes['aria-pressed'],'true');assert.equal(choice('fireworks',false).disabled,false);
+  await tick();assert.equal(writes.length,1);assert.equal(writes[0].revision,0);
+  waiting.shift()({revision:1,choices:{lasers:true}});await tick();assert.equal(writes.length,2);assert.equal(writes[1].revision,1);assert.equal(choice('drones',false),second);
+  waiting.shift()({revision:2,choices:{lasers:true,drones:false}});await tick();assert.equal(choice('lasers',true),first);assert.equal(choice('drones',false),second);h.page.dispose();
+});
+
+test('Fout behoudt keuzes en hervat pas na expliciet Opnieuw proberen, niet bij tabnavigatie',async()=>{
+  let calls=0,fail=true,state={revision:0,choices:{}};
+  const h=harness(async()=>({state:'pending',risks:[],production:state}),async body=>{calls++;if(fail)throw Error('UNCERTAIN');state={revision:8,choices:{[body.field]:body.value}};return state;});
+  h.page.activate();await tick();h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').onclick();await tick();
+  h.page.activate();await tick();assert.equal(calls,1);assert.equal(h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').attributes['aria-pressed'],'true');
+  fail=false;state={revision:7,choices:{}};h.panel.querySelectorAll('button').find(b=>b.textContent==='Opnieuw proberen').onclick();await tick();await tick();assert.equal(calls,2);assert.ok(!h.text().includes('nog niet bevestigd'));h.page.dispose();
 });
