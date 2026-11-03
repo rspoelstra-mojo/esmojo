@@ -83,6 +83,6 @@ test('Fout behoudt keuzes en hervat pas na expliciet Opnieuw proberen, niet bij 
   let calls=0,fail=true,state={revision:0,choices:{}};
   const h=harness(async()=>({state:'pending',risks:[],production:state}),async body=>{calls++;if(fail)throw Error('UNCERTAIN');state={revision:8,choices:{[body.field]:body.value}};return state;});
   h.page.activate();await tick();h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').onclick();await tick();
-  h.page.activate();await tick();assert.equal(calls,1);assert.equal(h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').attributes['aria-pressed'],'true');
+  await h.page.prepare();assert.equal(calls,1);assert.equal(h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').attributes['aria-pressed'],'true');
   fail=false;state={revision:7,choices:{}};h.panel.querySelectorAll('button').find(b=>b.textContent==='Opnieuw proberen').onclick();await tick();await tick();assert.equal(calls,2);assert.ok(!h.text().includes('nog niet bevestigd'));h.page.dispose();
 });
