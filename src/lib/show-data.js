@@ -1,11 +1,12 @@
-// Eén show, één pagina-levensduur. Vertrouwelijke waarden uitsluitend in geheugen.
-export function createShowData(bundle,request){
+// Eén showcontext. Vertrouwelijke waarden uitsluitend in tijdelijk sessiegeheugen.
+export function createShowData(bundle,request,concertId){
   if(!bundle?.profile||!bundle.profile.analyses||!Number.isSafeInteger(bundle.profile.revision)||!bundle.profile.researchByNumber
     ||!bundle.tickets?.workflow?.visitors?.fields||!Array.isArray(bundle.tickets.shows)||!bundle.barrier?.record||!bundle.floor?.basis
     ||!['ready','pending','not-ready'].includes(bundle.risks?.state)||!Array.isArray(bundle.risks.risks))throw Error('Onvolledige showgegevens.');
   const values=new Map([['show-profile',bundle.profile],['ticket-data',bundle.tickets],['barrier-layout',bundle.barrier],['floor-pressure',bundle.floor],['show-risks',bundle.risks],['analysis-finalization',bundle.profile]]);
   if(bundle.pdf)values.set('show-profile-pdf',bundle.pdf);
-  let disposed=false,riskVersion=0;
+  let disposed=false,riskVersion=0;const pendingWrites=new Set();
+  const settled=async()=>{while(pendingWrites.size)await Promise.allSettled([...pendingWrites]);};
   const isRead=(action,body)=>action==='show-risks'||body.operation==='read'||(action==='show-profile-pdf'&&body.operation==='status');
   function remember(action,data){
     if(disposed)return;
@@ -17,7 +18,7 @@ export function createShowData(bundle,request){
     }else values.set(action,data);
   }
   function overview(data){if(data.overview&&values.has('show-risks')){values.set('show-risks',{...values.get('show-risks'),...data.overview});riskVersion++;}}
-  return{
+  const context={
     async request(action,options){
       const body=options.body||{},read=isRead(action,body);
       if(read&&disposed)throw Error('Show gesloten.');
@@ -49,7 +50,27 @@ export function createShowData(bundle,request){
       }
       return data;
     },
+    get busy(){return pendingWrites.size>0;},
+    whenSettled:settled,
+    async prepare(){
+      await settled();if(disposed)throw Error('Show gesloten.');
+      const read=action=>context.request(action,{method:'POST',body:{operation:'read',concertId}});
+      // Een bevestigde mutatie kan enkele afhankelijke snapshots ongeldig maken.
+      for(const action of ['show-profile','ticket-data','barrier-layout','analysis-finalization','floor-pressure'])if(!values.has(action))await read(action);
+      if(!values.has('show-risks'))await context.request('show-risks',{method:'POST',body:{concertId}});
+      const final=values.get('show-profile').finalization;
+      if(final?.categories.visitors.completedAt&&final?.categories.artist.completedAt&&!values.has('show-profile-pdf'))await context.request('show-profile-pdf',{method:'POST',body:{operation:'status',concertId}});
+      if(disposed)throw Error('Show gesloten.');return context;
+    },
     version:()=>riskVersion,
     dispose(){disposed=true;values.clear();},
   };
+  const perform=context.request;
+  context.request=(action,options={})=>{
+    const body=options.body||{},write=!isRead(action,body)&&body.operation!=='download'&&!(action==='ticket-data'&&['reserve','renew','release'].includes(body.operation));
+    const task=perform(action,options);
+    if(write){pendingWrites.add(task);task.then(()=>pendingWrites.delete(task),()=>pendingWrites.delete(task));}
+    return task;
+  };
+  return context;
 }

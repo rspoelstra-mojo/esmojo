@@ -1,3 +1,4 @@
+import {showMemory} from './show-memory.js';
 import {clearAssessmentSaves} from './production-assessment-ui.js';
 import { clearProfileSaves } from './lib/profile-saves.js';
 import { installRouter, pageRoute } from './lib/router.js';
@@ -82,6 +83,7 @@ installRouter({onNavigate:renderPage});
 renderPage();
 startAuth({
   onReady(current) {
+    if(profile?.id!==current.id||profile?.role!==current.role){clearProfileSaves();clearAssessmentSaves();showMemory.clear();}
     profile = current;
     clearInterval(menuRefreshTimer);
     void refreshShowsMenu();
@@ -93,7 +95,7 @@ startAuth({
     renderPage();
   },
   onSignedOut() {
-    clearProfileSaves();clearAssessmentSaves();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
+    clearProfileSaves();clearAssessmentSaves();showMemory.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
     profile = null; disposePage(); disposePage = () => {};
     document.querySelector('.content-box').replaceChildren();

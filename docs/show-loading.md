@@ -41,11 +41,28 @@ mogen een nieuw gekozen show of andere pagina niet overschrijven.
 
 ## Gegevens hergebruiken
 
-`src/lib/show-data.js` bewaart uitsluitend tijdens deze showweergave de geladen
-leesgegevens in geheugen. De bestaande modules krijgen dezelfde requestfunctie;
+`src/lib/show-data.js` bewaart de geladen leesgegevens in tijdelijk sessiegeheugen. De bestaande modules krijgen dezelfde requestfunctie;
 reads voor tabjes, AI-details, bezoekersdata en productieonderdelen gebruiken die
 snapshots. Er is geen nieuwe localStorage/sessionStorage/analytics/log-opslag.
-Navigatie of afmelden ruimt de context op.
+Navigatie ruimt de pagina-controllers op en geeft de context terug aan het korte
+showgeheugen. `src/lib/show-memory.js` bewaart maximaal vijf recent gebruikte
+showcontexten tot vijftien minuten na het sluiten van de laatste weergave.
+Een actieve show vervalt niet. Lopende writes worden eerst bevestigd voordat een
+inactieve context wordt verdrongen of opgeruimd; de grens kan daarom tijdelijk
+worden overschreden. De bewaartermijn wordt met een timer bewaakt en bij iedere
+heropening opnieuw gecontroleerd. De minst recent gebruikte inactieve show wordt
+als eerste verdrongen. Afmelden, account-/rolwissel en een harde refresh wissen
+het geheugen. Er is geen opslag in localStorage, sessionStorage, IndexedDB of een
+serviceworker. Een laat antwoord mag gewist geheugen niet opnieuw vullen.
+
+Bij heropening wordt dezelfde context hergebruikt en het laatst gekozen tabje
+hersteld. De bestaande openbare fotometadata worden eveneens hergebruikt.
+Lopende writes worden afgewacht; `createShowData.prepare()` haalt daarna uitsluitend
+ontbrekende/ongeldig gemaakte leesgegevens op. Een nieuwe volledige show-open
+bundel is pas nodig wanneer de context verlopen, verdrongen of gewist is.
+Bevestigde writes werken de gedeelde context ook tijdens kort weg-navigeren bij.
+`src/lib/show-memory.test.js` test hergebruik, verloop, verdringing, gelijktijdig
+openen, late antwoorden, lopende/onjuiste writes en het veilig afmelden.
 
 Writes, veldreserveringen, bijlagepreviews, downloads en daadwerkelijke PDF-
 generatie blijven beveiligde serveracties. Nieuwe bevestigde resultaten vervangen
