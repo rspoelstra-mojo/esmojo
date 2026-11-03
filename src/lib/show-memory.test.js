@@ -41,3 +41,12 @@ test('Evictie wacht op een lopende write zodat de opslagbevestiging niet verlore
 test('De bewaartermijn ruimt inactieve gegevens ook zonder terugnavigeren automatisch op',async()=>{
  let current=0,fire,delay;const memory=createShowMemory({request:async()=>bundle(),now:()=>current,ttl:100,setTimer:(callback,ms)=>{fire=callback;delay=ms;return 1;},clearTimer(){}});const a=memory.acquire('A'),data=await a.ready;a.release();assert.equal(delay,100);current=100;fire();assert.equal(memory.size,0);await assert.rejects(read(data,'show-profile'),/gesloten/);memory.clear();
 });
+
+test('Ja/Nee-wachtrij bewaart alle keuzes tijdens navigatie; terugkeren wacht op de hele reeks',async()=>{
+ const pending=[],calls=[];let server={revision:0,choices:{}};
+ const memory=createShowMemory({request:async(action,options)=>{calls.push(action);if(action==='show-open')return bundle();if(action==='production-risks'){const wait=deferred();pending.push({wait,body:options.body});return wait.promise;}throw Error('Unexpected read');},...timers});
+ const lease=memory.acquire('A'),data=await lease.ready,q=data.productionChoices;q.enqueue('lasers',true);q.enqueue('drones',false);await tick();lease.release();
+ let ready=false;const back=memory.acquire('A');void back.ready.then(()=>{ready=true;});await tick();assert.equal(ready,false);
+ for(let i=0;i<2;i++){const {wait,body}=pending.shift();assert.equal(body.revision,i);server={revision:i+1,choices:{...server.choices,[body.field]:body.value}};wait.resolve(server);await tick();if(i===0)assert.equal(ready,false);}
+ assert.equal(await back.ready,data);assert.equal(ready,true);assert.deepEqual((await data.request('show-risks',{body:{}})).production,server);assert.deepEqual(calls,['show-open','production-risks','production-risks']);back.release();memory.clear();assert.equal(q.server,null);
+});

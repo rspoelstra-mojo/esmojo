@@ -356,3 +356,13 @@ nieuwe vaste 1000px-hoofdcontainer. Houd het ontwerp clean en minimalistisch, me
 witte kaarten, subtiele randen en bestaande accenten. De showheader heeft geen
 verloop; donkere modus gebruikt een effen donkere kaartkleur voor leesbaarheid.
 Hoofdmenu, submenu, logo, functionaliteit en gegevensarchitectuur blijven intact.
+
+## Productionele Ja/Nee-keuzes
+
+Op 3 november 2026 heeft de gebruiker directe bediening gevraagd: Ja/Nee-keuzes
+worden meteen geselecteerd en serieel op de achtergrond opgeslagen met de laatst
+bevestigde revisie. Andere rijen blijven bedienbaar. Een voorwaardelijke detailknop
+wordt pas actief na bevestigde Ja-opslag. Hergebruik de wachtrij in het tijdelijke
+showgeheugen; behoud lopende writes bij SPA-navigatie en wis bij afmelden/rolwissel.
+Bij onzekere opslag invoer behouden, vervolgwrites stoppen en uitsluitend na
+expliciet Opnieuw proberen herlezen en hervatten. Geen persistente browseropslag.

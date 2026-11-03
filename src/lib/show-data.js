@@ -1,3 +1,4 @@
+import {createProductionChoiceQueue} from './production-choice-saves.js';
 // Eén showcontext. Vertrouwelijke waarden uitsluitend in tijdelijk sessiegeheugen.
 export function createShowData(bundle,request,concertId){
   if(!bundle?.profile||!bundle.profile.analyses||!Number.isSafeInteger(bundle.profile.revision)||!bundle.profile.researchByNumber
@@ -17,7 +18,7 @@ export function createShowData(bundle,request,concertId){
       values.set('analysis-finalization',profile);
     }else values.set(action,data);
   }
-  function overview(data){if(data.overview&&values.has('show-risks')){values.set('show-risks',{...values.get('show-risks'),...data.overview});riskVersion++;}}
+  function overview(data){if(data.overview&&values.has('show-risks')){values.set('show-risks',{...values.get('show-risks'),...data.overview});if(data.overview.production)productionChoices.sync(data.overview.production);riskVersion++;}}
   const context={
     async request(action,options){
       const body=options.body||{},read=isRead(action,body);
@@ -50,10 +51,10 @@ export function createShowData(bundle,request,concertId){
       }
       return data;
     },
-    get busy(){return pendingWrites.size>0;},
-    whenSettled:settled,
+    get busy(){return pendingWrites.size>0||productionChoices.busy;},
+    async whenSettled(){await productionChoices.whenSettled();await settled();},
     async prepare(){
-      await settled();if(disposed)throw Error('Show gesloten.');
+      await context.whenSettled();if(disposed)throw Error('Show gesloten.');
       const read=action=>context.request(action,{method:'POST',body:{operation:'read',concertId}});
       // Een bevestigde mutatie kan enkele afhankelijke snapshots ongeldig maken.
       for(const action of ['show-profile','ticket-data','barrier-layout','analysis-finalization','floor-pressure'])if(!values.has(action))await read(action);
@@ -63,8 +64,14 @@ export function createShowData(bundle,request,concertId){
       if(disposed)throw Error('Show gesloten.');return context;
     },
     version:()=>riskVersion,
-    dispose(){disposed=true;values.clear();},
+    dispose(){disposed=true;productionChoices.cancel();values.clear();},
   };
+  const productionChoices=createProductionChoiceQueue({
+    save:body=>context.request('production-risks',{method:'POST',body:{concertId,...body}}),
+    read:async()=>{const data=await context.request('show-risks',{method:'POST',body:{concertId},refresh:true});return data.production;},
+  });
+  if(bundle.risks.production)productionChoices.sync(bundle.risks.production);
+  context.productionChoices=productionChoices;
   const perform=context.request;
   context.request=(action,options={})=>{
     const body=options.body||{},write=!isRead(action,body)&&body.operation!=='download'&&!(action==='ticket-data'&&['reserve','renew','release'].includes(body.operation));
