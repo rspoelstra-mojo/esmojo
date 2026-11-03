@@ -1,3 +1,5 @@
+import {createFluidPreviewPage} from './fluid-preview/page.js';
+import previewShows from './data/show-menu.json';
 import {showMemory} from './show-memory.js';
 import {clearAssessmentSaves} from './production-assessment-ui.js';
 import { clearProfileSaves } from './lib/profile-saves.js';
@@ -45,7 +47,8 @@ function renderPage() {
   content.replaceChildren();
   if (!profile) return;
   const route = pageRoute(location);
-  const root = route.split('/')[0];
+  const fluidPreview=__ESMOJO_FLUID_PREVIEW__&&route==='test/fluid-layout';
+  const root = fluidPreview?'shows':route.split('/')[0];
   const title = pages[root] || 'Pagina niet gevonden';
   const hasSubmenu = route !== '';
   document.querySelector('.workspace').classList.toggle('has-submenu', hasSubmenu);
@@ -56,7 +59,13 @@ function renderPage() {
   if (root === 'shows') {
     let selected = '';
     try { selected = decodeURIComponent(route.split('/')[1] || ''); } catch { selected = 'invalid'; }
-    disposePage = createShowsSubmenu(submenu, selected, content);
+    if(fluidPreview){
+      if(profile.role!=='beheerder'){content.textContent='Geen toegang tot deze testpagina.';return;}
+      selected=previewShows.shows.find(show=>show.name.toLowerCase()==='puscifer')?.key||'';
+      let disposeMenu=createShowsSubmenu(submenu,selected,null);
+      const disposeTest=createFluidPreviewPage(content,{onShow:show=>{if(show.key!==selected){disposeMenu();submenu.replaceChildren();selected=show.key;disposeMenu=createShowsSubmenu(submenu,selected,null);}}});
+      disposePage=()=>{disposeTest();disposeMenu();};
+    }else disposePage = createShowsSubmenu(submenu, selected, content);
   }
   if (root === 'beheerder') {
     if (profile.role !== 'beheerder') { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }

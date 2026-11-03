@@ -1,5 +1,5 @@
 const roots=new Set(['shows','artiest','statistieken','beheerder','account','activeren']);
-export const isAppPath=path=>path==='/'||roots.has(path.split('/')[1]);
+export const isAppPath=path=>path==='/'||path==='/test/fluid-layout'||roots.has(path.split('/')[1]);
 export const pageRoute=location=>location.pathname.replace(/^\/+|\/+$/g,'');
 export function legacyPageUrl(location){
  if(!location.hash.startsWith('#/'))return null;

@@ -1,5 +1,5 @@
 import { access } from './auth.js';
-export function createShowProfilePdfWidget(parent,{show,onStale,firstGeneration=false,onReady,requestAccess=access}){
+export function createShowProfilePdfWidget(parent,{show,onStale,firstGeneration=false,onReady,requestAccess=access,readOnly=false}){
  const card=document.createElement('section');card.className='profile-pdf-card';const title=document.createElement('h3');title.textContent='Showprofiel';
  const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');const button=document.createElement('button');button.type='button';button.className='analysis-complete';card.append(title,status,button);parent.append(card);
  let disposed=false,timer=null,current={state:'ready'},started=Date.now(),busy=false,generating=firstGeneration;
@@ -10,8 +10,9 @@ export function createShowProfilePdfWidget(parent,{show,onStale,firstGeneration=
  async function update(operation='status'){
   try{const data=await request(operation);if(disposed)return;current=data;
    if(data.state==='ready'){generating=false;ready();onReady?.();return;}
-   if(data.state==='not-ready'){button.hidden=true;card.classList.remove('profile-pdf-loading');status.textContent='Het showprofiel is niet meer actueel. Controleer de analyses.';onStale?.();return;}
-   if(data.state==='failed'){failure(data.errorCode==='LAYOUT_ERROR'?'De PDF past niet binnen de afgesproken opmaak. Controleer te lange woorden, namen of teksten; je gegevens zijn behouden.':'De PDF kon niet worden gemaakt. Je gegevens zijn behouden.');return;}
+   if(data.state==='not-ready'){button.hidden=true;card.classList.remove('profile-pdf-loading');status.textContent='Het showprofiel is niet meer actueel. Controleer de analyses.';if(!readOnly)onStale?.();return;}
+   if(data.state==='failed'){if(readOnly){status.textContent='De PDF kon niet worden gemaakt. Je gegevens zijn behouden.';button.hidden=true;return;}failure(data.errorCode==='LAYOUT_ERROR'?'De PDF past niet binnen de afgesproken opmaak. Controleer te lange woorden, namen of teksten; je gegevens zijn behouden.':'De PDF kon niet worden gemaakt. Je gegevens zijn behouden.');return;}
+   if(readOnly){card.classList.remove('profile-pdf-loading');status.textContent=data.state==='generating'?'Showprofiel wordt gemaakt en opgeslagen…':'Showprofiel is nog niet beschikbaar';button.hidden=true;return;}
    progress();
    if(Date.now()-started>300000){failure('De PDF is nog niet bevestigd. Probeer opnieuw; een al opgeslagen document wordt hergebruikt.');return;}
    if(data.state==='pending'&&operation==='status'){void update('ensure');return;}
@@ -23,6 +24,6 @@ export function createShowProfilePdfWidget(parent,{show,onStale,firstGeneration=
   catch(error){if(!disposed)status.textContent=error.message||'Downloaden is niet gelukt. Probeer opnieuw.';}
   finally{busy=false;if(!disposed)button.disabled=false;}
  };
- if(firstGeneration)progress();else ready();void update(firstGeneration?'ensure':'status');
+ if(firstGeneration&&!readOnly)progress();else ready();void update(firstGeneration&&!readOnly?'ensure':'status');
  return()=>{disposed=true;clearTimeout(timer);};
 }

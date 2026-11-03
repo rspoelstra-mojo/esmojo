@@ -30,6 +30,19 @@
           "value": "nosniff"
         }
       ]
+    },
+    {
+      "source": "/test/fluid-layout",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -55,6 +68,10 @@
     },
     {
       "source": "/activeren/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/test/fluid-layout",
       "destination": "/index.html"
     }
   ]

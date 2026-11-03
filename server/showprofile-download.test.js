@@ -22,3 +22,11 @@ test('Bestaand PDF-blok staat direct gereed en controleert stil via status, zond
  const source=(await readFile(new URL('../src/showprofile-pdf.js',import.meta.url),'utf8')).replace("import { access } from './auth.js';",'').replace('export function','function');vm.createContext(sandbox);vm.runInContext(source,sandbox);const dispose=sandbox.createShowProfilePdfWidget(root,{show:{key:'synthetic-only'}});
  const [,status,button]=root.children[0].children;assert.equal(status.textContent,'Showprofiel is gereed');assert.equal(button.textContent,'Showprofiel downloaden');assert.equal(button.hidden,false);assert.deepEqual(calls,['status']);resolve({state:'ready'});await new Promise(done=>setImmediate(done));assert.equal(status.textContent,'Showprofiel is gereed');assert.deepEqual(calls,['status']);dispose();
 });
+
+test('Alleen-lezen layouttest start geen PDF-generatie of herpoging bij pending/generating/failed',async()=>{
+ const source=(await readFile(new URL('../src/showprofile-pdf.js',import.meta.url),'utf8')).replace("import { access } from './auth.js';",'').replace('export function','function');
+ for(const state of ['pending','generating','failed','not-ready']){
+  class Element{constructor(){this.children=[];this.classList={add(){},remove(){}};}setAttribute(){}append(...items){this.children.push(...items);}}
+  const root=new Element(),calls=[];const sandbox={Date,document:{createElement:()=>new Element()},setTimeout(){throw Error('Geen polling/generatie in de layouttest');},clearTimeout(){},access:async(_,options)=>{calls.push(options.body.operation);return{state};}};vm.createContext(sandbox);vm.runInContext(source,sandbox);const dispose=sandbox.createShowProfilePdfWidget(root,{show:{key:'fixture'},readOnly:true,firstGeneration:true,onStale(){throw Error('Geen herlaadlus in immutable preview');}});await new Promise(done=>setImmediate(done));assert.deepEqual(calls,['status']);assert.equal(root.children[0].children[2].hidden,true);dispose();
+ }
+});

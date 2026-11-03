@@ -10,3 +10,17 @@ wrapper/CSS, bestaande showcomponenten en uitsluitend gegarandeerd pure reads.
 Alle muterende API's in deze preview worden aan de server geblokkeerd. Geen
 indexering of echte onderzoeksinhoud in builds/tests/logs. Doelroute in de preview:
 /test/fluid-layout. Controleer 1280/1440/1920/2560 px, menugelijkheid en read-only.
+
+## Uitvoering
+
+Centrale expliciete fluid-wrapper/CSS en hergebruik van bestaande showcomponenten.
+De preview is serverzijdig alleen-lezen, vereist beheerder + MFA en sluit overige
+API's af. Alleen de testroute is toegevoegd op deze previewbranch. Geen wijziging
+van index.html, bestaande CSS-bestanden, Apps Script, validators of productieversie.
+Vloerdruk-details zijn geblokkeerd vanwege bestaande schrijfbare leesroute.
+
+Browsercontroles met fictieve data: 1280/1440/1920/2560, contentbreedtes
+938/1098/1578/2218 px, menu's exact gelijk, tabjes/details/overlay, kleinere
+vensters zonder overflow en normale pagina terug naar max1000. Servertests:
+admin/MFA, deny-by-default, pure reads met nul Drive-writes, andere API's dicht.
+Technische beschrijving en toegang: docs/fluid-layout-preview.md.

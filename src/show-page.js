@@ -10,7 +10,7 @@ import {showMemory} from './show-memory.js';
 export function formatShowDates(dates){return dates.map(date=>new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(`${date}T12:00:00Z`))).join(' · ');}
 const tabs=['Overzicht','Showprofiel','Risicoanalyse','Maatregelen','Documenten'];
 const svg=paths=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
-export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,memory=request===access?showMemory:createShowMemory({request})}={}){
+export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,memory=request===access?showMemory:createShowMemory({request})}={}){
   let disposed=false,opening=false,releasePage=()=>{};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,content):null;
   async function open(){
@@ -48,7 +48,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       tabs.forEach((label,index)=>{
         const button=document.createElement('button');button.type='button';button.className='show-tab';button.textContent=label;button.id=`show-tab-${index}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`show-panel-${index}`);
         const panel=document.createElement('section');panel.id=`show-panel-${index}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);panel.tabIndex=0;
-        if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess});
+        if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
         if(label==='Risicoanalyse')risks=createRiskAnalysis(panel,{show,requestAccess,version:data.version});
         button.addEventListener('click',()=>select(index));button.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();select(next,true);}});
         buttons.push(button);views.push(panel);bar.append(button);panels.append(panel);
