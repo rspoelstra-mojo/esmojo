@@ -17,3 +17,9 @@ focus, bestaande Ja/Nee-logica en geen horizontale overflow.
 De volledige CI controleert ook dat de gegenereerde Apps Script-kopie identiek
 is aan de gedeelde configuratie. Die kopie is bijgewerkt voor Entreeproces;
 opslagvalidatie en toegestane Ja/Nee-velden veranderen niet.
+
+Livegang: de gebruiker heeft op 3 november 2026 expliciet doorlopende toestemming
+gegeven om alle gevraagde wijzigingen na controle direct live te publiceren.
+Deze toestemming omvat de huidige klaarliggende wijziging en is vastgelegd in
+AGENTS.md. De eerdere blokkade wegens ontbrekende publicatietoestemming is hiermee
+inhoudelijk opgelost; de normale controles en publicatieroute blijven gelden.
