@@ -6,6 +6,7 @@ import {createRiskAnalysis} from './risk-analysis.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 import {createShowMemory} from './lib/show-memory.js';
 import {showMemory} from './show-memory.js';
+import {createShowPlanning} from './show-planning.js';
 
 export function formatShowDates(dates){return dates.map(date=>new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(`${date}T12:00:00Z`))).join(' · ');}
 const tabs=['Overzicht','Showprofiel','Risicoanalyse','Maatregelen','Documenten'];
@@ -16,8 +17,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
   async function open(){
     if(disposed||opening)return;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
-    let data=null,disposeProfile=()=>{},risks=null,observer=null,frame=null;
-    const cleanup=()=>{disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
+    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},risks=null,observer=null,frame=null;
+    const cleanup=()=>{disposePlanning();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
       const [context,photoData]=await Promise.all([lease.ready,lease.view.photo?Promise.resolve(lease.view.photo):loadPhoto(show.key).catch(()=>null)]);
       if(disposed)return;
@@ -48,6 +49,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       tabs.forEach((label,index)=>{
         const button=document.createElement('button');button.type='button';button.className='show-tab';button.textContent=label;button.id=`show-tab-${index}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`show-panel-${index}`);
         const panel=document.createElement('section');panel.id=`show-panel-${index}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);panel.tabIndex=0;
+        if(label==='Overzicht')disposePlanning=createShowPlanning(panel,{show,data});
         if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
         if(label==='Risicoanalyse')risks=createRiskAnalysis(panel,{show,requestAccess,version:data.version,choices:data.productionChoices});
         button.addEventListener('click',()=>select(index));button.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();select(next,true);}});

@@ -50,3 +50,22 @@ test('Ja/Nee-wachtrij bewaart alle keuzes tijdens navigatie; terugkeren wacht op
  for(let i=0;i<2;i++){const {wait,body}=pending.shift();assert.equal(body.revision,i);server={revision:i+1,choices:{...server.choices,[body.field]:body.value}};wait.resolve(server);await tick();if(i===0)assert.equal(ready,false);}
  assert.equal(await back.ready,data);assert.equal(ready,true);assert.deepEqual((await data.request('show-risks',{body:{}})).production,server);assert.deepEqual(calls,['show-open','production-risks','production-risks']);back.release();memory.clear();assert.equal(q.server,null);
 });
+test('Planning leest bestaande context zonder extra netwerk; updates en fouten vernieuwen de status zonder gegevens te kunnen muteren',async()=>{
+ const base=bundle(),calls=[];let fail=false;
+ const memory=createShowMemory({request:async(action)=>{calls.push(action);if(action==='show-open')return base;if(fail)throw Error('tijdelijke fout');return{state:'ready'};},...timers});
+ const lease=memory.acquire('A'),data=await lease.ready;let updates=0;const unsubscribe=data.subscribe(()=>updates++);
+ const copy=data.planningSnapshot();copy.profile.finalization.categories.visitors.completedAt='fake';assert.equal(data.planningSnapshot().profile.finalization.categories.visitors.completedAt,null);assert.deepEqual(calls,['show-open']);
+ await data.request('show-profile-pdf',{body:{operation:'ensure'}});assert.equal(updates,1);assert.equal(data.planningSnapshot().pdf.state,'ready');
+ fail=true;await assert.rejects(data.request('show-profile-pdf',{body:{operation:'status'},refresh:true}),/tijdelijke fout/);assert.equal(updates,2);assert.equal(data.planningSnapshot().pdf,undefined);
+ unsubscribe();fail=false;await data.request('show-profile-pdf',{body:{operation:'ensure'}});assert.equal(updates,2);lease.release();memory.clear();
+});
+
+test('Een showprofielwijziging wist PDF-gereedheid maar verliest geen bevestigde productiebeoordelingen',async()=>{
+ const base=bundle();base.barrier.record.completed=true;base.floor.record={completed:true};
+ base.risks.assessments={barrier:{completed:true},floor:{completed:true}};base.pdf={state:'ready'};
+ const memory=createShowMemory({request:async action=>action==='show-open'?base:{...base.profile,revision:1},...timers});
+ const lease=memory.acquire('A'),data=await lease.ready;
+ await data.request('show-profile',{body:{operation:'draft'}});
+ const state=data.planningSnapshot();assert.equal(state.pdf,undefined);assert.equal(state.risks.assessments.barrier.completed,true);assert.equal(state.risks.assessments.floor.completed,true);assert.deepEqual(state.risks.production.choices,{});
+ lease.release();memory.clear();
+});
