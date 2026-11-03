@@ -6,7 +6,8 @@ export function createShowData(bundle,request,concertId){
     ||!['ready','pending','not-ready'].includes(bundle.risks?.state)||!Array.isArray(bundle.risks.risks))throw Error('Onvolledige showgegevens.');
   const values=new Map([['show-profile',bundle.profile],['ticket-data',bundle.tickets],['barrier-layout',bundle.barrier],['floor-pressure',bundle.floor],['show-risks',bundle.risks],['analysis-finalization',bundle.profile]]);
   if(bundle.pdf)values.set('show-profile-pdf',bundle.pdf);
-  let disposed=false,riskVersion=0;const pendingWrites=new Set();
+  let disposed=false,riskVersion=0;const pendingWrites=new Set(),listeners=new Set();
+  const notify=()=>{for(const listener of listeners)listener();};
   const settled=async()=>{while(pendingWrites.size)await Promise.allSettled([...pendingWrites]);};
   const isRead=(action,body)=>action==='show-risks'||body.operation==='read'||(action==='show-profile-pdf'&&body.operation==='status');
   function remember(action,data){
@@ -31,7 +32,7 @@ export function createShowData(bundle,request,concertId){
       const before=values.get(action);let data;
       try{data=await request(action,options);}catch(error){
         if(!disposed){values.delete(action);if(!read)for(const key of ['show-profile','analysis-finalization','show-risks','floor-pressure','show-profile-pdf'])values.delete(key);riskVersion++;}
-        throw error;
+        notify();throw error;
       }
       if(!disposed){
         if(read){remember(action,data);overview(data);}
@@ -49,7 +50,7 @@ export function createShowData(bundle,request,concertId){
           if(['show-profile','analysis-finalization','ticket-data'].includes(action)){values.delete('show-profile-pdf');values.delete('show-risks');riskVersion++;}
         }
       }
-      return data;
+      notify();return data;
     },
     get busy(){return pendingWrites.size>0||productionChoices.busy;},
     async whenSettled(){await productionChoices.whenSettled();await settled();},
@@ -63,8 +64,16 @@ export function createShowData(bundle,request,concertId){
       if(final?.categories.visitors.completedAt&&final?.categories.artist.completedAt&&!values.has('show-profile-pdf'))await context.request('show-profile-pdf',{method:'POST',body:{operation:'status',concertId}});
       if(disposed)throw Error('Show gesloten.');return context;
     },
+    planningSnapshot(){
+      const risks=values.get('show-risks');
+      return structuredClone({profile:{finalization:values.get('show-profile')?.finalization},pdf:values.get('show-profile-pdf'),risks:{
+        production:risks?.production||productionChoices.server,
+        assessments:risks?.assessments||{barrier:values.get('barrier-layout')?.record,floor:values.get('floor-pressure')?.record},
+      }});
+    },
+    subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
     version:()=>riskVersion,
-    dispose(){disposed=true;productionChoices.cancel();values.clear();},
+    dispose(){disposed=true;productionChoices.cancel();values.clear();listeners.clear();},
   };
   const productionChoices=createProductionChoiceQueue({
     save:body=>context.request('production-risks',{method:'POST',body:{concertId,...body}}),

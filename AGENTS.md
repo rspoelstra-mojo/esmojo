@@ -573,3 +573,16 @@ bevestigd. Iedere bewuste testverzending via Beheerder → Email stuurt hetzelfd
 gekozen testtemplate afzonderlijk naar beide adressen, met aparte stabiele
 idempotentiesleutels. Dit geldt niet voor andere accounts of productiemails.
 De UI toont beide adressen; geen browserveld of template mag ontvangers wijzigen.
+
+## Concertplanning op Overzicht
+
+Ieder concert toont de vijfstappenplanning in licht/donker. Deadlines zijn 31,
+14, 7 en 1 kalenderdag vóór de vroegste concertdatum, gevolgd door Showdag.
+Gebruik de Nederlandse kalenderdag Europe/Amsterdam, ook rond zomertijd.
+Showprofiel alleen afgerond als de actuele PDF-status ready is; productionele
+risico’s alleen als alle toepasselijke beoordelingen afgerond zijn. Nee-keuzes
+en Entreeproces bij Gashouder zijn NVT; ontbrekende beoordelingen blijven open.
+Operationele risico’s en beheersmaatregelen blijven zichtbaar maar voorlopig
+altijd onafgerond totdat hun echte afrondfunctionaliteit expliciet gebouwd is.
+Geen handmatig afvinken of nieuwe statusopslag. De planning gebruikt uitsluitend
+de bestaande gedeelde showcontext en reageert op bevestigde wijzigingen.
