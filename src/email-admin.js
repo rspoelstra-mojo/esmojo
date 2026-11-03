@@ -37,7 +37,7 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
       catalog=data;select.replaceChildren(node('option','','Kies een template'));select.firstChild.value='';
       for(const template of data.templates){const option=node('option','',template.label);option.value=template.id;select.append(option);}
       renderShows();
-      recipient.textContent='Versturen naar je eigen accountadres: '+data.recipient;
+      recipient.textContent='Testmail versturen naar: '+(data.recipients||[data.recipient]).join(' en ');
       notice(data.canSend?'':'E-mailverzending is nog niet geconfigureerd.');view.replaceChildren(title,form);update();
     }catch{if(!disposed){const error=node('p','form-message','De e-mailtemplates konden niet worden geladen.'),retry=node('button','secondary-button','Opnieuw laden');error.setAttribute('role','alert');retry.type='button';retry.onclick=()=>{view.replaceChildren();void load();};view.replaceChildren(title,error,retry);}}
     finally{finish();}
@@ -49,7 +49,7 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
     try{
       const template=selected(),body={templateId:template.id,requestId,...(template.requiresShow?{concertId:showSelect.value}:{})};
       const result=await request('email',{method:'POST',body});if(disposed)return;if(result.ok!==true)throw Error('Unconfirmed send');
-      requestId=null;notice('Testmail verstuurd naar '+catalog.recipient+'.');
+      requestId=null;notice('Testmail verstuurd naar '+(catalog.recipients||[catalog.recipient]).join(' en ')+'.');
     }catch{if(!disposed)notice('Testmail versturen is niet gelukt. Probeer het opnieuw.',true);}
     finally{busy=false;finish();if(!disposed)update();}
   };

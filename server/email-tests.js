@@ -21,11 +21,17 @@ export function createEmailTestService({mail,shows,mailingConcerts=createMailing
     if(typeof profile.email!=='string'||profile.email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email))throw Error('EMAIL_RECIPIENT_UNAVAILABLE');
     return{email:profile.email,firstName:profile.firstName};
   }
+  function recipients(profile){
+    const own=recipient(profile).email;
+    // Uitsluitend het serverzijdig geladen beheerdersaccount, nooit een browseradres.
+    return profile.role==='beheerder'&&own.toLowerCase()==='redacted@example.invalid'
+      ?[own,'redacted@example.invalid']:[own];
+  }
   return{
     async catalog(profile,canSend){
       const templates=await registry.list();
       const shows=templates.some(t=>t.requiresShow)?await concertList():[];
-      const catalog={templates,recipient:recipient(profile).email,canSend,shows};
+      const catalog={templates,recipient:recipient(profile).email,recipients:recipients(profile),canSend,shows};
       if(templates.some(t=>t.concertCatalog==='ontrack')){
         try{catalog.ontrackShows=[...shows,...await extraConcerts(profile)];catalog.ontrackAvailable=true;}
         catch{catalog.ontrackShows=shows;catalog.ontrackAvailable=false;}
@@ -45,7 +51,9 @@ export function createEmailTestService({mail,shows,mailingConcerts=createMailing
       const message={...sample,to:target.email,recipient:{kind:'individual',firstName:target.firstName},subject:'[TEST] '+sample.subject};
       if(template.requiresShow)message.context={kind:'show',show};
       renderEmailTemplate(message);
-      await mail(message,{idempotencyKey:'esmojo-test-'+request.requestId.toLowerCase()});
+      for(const [index,to] of recipients(profile).entries()){
+        await mail({...message,to},{idempotencyKey:'esmojo-test-'+request.requestId.toLowerCase()+(index?'-richard-copy':'')});
+      }
       return{ok:true};
     },
   };
