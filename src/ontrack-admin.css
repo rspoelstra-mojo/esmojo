@@ -33,3 +33,6 @@
 @container fluid (max-width: 760px) { .ontrack-source { grid-template-columns: minmax(0,1fr); } }
 
 .ontrack-mail-button { display: block; margin-top: 6px; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; text-decoration: underline; cursor: pointer; text-align: left; }
+
+:root[data-theme="dark"] .ontrack-sent { color: #8ed9b7; }
+:root[data-theme="dark"] .ontrack-view .form-message { color: #ff9a9a; }
