@@ -14,6 +14,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   const title=node('h2','assessment-page-title','Barrieropstelling');title.tabIndex=-1;
   const block=node('form','assessment-block'),columns=node('div','barrier-columns'),fields=node('div','assessment-fields'),preview=node('aside','assessment-preview');
   const typeField=node('div','assessment-field'),label=node('label','','Type barrieropstelling'),select=node('select','');select.id='barrier-type';label.htmlFor=select.id;select.required=true;
+  preview.dataset.layout='schematic';
   const placeholder=node('option','','Kies een barrieropstelling');placeholder.value='';select.append(placeholder);
   for(const option of barrierTypes){const item=node('option','',option.label);item.value=option.value;select.append(item);}typeField.append(label,select);
   const customFields=node('div','assessment-fields'),uploadField=node('div','assessment-field'),uploadLabel=node('label','','Afwijkende barrieropstelling uploaden'),upload=node('input','');upload.type='file';upload.id='barrier-upload';upload.accept='.png,.pdf,image/png,application/pdf';uploadLabel.htmlFor=upload.id;
@@ -39,6 +40,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   function placeholderPreview(text){previewBox.replaceChildren(node('p','',text));}
   async function renderPreview(){
     resetPreview();awaitingPreview=false;const sequence=previewSequence;
+    preview.dataset.layout=type==='custom'?'custom':'schematic';
     if(type!=='custom'){
       const url=barrierImages[type];if(!url){placeholderPreview('Schematische afbeelding nog niet beschikbaar');return;}
       const image=node('img','');image.alt=barrierTypes.find(row=>row.value===type)?.label||'Barrieropstelling';image.src=url;image.onerror=()=>{if(!disposed&&sequence===previewSequence)placeholderPreview('Schematische afbeelding nog niet beschikbaar');};previewBox.append(image);return;

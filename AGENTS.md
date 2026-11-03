@@ -366,3 +366,17 @@ wordt pas actief na bevestigde Ja-opslag. Hergebruik de wachtrij in het tijdelij
 showgeheugen; behoud lopende writes bij SPA-navigatie en wis bij afmelden/rolwissel.
 Bij onzekere opslag invoer behouden, vervolgwrites stoppen en uitsluitend na
 expliciet Opnieuw proberen herlezen en hervatten. Geen persistente browseropslag.
+
+## Entreeproces en visuele productieafspraken
+
+Bij concertlocatie Gashouder is Entreeproces niet van toepassing: zichtbaar,
+grijs en uitgeschakeld met kleine tekst “(Nvt bij Gashouder shows)”. Dit is geen
+verplichte afrondstap, ook niet bij toekomstige uitbreiding van die workflow.
+Andere locaties behouden de actieve knop.
+Standaard-barrierafbeeldingen staan in een aansluitend vierkant kader met afgeronde
+afbeeldingshoeken; Schematische weergave lijnt links uit met dat kader.
+In de vloerdruktabel staan bezoekers, netto m² en dichtheid op één lijn. De vaste
+regel Zitplaatsen bevat automatisch de overgebleven verkochte tickets na aftrek
+van de overige vakken (minimaal nul), zonder m²/dichtheid. Bij ontbrekende tickets
+geen getal invullen. De afgeleide waarde gebruikt bestaande rijen/ticketreferentie,
+zonder extra verplichte invoer of automatische risicobeoordeling.
