@@ -1,0 +1,9 @@
+.email-admin-view { min-width: 0; }
+.email-admin-view h1 { margin: 0 0 32px; font-size: 24px; font-weight: 600; letter-spacing: -.5px; }
+.account-form.email-admin-form { grid-template-columns: minmax(0,1fr); max-inline-size: 72ch; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); }
+.email-admin-field { display: grid; gap: 8px; min-width: 0; }
+.email-admin-field label { font-size: 14px; font-weight: 600; }
+.email-admin-recipient { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); overflow-wrap: anywhere; }
+.email-admin-form > button { justify-self: start; max-width: 100%; }
+.email-admin-form .account-notice, .email-admin-form .form-message { margin: 0; overflow-wrap: anywhere; }
+.email-admin-form .account-notice:empty { display: none; }

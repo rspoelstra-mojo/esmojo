@@ -28,7 +28,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
       calls.push([operation, actor, input]);
       if (operation === failOperation) throw new Error('FORBIDDEN');
       return operation === 'self' ? own : operation === 'list' ? [targetProfile || { ...profile, id: other, activated: false }] : { ok: true };
-    }, mail: async input => { calls.push(['mail', {...input,...renderEmailTemplate(input)}]); if (failMail) throw new Error('private-response'); },
+    }, mail: async (input,mailOptions) => { calls.push(['mail', {...input,...renderEmailTemplate(input)},mailOptions]); if (failMail) throw new Error('private-response'); },
   });
   const response = { headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(value) { this.code = value; return this; }, json(value) { this.data = value; return this; } };
   await handler({ method, body, headers: { ...(auth ? { authorization: `Bearer ${token(aal, sub)}` } : {}), ...(origin ? { origin } : {}) }, query: { action } }, response);
@@ -136,4 +136,22 @@ test('opnieuw uitnodigen gebruikt de doelaccountnaam en behoudt invite/recovery 
 test('ontbrekende betrouwbare doelvoornaam gebruikt Beste collega zonder een naam uit het mailadres af te leiden',async()=>{
  const {calls,response}=await run({method:'PATCH',body:{id:other,operation:'invite'},targetProfile:{...profile,id:other,activated:false,firstName:undefined,email:'gedeeld@example.invalid'}});
  assert.equal(response.code,200);const mail=calls.find(c=>c[0]==='mail')[1];assert.match(mail.html,/Beste collega,/);assert.match(mail.text,/Beste collega,/);assert.equal(mail.text.includes('Beste gedeeld,'),false);
+});
+
+const emailTestBody={templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'};
+test('Email-beheer toont automatisch beschikbare templates; alleen expliciete POST verstuurt één test naar de ingelogde beheerder',async()=>{
+ const catalog=await run({action:'email'});assert.equal(catalog.response.code,200);assert.deepEqual(catalog.response.data.templates,[{id:'account-activation',label:'Account activeren',requiresShow:false}]);assert.equal(catalog.response.data.recipient,profile.email);assert.equal(catalog.calls.some(c=>c[0]==='mail'),false);
+ const {response,calls}=await run({action:'email',method:'POST',body:emailTestBody});assert.equal(response.code,200);assert.equal(response.data.ok,true);assert.deepEqual(calls.map(c=>c[0]),['self','mail']);
+ const sent=calls.find(c=>c[0]==='mail');assert.equal(sent[1].to,profile.email);assert.match(sent[1].subject,/^\[TEST\]/);assert.match(sent[1].text,/Beste Test,/);assert.equal(sent[1].text.includes('test-only-not-an-activation'),false);assert.equal(sent[1].html.includes('/activeren?token='),false);assert.ok(sent[1].html.includes('ESMOJO openen'));assert.equal(sent[2].idempotencyKey,'esmojo-test-'+emailTestBody.requestId);
+});
+test('Testmailroute vereist MFA/activatie/beheerder/origin en accepteert geen vrije ontvanger, inhoud of onbekend template',async()=>{
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,activated:false}},{own:{...profile,role:'gebruiker'}},{origin:'https://evil.invalid'},{failOperation:'self'}]){const {response,calls}=await run({...input,action:'email',method:'POST',body:emailTestBody});assert.ok([401,403].includes(response.code));assert.equal(calls.some(c=>c[0]==='mail'),false);}
+ for(const body of [{...emailTestBody,to:'anders@example.invalid'},{...emailTestBody,html:'<h1>Vrij</h1>'},{...emailTestBody,subject:'Vrij'},{...emailTestBody,requestId:'ongeldig'},{...emailTestBody,templateId:'../../escape'},{...emailTestBody,concertId:'Onnodig'}]){const {response,calls}=await run({action:'email',method:'POST',body});assert.equal(response.code,400);assert.equal(calls.some(c=>c[0]==='mail'),false);}
+ assert.equal((await run({action:'email',method:'POST',body:{...emailTestBody,templateId:'bestaat-niet'}})).response.code,404);
+ assert.equal((await run({action:'email',method:'PATCH',body:emailTestBody})).response.code,405);
+});
+test('Testmail bewaart geen geheime providerfout; ontbrekende mailconfiguratie maakt geen verzending',async()=>{
+ const missing=await run({action:'email',configuration:{...env,RESEND_API_KEY:''}});assert.equal(missing.response.data.canSend,false);
+ const blocked=await run({action:'email',method:'POST',body:emailTestBody,configuration:{...env,RESEND_API_KEY:''}});assert.equal(blocked.response.code,503);assert.equal(blocked.calls.some(c=>c[0]==='mail'),false);
+ const failed=await run({action:'email',method:'POST',body:emailTestBody,failMail:true});assert.equal(failed.response.code,503);assert.equal(JSON.stringify(failed.response.data).includes('private-response'),false);assert.equal(failed.calls.filter(c=>c[0]==='mail').length,1);
 });

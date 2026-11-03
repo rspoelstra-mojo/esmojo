@@ -9,6 +9,7 @@ import './style.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
 import { startAuth } from './auth.js';
 import { createAccountsView } from './accounts.js';
+import {createEmailAdminView} from './email-admin.js';
 import { createProfileView, renderAvatar } from './profile.js';
 import { createSubmenuSearch } from './submenu-search.js';
 import { createShowsSubmenu, refreshShowsMenu } from './shows.js';
@@ -76,6 +77,9 @@ function renderPage() {
     submenu.append(link);
     link.dataset.submenuTitle = 'Accounts';
     if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile, link);
+    const emailLink=document.createElement('a');emailLink.href='/beheerder/email';emailLink.className='submenu-link';emailLink.textContent='Email';emailLink.dataset.submenuTitle='Email';
+    if(route==='beheerder/email')emailLink.setAttribute('aria-current','page');submenu.append(emailLink);
+    if(route==='beheerder/email')disposePage=createEmailAdminView(content,emailLink);
   }
   if (root === 'account') {
     disposePage = createProfileView(content, profile, updated => {
