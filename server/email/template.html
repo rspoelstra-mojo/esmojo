@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="nl" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>{{onderwerp}}</title>
+  <!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+  <style>
+    body { margin:0 !important; padding:0 !important; }
+    table { border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; }
+    a { color:#0046f2; }
+    @media screen and (max-width:600px) {
+      .outer { padding:0 !important; }
+      .pad { padding-left:24px !important; padding-right:24px !important; }
+      .title { font-size:25px !important; line-height:31px !important; }
+      .logo-cell { width:60px !important; }
+      .header-logo { width:60px !important; max-width:60px !important; }
+      .header-copy { padding-right:14px !important; }
+      .brand-label { font-size:10px !important; letter-spacing:1px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f2f4f7;color:#081830;font-family:Aptos,Arial,Helvetica,sans-serif;">
+  <div style="display:none;font-size:1px;line-height:1px;color:#f2f4f7;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{{preheader}}</div>
+  <table role="presentation" width="100%" bgcolor="#f2f4f7" style="width:100%;background-color:#f2f4f7;">
+    <tr><td class="outer" align="center" style="padding:40px 16px;">
+      <!--[if mso]><table role="presentation" width="640" align="center"><tr><td><![endif]-->
+      <table role="presentation" width="100%" style="width:100%;max-width:640px;background-color:#ffffff;" bgcolor="#ffffff">
+        <tr><td class="pad" bgcolor="#0046f2" style="padding:32px 40px 36px;background-color:#0046f2;">
+          <table role="presentation" width="100%" style="width:100%;table-layout:fixed;"><tr>
+            <td class="header-copy" valign="middle" style="padding-right:20px;vertical-align:middle;">
+              <p class="brand-label" style="margin:0 0 10px;color:#dce7ff;font-size:11px;line-height:17px;letter-spacing:1.5px;text-transform:uppercase;">Event Safety Mobility Operations</p>
+              <h1 class="title" style="margin:0;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:700;line-height:37px;overflow-wrap:break-word;word-break:break-word;">{{titel}}</h1>
+              <p class="context-line" style="margin:12px 0 0;color:#ffffff;font-size:15px;line-height:23px;overflow-wrap:break-word;word-break:break-word;">{{subtitel}}</p>
+            </td>
+            <td class="logo-cell" width="80" valign="middle" style="width:80px;vertical-align:middle;">
+              <img class="header-logo" src="{{logo_url}}" width="80" alt="ESMOJO" style="display:block;width:80px;max-width:80px;height:auto;border:0;color:#ffffff;font-size:16px;">
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="pad" style="padding:36px 40px 16px;">
+          <p class="greeting" style="margin:0 0 20px;font-size:16px;line-height:26px;color:#081830;overflow-wrap:break-word;word-break:break-word;">{{aanhef}}</p>
+          {{introductie}}
+        </td></tr>
+        {{informatieblokken}}
+        {{acties}}
+        <tr><td class="pad" style="padding:0 40px 36px;">
+          {{afsluiting}}
+          <p style="margin:0;color:#334155;font-size:15px;line-height:25px;">Met vriendelijke groet,<br><strong style="color:#081830;">{{afzender_naam}}</strong></p>
+        </td></tr>
+        <tr><td class="pad email-footer" bgcolor="#f5f7fa" style="padding:24px 40px;border-top:1px solid #d9e0e8;background-color:#f5f7fa;">
+          <p style="margin:0;color:#5c697a;font-size:13px;line-height:21px;">Event Safety Mobility Operations</p>
+        </td></tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>
+  </table>
+</body>
+</html>

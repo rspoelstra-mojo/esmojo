@@ -13,6 +13,7 @@ import { validateProductionRiskSelection } from '../shared/production-risks.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
 import { sendEmail } from './email.js';
+import { accountActivationEmail } from './account-email.js';
 import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCookie } from './session-cookie.js';
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
@@ -196,7 +197,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         const generated = await admin.generateLink({ type, email: target.email });
         if (generated.error || generated.data?.user?.id !== target.id || !generated.data?.properties?.hashed_token) return reply(503, { error: 'Uitnodiging kon niet worden vernieuwd.' });
         const link = `https://esmojo.nl/#/activeren?token=${encodeURIComponent(generated.data.properties.hashed_token)}&type=${type}`;
-        await mail({ to: target.email, subject: 'Stel je ESMOJO-account in', text: `Stel via deze eenmalige link je wachtwoord en authenticator in:\n\n${link}` });
+        await mail(accountActivationEmail({to:target.email,firstName:target.firstName,activationUrl:link,reissued:true}));
         return reply(200, { ok: true });
       }
       if (req.method === 'POST') {
@@ -221,7 +222,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }
         const link = `https://esmojo.nl/#/activeren?token=${encodeURIComponent(generated.data.properties.hashed_token)}`;
         try {
-          await mail({ to: email, subject: 'Stel je ESMOJO-account in', text: `Er is een ESMOJO-account voor je aangemaakt. Stel via deze eenmalige link je wachtwoord en authenticator in:\n\n${link}\n\nJe krijgt pas toegang nadat je de 2-stapsverificatie hebt afgerond.` });
+          await mail(accountActivationEmail({to:email,firstName:profile.firstName,activationUrl:link}));
         } catch {
           return reply(202, { warning: 'Account aangemaakt, maar uitnodiging niet verzonden. Gebruik Opnieuw uitnodigen bij dit account.' });
         }

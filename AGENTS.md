@@ -144,7 +144,10 @@ Google Drive. Als expliciete uitzondering mag Supabase Auth het e-mailadres,
 wachtwoordbeveiliging en verplichte TOTP-tweestapsverificatie beheren. Bewaar geen
 profielvelden of foto's in Supabase-gebruikersmetadata of persistente browseropslag.
 De gebruiker staat Resend toe het e-mailadres en de eenmalige activatielink te
-verwerken voor accountuitnodigingen. Voeg geen profielvelden toe aan die mails.
+verwerken voor accountuitnodigingen. Op 3 november 2026 is expliciet ook de
+betrouwbare afzonderlijke voornaam toegestaan voor de persoonlijke aanhef. Dit
+wijzigt de vertrouwelijke Drive-opslag van het profiel niet; voeg overige
+profielvelden niet aan e-mails toe.
 
 Er zijn twee categorieën: Openbaar en Vertrouwelijk.
 Vraag de gebruiker bij elke nieuwe gegevenssoort of nieuwe velden expliciet
@@ -403,3 +406,29 @@ opgeslagen zonder toelichting. Afwijkend ontwerp blijft handmatig; Midden/Hoog
 houden hun verplichte beheersmaatregel. Niet automatisch schrijven door openen
 of verversen, en bestaande opgeslagen keuzes blijven leesbaar. De afbeelding
 en het label Schematische weergave zijn rechts uitgelijnd in het barrierblok.
+
+## Vaste e-mailstandaard
+
+Gebruik voor alle uitgaande e-mails uitsluitend sendEmail uit server/email.js,
+met gestructureerde inhoud; deze module rendert centraal via server/email-template.js
+en server/email/template.html (de door de gebruiker aangeleverde vormgeving).
+Geen vrije HTML/plaintext die het template omzeilt. Header #0046F2, transparant wit
+ESMOJO-logo, vaste merkregel, witte inhoud, optionele grijze informatieblokken,
+blauwe linkknop met 8px radius zonder gekleurde tabelcel en alleen de merkregel
+in de footer. Logo komt van de beschikbare HTTPS-asset; geen data-URI of lokaal pad.
+De originele logoasset blijft ongewijzigd; de witte proportionele PNG-export wordt
+bij de build gemaakt. Geen voorbeeldteksten of voorbeeldlinks automatisch versturen.
+
+Accountmails hebben als expliciet bevestigde regel onder de titel: Account activeren.
+Voor andere niet-show-specifieke mailtypen eerst de regel aan de gebruiker vragen.
+Showmails gebruiken uitsluitend het gekoppelde canonieke showobject (key, naam,
+locatie, relevante datums); de renderer maakt de Nederlandse datumregel en weigert
+ontbrekende gegevens. Geen willekeurige eerste datum uit een reeks.
+
+Persoonlijke aanhef gebruikt alleen de betrouwbare afzonderlijke firstName van de
+ontvanger, nooit de beheerder of een afleiding uit e-mailadres/volledige naam.
+Ontbrekende naam, gedeelde mailbox of groep: Beste collega,. Iedere persoonlijke
+mail heeft één ontvanger; toekomstige personalisatie verstuurt afzonderlijk.
+Geen externe persoonsverrijking. Escape alle tekst en valideer linkdoelen.
+Behoud accounttriggers, token/TTL, MFA, afzender en reply-to. Geen echte testmails;
+gebruik tools/email/preview.mjs en de tests met fictieve fixtures/gemockte verzending.

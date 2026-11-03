@@ -20,6 +20,7 @@ jobs:
       - name: Authentication, authorization and existing server tests
         run: |
           node server/accounts-api.test.js
+          node server/email-template.test.js
           node server/auth-submission.test.js
           node server/session-cookie.test.js
           node server/account-profiles.test.js
@@ -47,3 +48,14 @@ jobs:
           node server/fluid-interactions.test.js
           node server/risk-analysis-page.test.js
           node .agents/skills/esmojo-concertonderzoek/scripts/workflow.test.mjs
+      - name: Email previews zonder verzending
+        run: node tools/email/check-preview.mjs /tmp/esmojo-email-preview
+      - name: Bewaar fictieve emailvoorbeelden
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: esmojo-email-preview
+          path: /tmp/esmojo-email-preview
+          retention-days: 7
+      - name: Controleer openbare productie-logo na livegang
+        if: github.ref == 'refs/heads/main'
+        run: node tools/email/check-live-logo.mjs

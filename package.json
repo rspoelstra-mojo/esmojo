@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "build": "node tools/email/export-logo.mjs && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "preview:email": "node tools/email/preview.mjs"
   },
   "devDependencies": {
     "vite": "^6.4.0"
