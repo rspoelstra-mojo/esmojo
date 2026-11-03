@@ -17,11 +17,12 @@ function doGet() {
 function doPost(event) {
   try {
     const raw = event && event.postData && event.postData.contents;
-    if (raw && raw.length <= 3000000) {
+    if (raw && raw.length <= 5000000) {
       const envelope = JSON.parse(raw);
-      // PDF-bytes vallen onder de eigen HMAC- en inhoudsgrenzen van Shows.gs.
-      if (envelope.action === 'ontrack-concerts') return esmojoOnTrackConcerts_(envelope);
-      if (envelope.action === 'shows') return esmojoShows_(envelope);
+      // Alleen de nieuwe OnTrack-PDF-route krijgt de grotere envelop. Legacygrenzen blijven intact.
+      if (envelope.action === 'ontrack-reports') return esmojoOnTrackReports_(envelope);
+      if (raw.length <= 3000000 && envelope.action === 'ontrack-concerts') return esmojoOnTrackConcerts_(envelope);
+      if (raw.length <= 3000000 && envelope.action === 'shows') return esmojoShows_(envelope);
       if (raw.length <= 120000) {
         if (envelope.action === 'ontrack') return esmojoOnTrack_(envelope);
         if (envelope.action === 'accounts') return esmojoAccounts_(envelope);
