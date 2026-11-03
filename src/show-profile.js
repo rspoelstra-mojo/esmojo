@@ -21,10 +21,10 @@ const paths = {
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
 const node = (tag, className, text) => { const el = document.createElement(tag); el.className = className; if (text !== undefined) el.textContent = text; return el; };
-export function createShowProfile(panel, { show } = {}) {
+export function createShowProfile(panel, { show,requestAccess=access } = {}) {
   const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
-  const request = body => access('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
+  const request = body => requestAccess('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
   const saves=profileSaves(show.key,request),drafts=saves.drafts;
   let firstPdfGeneration=false;
   const ticketState = { drafts: {}, base: {} }; let disposeTickets = () => {}, ticketOpen = false;
@@ -35,21 +35,21 @@ export function createShowProfile(panel, { show } = {}) {
   const loading = menuLink ? createSubmenuLoading(menuLink, panel) : null;
   const badgeFor = number => { const state = saves.pending.has(number)?'saving':saves.errors.has(number)?'failed':records[number]?.status || 'pending'; const badge = node('span', 'analysis-status', state==='saving'?'Opslaan…':state==='failed'?'Niet opgeslagen':analysisStatuses[state]); badge.dataset.status = state; return badge; };
   function message(text) { const p = node('p', 'profile-message', text); p.setAttribute('role', 'status'); return p; }
-  async function load() {
+  async function load(strict=false) {
     const sequence=++statusSequence; loaded = false; loadError = ''; finalizationError=''; renderOverview(); const finish = loading?.start(); panel.setAttribute('aria-busy', 'true');
     try { const data = await request({ operation: 'read' }); if (disposed) return; researchByNumber = data.researchByNumber ?? null; researchErrors = data.researchErrors || {}; if(!loaded||sequence===statusSequence){saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;} loaded = true; }
-    catch { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.'; }
+    catch(error) { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.';if(strict===true)throw error; }
     finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed && !ticketOpen) renderOverview(); }
   }
-  async function refreshFinalization() {
+  async function refreshFinalization(force=false) {
     const sequence=++statusSequence;
-    try { const data=await access('analysis-finalization',{method:'POST',body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
+    try { const data=await requestAccess('analysis-finalization',{method:'POST',refresh:force===true,body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
     catch { /* Geen afrondknop tonen met een onzekere status. */ if(!disposed&&sequence===statusSequence){finalization=null;finalizationError='Afrondstatus laden is niet gelukt.';if(!ticketOpen&&editorNumber===null)renderOverview();} }
   }
   function completeCategory(category) {
     if(saves.pending.size||saves.errors.size||!finalization?.categories[category]?.ready||finalization.categories[category].completedAt)return;
     const basis=structuredClone(finalization.basis);
-    disposeFinal=openAnalysisFinalization({category,submit:async values=>{const data=await access('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;},onClose:()=>{disposeFinal=()=>{};if(!disposed){renderOverview();void refreshFinalization();}}});
+    disposeFinal=openAnalysisFinalization({category,submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;},onClose:()=>{disposeFinal=()=>{};if(!disposed){renderOverview();void refreshFinalization();}}});
   }
   function renderOverview(focusNumber) {
     disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
@@ -73,7 +73,7 @@ export function createShowProfile(panel, { show } = {}) {
         const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
         const ticketBadge=node('span','analysis-status',finalization?.ticketsReady?'Afgerond':'Handmatig invoeren');ticketBadge.dataset.status=finalization?.ticketsReady?'completed':'pending';
         button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'),ticketBadge,arrow);
-        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();void refreshFinalization();}}); };
+        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,requestAccess,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();if(ticketState.changed){ticketState.changed=false;void refreshFinalization();}}}); };
         row.append(button);card.append(row);
       }
       categories.append(card);
@@ -81,7 +81,7 @@ export function createShowProfile(panel, { show } = {}) {
     for(const [key,label]of [['visitors','Bezoekersanalyse afronden'],['artist','Artiestanalyse afronden']]) {
       if(loaded&&!saves.pending.size&&!saves.errors.size&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
     }
-    if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,onStale:refreshFinalization,firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
+    if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,requestAccess,onStale:()=>refreshFinalization(true),firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
     const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
     const info = node('div', ''), view = node('button', 'profile-view-analysis', 'Bekijk analyse →'); view.type = 'button'; view.disabled = !loaded; view.onclick = () => openEditor(selected);
     info.append(node('h3', '', entry.question), node('p', '', records[selected]?.summary || researchView(researchByNumber?.[selected]).summaryText || 'Nog geen samenvatting beschikbaar.'), view); highlight.append(glyph, info); aside.append(highlight);
@@ -158,6 +158,7 @@ export function createShowProfile(panel, { show } = {}) {
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
   const unsubscribe=saves.subscribe(()=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
-  load();
-  return () => { disposed = true; unsubscribe(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
+  const ready=load(true);
+  const dispose=() => { disposed = true; unsubscribe(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
+  dispose.ready=ready;return dispose;
 }

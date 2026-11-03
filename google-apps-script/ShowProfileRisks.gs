@@ -36,7 +36,7 @@ function esmojoRiskStatus_(concertId) {
     pdf:{version:source.row.version,fileName:source.row.fileName,sourceUpdatedAt:source.row.sourceUpdatedAt},
     analysis:{exists:Boolean(document),filename,promptVersion:RISK_PROMPT_VERSION}};
 }
-function esmojoShowProfileRisks_(request) {
+function esmojoShowProfileRisks_(request,openTarget) {
   const op=request.operation.slice(5),allowed={pending:['operation','after'],status:['operation','concertId'],view:['operation','concertId'],'production-save':['operation','concertId','field','value','revision','actor'],pdf:['operation','concertId','source'],read:['operation','concertId','source'],save:['operation','concertId','source','result']}[op];
   if(!allowed)throw Error('VALIDATION');riskKeys(request,allowed);
   if(op==='pending'){
@@ -56,7 +56,7 @@ function esmojoShowProfileRisks_(request) {
   if(op==='status')return esmojoRiskStatus_(request.concertId);
   if(op==='production-save')return esmojoSaveProductionRisk_(request,esmojoResearchTarget_(request.concertId));
   if(op==='view'){
-    const target=esmojoResearchTarget_(request.concertId),productionDocument=esmojoReadProductionRisks_(target).document,production=esmojoProductionRiskState_(productionDocument);
+    const target=openTarget||esmojoResearchTarget_(request.concertId),productionDocument=esmojoReadProductionRisks_(target).document,production=esmojoProductionRiskState_(productionDocument);
     const assessments={barrier:typeof esmojoBarrierSummary_==='function'?esmojoBarrierSummary_(productionDocument):null,floor:typeof esmojoFloorSummary_==='function'?esmojoFloorSummary_(productionDocument):null};
     let source;
     try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return{state:'not-ready',risks:[],production,assessments};throw error;}

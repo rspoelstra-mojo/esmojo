@@ -1,9 +1,9 @@
 import { access } from './auth.js';
-export function createShowProfilePdfWidget(parent,{show,onStale,firstGeneration=false,onReady}){
+export function createShowProfilePdfWidget(parent,{show,onStale,firstGeneration=false,onReady,requestAccess=access}){
  const card=document.createElement('section');card.className='profile-pdf-card';const title=document.createElement('h3');title.textContent='Showprofiel';
  const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');const button=document.createElement('button');button.type='button';button.className='analysis-complete';card.append(title,status,button);parent.append(card);
  let disposed=false,timer=null,current={state:'ready'},started=Date.now(),busy=false,generating=firstGeneration;
- const request=operation=>access('show-profile-pdf',{method:'POST',body:{concertId:show.key,operation}});
+ const request=operation=>requestAccess('show-profile-pdf',{method:'POST',body:{concertId:show.key,operation}});
  function ready(){card.classList.remove('profile-pdf-loading');status.textContent='Showprofiel is gereed';button.hidden=false;button.disabled=busy;button.textContent='Showprofiel downloaden';}
  function progress(){generating=true;card.classList.add('profile-pdf-loading');status.textContent='Showprofiel wordt gemaakt en opgeslagen…';button.hidden=true;}
  function failure(text){card.classList.remove('profile-pdf-loading');status.textContent=text;button.hidden=false;button.disabled=false;button.textContent='Opnieuw proberen';current={state:'failed'};}

@@ -13,12 +13,12 @@ function esmojoReadTicketData_(file, concertId) {
   }
   return data;
 }
-function esmojoTicketData_(request) {
+function esmojoTicketData_(request,openTarget) {
   const op = request.operation.slice(7), allowed = ['operation','concertId','actor','field','token','expectedVersion','content'];
   if (Object.keys(request).some(key => !allowed.includes(key)) || !['read','reserve','renew','release','review','reopen'].includes(op)
       || typeof request.actor !== 'string' || !request.actor || request.actor.length > 100) throw Error('VALIDATION');
   if (op !== 'read' && (!ticketFields.includes(request.field) || !/^[a-f0-9-]{36}$/.test(request.token || '') || !Number.isSafeInteger(request.expectedVersion) || request.expectedVersion < 0)) throw Error('VALIDATION');
-  const target = esmojoResearchTarget_(request.concertId), file = esmojoShowFile_(target.folder, 'bezoekersdata.json');
+  const target = openTarget||esmojoResearchTarget_(request.concertId), file = esmojoShowFile_(target.folder, 'bezoekersdata.json');
   const data = esmojoReadTicketData_(file, target.primary.concertId), workflow = JSON.parse(data.workflow_json), visitors = workflow.visitors;
   const shows = saleShows({ shows: target.seriesShows });
   const result = () => ({ workflow, shows });

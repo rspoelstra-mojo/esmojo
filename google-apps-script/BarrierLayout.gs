@@ -22,30 +22,30 @@ function esmojoBarrierSave_(target,storage,record,actor,action){
   storage.document.history.push({at:new Date().toISOString(),actor,field:'barrier_layout',action,before,after:record});
   storage.document.barrier=record;storage.document.revision++;
   if(typeof esmojoSyncFloor_==='function')esmojoSyncFloor_(storage.document,record,actor);
-  esmojoWriteAssessmentDocument_(target,storage);return {record};
+  esmojoWriteAssessmentDocument_(target,storage);return {record,overview:esmojoAssessmentOverview_(storage.document)};
 }
-function esmojoBarrierLayout_(request){
+function esmojoBarrierLayout_(request,openTarget){
   const op=request.operation.slice(8),fields={read:[],download:['uploadId'],draft:['revision','data'],complete:['revision','data'],reopen:['revision'],'remove-upload':['revision','uploadId'],upload:['revision','uploadId','fileName','mime','base64','sha256']}[op];
   if(!fields)throw Error('VALIDATION');
   riskKeys(request,['operation','concertId','actor',...fields]);assessmentConcert(request.concertId);
   if(typeof request.actor!=='string'||!request.actor||request.actor.length>100)throw Error('VALIDATION');
   if(fields.includes('revision'))assessmentRevision(request.revision);
   if(fields.includes('uploadId')&&!validUploadId(request.uploadId))throw Error('VALIDATION');
-  const target=esmojoResearchTarget_(request.concertId),storage=esmojoReadProductionRisks_(target),document=storage.document,current=esmojoBarrierRecord_(document);
-  if(op==='read')return {record:current};
+  const target=openTarget||esmojoResearchTarget_(request.concertId),storage=esmojoReadProductionRisks_(target),document=storage.document,current=esmojoBarrierRecord_(document);
+  if(op==='read')return {record:current,overview:esmojoAssessmentOverview_(document)};
   if(op==='download'){
     if(current.attachment?.uploadId!==request.uploadId)throw Error('ATTACHMENT_INVALID');
     const {bytes}=esmojoBarrierFile_(target,current.attachment);return {attachment:current.attachment,base64:Utilities.base64Encode(bytes)};
   }
   if(['draft','complete'].includes(op))validateBarrierData(request.data,op==='complete');
   if(current.completed){
-    if(op==='complete'&&JSON.stringify(barrierData(current))===JSON.stringify(request.data))return {record:current};
+    if(op==='complete'&&JSON.stringify(barrierData(current))===JSON.stringify(request.data))return {record:current,overview:esmojoAssessmentOverview_(document)};
     if(op!=='reopen')throw Error('ASSESSMENT_COMPLETED');
   }
-  if(op==='upload'&&current.attachment?.uploadId===request.uploadId&&current.attachment.sha256===request.sha256){esmojoBarrierFile_(target,current.attachment);return {record:current};}
+  if(op==='upload'&&current.attachment?.uploadId===request.uploadId&&current.attachment.sha256===request.sha256){esmojoBarrierFile_(target,current.attachment);return {record:current,overview:esmojoAssessmentOverview_(document)};}
   if(request.revision!==current.revision){
-    if(op==='draft'&&current.revision===request.revision+1&&JSON.stringify(barrierData(current))===JSON.stringify(request.data))return {record:current};
-    if(op==='remove-upload'&&!current.attachment&&current.revision===request.revision+1)return {record:current};
+    if(op==='draft'&&current.revision===request.revision+1&&JSON.stringify(barrierData(current))===JSON.stringify(request.data))return {record:current,overview:esmojoAssessmentOverview_(document)};
+    if(op==='remove-upload'&&!current.attachment&&current.revision===request.revision+1)return {record:current,overview:esmojoAssessmentOverview_(document)};
     throw Error('ASSESSMENT_CONFLICT');
   }
   const record=Object.assign({},current,{revision:current.revision+1});
@@ -84,7 +84,7 @@ function esmojoBarrierLayout_(request){
     if(record.barrierType==='custom'){if(!record.attachment)throw Error('VALIDATION');record.notes=record.notes.trim();}
     record.completed=true;record.completedBy=request.actor;record.completedAt=new Date().toISOString();
   }
-  if(op==='draft'&&JSON.stringify(barrierData(current))===JSON.stringify(barrierData(record)))return {record:current};
+  if(op==='draft'&&JSON.stringify(barrierData(current))===JSON.stringify(barrierData(record)))return {record:current,overview:esmojoAssessmentOverview_(document)};
   return esmojoBarrierSave_(target,storage,record,request.actor,op);
 }
 
@@ -95,3 +95,5 @@ function esmojoMoveBarrierFiles_(document,from,to){
     esmojoBarrierFile_({folder:parent===from.getId()?from:to},attachment);if(parent!==to.getId())file.moveTo(to);
   }
 }
+
+function esmojoAssessmentOverview_(document){return {production:esmojoProductionRiskState_(document),assessments:{barrier:esmojoBarrierSummary_(document),floor:esmojoFloorSummary_(document)}};}

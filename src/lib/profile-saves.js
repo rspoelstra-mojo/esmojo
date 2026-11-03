@@ -18,13 +18,13 @@ export function createProfileSaveQueue(request){
   }
   running=false;
  }
- return{drafts,errors,pending,get server(){return server;},sync,
+ return{drafts,errors,pending,setRequest(next){request=next;},get server(){return server;},sync,
   enqueue(number,status,summary){if(!alive||!server||pending.has(number))return false;drafts.set(number,summary);errors.delete(number);jobs.push({number,status,summary});pending.add(number);emit();void pump();return true;},
   subscribe(callback){listeners.add(callback);return()=>listeners.delete(callback);},
   cancel(){alive=false;jobs.length=0;pending.clear();errors.clear();drafts.clear();listeners.clear();},
  };
 }
 const queues=new Map();
-export function profileSaves(key,request){if(!queues.has(key))queues.set(key,createProfileSaveQueue(request));return queues.get(key);}
+export function profileSaves(key,request){if(!queues.has(key))queues.set(key,createProfileSaveQueue(request));else queues.get(key).setRequest(request);return queues.get(key);}
 export function clearProfileSaves(){for(const queue of queues.values())queue.cancel();queues.clear();}
 if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{if([...queues.values()].some(queue=>queue.pending.size)){event.preventDefault();event.returnValue='';}});
