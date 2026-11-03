@@ -464,5 +464,14 @@ De inhoudelijke rapportageprompt/PDF-opmaak wordt nog door de gebruiker aangelev
 Tot die tijd alleen CSV-metadata inventariseren, tellen en ontvangers opslaan;
 geen eigen rapportageregels, automatische verwerking of echte rapportmails maken.
 Vinkje uitsluitend bij bevestigde verzending. Toekomstige OnTrack-mail gebruikt
-de centrale emailstandaard en automatische templatecatalogus; de niet-showregel
-onder de mailtitel moet nog expliciet met de gebruiker afgestemd worden.
+de centrale emailstandaard en automatische templatecatalogus; Showrapportage is show-specifiek en gebruikt de bevestigde artiest/locatie/datumregel.
+
+De gebruiker heeft de show-specifieke mail Showrapportage toegevoegd, met tekst
+“Hierbij ontvang je de showrapportage van [artiestnaam] op [showdatum] in de
+[showlocatie].” Persoonlijke aanhef via eigen voornaam en afsluiting met
+Event Safety Mobility Operations. Gebruik server/email-templates/show-report.js.
+De echte mail vereist de werkelijk gegenereerde PDF als bijlage en gekoppelde
+showmetadata. Geen mail zonder PDF of ontbrekende concertgegevens. De expliciete
+mailtest gebruikt een duidelijk gemarkeerde test-PDF; geen echte rapportverwerking.
+PDF-bijlagen gaan uitsluitend in servergeheugen naar Resend, maximaal 10 MB;
+geen URL, lokaal pad of bijlage-inhoud in browser/records/logs.

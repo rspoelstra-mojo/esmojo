@@ -8,7 +8,7 @@ import {resolve,join} from 'node:path';
 import {spawn,spawnSync} from 'node:child_process';
 import {createEmailPreviews} from './preview.mjs';
 import {EMAIL_LOGO_URL} from '../../server/email-template.js';
-const directory=resolve(process.argv[2]||'/tmp/esmojo-email-preview');createEmailPreviews(directory);
+const directory=resolve(process.argv[2]||'/tmp/esmojo-email-preview');await createEmailPreviews(directory);
 const chrome=process.env.CHROME_BIN||['google-chrome','google-chrome-stable','chromium','chromium-browser'].find(name=>spawnSync('which',[name],{encoding:'utf8'}).status===0);
 if(!chrome)throw Error('Geen Chrome beschikbaar voor de e-mailpreviewcontrole.');
 const userData=mkdtempSync(join(tmpdir(),'esmojo-email-chrome-'));
