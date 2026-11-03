@@ -60,7 +60,7 @@ export async function scrapeMojo({ request = fetch, now = new Date(), venue:venu
     if (seen.has(url.href) || seen.size >= 100 || url.origin !== 'https://www.mojo.nl' || url.pathname !== '/agenda') throw new Error('MOJO_PAGINATION');
     seen.add(url.href);
     const response = await request(url.href, { headers: { 'User-Agent': 'ESMOJO concertagenda (+https://esmojo.nl)' }, signal: AbortSignal.timeout(20000), redirect: 'error' });
-    if (!response.ok) throw new Error('MOJO_UNAVAILABLE');
+    if (!response.ok) throw Object.assign(new Error('MOJO_UNAVAILABLE'),{status:response.status});
     const html = await response.text();
     if (html.length > 2000000) throw new Error('MOJO_FORMAT');
     const page = parseAgenda(html,{venue:venueId});
