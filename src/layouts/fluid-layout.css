@@ -1,11 +1,11 @@
 /* Uitsluitend expliciet geactiveerde inhoud. Geen rail- of submenuregels. */
 .workspace[data-layout="fluid"] > main { padding: 24px 28px; }
-.content-box.fluid-layout[data-fluid-variant] { max-width: none; padding: 0; min-width: 0; container: fluid / inline-size; --fluid-gap: 20px; --fluid-card-min: 320px; --fluid-reading: 72ch; --fluid-card: #fff; --fluid-header-start: #fff; --fluid-header-end: #edf3ff; }
-:root[data-theme="dark"] .fluid-layout { --fluid-card: #0b1425; --fluid-header-start: #0b1425; --fluid-header-end: #101e3c; }
+.content-box.fluid-layout[data-fluid-variant] { max-width: none; padding: 0; min-width: 0; container: fluid / inline-size; --fluid-gap: 20px; --fluid-card-min: 320px; --fluid-reading: 72ch; --fluid-card: #fff; }
+:root[data-theme="dark"] .fluid-layout { --fluid-card: #0b1425; }
 .fluid-grid { display: grid; gap: var(--fluid-gap, 20px); grid-template-columns: repeat(auto-fit,minmax(min(100%,var(--fluid-card-min,320px)),1fr)); align-items: start; }
 .fluid-document { max-inline-size: var(--fluid-reading,72ch); }
 .fluid-layout .show-page { --profile-aside-width: 300px; }
-.fluid-layout[data-fluid-variant="show"] .show-heading { padding: 20px 24px 0; border: 1px solid var(--line); border-radius: 12px; column-gap: 24px; grid-template-columns: minmax(0,1fr) minmax(240px,340px); background: linear-gradient(110deg,var(--fluid-header-start),var(--fluid-header-end)); }
+.fluid-layout[data-fluid-variant="show"] .show-heading { padding: 20px 24px 0; border: 1px solid var(--line); border-radius: 12px; column-gap: 24px; grid-template-columns: minmax(0,1fr) minmax(240px,340px); background: var(--fluid-card); }
 .fluid-layout .show-heading .show-tabs { grid-column: 1; grid-row: 2; margin-top: 8px; }
 .fluid-layout .show-artist-photo { grid-column: 2; grid-row: 1 / span 2; max-width: 340px; margin-bottom: 16px; align-self: center; }
 .fluid-layout .show-heading:has(.show-artist-photo[hidden]) { grid-template-columns: minmax(0,1fr); }
