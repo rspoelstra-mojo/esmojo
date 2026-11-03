@@ -10,11 +10,20 @@ De bestaande componentstijlen, contentbox en systeemthema blijven leidend.
 in het linkerblok. Rechts staat de herbruikbare `src/risk-review-card.js`, even
 breed als de bestaande Showprofiel-zijkaart; op kleine schermen stapelen deze
 blokken. Het blok “Risico beoordeling” toont vier gekleurde keuzes in twee kolommen
-en de primaire knop Opslaan. Geen risico vereist Toelichting; Midden/Hoog vereisen
+en de primaire knop Opslaan. De algemene kaart start zonder selectie. Geen risico
+vereist normaal Toelichting; Midden/Hoog vereisen
 Beheersmaatregel; Laag toont geen tekstveld. Opslaan voert de bestaande complete-
 actie uit, met behoud van gebruiker, tijdstip en revisiecontrole. Een expliciete
 bewerkactie heropent de beoordeling en bewaart de oude versie in historie.
 Dit nieuwe blok wordt voorlopig uitsluitend bij Barrieropstelling gebruikt.
+
+Uitzondering op bewuste selectie: Seated en de vier standaard-barrieropstellingen
+worden direct als Geen risico afgerond opgeslagen, zonder toelichting. Dit gaat
+via dezelfde complete-actie met de actuele revisie, na eventuele eerdere
+conceptwrites. Herselectie na Bewerken is een expliciete actie, ook bij ongewijzigde
+gegevens. Lezen of verversen start nooit een automatische afronding. Afwijkend
+ontwerp blijft handmatig; Midden/Hoog houden altijd hun verplichte maatregel.
+Het vierkante schema en het label zijn rechts uitgelijnd in het linkerblok.
 
 De beoordelingstekst staat als `riskNote` in hetzelfde Vertrouwelijke Drive-record,
 los van `notes` voor het afwijkende ontwerp. Beide runtimes valideren lengte, type
@@ -78,7 +87,8 @@ worden bij afronding in dezelfde vertrouwelijke beoordeling vastgelegd.
 
 Geen risico vereist toelichting; Midden/Hoog vereisen beheersmaatregelen; Laag
 vereist geen aanvullende tekst. Seated is uitsluitend bij Vloerdruk automatisch
-Geen risico en afgerond. De barrierbeoordeling blijft handmatig.
+Geen risico en afgerond. Voor Barrieropstelling geldt de hierboven beschreven
+uitzondering voor een bewust gekozen standaardopstelling.
 
 Een gewijzigde barrier-signatuur (type of hash van afwijkend ontwerp) archiveert de
 oude vloerdrukbeoordeling en maakt een nieuw concept. Passende vakgegevens blijven
