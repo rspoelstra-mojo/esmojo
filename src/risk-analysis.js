@@ -15,8 +15,9 @@ const paths = {
 const glyph = (name, className) => { const el=node('span',className); el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`; return el; };
 const badge = () => { const el=node('span','analysis-status','AI-concept');el.dataset.status='draft';return el; };
 
-export function createRiskAnalysis(panel, { show, request = body => access('show-risks', { method:'POST', body }), saveSelection = body => access('production-risks', {method:'POST',body}) } = {}) {
+export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=access, request = body => requestAccess('show-risks', { method:'POST', body }), saveSelection = body => requestAccess('production-risks', {method:'POST',body}) } = {}) {
   let disposed=false, loaded=false, loadingNow=false, risks=[], state='pending', error='', view='overview';
+  let loadedVersion=-1;
   let production={revision:0,choices:{}},productionReady=false,saving=false,assessments={},disposeDetail=null;
   function closeDetail(){const cleanup=disposeDetail;disposeDetail=null;return cleanup?.();}
   function backFromAssessment(id){productionReady=false;const pending=closeDetail();overview(null,id);Promise.resolve(pending).then(()=>{if(!disposed&&view==='overview')void load();});}
@@ -78,7 +79,8 @@ export function createRiskAnalysis(panel, { show, request = body => access('show
   function productionDetail(entry,group){
     if(disposed)return;closeDetail();view='production';section.replaceChildren();
     if(['barrier_layout','floor_pressure'].includes(entry.id)){
-      const options={show,onBack:()=>backFromAssessment(entry.id),onBarrier:()=>productionDetail(productionRiskGroups[0].items[0],productionRiskGroups[0])};
+      const action=entry.id==='barrier_layout'?'barrier-layout':'floor-pressure';
+      const options={show,request:body=>requestAccess(action,{method:'POST',body}),onStored:(_record,data)=>{if(data?.overview){production=data.overview.production;assessments=data.overview.assessments;}},onBack:()=>backFromAssessment(entry.id),onBarrier:()=>productionDetail(productionRiskGroups[0].items[0],productionRiskGroups[0])};
       disposeDetail=entry.id==='barrier_layout'?createBarrierLayoutPage(section,options):createFloorPressurePage(section,options);return;
     }
     const back=node('button','profile-back','← Terug naar overzicht');back.type='button';back.onclick=()=>overview(null,entry.id);
@@ -109,7 +111,7 @@ export function createRiskAnalysis(panel, { show, request = body => access('show
     }catch{if(!disposed){productionReady=false;error='De keuze is niet bevestigd. Laad de risicoanalyse opnieuw voordat je verdergaat.';}}
     finally{saving=false;finish?.();panel.removeAttribute('aria-busy');if(!disposed&&view==='overview'){overview();if(productionReady)[...section.querySelectorAll('[data-field]')].find(button=>button.dataset.field===field&&button.dataset.choice===String(value))?.focus({preventScroll:true});}}
   }
-  async function load() {
+  async function load(strict=false) {
     if(disposed||loadingNow||saving)return;
     loadingNow=true;productionReady=false;error='';if(view==='overview')overview();const finish=loading?.start();panel.setAttribute('aria-busy','true');
     try{
@@ -117,10 +119,10 @@ export function createRiskAnalysis(panel, { show, request = body => access('show
       if(!['ready','pending','not-ready'].includes(data.state)||!Array.isArray(data.risks)||data.risks.length>30)throw Error('Invalid response');
       const ids=new Set();
       for(const risk of data.risks){if(!risk||!/^R\d{2}$/.test(risk.id)||ids.has(risk.id)||['title','description','consequence'].some(key=>typeof risk[key]!=='string'||!risk[key].trim()))throw Error('Invalid risk');ids.add(risk.id);}
-      validateProductionRiskState(data.production);production=data.production;assessments=data.assessments||{};productionReady=true;state=data.state;risks=data.risks;loaded=true;
-    }catch{if(!disposed){loaded=false;risks=[];error='Risicoanalyse laden is niet gelukt. Probeer opnieuw.';}}
+      validateProductionRiskState(data.production);production=data.production;assessments=data.assessments||{};productionReady=true;state=data.state;risks=data.risks;loaded=true;loadedVersion=version();
+    }catch{if(!disposed){loaded=false;risks=[];error='Risicoanalyse laden is niet gelukt. Probeer opnieuw.';}if(strict===true)throw Error(error);}
     finally{loadingNow=false;finish?.();panel.removeAttribute('aria-busy');if(!disposed&&view==='overview')overview();}
   }
   overview();
-  return { activate(){if(!loaded&&!loadingNow)void load();}, dispose(){disposed=true;closeDetail();risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
+  return { prepare(){return load(true);}, activate(){if((!loaded||loadedVersion!==version())&&!loadingNow)void load();}, dispose(){disposed=true;closeDetail();risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
 }

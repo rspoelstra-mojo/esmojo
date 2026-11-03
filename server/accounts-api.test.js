@@ -107,10 +107,11 @@ test('eigen fotoroute vereist TOTP en een geactiveerd profiel', async () => {
 });
 
 test('Nieuwe productionele routes vereisen account/MFA en gebruiken uitsluitend de server-actor',async()=>{
- for(const action of ['barrier-layout','floor-pressure']){
-  assert.equal((await run({action,method:'POST',auth:false,body:{operation:'read',concertId:'Test'}})).response.code,401);
-  assert.equal((await run({action,method:'POST',aal:'aal1',body:{operation:'read',concertId:'Test'}})).response.code,403);
-  const success=await run({action,method:'POST',body:{operation:'read',concertId:'Test'}});assert.equal(success.response.code,200);assert.equal(success.calls.find(c=>c[0]==='shows')[2].actor,id);
-  assert.equal((await run({action,method:'POST',body:{operation:'read',concertId:'Test',actor:other}})).response.code,400);
+ for(const action of ['barrier-layout','floor-pressure','show-open']){
+  const body=action==='show-open'?{concertId:'Test'}:{operation:'read',concertId:'Test'};
+  assert.equal((await run({action,method:'POST',auth:false,body})).response.code,401);
+  assert.equal((await run({action,method:'POST',aal:'aal1',body})).response.code,403);
+  const success=await run({action,method:'POST',body});assert.equal(success.response.code,200);assert.equal(success.calls.find(c=>c[0]==='shows')[2].actor,id);
+  assert.equal((await run({action,method:'POST',body:{...body,actor:other}})).response.code,400);
  }
 });

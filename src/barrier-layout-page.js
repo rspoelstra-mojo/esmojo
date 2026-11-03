@@ -56,7 +56,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   }
   function accept(data,replace){
     if(!data?.record||!Number.isSafeInteger(data.record.revision))throw Error('Onvolledige opslagbevestiging.');record=data.record;
-    if(!disposed){if(replace){type=record.barrierType;riskLevel=record.riskLevel;select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();onStored(record);update();}
+    if(!disposed){if(replace){type=record.barrierType;riskLevel=record.riskLevel;select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();onStored(record,data);update();}
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();

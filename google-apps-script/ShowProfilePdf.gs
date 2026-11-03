@@ -31,12 +31,12 @@ function esmojoPdfStoredFile_(row,folder,otherFolder){
   if(file.isTrashed()||file.getMimeType()!=='application/pdf'||file.getName()!==row.fileName||![folder.getId(),otherFolder?.getId()].includes(parentId)||!parentId||parents.hasNext())throw Error('REPORT_UNAVAILABLE');
   return file;
 }
-function esmojoShowProfilePdf_(request){
+function esmojoShowProfilePdf_(request,openTarget){
   const op=request.operation.slice(7),allowed={status:['operation','concertId'],reserve:['operation','concertId','jobId','manager','layoutVersion'],commit:['operation','concertId','jobId','revision','version','layoutVersion','fileName','pdfBase64','sha256'],fail:['operation','concertId','jobId','revision','errorCode'],download:['operation','concertId']}[op];
   if(!allowed||Object.keys(request).some(key=>!allowed.includes(key))||typeof request.concertId!=='string'||!request.concertId||request.concertId.length>240||/[\x00-\x1f/\\]/.test(request.concertId))throw Error('VALIDATION');
   if(['reserve','commit','fail'].includes(op)&&!/^[a-f0-9-]{36}$/.test(request.jobId||''))throw Error('VALIDATION');
   if(['reserve','commit'].includes(op)&&request.layoutVersion!==ESMOJO_PDF_LAYOUT)throw Error('REPORT_CONFLICT');
-  const snapshot=esmojoPdfSnapshot_(request.concertId),{target,revision,fileName}=snapshot;
+  const snapshot=esmojoPdfSnapshot_(request.concertId,openTarget),{target,revision,fileName}=snapshot;
   const metadata=esmojoShowFile_(target.folder,'showprofiel-pdf.json'),data=esmojoReadPdfRegister_(metadata,target.primary.concertId),existing=data.reports[revision];
   const save=()=>{const body=JSON.stringify(data);const saved=metadata?(metadata.setContent(body),metadata):target.folder.createFile(Utilities.newBlob(body,'application/json','showprofiel-pdf.json'));if(saved.getBlob().getDataAsString('UTF-8')!==body)throw Error('UNAVAILABLE');};
   const ready=()=>({state:'ready',revision,fileName:existing.fileName,version:existing.version});

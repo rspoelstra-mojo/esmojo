@@ -9,7 +9,7 @@ export function createShowsStore({ env = process.env, request = fetch } = {}) {
     const body = JSON.stringify({ operation, ...payload }), timestamp = Date.now(), nonce = randomBytes(16).toString('hex');
     const digest = createHash('sha256').update(body).digest('hex');
     const signature = createHmac('sha256', secret).update(`shows\n${timestamp}\n${nonce}\n${digest}`).digest('hex');
-    const response = await request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shows', timestamp, nonce, signature, body }), signal: AbortSignal.timeout(operation === 'sync' ? 240000 : (operation.startsWith('report-') || operation.startsWith('risk-') || /^(barrier-|floor-)/.test(operation)) ? 90000 : 25000) });
+    const response = await request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shows', timestamp, nonce, signature, body }), signal: AbortSignal.timeout(operation === 'sync' ? 240000 : (operation === 'show-open' || operation.startsWith('report-') || operation.startsWith('risk-') || /^(barrier-|floor-)/.test(operation)) ? 90000 : 25000) });
     if (!response.ok) throw new Error('SHOWS_UNAVAILABLE');
     const result = await response.json();
     if (!result.ok) throw new Error(['TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(result.code) ? result.code : 'SHOWS_UNAVAILABLE');

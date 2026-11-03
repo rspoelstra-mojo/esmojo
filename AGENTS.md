@@ -65,6 +65,14 @@ lokaal en direct; nooit de pagina-inhoud. Hergebruik src/submenu-search.js en
 geef nieuwe links zo nodig data-submenu-title mee. Geen zoekopdrachten opslaan
 of naar een zoekdienst sturen. Escape/sluiten maakt de volledige lijst zichtbaar.
 
+Op 3 november 2026 heeft de gebruiker voor het openen van een show één gezamenlijke
+laadronde gevraagd: rondje in de gekozen submenu-link en de showpagina pas tonen
+wanneer showprofiel, onderzoeksinhoud, bezoekersgegevens, risico's, productie-
+beoordelingen en toepasselijke PDF-status geladen zijn. Hergebruik deze gegevens
+uitsluitend in geheugen tijdens de levensduur van de showpagina; geen gedeeltelijk
+bruikbare pagina of herhaalde initiële reads bij tab-/detailnavigatie. Writes,
+reserveringen, downloads en echte PDF-generatie blijven beveiligde serveracties.
+
 Snelheid is het belangrijkste ontwerpuitgangspunt. De gebruiker accepteert een
 langere eerste laadbeurt of refresh als navigatie en veelgebruikte acties daarna
 direct werken. Laad passende veelgebruikte gegevens vooraf, hergebruik gegevens

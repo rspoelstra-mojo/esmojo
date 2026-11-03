@@ -98,6 +98,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
       const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
       const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
+      if(action==='show-open'&&req.method==='POST'){
+        try{return reply(200,await shows('show-open',{...validateRiskViewRequest(req.body),actor}));}
+        catch(error){return reply(error.message==='VALIDATION'?400:503,{error:error.message==='VALIDATION'?'Ongeldige show.':'De show kon niet volledig worden geladen. Probeer opnieuw.'});}
+      }
       if(['barrier-layout','floor-pressure'].includes(action)&&req.method==='POST'){
         try{const input=action==='barrier-layout'?validateBarrierRequest(req.body):validateFloorRequest(req.body),{operation,...payload}=input;return reply(200,await shows((action==='barrier-layout'?'barrier-':'floor-')+operation,{...payload,actor}));}
         catch(error){const code=error.message;return reply(code==='VALIDATION'?400:['ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?409:503,{code:['VALIDATION','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(code)?code:'UNAVAILABLE',error:code==='VALIDATION'?(action==='barrier-layout'?'Controleer de verplichte velden en kies een geldige PNG of PDF (maximaal 2 MB).':'Controleer de publieksvakken, bezoekersaantallen, oppervlakten en verplichte beoordeling.'):code==='ASSESSMENT_CONFLICT'?'Deze beoordeling of de brongegevens zijn intussen gewijzigd. Laad opnieuw; je invoer is behouden.':code==='ASSESSMENT_COMPLETED'?'Dit onderdeel is al afgerond. Open de actuele beoordeling of kies eerst Bewerken.':'Laden of opslaan is niet gelukt. Je invoer is behouden. Probeer opnieuw.'});}

@@ -11,14 +11,14 @@ function esmojoReadShowProfile_(file, concertId) {
   }
   return value;
 }
-function esmojoShowProfile_(request) {
+function esmojoShowProfile_(request,openTarget) {
   const saving = request.operation === 'profile-save';
   const allowed = saving ? ['operation', 'concertId', 'questionNumber', 'status', 'summary', 'revision'] : ['operation', 'concertId', 'questionNumber'];
   if (Object.keys(request).some(key => !allowed.includes(key)) || typeof request.concertId !== 'string' || !request.concertId || request.concertId.length > 240 || /[\x00-\x1f/\\]/.test(request.concertId)) throw new Error('VALIDATION');
   if ((saving || request.questionNumber !== undefined) && (!Number.isInteger(request.questionNumber) || request.questionNumber < 1 || request.questionNumber > 11)) throw new Error('VALIDATION');
   if (saving && (!['draft', 'completed'].includes(request.status) || typeof request.summary !== 'string' || request.summary.length > 400 || /\x00/.test(request.summary)
       || (request.status === 'completed' && !request.summary.trim()) || !Number.isSafeInteger(request.revision) || request.revision < 0)) throw new Error('VALIDATION');
-  const target = esmojoResearchTarget_(request.concertId), filename = 'showprofiel.json';
+  const target = openTarget||esmojoResearchTarget_(request.concertId), filename = 'showprofiel.json';
   const file = esmojoShowFile_(target.folder, filename), document = esmojoReadShowProfile_(file, target.primary.concertId);
   if (!saving) {
     // Eén maplisting voor het overzicht; geen elf losse bestandszoekopdrachten.
