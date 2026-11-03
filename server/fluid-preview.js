@@ -11,7 +11,7 @@ export function createFluidPreviewService({shows,pdfService,now=()=>new Date()})
   return async(input,actor)=>{
     const op=input?.operation,allowed=op==='attachment'?['operation','uploadId']:['operation'];
     if(!input||!['snapshot','download','attachment'].includes(op)||Object.keys(input).sort().join(',')!==allowed.sort().join(',')||(op==='attachment'&&!validUploadId(input.uploadId)))throw Error('VALIDATION');
-    const index=await shows('list'),show=upcomingShows(index.concerts,now()).find(row=>row.name.toLowerCase()==='puscifer');
+    const index=await shows('list'),show=(index.shows||upcomingShows(index.concerts,now())).find(row=>row.name.toLowerCase()==='puscifer');
     if(!show)throw Error('NOT_FOUND');const concertId=show.key;
     if(op==='download')return pdfService.download(concertId);
     if(op==='attachment')return shows('barrier-download',{concertId,actor,uploadId:input.uploadId});
