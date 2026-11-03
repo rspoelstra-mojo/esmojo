@@ -475,3 +475,25 @@ showmetadata. Geen mail zonder PDF of ontbrekende concertgegevens. De expliciete
 mailtest gebruikt een duidelijk gemarkeerde test-PDF; geen echte rapportverwerking.
 PDF-bijlagen gaan uitsluitend in servergeheugen naar Resend, maximaal 10 MB;
 geen URL, lokaal pad of bijlage-inhoud in browser/records/logs.
+
+## Extra MOJO-locaties uitsluitend voor OnTrack-mailings
+
+Op 3 november 2026 heeft de gebruiker MOJO-concerten in Ziggo Dome, AFAS Live,
+GelreDome, Johan Cruijff ArenA en Rotterdam Ahoy gevraagd voor Showrapportage.
+Hergebruik de bestaande Openbaar-classificatie voor artiest, concert-ID, locatie,
+stad, datum en MOJO-bron. Bewaar deze inventaris uitsluitend als
+_esmojo_ontrack_concerts_v1.json in de OnTrack-Drive-map. Geen invoeging in de
+Shows-/Productie-index, menuseed, artiestmappen, analyses of andere pagina’s.
+
+De bestaande mojo-shows.yml controleert beide inventarissen dagelijks rond
+12.00 uur Nederland, met dezelfde zomer-/wintertijdcontrole en 365-dagenhorizon.
+Iedere import heeft een eigen vaste OIDC-audience en eigen signed Drive-domein.
+Valideer de complete inventaris voordat die de vorige vervangt; behoud historie
+voor reeds bekende concerten en bestaande gegevens bij fouten. Geen eigen
+artist-/concertmappen aanmaken voor de extra locaties.
+
+Alleen het mailtype show-report gebruikt concertCatalog ontrack in de centrale
+mailcatalogus. Beheerder/MFA en extra Drive-profielcontrole blijven verplicht.
+Andere mailtypen houden de gewone showbron. Extra concertgegevens uitsluitend
+in beheerder-mailkeuzes tonen; niet in Shows of andere siteonderdelen. Gebruik
+uitsluitend de exacte gekozen concertkoppeling voor de mailmetadata.

@@ -38,6 +38,7 @@ jobs:
         run: |
           node server/apps-script.test.js
           node server/ontrack.test.js
+          node server/ontrack-concerts.test.js
           node --test tools/apps-script/deploy.test.mjs
           node server/mcp.test.js
           node server/showprofile-risks.test.js

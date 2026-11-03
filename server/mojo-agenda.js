@@ -1,12 +1,14 @@
+import {mojoVenue,matchesMojoVenue} from './mojo-venues.js';
 // Alleen openbare MOJO-agendagegevens. Geen afbeeldingen, tickets of bezoekersdata.
 const DAY = 86400000;
 const MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 export const calendarDate = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 export const addDays = (date, days) => new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY).toISOString().slice(0, 10);
 export const artistKey = name => name.normalize('NFC').toLocaleLowerCase('nl').replace(/\s+/g, ' ').trim();
-export function concertId(artist, date) {
+export function concertId(artist, date, venue = 'Gashouder') {
   const name = artist.normalize('NFC').trim().replace(/[\s_/\\]+/g, '-');
-  return `${name}_Gashouder_${date.slice(8, 10)}${date.slice(5, 7)}${date.slice(0, 4)}`;
+  const location=venue.normalize('NFC').trim().replace(/[\s_/\\]+/g,'-');
+  return `${name}_${location}_${date.slice(8, 10)}${date.slice(5, 7)}${date.slice(0, 4)}`;
 }
 export function text(html) {
   const entities = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ', ndash: '–', mdash: '—', eacute: 'é', ouml: 'ö', uuml: 'ü', auml: 'ä' };
@@ -17,7 +19,8 @@ export function text(html) {
   }).replace(/\s+/g, ' ').trim().normalize('NFC');
 }
 const field = (html, name) => text(new RegExp(`<([a-z][\\w:-]*)\\b[^>]*class=["'][^"']*\\b${name}\\b[^"']*["'][^>]*>([\\s\\S]*?)<\\/\\1\\s*>`, 'i').exec(html)?.[2] || '');
-export function parseAgenda(html) {
+export function parseAgenda(html, {venue:venueId='gashouder'}={}) {
+  const venue=mojoVenue(venueId);
   if (!html.includes('js-hook-async-content="agenda-list"')) throw new Error('MOJO_FORMAT');
   const records = []; let year, month, count = 0;
   const tokens = /<h2\b[^>]*class="[^"]*agenda-list__title[^"]*"[^>]*>([\s\S]*?)<\/h2>|<li\b[^>]*class="[^"]*\bc-agenda-item\b[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
@@ -31,8 +34,7 @@ export function parseAgenda(html) {
     count++;
     const item = match[2], location = field(item, 'agenda-item__subtitle');
     // Interpunctie en volgorde mogen verschillen, niet de zaal of de stad.
-    const venueWords = location.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ');
-    if (!venueWords.includes('gashouder') || !venueWords.includes('amsterdam')) continue;
+    if (!matchesMojoVenue(location,venue)) continue;
     const artist = field(item, 'agenda-item__title');
     const day = Number(field(item, 'agenda-item__date-day'));
     if (!artist || artist.length > 160 || !year || !month || !day) throw new Error('MOJO_FORMAT');
@@ -42,16 +44,17 @@ export function parseAgenda(html) {
     const source = new URL(text(href || '/agenda'), 'https://www.mojo.nl');
     // Externe locatie-links worden niet gevolgd of als importbron opgeslagen.
     const sourceUrl = source.origin === 'https://www.mojo.nl' ? source.href : 'https://www.mojo.nl/agenda';
-    records.push({ artist, date, venue: 'Gashouder', city: 'Amsterdam', sourceUrl, concertId: concertId(artist, date) });
+    records.push({ artist, date, venue: venue.name, city: venue.city, sourceUrl, concertId: concertId(artist, date, venue.name) });
   }
   if (!count && !html.includes('We hebben geen resultaten gevonden')) throw new Error('MOJO_FORMAT');
   const next = /<a\b[^>]*class="[^"]*pagination__arrow--next[^"]*"[^>]*href="([^"]+)"/i.exec(html)?.[1];
   return { records, next: next ? text(next) : null };
 }
 
-export async function scrapeMojo({ request = fetch, now = new Date() } = {}) {
+export async function scrapeMojo({ request = fetch, now = new Date(), venue:venueId='gashouder' } = {}) {
+  const venue=mojoVenue(venueId);
   const from = calendarDate(now), until = addDays(from, 365);
-  let url = new URL('https://www.mojo.nl/agenda?query=Gashouder');
+  let url = new URL('https://www.mojo.nl/agenda?'+new URLSearchParams({query:venue.query}));
   const seen = new Set(), concerts = new Map();
   while (url) {
     if (seen.has(url.href) || seen.size >= 100 || url.origin !== 'https://www.mojo.nl' || url.pathname !== '/agenda') throw new Error('MOJO_PAGINATION');
@@ -60,7 +63,7 @@ export async function scrapeMojo({ request = fetch, now = new Date() } = {}) {
     if (!response.ok) throw new Error('MOJO_UNAVAILABLE');
     const html = await response.text();
     if (html.length > 2000000) throw new Error('MOJO_FORMAT');
-    const page = parseAgenda(html);
+    const page = parseAgenda(html,{venue:venueId});
     for (const row of page.records) {
       if (row.date < from || row.date >= until) continue;
       const existing = concerts.get(row.concertId);

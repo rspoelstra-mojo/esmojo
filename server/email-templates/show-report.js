@@ -8,7 +8,7 @@ export function showReportEmail({to,firstName,show,pdf}){
   emailAttachments(message);return message;
 }
 export default {
-  id:'show-report',label:'Showrapportage',requiresShow:true,build:showReportEmail,
+  id:'show-report',label:'Showrapportage',requiresShow:true,concertCatalog:'ontrack',build:showReportEmail,
   async buildTest({recipient,show}){
     // Uitsluitend de expliciete mailtest: geen echte showrapportage of opslag.
     const {PDFDocument,StandardFonts}=await import('pdf-lib');

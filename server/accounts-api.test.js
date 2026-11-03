@@ -23,6 +23,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({ env: configuration, clientFactory,
+    mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
     shows:async(operation,input)=>{calls.push(['shows',operation,input]);return operation==='list'?{shows:[]}:{record:{revision:0}};},
     profiles: async (operation, actor, input) => {
@@ -141,7 +142,7 @@ test('ontbrekende betrouwbare doelvoornaam gebruikt Beste collega zonder een naa
 
 const emailTestBody={templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'};
 test('Email-beheer toont automatisch beschikbare templates; alleen expliciete POST verstuurt één test naar de ingelogde beheerder',async()=>{
- const catalog=await run({action:'email'});assert.equal(catalog.response.code,200);assert.deepEqual(catalog.response.data.templates,[{id:'account-activation',label:'Account activeren',requiresShow:false},{id:'show-report',label:'Showrapportage',requiresShow:true}]);assert.equal(catalog.response.data.recipient,profile.email);assert.equal(catalog.calls.some(c=>c[0]==='mail'),false);
+ const catalog=await run({action:'email'});assert.equal(catalog.response.code,200);assert.deepEqual(catalog.response.data.templates,[{id:'account-activation',label:'Account activeren',requiresShow:false},{id:'show-report',label:'Showrapportage',requiresShow:true,concertCatalog:'ontrack'}]);assert.equal(catalog.response.data.recipient,profile.email);assert.equal(catalog.calls.some(c=>c[0]==='mail'),false);
  const {response,calls}=await run({action:'email',method:'POST',body:emailTestBody});assert.equal(response.code,200);assert.equal(response.data.ok,true);assert.deepEqual(calls.map(c=>c[0]),['self','mail']);
  const sent=calls.find(c=>c[0]==='mail');assert.equal(sent[1].to,profile.email);assert.match(sent[1].subject,/^\[TEST\]/);assert.match(sent[1].text,/Beste Test,/);assert.equal(sent[1].text.includes('test-only-not-an-activation'),false);assert.equal(sent[1].html.includes('/activeren?token='),false);assert.ok(sent[1].html.includes('ESMOJO openen'));assert.equal(sent[2].idempotencyKey,'esmojo-test-'+emailTestBody.requestId);
 });
