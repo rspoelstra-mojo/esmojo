@@ -25,7 +25,7 @@ const risks=[{id:'R01',title:'Eerste risico',description:'Beschrijving één',co
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 test('Risico’s laden pas bij tabselectie, krijgen ieder eigen pagina en terugknop zonder extra verzoek',async()=>{
   let calls=0,resolve;const h=harness(body=>{assert.equal(body.concertId,'Test');calls++;return new Promise(done=>resolve=done);});
-  assert.match(h.text(),/Productionele risico's/);assert.match(h.text(),/Operationele risico's/);assert.equal(calls,0);
+  assert.deepEqual(h.panel.querySelectorAll('h3').map(el=>el.textContent),['Zaalindeling','Special effects',"Operationele risico's"]);assert.match(h.text(),/Operationele risico's/);assert.equal(calls,0);
   h.page.activate();h.page.activate();assert.equal(calls,1);assert.equal(h.panel.attributes['aria-busy'],'true');
   resolve({state:'ready',risks,production:{revision:0,choices:{}}});await tick();assert.equal(h.buttons().length,2);assert.equal(h.panel.attributes['aria-busy'],undefined);
   for(const risk of risks){h.buttons().find(b=>b.dataset.riskId===risk.id).onclick();assert.ok(h.text().includes(risk.title));assert.ok(h.text().includes(risk.description));assert.ok(h.text().includes(risk.consequence));assert.equal(h.panel.querySelectorAll('textarea').length,0);h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.buttons().length,2);assert.equal(h.focused().dataset.riskId,risk.id);}
@@ -45,7 +45,8 @@ test('Productionele pagina’s openen direct of uitsluitend na bevestigd Ja; Nee
   const h=harness(async()=>({state:'pending',risks:[],production:{revision:0,choices:{}}}),body=>{writes.push(body);return new Promise(done=>save=done);});
   const button=id=>h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId===id);
   const choice=(field,value)=>h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field===field&&b.dataset.choice===String(value));
-  assert.equal(h.panel.querySelectorAll('[data-production-id]').length,7);assert.equal(button('barrier_layout').disabled,false);assert.equal(button('escape_routes').disabled,true);
+  assert.equal(h.panel.querySelectorAll('[data-production-id]').length,8);assert.equal(button('barrier_layout').disabled,false);assert.equal(button('escape_routes').disabled,true);
+  assert.equal(button('entrance_process').disabled,false);button('entrance_process').onclick();assert.ok(h.text().includes('Entreeproces'));assert.ok(h.text().includes("Productionele risico's · Zaalindeling"));h.panel.querySelectorAll('button')[0].onclick();
   h.page.activate();await tick();assert.equal(choice('escape_routes',false).attributes['aria-pressed'],'false');
   choice('escape_routes',true).onclick();assert.equal(button('escape_routes').disabled,true);assert.equal(writes.length,1);assert.equal(writes[0].revision,0);
   save({revision:1,choices:{escape_routes:true}});await tick();assert.equal(button('escape_routes').disabled,false);
