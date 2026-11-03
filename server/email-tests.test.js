@@ -53,3 +53,29 @@ test('Showrapportage verschijnt automatisch en verzendt exact de gekoppelde show
  assert.throws(()=>showReportEmail({show,pdf:{filename:'Rapport.pdf',content:Buffer.from('geen pdf')}}),/Ongeldige PDF/);
  const production=showReportEmail({to:'zelf@example.invalid',firstName:'Anne Marie',show,pdf:{filename:'Showrapportage.pdf',content:bytes}});assert.equal(production.attachments[0].filename,'Showrapportage.pdf');assert.ok(!renderEmailTemplate(production).text.includes('[artiestnaam]'));
 });
+
+test('Alle testtemplates hebben alleen voor Richards beheerdersaccount twee vaste ontvangers',async()=>{
+ const calls=[],show={key:'testconcert',name:'Testartiest',venue:'Gashouder',dates:['2026-11-04']};
+ const service=createEmailTestService({mail:async(message,options)=>calls.push({message,options}),shows:async()=>({shows:[show]}),mailingConcerts:async()=>({concerts:[]})});
+ const own={role:'beheerder',email:'r.spoelstra@mojo.nl',firstName:'Richard'},input={requestId:'11111111-1111-4111-8111-111111111111'};
+ const catalog=await service.catalog(own,true);assert.deepEqual(catalog.recipients,[own.email,'richspoelstra@gmail.com']);assert.equal(calls.length,0);
+ for(const template of catalog.templates){
+  calls.length=0;await service.send(own,{...input,templateId:template.id,...(template.requiresShow?{concertId:show.key}:{})});
+  assert.deepEqual(calls.map(row=>row.message.to),catalog.recipients);assert.notEqual(calls[0].options.idempotencyKey,calls[1].options.idempotencyKey);
+  assert.equal(renderEmailTemplate(calls[0].message).html,renderEmailTemplate(calls[1].message).html);
+  assert.equal(calls[0].message.attachments,calls[1].message.attachments);
+ }
+ for(const profile of [{...own,email:'ander@example.invalid'},{...own,role:'medewerker'},{...own,email:'r.spoelstra@mojo.nl.example.invalid'}]){
+  calls.length=0;assert.deepEqual((await service.catalog(profile,true)).recipients,[profile.email]);
+  await service.send(profile,{...input,templateId:'account-activation'});assert.deepEqual(calls.map(row=>row.message.to),[profile.email]);
+ }
+ await assert.rejects(service.send(own,{...input,templateId:'account-activation',recipients:['ongewenst@example.invalid']}),/VALIDATION/);
+});
+
+test('Herhalen na mislukte extra testmail gebruikt dezelfde afzonderlijke idempotentiesleutels',async()=>{
+ const calls=[];let fail=true;
+ const service=createEmailTestService({mail:async(message,options)=>{calls.push({to:message.to,key:options.idempotencyKey});if(message.to==='richspoelstra@gmail.com'&&fail){fail=false;throw Error('Tijdelijke mailfout');}},shows:async()=>({shows:[]})});
+ const profile={role:'beheerder',email:'r.spoelstra@mojo.nl',firstName:'Richard'},request={templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'};
+ await assert.rejects(service.send(profile,request),/Tijdelijke mailfout/);assert.deepEqual(await service.send(profile,request),{ok:true});
+ assert.deepEqual(calls.slice(0,2),calls.slice(2));
+});
