@@ -23,6 +23,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({ env: configuration, clientFactory,
+    ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
     shows:async(operation,input)=>{calls.push(['shows',operation,input]);return {record:{revision:0}};},
     profiles: async (operation, actor, input) => {
       calls.push([operation, actor, input]);
@@ -154,4 +155,11 @@ test('Testmail bewaart geen geheime providerfout; ontbrekende mailconfiguratie m
  const missing=await run({action:'email',configuration:{...env,RESEND_API_KEY:''}});assert.equal(missing.response.data.canSend,false);
  const blocked=await run({action:'email',method:'POST',body:emailTestBody,configuration:{...env,RESEND_API_KEY:''}});assert.equal(blocked.response.code,503);assert.equal(blocked.calls.some(c=>c[0]==='mail'),false);
  const failed=await run({action:'email',method:'POST',body:emailTestBody,failMail:true});assert.equal(failed.response.code,503);assert.equal(JSON.stringify(failed.response.data).includes('private-response'),false);assert.equal(failed.calls.filter(c=>c[0]==='mail').length,1);
+});
+
+test('OnTrack vereist beheerder/MFA en verstuurt nooit mail via status of ontvangerkeuze',async()=>{
+ const read=await run({action:'ontrack'});assert.equal(read.response.code,200);assert.deepEqual(read.calls.map(c=>c[0]),['self','ontrack']);assert.equal(read.calls[1][1],'status');
+ const write=await run({action:'ontrack',method:'PATCH',body:{revision:0,recipientIds:[other]}});assert.equal(write.response.code,200);assert.deepEqual(write.calls[1],['ontrack','recipients',id,{revision:0,recipientIds:[other]}]);
+ for(const options of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{origin:'https://evil.invalid'}]){const r=await run({action:'ontrack',...options});assert.ok([401,403].includes(r.response.code));assert.equal(r.calls.some(c=>c[0]==='ontrack'),false);}
+ const invalid=await run({action:'ontrack',method:'PATCH',body:{revision:0,recipientIds:[other],folderId:'arbitrary'}});assert.equal(invalid.response.code,400);assert.equal(invalid.calls.some(c=>c[0]==='ontrack'),false);assert.equal((await run({action:'ontrack',method:'POST'})).response.code,405);
 });
