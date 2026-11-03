@@ -38,9 +38,9 @@ export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=a
       const retry=node('button','secondary-button','Opnieuw laden');retry.type='button';retry.onclick=load;section.append(message,retry);
     }
     const layout=node('div','profile-layout'),categories=node('div','profile-categories');
-    const productionCard=category("Productionele risico's",'production');
     for(const group of productionRiskGroups){
-      const block=node('section','production-risk-group');block.append(node('h4','production-risk-group-title',group.title));
+      const {card}=category(group.title,'production');
+      const block=node('div','production-risk-group');
       for(const entry of group.items){
         const row=node('div','production-risk-row'),frame=node('div','visitor-analysis'),button=node('button','visitor-analysis-summary');button.type='button';button.dataset.productionId=entry.id;
         button.disabled=Boolean(entry.conditional&&(!productionReady||saving||production.choices[entry.id]!==true));
@@ -60,7 +60,7 @@ export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=a
         }
         block.append(row);
       }
-      productionCard.card.append(block);
+      card.append(block);categories.append(card);
     }
     const operational=category("Operationele risico's",'operational');
     if(loaded)operational.header.append(node('span','profile-category-count',`${risks.length} ${risks.length===1?'risico':"risico's"}`));
@@ -72,7 +72,7 @@ export function createRiskAnalysis(panel, { show, version=()=>0, requestAccess=a
       button.append(node('span','analysis-row-title',risk.title),badge(),glyph('chevron','analysis-chevron'));
       button.onclick=()=>detail(risk);row.append(button);operational.card.append(row);
     }
-    categories.append(productionCard.card,operational.card);layout.append(categories);section.append(layout);
+    categories.append(operational.card);layout.append(categories);section.append(layout);
     if(focusId) [...section.querySelectorAll('[data-risk-id]')].find(button=>button.dataset.riskId===focusId)?.focus({preventScroll:true});
     if(productionId)[...section.querySelectorAll('[data-production-id]')].find(button=>button.dataset.productionId===productionId)?.focus({preventScroll:true});
   }

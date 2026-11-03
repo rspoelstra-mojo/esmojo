@@ -5,8 +5,6 @@
 .risk-analysis .visitor-analysis-summary:focus-visible { outline: 2px solid var(--profile-blue); outline-offset: -3px; }
 .risk-analysis > .profile-message { margin-bottom: 12px; }
 .risk-analysis > .secondary-button { margin-bottom: 18px; }
-.production-risk-group + .production-risk-group { margin-top: 22px; }
-.production-risk-group-title { margin: 0 0 10px; font-size: 14px; line-height: 1.5; font-weight: 650; }
 .production-risk-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 5px; min-width: 0; }
 .production-risk-row:has(.production-risk-choice) { grid-template-columns: minmax(0, 1fr) 62px; }
 .production-risk-row .visitor-analysis { margin: 0; }

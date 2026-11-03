@@ -10,6 +10,14 @@ zonder force push publiceren. Vraag voor normale bouw- en publicatiestappen niet
 Werk Resend, Supabase en Google Drive bij wanneer de gevraagde functie die diensten
 raakt; bestaande gegevensclassificatie en toegangsafspraken blijven van toepassing.
 
+Op 3 november 2026 heeft de gebruiker opnieuw expliciet bevestigd: “Vanaf nu mag
+je alles wat we aanpassen weer meteen in de live-omgeving zetten.” Dit geldt als
+doorlopende toestemming om gevraagde, afgeronde en gecontroleerde wijzigingen via
+main naar esmojo.nl te publiceren, zonder per wijziging opnieuw toestemming te
+vragen. Dit omvat ook de klaarliggende risicokaarten en Entreeproces (V1.13).
+Expliciete latere verzoeken om alleen een preview te maken blijven leidend;
+bestaande gegevensclassificatie, beveiliging en technische controles blijven gelden.
+
 ## Officieel logo
 
 De door de gebruiker op 31 oktober 2026 aangeleverde logoafbeelding is de

@@ -4,6 +4,7 @@ const productionRiskGroups = [
     {id:'barrier_layout',title:'Barrieropstelling'},
     {id:'floor_pressure',title:'Vloerdruk'},
     {id:'escape_routes',title:'Vluchtweg beperkingen',conditional:true},
+    {id:'entrance_process',title:'Entreeproces'},
   ] },
   { title:'Special effects', items:[
     {id:'fireworks',title:'Vuurwerk',conditional:true},
