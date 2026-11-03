@@ -65,8 +65,10 @@ parallelle jobs uniek en kunnen na een mislukte generatie een gat vertonen.
 ## Concertkoppeling en achtergrondwerk
 
 Alleen bestaande canonieke metadata uit de Gashouder-index en de aparte OnTrack-
-concertinventaris wordt gebruikt. Een bestandsnaam is slechts een unieke exacte
-matchhint tegen deze opgeslagen records. Bij geen/eerdere onbekende/ambigue match
+concertinventaris wordt gebruikt. Het concert-ID wordt uit `incidents_<concert-ID>.csv` gelezen en eerst
+letterlijk met de opgeslagen sleutel vergeleken. Daarna is uitsluitend een
+unieke match op hoofdletters/scheidingstekens toegestaan. Er wordt niet meer
+uit de zichtbare artiestnaam, zaal en datum een bestandsnaam opgebouwd. Bij geen/eerdere onbekende/ambigue match
 blijft de CSV ongekoppeld tot de beheerder kiest. De bestandsnaam maakt nooit
 zelf metadata of nieuwe concertrecords. De gekozen datum moet aansluiten op de
 CSV-datums; een vroege volgende-dagmelding kan bij de vorige showavond horen.
@@ -120,11 +122,18 @@ Het originele Montell Fish-PDF is visueel geïnspecteerd; productiefonts, kleure
 MOJO-beeldmerk en compacte footer zijn hergebruikt. `tools/pdf/verify-original.mjs`
 bevestigt dat de bestaande showprofielgenerator byte-identiek blijft.
 
-**Nog niet aangeleverd:** de goedgekeurde volledige SCOOTER-referentie-PDF en
-`Minimalistisch ON-appicoon in grijs(1).png`. Deze zijn in werkmap/Drive gezocht;
-gebruiker is gevraagd ze toe te voegen. De layoutproef zonder icoon is nadrukkelijk
-PROEF en geen definitief rapport. Worker/generator blijven geblokkeerd totdat het
-originele icoon in `server/ontrack-report/assets/ontrack-icon.png` staat. Geen
-vervangend icoon genereren/tekenen/downloaden. De nog ontbrekende goedgekeurde
-referentie verhindert de volledige visuele vergelijkingscontrole; claim die niet.
-De ON-URI is structureel getest met een testafbeelding, niet als goedgekeurd icoon.
+Het originele grijze ON-icoon is op 3 november 2026 als ZIP aangeleverd en
+ongewijzigd geplaatst in `server/ontrack-report/assets/ontrack-icon.png`.
+SHA256 a40789fde3886ed38cde64f02adff922909c340f6e12f00cb3707705ab4e9870
+komt overeen met het uitgepakte origineel. De assetblokkade is daarmee opgeheven.
+De voorbeeld-PDF met dit icoon behoudt vijf A4-pagina’s en alle incidentele teksten;
+de ON-URI en kliktegel zijn nu met het daadwerkelijke originele icoon getest.
+
+**Nog ontbrekend:** de goedgekeurde volledige SCOOTER-referentie-PDF. De originele
+Montell-designstandaard is gecontroleerd, maar volledige visuele vergelijking met
+de genoemde goedgekeurde SCOOTER-rapportage kan nog niet worden geclaimd.
+
+De gevraagde historische uitbreiding tot één maand terug is expliciet ingetrokken.
+Er zijn geen scraper-/vensterwijzigingen of nieuwe historische records toegevoegd.
+De bestaande toekomstinventaris en het behoud van eerder bekende concerten blijven
+intact. Onbekend concert-ID blijft wachten op een geldige opgeslagen koppeling.
