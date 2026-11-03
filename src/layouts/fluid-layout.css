@@ -1,5 +1,5 @@
 /* Uitsluitend expliciet geactiveerde inhoud. Geen rail- of submenuregels. */
-.workspace[data-layout="fluid"] > main { padding: 24px 28px; }
+.workspace[data-layout="fluid"] > main { padding: var(--menu-top) 28px; }
 .content-box.fluid-layout[data-fluid-variant] { max-width: none; padding: 0; min-width: 0; container: fluid / inline-size; --fluid-gap: 20px; --fluid-card-min: 320px; --fluid-reading: 72ch; --fluid-card: #fff; }
 :root[data-theme="dark"] .fluid-layout { --fluid-card: #0b1425; }
 .fluid-grid { display: grid; gap: var(--fluid-gap, 20px); grid-template-columns: repeat(auto-fit,minmax(min(100%,var(--fluid-card-min,320px)),1fr)); align-items: start; }
@@ -16,7 +16,6 @@
 .fluid-layout .analysis-editor-form { align-items: start; }
 .fluid-layout .risk-analysis .profile-layout { display: block; }
 .fluid-layout .analysis-editor-actions, .fluid-layout .analysis-editor-form > .profile-message { grid-column: 1 / -1; }
-.fluid-preview-note { font-size: 12px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
 body[data-fluid-layout] .analysis-final-overlay { padding: 24px 28px; }
 body[data-fluid-layout] .analysis-final-box { max-width: none; padding: 0; }
 body[data-fluid-layout] .analysis-final-form { max-width: 960px; margin-inline: auto; }

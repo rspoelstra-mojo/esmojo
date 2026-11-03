@@ -25,9 +25,6 @@ export function createFluidPreviewPage(content,{onShow,request=access,loadPhoto=
       };
       const view={tab:1};const memory={acquire:()=>({view,ready:Promise.resolve({request:requestAccess,version:()=>0}),release(){}})};
       disposeShow=createShowPage(content,show,{memory,request:requestAccess,loadPhoto,readOnly:true});
-      const note=document.createElement('p');note.className='fluid-preview-note';note.textContent='Fluid-layouttest · Alleen-lezen';
-      const observer=new MutationObserver(()=>{if(content.querySelector('.show-page')&&!content.querySelector('.fluid-preview-note'))content.prepend(note);});observer.observe(content,{childList:true});
-      const stop=disposeShow;disposeShow=()=>{observer.disconnect();stop();};
     }catch{if(!disposed){const error=document.createElement('p');error.className='profile-message';error.textContent='De afgeschermde Puscifer-testpagina kon niet worden geladen.';const retry=document.createElement('button');retry.className='secondary-button';retry.textContent='Opnieuw laden';retry.onclick=()=>{content.replaceChildren();void load();};content.replaceChildren(error,retry);}}finally{finish?.();}
   }
   void load();return()=>{disposed=true;disposeShow();loading?.dispose();unprotect();disableLayout();snapshot=null;};
