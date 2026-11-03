@@ -6,10 +6,20 @@ De bestaande componentstijlen, contentbox en systeemthema blijven leidend.
 
 ## Interface en afbeeldingen
 
-`src/barrier-layout-page.js` toont één compact formulier, links selectie/upload/
-toelichting/handmatige beoordeling en rechts een vaste preview. Op smalle schermen
-stapelen de kolommen. De primaire afrondactie staat rechtsonder. Een expliciete
-bewerkactie heropent een afgeronde beoordeling en bewaart de oude versie in historie.
+`src/barrier-layout-page.js` toont de selectie/upload/toelichting en de preview
+in het linkerblok. Rechts staat de herbruikbare `src/risk-review-card.js`, even
+breed als de bestaande Showprofiel-zijkaart; op kleine schermen stapelen deze
+blokken. Het blok “Risico beoordeling” toont vier gekleurde keuzes in twee kolommen
+en de primaire knop Opslaan. Geen risico vereist Toelichting; Midden/Hoog vereisen
+Beheersmaatregel; Laag toont geen tekstveld. Opslaan voert de bestaande complete-
+actie uit, met behoud van gebruiker, tijdstip en revisiecontrole. Een expliciete
+bewerkactie heropent de beoordeling en bewaart de oude versie in historie.
+Dit nieuwe blok wordt voorlopig uitsluitend bij Barrieropstelling gebruikt.
+
+De beoordelingstekst staat als `riskNote` in hetzelfde Vertrouwelijke Drive-record,
+los van `notes` voor het afwijkende ontwerp. Beide runtimes valideren lengte, type
+en verplichte inhoud. Historische afgeronde records zonder deze nieuwe eigenschap
+blijven zonder migratie leesbaar; nieuwe afrondingen krijgen geen uitzondering.
 
 `shared/barrier-layout.js` bevat de zes exacte labels en vijf exacte bestandsnamen.
 `src/barrier-images.js` koppelt deze centraal via Vite aan

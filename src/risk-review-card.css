@@ -1,0 +1,18 @@
+.barrier-assessment-layout { display: grid; grid-template-columns: minmax(0,1fr) var(--profile-aside-width,250px); gap: 20px; align-items: start; }
+.risk-review-card .risk-review-choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; padding: 0; margin: 0; border: 0; min-width: 0; }
+.risk-review-option { position: relative; min-width: 0; cursor: pointer; }
+.risk-review-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.risk-review-option span { display: flex; justify-content: center; align-items: center; min-height: 42px; padding: 8px; border: 1px solid transparent; border-radius: 8px; font-size: 13px; text-align: center; line-height: 1.5; }
+.risk-review-option[data-level="none"] span { background: #e7f5ed; color: #28734d; }
+.risk-review-option[data-level="low"] span { background: #fff4dc; color: #805b10; }
+.risk-review-option[data-level="medium"] span { background: #ffead5; color: #99500d; }
+.risk-review-option[data-level="high"] span { background: #fde8e8; color: #a22929; }
+.risk-review-option input:checked + span { border-color: currentColor; font-weight: 650; box-shadow: inset 0 0 0 1px currentColor; }
+.risk-review-option input:focus-visible + span { outline: 2px solid var(--profile-blue); outline-offset: 2px; }
+.risk-review-option:has(input:disabled) { cursor: default; }
+.risk-review-card .risk-review-note { margin-top: 18px; }
+.risk-review-card .risk-review-status { margin-top: 12px; }
+.risk-review-card .risk-review-status:empty { display: none; }
+.fluid-layout .barrier-assessment-layout { grid-template-columns: minmax(0,1fr) minmax(260px,300px); }
+@container fluid (min-width: 1250px) { .fluid-layout .barrier-assessment-layout { grid-template-columns: minmax(0,1fr) minmax(260px,340px); } }
+@container fluid (max-width: 849px) { .fluid-layout .barrier-assessment-layout { grid-template-columns: minmax(0,1fr); } }

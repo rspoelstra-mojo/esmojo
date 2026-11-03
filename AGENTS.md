@@ -370,7 +370,8 @@ expliciet Opnieuw proberen herlezen en hervatten. Geen persistente browseropslag
 ## Entreeproces en visuele productieafspraken
 
 Bij concertlocatie Gashouder is Entreeproces niet van toepassing: zichtbaar,
-grijs en uitgeschakeld met kleine tekst “(Nvt bij Gashouder shows)”. Dit is geen
+grijs en uitgeschakeld met een grijze statusbadge “NVT bij Gashouder”, in dezelfde
+vorm als Afgerond. Geen kleine toelichting achter de titel. Dit is geen
 verplichte afrondstap, ook niet bij toekomstige uitbreiding van die workflow.
 Andere locaties behouden de actieve knop.
 Standaard-barrierafbeeldingen staan in een aansluitend vierkant kader met afgeronde
@@ -380,3 +381,16 @@ regel Zitplaatsen bevat automatisch de overgebleven verkochte tickets na aftrek
 van de overige vakken (minimaal nul), zonder m²/dichtheid. Bij ontbrekende tickets
 geen getal invullen. De afgeleide waarde gebruikt bestaande rijen/ticketreferentie,
 zonder extra verplichte invoer of automatische risicobeoordeling.
+
+## Herbruikbare risicobeoordeling
+
+Gebruik src/risk-review-card.js voor het standaardblok “Risico beoordeling”: vier
+gekleurde keuzes in twee kolommen. Geen risico vereist Toelichting; Laag heeft
+geen tekstveld; Midden/Hoog vereisen Beheersmaatregel. Opslaan rondt de geldige
+beoordeling af via de bestaande beveiligde revisie-/Drive-route. Momenteel wordt
+dit blok uitsluitend rechts van Barrieropstelling gebruikt, op dezelfde breedte
+als de Showprofiel-zijkaart. Vloerdruk behoudt de bestaande component.
+De barrierbeoordeling bewaart riskNote afzonderlijk van notes voor een afwijkend
+ontwerp, binnen dezelfde Vertrouwelijke beoordeling in Drive. Historische
+afgeronde records zonder riskNote blijven leesbaar; nieuwe afrondingen volgen de
+nieuwe verplichte velden. Geen automatische risicoklasse.
