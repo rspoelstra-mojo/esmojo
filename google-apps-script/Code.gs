@@ -20,6 +20,7 @@ function doPost(event) {
     if (raw && raw.length <= 3000000) {
       const envelope = JSON.parse(raw);
       // PDF-bytes vallen onder de eigen HMAC- en inhoudsgrenzen van Shows.gs.
+      if (envelope.action === 'ontrack-concerts') return esmojoOnTrackConcerts_(envelope);
       if (envelope.action === 'shows') return esmojoShows_(envelope);
       if (raw.length <= 120000) {
         if (envelope.action === 'ontrack') return esmojoOnTrack_(envelope);

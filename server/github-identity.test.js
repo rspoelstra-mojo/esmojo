@@ -21,3 +21,10 @@ test('ontbrekende, vervalste of alg-none tokens en onbekende sleutels krijgen ge
 test('immutable subject en eigenaar-/repository-ID zijn verplicht, niet alleen herbruikbare namen', async () => {
   for (const change of [{ repository_id: '1' }, { repository_owner_id: '1' }, { sub: 'repo:rspoelstra-mojo/esmojo:ref:refs/heads/main' }]) await assert.rejects(verifyImportIdentity(token(change), { request, now }), /FORBIDDEN/);
 });
+test('OnTrack-import heeft een eigen vaste audience en behoudt alle workflow/main-controles',async()=>{
+ const audience='https://esmojo.nl/api/ontrack-concerts-sync';
+ assert.deepEqual(await verifyImportIdentity(token({aud:audience}),{request,now,audience}),{runId:'123'});
+ await assert.rejects(verifyImportIdentity(token(),{request,now,audience}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:audience,ref:'refs/heads/task'}),{request,now,audience}),/FORBIDDEN/);
+});

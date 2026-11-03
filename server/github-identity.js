@@ -1,7 +1,7 @@
 import { createPublicKey, verify } from 'node:crypto';
 
 // Alleen de workflow op main in onze eigen repository mag de Drive-import starten.
-export async function verifyImportIdentity(token, { request = fetch, now = Date.now() } = {}) {
+export async function verifyImportIdentity(token, { request = fetch, now = Date.now(), audience = 'https://esmojo.nl/api/shows-sync' } = {}) {
   if (typeof token !== 'string' || token.length > 20000) throw new Error('FORBIDDEN');
   try {
     const parts = token.split('.');
@@ -10,7 +10,7 @@ export async function verifyImportIdentity(token, { request = fetch, now = Date.
     const claims = JSON.parse(Buffer.from(parts[1], 'base64url'));
     if (header.alg !== 'RS256' || typeof header.kid !== 'string'
         || claims.iss !== 'https://token.actions.githubusercontent.com'
-        || claims.aud !== 'https://esmojo.nl/api/shows-sync'
+        || claims.aud !== audience
         || claims.sub !== 'repo:rspoelstra-mojo@350283629/esmojo@1439724175:ref:refs/heads/main'
         || claims.repository_id !== '1439724175' || claims.repository_owner_id !== '350283629'
         || claims.repository !== 'rspoelstra-mojo/esmojo' || claims.ref !== 'refs/heads/main'
