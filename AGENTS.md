@@ -566,3 +566,10 @@ Op expliciet verzoek is de witte buitenrand van het ON-icoon op 3 november 2026
 in de PDF-weergave verwijderd met een afgeronde uitsnede van de grijze tegel.
 Deze toestemming geldt voor die presentatie; het oorspronkelijke PNG-bestand
 blijft byte-identiek bewaard. De ON-lettervormen, kleur en klikbare link behouden.
+
+Uitsluitend voor het serverzijdig geladen beheerdersaccount r.spoelstra@mojo.nl
+heeft de gebruiker een vaste extra testmailontvanger richspoelstra@gmail.com
+bevestigd. Iedere bewuste testverzending via Beheerder → Email stuurt hetzelfde
+gekozen testtemplate afzonderlijk naar beide adressen, met aparte stabiele
+idempotentiesleutels. Dit geldt niet voor andere accounts of productiemails.
+De UI toont beide adressen; geen browserveld of template mag ontvangers wijzigen.
