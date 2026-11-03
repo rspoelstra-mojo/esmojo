@@ -13,3 +13,7 @@ Uitgevoerd: losse bestaande kaartcomponenten per groep; Entreeproces gebruikt de
 bestaande lege detailpagina met terugknop. Gecontroleerd: 6 bestaande paginatests,
 productiebuild en browser op 1280/1440/1920/2560/700/390px; kaarttitels, klik/terug/
 focus, bestaande Ja/Nee-logica en geen horizontale overflow.
+
+De volledige CI controleert ook dat de gegenereerde Apps Script-kopie identiek
+is aan de gedeelde configuratie. Die kopie is bijgewerkt voor Entreeproces;
+opslagvalidatie en toegestane Ja/Nee-velden veranderen niet.
