@@ -77,3 +77,12 @@ test('Onjuiste/ongetekende/replayed domeinverzoeken krijgen geen toegang tot de 
  for(const input of [{body,timestamp:Date.now(),nonce:'a'.repeat(32),signature:'0'.repeat(64)},{body,timestamp:Date.now()-180000,nonce:'b'.repeat(32),signature:'0'.repeat(64)}])assert.equal(f.context.esmojoOnTrackReports_(input).code,'FORBIDDEN');
  const timestamp=Date.now(),nonce='c'.repeat(32),signature=createHmac('sha256',secret).update('ontrack-concerts\n'+timestamp+'\n'+nonce+'\n'+hash(body)).digest('hex');assert.equal(f.context.esmojoOnTrackReports_({body,timestamp,nonce,signature}).code,'FORBIDDEN');assert.equal(f.register.bytes.toString(),before);
 });
+
+test('CSV-koppeling gebruikt uitsluitend concert-ID: exacte sleutel vóór schrijfwijze, gewijzigde labels werken en ambiguïteit blijft ongekoppeld',()=>{
+ const f=harness(),match=(file,choices)=>f.context.esmojoOnTrackAutoShow_(file,choices);
+ const changed={key:'Fictieve-artiest_Ziggo-Dome_03112026',name:'Volledig gewijzigde zichtbare artiestnaam',venue:'Nieuwe locatieweergave',dates:['2026-11-03']};
+ assert.equal(match('incidents_Fictieve-artiest_Ziggo-Dome_03112026.csv',[changed]).key,changed.key);assert.equal(match('incidents_FICTIEVE_ARTIEST_ZIGGO_DOME_03112026.csv',[changed]).key,changed.key);
+ const other={...changed,key:'ander-concert-id',name:'Fictieve artiest',venue:'Ziggo Dome'};assert.equal(match('incidents_Fictieve_artiest_Ziggo_Dome_03112026.csv',[other]),null);
+ const collision={...changed,key:'FICTIEVE_ARTIEST_ZIGGO_DOME_03112026'};assert.equal(match('incidents_FICTIEVE_ARTIEST_ZIGGO_DOME_03112026.csv',[changed,collision]).key,collision.key);assert.equal(match('incidents_fictieve_artiest_ziggo_dome_03112026.csv',[changed,collision]),null);
+ assert.equal(match('ander_incidents_Fictieve-artiest_Ziggo-Dome_03112026.csv',[changed]),null);assert.equal(match('incidents_Fictieve-artiest_Ziggo-Dome_03112026_extra.csv',[changed]),null);assert.equal(match('incidents_Fictieve-artiest_Ziggo-Dome_03112026.pdf',[changed]),null);
+});

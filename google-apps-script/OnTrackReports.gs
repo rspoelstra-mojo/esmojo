@@ -20,8 +20,14 @@ function esmojoOnTrackReportChoices_(folder){
  return Array.from(choices.values()).sort((a,b)=>b.dates[0].localeCompare(a.dates[0])||a.name.localeCompare(b.name));
 }
 function esmojoOnTrackAutoShow_(name,choices){
- const normalize=value=>value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'');
- const matches=choices.filter(show=>{const date=show.dates[0].split('-').reverse().join('');return normalize(name.replace(/\.csv$/i,''))===normalize('incidents_'+show.name+'_'+show.venue+'_'+date);});return matches.length===1?matches[0]:null;
+ const match=typeof name==='string'&&/^incidents_(.+)\.csv$/i.exec(name);
+ if(!match)return null;const concertId=match[1];
+ // De opgeslagen sleutel is leidend, ook als zichtbare naam/locatie later wijzigt.
+ const exact=choices.filter(show=>show.key===concertId);if(exact.length)return exact.length===1?exact[0]:null;
+ // Alleen schrijfwijze: casing en scheidingstekens; geen fuzzy namen of ID-substrings.
+ const normalize=value=>value.normalize('NFC').toUpperCase().replace(/[\s_-]+/g,'_');
+ const matches=choices.filter(show=>normalize(show.key)===normalize(concertId));
+ return matches.length===1?matches[0]:null;
 }
 function esmojoOnTrackQueue_(state){return state.sources.map(source=>({id:source.id,name:source.name,showKey:source.showKey||null,linkRevision:source.linkRevision||0,status:source.job&&Date.parse(source.job.expiresAt)<=Date.now()?'failed':source.status||'unlinked',reused:Boolean(source.duplicateOf),errorCode:source.errorCode||null,errorRow:source.errorRow||null}));}
 function esmojoOnTrackReports_(input){

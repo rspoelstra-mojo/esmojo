@@ -24,11 +24,10 @@ PDF als door OnTrack gegenereerd meetellen. Accountselectie is persistent en
 revisiegecontroleerd; de nieuwste keuze geldt voor nieuwe rapporten. Een bestaand
 rapport zonder ontvangers kan later bewust met Rapport mailen worden aangeboden.
 
-De inhoudelijke overdracht is ontvangen. Nog ontbrekend zijn het originele
-ON-icoon en de goedgekeurde volledige SCOOTER-referentie-PDF. Zonder origineel
-icoon zijn definitieve PDF-verwerking en rapportverzending geblokkeerd. De pagina
-vermeldt dit. Geen vervangend icoon of stilzwijgend goedgekeurde layout. De lokale
-SCOOTER-layoutproef is geen productie-PDF en is niet verstuurd.
+Het originele ON-icoon is ontvangen en ongewijzigd in de vaste assetmap geplaatst.
+De assetblokkade is daarmee opgeheven. Definitieve verwerking vereist nog steeds
+een geldige CSV en een opgeslagen concertkoppeling. De goedgekeurde volledige
+SCOOTER-referentie-PDF ontbreekt nog voor de volledige visuele vergelijking.
 
 `src/ontrack-admin.js`/CSS en de beheerder/MFA-route blijven geïsoleerd. De vaste
 signed Drive-brug hergebruikt `_esmojo_ontrack_v1.json`, waarin uitsluitend
