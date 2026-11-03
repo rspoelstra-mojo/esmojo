@@ -12,6 +12,7 @@ const productionRiskLevels = [
   {value:'medium',label:'Midden',hue:35},{value:'high',label:'Hoog',hue:0},
 ];
 const barrierUploadLimit = 2*1024*1024;
+function isStandardBarrierType(type){return barrierTypes.some(row=>row.value===type&&row.value!=='custom');}
 function assessmentKeys(value,keys){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!==[...keys].sort().join(','))throw Error('VALIDATION');}
 function assessmentConcert(value){if(typeof value!=='string'||!value.trim()||value.length>240||/[\x00-\x1f/\\]/.test(value))throw Error('VALIDATION');}
 function assessmentRevision(value){if(!Number.isSafeInteger(value)||value<0)throw Error('VALIDATION');}
@@ -28,8 +29,9 @@ function validateBarrierData(value,complete=false,requireRiskNote=true){
     if(typeof value.notes!=='string'||value.notes.length>4000||/\x00/.test(value.notes)||(value.uploadId!==null&&!validUploadId(value.uploadId)))throw Error('VALIDATION');
   }else if(value.notes!==null||value.uploadId!==null)throw Error('VALIDATION');
   if(complete&&(!value.barrierType||!value.riskLevel||(value.barrierType==='custom'&&(!value.notes.trim()||!value.uploadId))))throw Error('VALIDATION');
-  if(complete&&requireRiskNote&&['none','medium','high'].includes(value.riskLevel)&&!riskNote.trim())throw Error('VALIDATION');
-  return {barrierType:value.barrierType,riskLevel:value.riskLevel,notes:complete&&value.barrierType==='custom'?value.notes.trim():value.notes,uploadId:value.uploadId,riskNote:value.riskLevel==='low'?'':complete?riskNote.trim():riskNote};
+  const standardNoRisk=value.riskLevel==='none'&&isStandardBarrierType(value.barrierType);
+  if(complete&&requireRiskNote&&['none','medium','high'].includes(value.riskLevel)&&!standardNoRisk&&!riskNote.trim())throw Error('VALIDATION');
+  return {barrierType:value.barrierType,riskLevel:value.riskLevel,notes:complete&&value.barrierType==='custom'?value.notes.trim():value.notes,uploadId:value.uploadId,riskNote:value.riskLevel==='low'||standardNoRisk?'':complete?riskNote.trim():riskNote};
 }
 function emptyBarrier(){return {revision:0,barrierType:null,riskLevel:null,notes:null,attachment:null,riskNote:'',completed:false,completedBy:null,completedAt:null};}
 function barrierData(record){return {barrierType:record.barrierType,riskLevel:record.riskLevel,notes:record.barrierType==='custom'?record.notes||'':null,uploadId:record.barrierType==='custom'?record.attachment?.uploadId||null:null,riskNote:record.riskNote??''};}

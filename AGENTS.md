@@ -393,4 +393,13 @@ als de Showprofiel-zijkaart. Vloerdruk behoudt de bestaande component.
 De barrierbeoordeling bewaart riskNote afzonderlijk van notes voor een afwijkend
 ontwerp, binnen dezelfde Vertrouwelijke beoordeling in Drive. Historische
 afgeronde records zonder riskNote blijven leesbaar; nieuwe afrondingen volgen de
-nieuwe verplichte velden. Geen automatische risicoklasse.
+nieuwe verplichte velden, met de hierna vastgelegde uitzondering voor standaard-
+barrieropstellingen.
+
+Op aanvullend verzoek op 3 november 2026: de algemene Risico beoordeling-kaart
+heeft standaard geen selectie. Uitsluitend na bewuste keuze voor Seated of één
+van de vier standaard-barrieropstellingen wordt Geen risico automatisch afgerond
+opgeslagen zonder toelichting. Afwijkend ontwerp blijft handmatig; Midden/Hoog
+houden hun verplichte beheersmaatregel. Niet automatisch schrijven door openen
+of verversen, en bestaande opgeslagen keuzes blijven leesbaar. De afbeelding
+en het label Schematische weergave zijn rechts uitgelijnd in het barrierblok.
