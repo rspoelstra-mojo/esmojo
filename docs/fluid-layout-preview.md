@@ -81,6 +81,27 @@ Buiten preview is deze isolatie uitgeschakeld; de nieuwe test-API is in producti
 niet beschikbaar. Er zijn geen Apps Script-, database-, validatie-, PDF-generator-
 of Drive-opslagwijzigingen. Bestaande API-contracten blijven intact.
 
+## Preview-aanmelding na MFA
+
+De preview controleert het account en de actuele rol via een server-side,
+uitsluitend alleen-lezen adapter naar de bestaande beveiligde API op
+`https://esmojo.nl`. De productie-API valideert hetzelfde persoonlijke toegangstoken
+opnieuw. De preview controleert dat de teruggelezen identiteit overeenkomt, dat
+het account geactiveerd beheerder is en dat de sessie niet is verlopen. De eigen
+Supabase/MFA-controles en beveiligde sessiecookie blijven daarnaast behouden.
+Er is daardoor geen aparte Drive-configuratie voor de preview nodig.
+
+`server/fluid-preview-source.js` heeft een vaste host en een gesloten lijst van
+zuivere reads. Cookies, refresh-tokens, oorspronkelijke Origin-headers en vrije
+bestemmingen worden niet doorgestuurd. Mutatie- en synchronisatieoperaties zijn
+niet beschikbaar. De bestaande productie-API's of hun configuratie worden niet
+gewijzigd. Sessiefouten en onbereikbaarheid hebben veilige, gerichte foutmeldingen;
+er is geen fallback die de accountcontrole of MFA overslaat.
+
+De volledige browserflow is met testaccounts getest: wachtwoord → MFA → bestaande
+server-sessiecontrole → cookiebevestiging → de fluid-pagina, met doelbewust ontbrekende
+Drive-configuratie in de preview. Alle bronverzoeken waren alleen-lezen.
+
 ## Controles
 
 - Geactiveerde beheerder + MFA vereist, gewone gebruiker/anonymous geweigerd.

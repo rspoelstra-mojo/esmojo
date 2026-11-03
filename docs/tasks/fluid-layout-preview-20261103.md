@@ -24,3 +24,11 @@ Browsercontroles met fictieve data: 1280/1440/1920/2560, contentbreedtes
 vensters zonder overflow en normale pagina terug naar max1000. Servertests:
 admin/MFA, deny-by-default, pure reads met nul Drive-writes, andere API's dicht.
 Technische beschrijving en toegang: docs/fluid-layout-preview.md.
+
+## Herstel preview-aanmelding
+
+Na de melding na MFA is de aparte Drive-afhankelijkheid van de preview verwijderd.
+Account/rol/sessie en showgegevens lopen via een vaste, alleen-lezen serveradapter
+naar de bestaande API op esmojo.nl. Geen cookies/refresh-tokens, mutaties of vrije
+URL's worden doorgestuurd. Productie blijft ongewijzigd. Nieuwe regressietests en
+een volledige browser-aanmeldflow met ontbrekende preview-Drive-config slagen.
