@@ -1,13 +1,13 @@
 import './production-assessment.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
-import {barrierTypes,barrierData,validateBarrierData,barrierUploadLimit} from '../shared/barrier-layout.js';
+import {barrierTypes,isStandardBarrierType,validateBarrierData,barrierUploadLimit} from '../shared/barrier-layout.js';
 import {barrierImages} from './barrier-images.js';
 import {createRiskReviewCard} from './risk-review-card.js';
 import {assessmentNode as node,createAssessmentQueue} from './production-assessment-ui.js';
 
 export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},request=body=>access('barrier-layout',{method:'POST',body})}){
-  let disposed=false,ready=false,record=null,queue=null,reading=false,preparing=false,previewUrl=null,previewSequence=0,awaitingPreview=false;
+  let disposed=false,ready=false,record=null,queue=null,reading=false,preparing=false,previewUrl=null,previewSequence=0,awaitingPreview=false,autoSaving=false;
   let type=null,riskLevel=null,riskNote='',custom={notes:'',attachment:null};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
   section.replaceChildren();const root=node('section','production-assessment');
@@ -26,18 +26,22 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   const status=node('p','assessment-status'),error=node('p','profile-message');error.setAttribute('role','alert');
   const reload=node('button','secondary-button','Actuele beoordeling laden');reload.type='button';reload.hidden=true;
   const review=createRiskReviewCard({name:'barrier-risk',editLabel:'Barrieropstelling bewerken',
-    onChange:(value,note,field)=>{riskLevel=value;riskNote=note;if(field==='note')queue.later();else queue.save();update();},
+    onChange:(value,note,field)=>{riskLevel=value;riskNote=value==='none'&&isStandardBarrierType(type)?'':note;if(field==='note')queue.later();else queue.save();update();},
     onSave:()=>{if(valid()&&block.reportValidity())void queue.action('complete',{data:snapshot()});},
     onEdit:()=>queue.action('reopen'),
   });
   const layout=node('div','barrier-assessment-layout');block.append(columns,status,error,reload);layout.append(block,review.element);root.append(back,title,layout);section.append(root);
-  const snapshot=()=>({barrierType:type,riskLevel,notes:type==='custom'?custom.notes:null,uploadId:type==='custom'?custom.attachment?.uploadId||null:null,riskNote:riskLevel==='low'?'':riskNote});
+  const snapshot=()=>({barrierType:type,riskLevel,notes:type==='custom'?custom.notes:null,uploadId:type==='custom'?custom.attachment?.uploadId||null:null,riskNote:riskLevel==='low'||(riskLevel==='none'&&isStandardBarrierType(type))?'':riskNote});
   const call=(operation,payload={})=>request({operation,concertId:show.key,...payload});
   const valid=()=>{try{validateBarrierData(snapshot(),true);return true;}catch{return false;}};
+  function sendAssessment(operation,payload){
+    const automatic=operation==='draft'&&autoSaving&&payload.data.barrierType===type&&isStandardBarrierType(type)&&payload.data.riskLevel==='none';
+    return call(automatic?'complete':operation,{...payload,revision:record.revision});
+  }
   function update(){
-    if(disposed)return;const locked=!ready||reading||preparing||queue?.exclusive||record?.completed;
-    select.disabled=locked;customFields.hidden=type!=='custom';notes.disabled=locked;notes.required=type==='custom';
-    review.update({riskLevel,riskNote:riskLevel==='low'?'':riskNote,disabled:locked,busy:queue?.busy,failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
+    if(disposed)return;const locked=!ready||reading||preparing||autoSaving||queue?.exclusive||record?.completed;
+    select.disabled=locked||Boolean(queue?.failed);customFields.hidden=type!=='custom';notes.disabled=locked;notes.required=type==='custom';
+    review.update({noRiskNoteRequired:!isStandardBarrierType(type),riskLevel,riskNote:riskLevel==='low'||(riskLevel==='none'&&isStandardBarrierType(type))?'':riskNote,disabled:locked,busy:queue?.busy,failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
     upload.disabled=locked||queue?.busy;remove.hidden=!custom.attachment;remove.disabled=locked||queue?.busy;
     back.disabled=preparing||Boolean(queue?.exclusive);
     status.textContent=record?.completed?'✓ Barrieropstelling afgerond':queue?.failed?'Opslag niet bevestigd':queue?.busy?'Concept wordt opgeslagen…':record?.revision?'Concept opgeslagen':'';status.classList.toggle('assessment-completed',Boolean(record?.completed));
@@ -64,16 +68,16 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
     }catch{if(!disposed&&sequence===previewSequence){placeholderPreview('Bestandsweergave niet beschikbaar.');const retry=node('button','secondary-button','Opnieuw laden');retry.type='button';retry.onclick=renderPreview;previewBox.append(retry);}}
   }
   function accept(data,replace){
-    if(!data?.record||!Number.isSafeInteger(data.record.revision))throw Error('Onvolledige opslagbevestiging.');record=data.record;
+    if(!data?.record||!Number.isSafeInteger(data.record.revision))throw Error('Onvolledige opslagbevestiging.');record=data.record;if(record.completed)autoSaving=false;
     if(!disposed){if(replace){type=record.barrierType;riskLevel=record.riskLevel;riskNote=record.riskNote||'';select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();onStored(record,data);update();}
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();
-    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);queue=createAssessmentQueue({snapshot,send:(operation,payload)=>call(operation,{...payload,revision:record.revision}),stored:accept,changed:update,error:message=>{error.textContent=message+' Je invoer blijft hier staan. Laad de actuele beoordeling om opnieuw te beginnen.';reload.hidden=false;}});ready=true;}
+    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);queue=createAssessmentQueue({snapshot,send:sendAssessment,stored:accept,changed:update,error:message=>{autoSaving=false;error.textContent=message+' Je invoer blijft hier staan. Laad de actuele beoordeling om opnieuw te beginnen.';reload.hidden=false;}});ready=true;}
     catch(failure){if(!disposed){error.textContent=failure.message;reload.hidden=false;}}
     finally{reading=false;finish?.();update();}
   }
-  select.onchange=()=>{type=select.value||null;riskLevel=null;riskNote='';if(type==='custom')notes.value=custom.notes;queue.save();void renderPreview();update();};
+  select.onchange=()=>{type=select.value||null;autoSaving=isStandardBarrierType(type);riskLevel=autoSaving?'none':null;riskNote='';if(type==='custom')notes.value=custom.notes;queue.save(autoSaving);void renderPreview();update();};
   notes.oninput=()=>{custom.notes=notes.value;queue.later();update();};notes.onblur=()=>{if(ready&&!record.completed&&!queue.failed)queue.save();};
   upload.onchange=async()=>{
     const file=upload.files?.[0];if(!file||!ready||queue.busy||queue.failed)return;
