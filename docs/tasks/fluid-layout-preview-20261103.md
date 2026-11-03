@@ -39,3 +39,12 @@ Op het laatste verzoek van de gebruiker is uitsluitend het verloop in de header
 vervangen door een effen witte kaartachtergrond (lichte modus). Donkere modus
 gebruikt de bestaande effen kaartkleur voor leesbaarheid. Foto, tekst, typografie,
 tabjes en geometrie zijn behouden. Deze wijziging blijft uitsluitend in de preview.
+
+## Goedgekeurde livegang en standaard
+
+De gebruiker heeft de witte header en fluid-layout op 3 november goedgekeurd en
+expliciet gevraagd dit live te zetten. De centrale wrapper wordt nu ook op gewone
+pagina’s geactiveerd: showvariant op Shows, basisvariant op overige pagina’s.
+Opruimen bij navigatie en afmelden voorkomt achterblijvende overlay-/layoutstatus.
+De afgeschermde preview blijft alleen-lezen; productie behoudt bestaande writes.
+De permanente ontwerpafspraak staat in AGENTS.md. Publicatieversie: V1.12.
