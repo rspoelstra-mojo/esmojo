@@ -48,3 +48,7 @@ pagina’s geactiveerd: showvariant op Shows, basisvariant op overige pagina’s
 Opruimen bij navigatie en afmelden voorkomt achterblijvende overlay-/layoutstatus.
 De afgeschermde preview blijft alleen-lezen; productie behoudt bestaande writes.
 De permanente ontwerpafspraak staat in AGENTS.md. Publicatieversie: V1.12.
+
+Aanvullend verzoek vóór livegang: verwijder de testmelding boven de concertheader
+ook in de preview. De verticale hoofdpadding gebruikt dezelfde --menu-top als het
+logo; op desktop zijn bovenranden van logo en concertheader gelijk.
