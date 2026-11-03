@@ -432,3 +432,18 @@ mail heeft één ontvanger; toekomstige personalisatie verstuurt afzonderlijk.
 Geen externe persoonsverrijking. Escape alle tekst en valideer linkdoelen.
 Behoud accounttriggers, token/TTL, MFA, afzender en reply-to. Geen echte testmails;
 gebruik tools/email/preview.mjs en de tests met fictieve fixtures/gemockte verzending.
+
+## Email testen en templatedekking
+
+Op verzoek van de gebruiker is Beheerder → Email de testpagina voor alle
+huidige en toekomstige mailtemplates. Voeg ieder werkelijk mailtype toe als
+`server/email-templates/<id>.js` met default `{id,label,requiresShow,build,buildTest}`;
+het centrale register ontdekt de map automatisch. Geen tweede handmatige
+templatelijst in UI/API. Testvarianten maken geen activatietokens of accounts.
+Alleen een bewuste klik van een ingelogde actieve beheerder met MFA verstuurt
+naar diens eigen serverzijdig opgehaalde accountadres via de bestaande Resend-
+voorziening. Geen vrije ontvanger/HTML en geen automatische verzending bij openen.
+Ontwikkelcontroles gebruiken uitsluitend fictieve gegevens en gemockte verzending.
+
+Bezoekersanalyse en Artiestanalyse hebben gelijke kolombreedtes wanneer ze naast
+elkaar staan; behoud de bestaande responsive herschikking en aparte zijbalk.

@@ -20,7 +20,7 @@ body[data-fluid-layout] .analysis-final-overlay { padding: 24px 28px; }
 body[data-fluid-layout] .analysis-final-box { max-width: none; padding: 0; }
 body[data-fluid-layout] .analysis-final-form { max-width: 960px; margin-inline: auto; }
 @container fluid (min-width: 1250px) {
-  .fluid-layout .profile-layout { grid-template-columns: minmax(0,1fr) minmax(0,1.15fr) minmax(260px,340px); }
+  .fluid-layout .profile-layout { grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(260px,340px); }
   .fluid-layout .profile-categories { display: contents; }
   .fluid-layout .profile-insights { grid-column: 3; grid-row: 1; }
   .fluid-layout .analysis-editor-form { grid-template-columns: minmax(0,1.3fr) minmax(320px,.8fr); }

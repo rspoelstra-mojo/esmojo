@@ -52,3 +52,9 @@ test('Witte transparante PNG-export behoudt de bron en verhoudingen en bevat gee
  for(let at=0;at<output.pixels.length;at+=4){assert.equal(output.pixels[at],255);assert.equal(output.pixels[at+1],255);assert.equal(output.pixels[at+2],255);if(output.pixels[at+3]===0)transparent++;else visible++;}
  assert.ok(transparent>0&&visible>0);assert.equal(output.pixels[3],0);assert.equal(createHash('sha256').update(source).digest('hex'),before);
 });
+
+test('Resend krijgt een gevalideerde idempotentiesleutel voor dezelfde bewuste testaanvraag',async()=>{
+ const calls=[],options={env:{RESEND_API_KEY:'local-test-only'},idempotencyKey:'esmojo-test-11111111-1111-4111-8111-111111111111',fetchImpl:async(url,init)=>{calls.push(init);return{ok:true,json:async()=>({id:'fixture'})};}};
+ await sendEmail(message(),options);assert.equal(calls[0].headers['Idempotency-Key'],options.idempotencyKey);
+ await assert.rejects(sendEmail(message(),{...options,idempotencyKey:'bad\r\nheader'}));assert.equal(calls.length,1);
+});
