@@ -50,7 +50,9 @@ PDF-opslag/download, individuele ontvangerverzending en bevestigde verzendstatus
 Inventarisatie start nu bij pagina openen of bewust verversen; er is nog geen
 achtergrondworker. De pagina meldt dit expliciet.
 
-De toekomstige mail gebruikt de bestaande centrale emailstandaard en verschijnt
-als module automatisch in Beheerder → Email. De niet-showcontext onder de titel
-wordt eerst met de gebruiker afgestemd. Nooit een voorbeeldadres, echte token of
+De mail Showrapportage staat in server/email-templates/show-report.js en verschijnt
+automatisch in Beheerder → Email. De builder vereist gekoppelde showmetadata en
+de gegenereerde PDF; het transport weigert een ontbrekende/ongeldige bijlage.
+De testknop gebruikt de werkelijk geselecteerde show en een duidelijk gemarkeerde
+test-PDF. Er wordt nog geen echte CSV-rapportage gegenereerd. Nooit een voorbeeldadres, echte token of
 zelfbedachte rapportinhoud versturen.

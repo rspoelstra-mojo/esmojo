@@ -27,3 +27,12 @@ in geïsoleerde fixtures, 5 bestaande brugtests en 4 deploytests geslaagd. Brows
 submenu, tellingen/verzendstatus, ontvangers, conflictbehoud, bewuste herpoging en
 opnieuw laden; light/dark op 390/1280/1440/1920/2560px zonder overflow. Geen echte
 CSV-inhoud gelezen, rapport gemaakt of mail verstuurd vanuit de tests.
+
+Aanvullend expliciet verzoek: mailtemplate Showrapportage met opgegeven tekst,
+persoonlijke aanhef, werkelijk gekoppelde showmetadata en verplichte PDF-bijlage.
+Toegevoegd als automatisch ontdekt mailtype, geen nieuwe verzendtrigger. Testmail
+met expliciet gemarkeerde test-PDF, geen echte rapportage. Centrale PDF-bijlage-
+validatie/Resend-transport, veilige HTML/plaintextpreview en tests toegevoegd.
+Aanvullende bestanden: email-templates/show-report.js, email-attachments.js,
+centrale renderer/transport, bestaande mailtests en previewtools. Vier register/
+servicetests toetsen inclusief complete gemockte showmail/PDF-verzending.

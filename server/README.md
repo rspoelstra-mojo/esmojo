@@ -74,3 +74,23 @@ Tijdens verzending is de knop geblokkeerd; een bewuste herpoging hergebruikt de
 UUID als Resend Idempotency-Key om dubbele verwerking te voorkomen. Er is geen
 automatische herpoging, opslag van mailinhoud of vrije ontvangerkeuze.
 Ontwikkeltests mocken de verzendmodule; er wordt niet zelfstandig echt verzonden.
+
+## Showrapportage en PDF-bijlagen
+
+`server/email-templates/show-report.js` exporteert `showReportEmail` met
+`{to,firstName,show,pdf:{filename,content}}`. De PDF-content is een Uint8Array of
+Buffer uit de toekomstige geautoriseerde rapportgenerator/Drive-read. De builder
+vereist de bijlage en alle gekoppelde showgegevens. Inhoud en afsluiting volgen
+de expliciete gebruikerstekst; aanhef en datumregel blijven centraal.
+
+`server/email-attachments.js` controleert PDF-type/signatuur/einde, bestandsnaam en
+maximaal 10 MB totaal. Geen externe URLs of lokale paden; nooit vrij door de
+browser aangeleverde mail/bijlage-inhoud. `sendEmail` zet de gevalideerde bytes
+alleen in het serververzoek naar de Resend-bijlagevorm om. Normale accountmails
+hebben ongewijzigd geen bijlagen. De renderer blijft de gedeelde HTML/plaintextbron.
+
+De automatische testcatalogus bevat Showrapportage, met verplichte concertkeuze.
+De expliciete test bouwt een PDF met de melding dat dit geen echte showrapportage
+is; bestand TEST-Showrapportage.pdf, onderwerp [TEST] Showrapportage. Dit start
+geen OnTrack-verwerking en maakt geen productierapportbestand. Ook de lokale
+previewtool schrijft een fictief show-report.html/.txt, zonder verzending.
