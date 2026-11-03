@@ -34,16 +34,9 @@ function esmojoOnTrack_(input) {
       Object.keys(state.nonces).forEach(nonce=>{if(state.nonces[nonce]<Date.now()-120000)delete state.nonces[nonce];});
       state.nonces[input.nonce]=input.timestamp;state.recipientIds=request.recipientIds.slice();state.revision++;state.updatedAt=new Date().toISOString();state.updatedBy=actor.id;changed=true;
     }
-    // Inventariseer alleen metadata; CSV-inhoud en PDF-verwerking wachten op de prompt.
-    const files=folder.getFiles(),known=new Set(state.sources.map(source=>source.id));
-    while(files.hasNext()){
-      const source=files.next();
-      if(!source.isTrashed()&&/\.csv$/i.test(source.getName())&&!known.has(source.getId())){
-        state.sources.push({id:source.getId(),name:source.getName(),receivedAt:source.getDateCreated().toISOString()});known.add(source.getId());changed=true;
-      }
-    }
+    if(esmojoOnTrackScan_(folder,state))changed=true;
     if(changed){const serialized=JSON.stringify(state);if(file)file.setContent(serialized);else folder.createFile(Utilities.newBlob(serialized,'application/json','_esmojo_ontrack_v1.json'));}
     const reports=state.reports.filter(report=>typeof report.sourceId==='string'&&typeof report.pdfId==='string'&&Number.isFinite(Date.parse(report.convertedAt)));
-    return esmojoReply_({ok:true,data:{revision:state.revision,received:state.sources.length,converted:new Set(reports.map(report=>report.sourceId)).size,latest:reports.slice().sort((a,b)=>Date.parse(b.convertedAt)-Date.parse(a.convertedAt)).slice(0,5).map(report=>({name:report.name,convertedAt:report.convertedAt,emailStatus:report.emailStatus==='sent'?'sent':report.emailStatus==='failed'?'failed':'pending'})),recipientIds:state.recipientIds,accounts,processingStatus:'awaiting_report_specification'}});
+    return esmojoReply_({ok:true,data:{revision:state.revision,received:state.sources.length,converted:new Set(reports.map(report=>report.sourceId)).size,latest:reports.slice().sort((a,b)=>Date.parse(b.convertedAt)-Date.parse(a.convertedAt)).slice(0,5).map(report=>({id:report.id||null,name:report.name,convertedAt:report.convertedAt,emailStatus:report.emailStatus==='sent'?'sent':report.emailStatus==='failed'?'failed':report.emailStatus==='no-recipients'?'no-recipients':'pending'})),recipientIds:state.recipientIds,accounts,sources:esmojoOnTrackQueue_(state),showChoices:esmojoOnTrackReportChoices_(folder),processingStatus:state.pipeline?.status||'idle'}});
   } catch (_) {return denied('ONTRACK_UNAVAILABLE');} finally {lock.releaseLock();}
 }

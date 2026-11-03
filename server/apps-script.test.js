@@ -69,3 +69,8 @@ test('alleen Shows krijgt ruimte voor de PDF-envelop; andere routes behouden hun
  for(const action of ['accounts','research','mcp-auth'])assert.equal(request(action,120001).ok,false);
  assert.equal(reads(),0);
 });
+
+test('Alleen ondertekende OnTrack-reporthandler krijgt de 3 MB PDF-grens; oude routes niet verruimd',()=>{
+ const {context,reads}=script(),calls=[];context.esmojoOnTrackReports_=envelope=>{calls.push(envelope.action);return{ok:true};};
+ const request=length=>context.doPost({postData:{contents:JSON.stringify({action:'ontrack-reports',body:'x'.repeat(length)})}});assert.equal(request(4300000).ok,true);assert.equal(calls.length,1);assert.equal(request(5000000).ok,false);assert.equal(calls.length,1);assert.equal(reads(),0);
+});

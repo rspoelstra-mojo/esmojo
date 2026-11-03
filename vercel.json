@@ -5,7 +5,11 @@
       "maxDuration": 300
     },
     "api/access.js": {
-      "includeFiles": "{server/report-original/**,server/email/template.html,server/email-templates/**}",
+      "includeFiles": "{server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**}",
+      "maxDuration": 300
+    },
+    "api/ontrack-reports-sync.js": {
+      "includeFiles": "{server/report-original/assets/**,server/email/template.html,server/ontrack-report/assets/**}",
       "maxDuration": 300
     }
   },

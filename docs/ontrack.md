@@ -5,57 +5,36 @@ MFA/sessiecontrole. Geen showkoppeling of wijzigingen aan bestaande analyses.
 
 Bron en opslag: de door de gebruiker aangewezen private Drive-map
 `1V5lw-IicMW_bkphtjD4HIEejCpsOapps`. Alle gegevens zijn Vertrouwelijk; Vercel mag
-verwerken en de bestaande Resend-voorziening mag later de rapporten verzenden.
+verwerken en de bestaande Resend-voorziening mag de rapporten verzenden.
 Opslag uitsluitend in Drive, geen Supabase of persistente browsercache.
 
-## Nu beschikbaar
+## Rapportage en beheer
 
-- CSV-inventaris bij openen en Actuele gegevens laden. Alleen directe bestanden
-  met extensie .csv (hoofdletterongevoelig); geen CSV-inhoud lezen.
-- Ontvangen telt unieke bestands-ID’s die OnTrack sinds ingebruikname in de map
-  heeft gezien, inclusief bestaande bestanden bij eerste inventaris. Geen
-  reconstructie van bestanden die vóór die inventaris al waren verwijderd.
-- Verwerkt telt unieke sourceId’s met een geregistreerde PDF/omzettijd.
-- Laatste vijf gesorteerd op convertedAt; vinkje alleen bij emailStatus sent.
-- Bestaande actieve accounts selecteren, met revisiecontrole persistent opslaan.
-  Geen ontvangers selecteren betekent geen gekozen ontvangers.
-- Bij mislukken blijft de selectie in tijdelijk geheugen; na bewust actuele
-  gegevens laden blijft die selectie behouden voor opnieuw opslaan.
+De volledige automatische rapportworkflow staat beschreven in
+[ontrack-report.md](ontrack-report.md). Parser, berekeningen, eigen A4-generator,
+intake, versies, private PDF-download, ontvangeraflevering en herpogingen zijn
+geïmplementeerd. De vaste workflow controleert iedere 30 minuten, ook als de
+beheerpagina gesloten is. Openen/verversen inventariseert eveneens de CSV-metadata.
 
-## Architectuur
+Ontvangen telt unieke waargenomen CSV-bestands-ID’s, verwerkt telt bron-ID’s met
+een echte geregistreerde PDF. Identieke inhoud+concert+layout hergebruikt het
+rapport, ook bij een dubbel Drive-bestand. Laatste vijf sorteert op werkelijke
+omzettijd; vinkje uitsluitend na bevestigde mail. Geen bestaande willekeurige
+PDF als door OnTrack gegenereerd meetellen. Accountselectie is persistent en
+revisiegecontroleerd; de nieuwste keuze geldt voor nieuwe rapporten. Een bestaand
+rapport zonder ontvangers kan later bewust met Rapport mailen worden aangeboden.
 
-`src/ontrack-admin.js` en eigen CSS vormen de fluid-interface. GET/PATCH
-`api/access?action=ontrack` wordt uitsluitend na beheerdercontrole afgehandeld.
-`server/ontrack-store.js` gebruikt de bestaande Apps Script-URL/shared secret
-met een eigen HMAC-domein ontrack en een korte vervaltijd. Geen vrij Drive-pad of
-vrije ontvangeradressen via de API. Read-only previews laten deze route niet toe.
+De inhoudelijke overdracht is ontvangen. Nog ontbrekend zijn het originele
+ON-icoon en de goedgekeurde volledige SCOOTER-referentie-PDF. Zonder origineel
+icoon zijn definitieve PDF-verwerking en rapportverzending geblokkeerd. De pagina
+vermeldt dit. Geen vervangend icoon of stilzwijgend goedgekeurde layout. De lokale
+SCOOTER-layoutproef is geen productie-PDF en is niet verstuurd.
 
-`google-apps-script/OnTrack.gs` controleert de ondertekening én het actuele actieve
-beheerderprofiel opnieuw, vergrendelt het eigen register en inventariseert de
-vaste map. `_esmojo_ontrack_v1.json` bevat version, revision (ontvangerinstellingen),
-recipientIds, sources (id/name/receivedAt), reports en beperkte replaynonces.
-Instellingen hebben updatedBy/updatedAt. CSV’s worden op id ontdubbeld; namen
-zijn geen unieke sleutel. Bronbestanden worden niet aangepast of verplaatst.
-
-Een toekomstige rapportregistratie gebruikt sourceId, pdfId, name, convertedAt
-(ISO), emailStatus (pending/failed/sent). Omgezet en verzonden zijn aparte feiten;
-een bestaande willekeurige PDF wordt niet als door OnTrack verwerkt geteld.
-De huidige release schrijft geen rapportregistraties en verzendt geen mails.
-
-## Nog aan te sluiten na de rapportageprompt
-
-CSV-parser/inhoudelijke validatie, PDF-generator volgens aangeleverde opmaak,
-automatische mapcontrole/worker, versiegebonden verwerking en veilige herpogingen,
-PDF-opslag/download, individuele ontvangerverzending en bevestigde verzendstatus.
-Inventarisatie start nu bij pagina openen of bewust verversen; er is nog geen
-achtergrondworker. De pagina meldt dit expliciet.
-
-De mail Showrapportage staat in server/email-templates/show-report.js en verschijnt
-automatisch in Beheerder → Email. De builder vereist gekoppelde showmetadata en
-de gegenereerde PDF; het transport weigert een ontbrekende/ongeldige bijlage.
-De testknop gebruikt de werkelijk geselecteerde show en een duidelijk gemarkeerde
-test-PDF. Er wordt nog geen echte CSV-rapportage gegenereerd. Nooit een voorbeeldadres, echte token of
-zelfbedachte rapportinhoud versturen.
+`src/ontrack-admin.js`/CSS en de beheerder/MFA-route blijven geïsoleerd. De vaste
+signed Drive-brug hergebruikt `_esmojo_ontrack_v1.json`, waarin uitsluitend
+metadata/referenties/status staan; CSV en PDF zijn eigen private bestanden.
+Geen Supabase, openbare bestandlinks of persistente browseropslag. Alleen de
+bewuste private PDF-download gebruikt tijdelijk een blob in browsergeheugen.
 
 ## Extra concertlocaties voor Showrapportage
 
