@@ -1,6 +1,7 @@
+import {reportPages} from '../shared/report-routes.js';
 import {calculateReport} from './ontrack-report/data.js';
 // Alleen vaste voorbeeldkeuze; automatische rapport-/CSV-koppeling volgt later.
-const examples={jungle:{name:'Jungle',venue:'Ziggo Dome',dates:['2026-11-03']}};
+const examples={jungle:{key:reportPages.find(report=>report.slug==='jungle').concertId,name:'Jungle',venue:'Ziggo Dome',dates:['2026-11-03']}};
 export function validateWebReportRequest(input){
  if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).join(',')!=='slug'||typeof input.slug!=='string'||!Object.hasOwn(examples,input.slug))throw Error('VALIDATION');
  return input.slug;

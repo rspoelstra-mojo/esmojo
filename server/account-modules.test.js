@@ -8,7 +8,7 @@ test('Alle acht combinaties van modules blijven onafhankelijk, inclusief geen mo
   for(const module of accountModules)assert.equal(hasModule(profile,module.id),modules.includes(module.id));
  }
  for(const module of accountModules)assert.equal(hasModule({},module.id),true);
- assert.equal(moduleForPage('shows'),'shows');assert.equal(moduleForPage('artiest'),'artists');assert.equal(moduleForPage('statistieken'),'reports');assert.equal(moduleForPage('account'),null);
+ assert.equal(moduleForPage('shows'),'shows');assert.equal(moduleForPage('artiest'),'artists');assert.equal(moduleForPage('statistieken'),'reports');assert.equal(moduleForPage('rapportages'),'reports');assert.equal(moduleForPage('account'),null);
 });
 test('Ongeldige modules falen gesloten; de Drive-validator is exact dezelfde implementatie',()=>{
  for(const modules of [null,'reports',{},['reports','reports'],['admin'],['reports','onbekend']]){
