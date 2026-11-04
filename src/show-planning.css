@@ -20,10 +20,10 @@
 .planning-step[data-state="completed"] .planning-badge { background:var(--planning-green-soft); color:var(--planning-green); }
 .planning-step[data-state="current"] .planning-badge { background:var(--planning-blue-soft); color:var(--planning-blue-text); }
 .planning-badge[data-overdue="true"] { font-weight:600; }
-.planning-track { position:absolute; inset:95px 12px auto; height:3px; }
-.planning-segment { position:absolute; width:20%; height:3px; background:var(--planning-line); }
+.planning-track { position:absolute; inset:93px 12px auto; height:2px; }
+.planning-segment { position:absolute; width:20%; height:2px; background:var(--planning-line); }
 .planning-segment[data-completed="true"] { background:var(--planning-blue); }
-.planning-today { position:absolute; left:calc(12px + (100% - 24px)*var(--planning-position)); top:16px; height:80px; border-left:1px dashed var(--planning-blue); z-index:2; pointer-events:none; }
+.planning-today { position:absolute; left:calc(12px + (100% - 24px)*var(--planning-position)); top:16px; height:78px; border-left:1px dashed var(--planning-blue); z-index:2; pointer-events:none; }
 .planning-today-label { position:absolute; top:0; left:0; transform:translateX(-50%); white-space:nowrap; padding:4px 9px; border-radius:7px; font-size:11px; font-weight:600; background:var(--planning-blue-soft); color:var(--planning-blue-text); }
 .planning-footer { padding:12px 16px; display:flex; align-items:center; gap:12px; border-top:1px solid var(--line); background:var(--planning-footer); color:var(--planning-muted); font-size:12px; line-height:1.5; }
 .planning-footer .planning-icon { color:var(--planning-blue-text); width:16px; height:16px; }
