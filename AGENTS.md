@@ -674,3 +674,25 @@ hetzelfde ID. Oude /statistieken-paden en /rapportages/jungle blijven via redire
 of History-normalisatie werken, inclusief oude hashbladwijzers. Beide rootnamen
 blijven onder de Reports-modulecontrole vallen. Geen wijzigingen aan CSV-inhoud,
 bronselectie, accountrechten of mail-/verwerkingsacties voor een routewijziging.
+
+## Webrapportage: lijstfilter, types en headerfoto
+
+Op 4 november 2026 heeft de gebruiker uitsluitend voor de rapportagewebsite de
+volgende presentatie bevestigd. Locatie/tijd gebruikt korte Nederlandse maanden,
+zoals 3 nov 2026. High (hoofdletterongevoelig) krijgt een rood incidentblok; behoud
+ook bestaande Critical-markering. Verberg uit de individuele lijst types met
+zelfzorg of kolven en omschrijvingen met pleister, pcm, paracetamol of paracetemol,
+steeds hoofdletterongevoelig. Alleen de lijst en de zichtbare teller worden
+gefilterd; nooit de bronrecords, oorspronkelijke KPI-berekeningen of PDF.
+
+De grote medische/beveiligingstotalen blijven, dubbele totaalregels onderin niet.
+Web-typegrafieken houden alle types met meerdere meldingen en vullen zo nodig
+aan tot vijf daadwerkelijke types. Sorteer op aantal, dan eerste CSV-positie;
+verzin geen types wanneer er minder bestaan. De webprojectie wijkt hiermee
+bewust af van de ongewijzigde PDF-selectie (>1). Caption Meest gemelde incidenttypes.
+
+Rapportheaderfoto rechts via bestaande getMojoPhoto en geverifieerde MOJO-bron.
+De vaste Jungle-bron komt uit de bestaande concertcatalogus. Geen browser-URL
+als scraperinput, geen Shows-moduletoegang vereisen voor een Reports-gebruiker.
+Server en browser beperken foto’s tot MOJO; fout/onbereikbare foto mag het rapport
+niet blokkeren. Standaard typography/thema’s en de canonieke URL blijven intact.
