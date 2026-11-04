@@ -46,7 +46,7 @@ export function renderHomeDashboard(parent,data,{now=()=>new Date(),loadPhoto=lo
  }
  function render(){if(disposed)return;model=homePlanning(data,now());if(followCurrent)month=model.today.slice(0,7);renderShows();renderDeadlines();}
  parent.replaceChildren(root);render();const timer=setInterval(()=>{if(homePlanning(data,now()).today!==model.today)render();},60000);
- const dispose=()=>{disposed=true;data={shows:[]};observer.disconnect();photoObserver.disconnect();clearInterval(timer);photos.clear();root.remove();};dispose.update=next=>{if(disposed||JSON.stringify(next)===JSON.stringify(data))return;data=next;render();};return dispose;
+ const dispose=()=>{disposed=true;data={shows:[]};model=null;observer.disconnect();photoObserver.disconnect();clearInterval(timer);photos.clear();pendingPhotos.clear();root.remove();};dispose.update=next=>{if(disposed||JSON.stringify(next)===JSON.stringify(data))return;data=next;render();};return dispose;
 }
 export function createHomeDashboard(parent,{request=access,now=()=>new Date()}={}){
  let disposed=false,cleanup=()=>{},loading=false;const controller=new AbortController();
@@ -58,5 +58,5 @@ export function createHomeDashboard(parent,{request=access,now=()=>new Date()}={
  const skeleton=node('div','home-dashboard'),columns=node('div','home-layout');for(let i=0;i<3;i++)columns.append(node('div','home-loading'));skeleton.append(columns);parent.append(skeleton);void load();
  window.addEventListener('focus',()=>void load(),{signal:controller.signal});document.addEventListener('visibilitychange',()=>{if(!document.hidden)void load();},{signal:controller.signal});
  const timer=setInterval(()=>{if(!document.hidden)void load();},60000);
- return()=>{disposed=true;cleanup();controller.abort();clearInterval(timer);parent.replaceChildren();parent.removeAttribute('aria-busy');};
+ return()=>{disposed=true;cleanup();cleanup=()=>{};controller.abort();clearInterval(timer);parent.replaceChildren();parent.removeAttribute('aria-busy');};
 }
