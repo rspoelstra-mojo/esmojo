@@ -1,3 +1,4 @@
+import {createWebReportService} from './report-web.js';
 import {createOnTrackReportStore,createOnTrackReportService} from './ontrack-report/service.js';
 import {createMailingConcertsStore} from './ontrack-concerts.js';
 import {createOnTrackStore,validateOnTrackRecipients} from './ontrack-store.js';
@@ -116,6 +117,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
       const requiredModule=['shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
+      if(action==='report-web'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await createWebReportService({store:ontrackReportStore})(actor,req.body));}
+        catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:503;return reply(status,{error:status===400?'Deze rapportage is niet beschikbaar.':status===403?'Je hebt geen toegang tot deze module.':'De rapportage kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
+      }
       if(previewReads&&action==='shows'&&req.method==='GET')return reply(200,await previewReads.menu());
       if(previewReads&&action==='show-photo'&&req.method==='POST'){const input=validateRiskViewRequest(req.body);return reply(200,await previewReads.photo(input.concertId));}
       if(action==='fluid-preview'){

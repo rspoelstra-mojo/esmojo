@@ -643,3 +643,24 @@ zoals de oorspronkelijke referentie. Gebruik 14px staptitels, 12px datums/voetre
 11px badges, kleinere punten en minder witruimte; geen tekstschaling per viewport.
 De eigen planningscontainer gaat pas onder 680px over naar de compacte verticale
 indeling. Behoud tweederdebreedte, thema’s, deadlines en echte afrondstatussen.
+
+## Jungle-webrapportage onder Rapportages
+
+Vanaf 4 november 2026 bestaat /statistieken/jungle met submenu Jungle. Het is een
+vaste vormgevingsvoorbeeldpagina; automatische pagina’s voor nieuwe CSV’s volgen
+later. De bestaande CSV in de private OnTrack-map is expliciet als bron bevestigd.
+Geen echte CSV/PDF/incidentteksten in Git, builds of CI-fixtures opnemen. Vercel
+rekent met de bestaande calculateReport-functie. De gedeelde web-renderer toont
+zes fluid kaarten en alle incidenten, met normale 14px tekst en beide thema’s.
+Geen iframe, nieuwe PDF, AI-research, showwijziging of mailactie voor deze weergave.
+
+Actie report-web vereist de actuele Rapportages-module na MFA. De getekende
+Drive-operatie web-preview controleert opnieuw actieve moduletoegang, ook voor
+gewone gebruikers. Alleen vaste slug jungle; geen vrije bestands-ID, naam, actor,
+URL of pad uit de browser. De Drive-leesoperatie accepteert uitsluitend de vaste
+geverifieerde CSV, juiste map, MIME en grootte; rapportregister/CSV blijven intact.
+Bronbytes blijven serverzijdig, de HTTP-response bevat alleen benodigde velden en
+no-store. De browser bewaart niets persistent en ruimt weergave/observer op bij
+verlaten/rechtenwijziging. Gebruik dezelfde renderer later voor echte koppelingen.
+De incidenten zelf en PDF-kop zijn 3 november; de CSV-bestandsnaam heeft 2 november
+maar wordt niet stilzwijgend hernoemd of als datumbron gebruikt.
