@@ -25,3 +25,14 @@ test('Expliciete beveiligingsfilter vindt alle passende records, inclusief stand
  for(const [filter,expected]of [['verbal','verbaal'],['physical','fysiek'],['evictions','zorg'],['arrests','zorg']])assert.deepEqual(selectedReportIncidents(source,filter).map(row=>row.id),[expected]);
  assert.deepEqual(selectedReportIncidents(source,'onbekend'),[]);assert.deepEqual(selectedReportIncidents(source,null),visibleReportIncidents(source));
 });
+test('Medische filters tonen ook standaard verborgen zelfzorg, kiezen uitsluitend eigen labels en herstellen default bij wissen',async()=>{
+ const {selectedReportIncidents}=await import('./report-view.js');
+ const source=[{id:'zorg',type:'Zelfzorg',medicalFilters:['selfcare']},{id:'overlap',description:'PCM',medicalFilters:['selfcare','unwell']},{id:'behandeling',type:'Controle',medicalFilters:['treatments','ambulance']},{id:'ander',securityFilters:['evictions']}];
+ for(const [filter,ids]of [['selfcare',['zorg','overlap']],['treatments',['behandeling']],['unwell',['overlap']],['ambulance',['behandeling']]])assert.deepEqual(selectedReportIncidents(source,filter).map(row=>row.id),ids);
+ assert.deepEqual(selectedReportIncidents(source,'evictions').map(row=>row.id),['ander']);assert.deepEqual(selectedReportIncidents(source,null).map(row=>row.id),['behandeling','ander']);
+});
+
+test('Prioriteiten worden uitsluitend voor weergave Nederlands, ongeacht hoofdletters; onbekend/ontbrekend blijft leesbaar',async()=>{
+ const {reportPriorityLabel}=await import('./report-view.js');
+ for(const [source,label]of [['Low','Laag'],[' medium ','Midden'],['HIGH','Hoog'],['Critical','Kritisch'],['Laag','Laag'],['Urgent','Urgent'],['__proto__','__proto__'],['','Niet opgegeven'],[null,'Niet opgegeven']])assert.equal(reportPriorityLabel(source),label);
+});

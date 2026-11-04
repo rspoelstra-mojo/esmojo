@@ -720,3 +720,21 @@ Actieve filter doorzoekt alle originele incidenten, ook standaard verborgen
 zelfzorgrecords. Wissen herstelt standaard lijstselectie. KPI's/grafieken/PDF
 blijven ongewijzigd. Stuur uitsluitend afgeleide labels mee, geen extra ruwe
 CSV-velden. Bestaande Rapportages-modulecontrole, MFA en private bron blijven.
+
+
+Op 4 november 2026 zijn ook de vier medische KPI's aanklikbare incidentfilters:
+Behandelingen, Zelfzorg, Onwelwordingen en Ambulancetransporten. De bestaande
+medische criteria staan centraal in shared/report-medical.js. Medische afdeling
+vereist voor behandeling/zelfzorg/onwel; ambulance volgt Resolved Status over
+alle afdelingen en telt personen. Geen tellingen stilzwijgend wijzigen om bij
+het algemene lijstfilter aan te sluiten. Projecteer alleen medicalFilters-labels,
+geen extra ruwe CSV-velden. Alle acht KPI-rijen gebruiken dezelfde knopcomponent,
+met gelijke hoogte en rijafstand voor Medisch/Beveiliging in beide thema's.
+Eén actieve medische of beveiligingsfilter; dropdown/reset blijft bij Individuele
+incidenten. Expliciete zelfzorgselectie toont bijbehorende standaard verborgen
+records. Wissen herstelt het algemene lijstfilter. PDF/grafieken ongewijzigd.
+
+Prioriteit in de individuele rapportagewebsite-incidenten gebruikt Nederlandse
+labels: Low=Laag, Medium=Midden, High=Hoog, Critical=Kritisch. Vertaal uitsluitend
+voor presentatie, hoofdletterongevoelig; behoud bronwaarden en High/Critical-rood.
+Ontbrekende prioriteit Niet opgegeven, onbekende waarde leesbaar behouden.
