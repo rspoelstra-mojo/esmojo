@@ -586,3 +586,10 @@ Operationele risico’s en beheersmaatregelen blijven zichtbaar maar voorlopig
 altijd onafgerond totdat hun echte afrondfunctionaliteit expliciet gebouwd is.
 Geen handmatig afvinken of nieuwe statusopslag. De planning gebruikt uitsluitend
 de bestaande gedeelde showcontext en reageert op bevestigde wijzigingen.
+
+Op 4 november 2026 is de Overzicht-planning op twee derde van de contentbreedte
+gezet, met één derde ruimte ernaast voor latere blokken. Onder 1000px beschikbare
+content wordt het één kolom. Gebruik de show-overview-grid en de eigen container
+van de planning; behoud lettergroottes en responsive herschikking.
+Hoofdmenu Statistieken heet vanaf deze versie Rapportages met een documenticoon;
+het bestaande interne pad blijft bereikbaar.
