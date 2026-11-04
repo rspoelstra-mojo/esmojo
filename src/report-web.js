@@ -1,15 +1,24 @@
-import {visibleReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto} from './lib/report-view.js';
+import {createReportDateTabs} from './report-date-tabs.js';
+import {securityReportFilters} from '../shared/report-security.js';
+import {selectedReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto} from './lib/report-view.js';
 import './report-web.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 import {donutChart,timelineChart} from './report-charts.js';
 const node=(tag,className,text)=>{const el=document.createElement(tag);el.className=className;if(text!==undefined)el.textContent=text;return el;};
 const value=text=>typeof text==='string'&&text.trim()?text:'Niet opgegeven';
-const formatDate=date=>new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(date+'T12:00:00Z'));
 function card(title,className=''){const element=node('section','report-card '+className),heading=node('h2','report-card-title',title);element.append(heading);return element;}
-function statCard(title,statistics,labels,className){
+function statCard(title,statistics,labels,className,onFilter){
  const element=card(title,className),header=node('div','report-stat-header');header.append(element.firstChild,node('strong','report-total',String(statistics.total)));element.append(header);
- const rows=node('dl','report-stat-list');for(const [field,label]of labels){const row=node('div','report-stat-row');row.append(node('dt','',label),node('dd','',String(statistics[field])));rows.append(row);}element.append(rows);return element;
+ const rows=node(onFilter?'ul':'dl','report-stat-list'+(onFilter?' report-filter-list':''));
+ for(const [field,label]of labels){
+  if(onFilter){
+   const item=node('li',''),button=node('button','report-stat-filter');button.type='button';button.dataset.securityFilter=field;button.setAttribute('aria-pressed','false');button.setAttribute('aria-controls','report-incident-list');button.title='Filter incidenten: '+label;
+   const amount=node('span','report-filter-amount',String(statistics[field])),glyph=node('span','report-filter-glyph');glyph.setAttribute('aria-hidden','true');glyph.innerHTML='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14l-5 6v5l-4 2v-7L3 4Z"/></svg>';
+   amount.append(glyph);button.append(node('span','',label),amount);button.onclick=()=>onFilter(field);item.append(button);rows.append(item);
+  }else{const row=node('div','report-stat-row');row.append(node('dt','',label),node('dd','',String(statistics[field])));rows.append(row);}
+ }
+ element.append(rows);return element;
 }
 function typesCard(title,groups,className){
  const element=card(title,className);element.append(node('p','report-card-caption','Meest gemelde incidenttypes'));
@@ -29,25 +38,51 @@ function incidentCard(incident,index){
  element.append(fields);return element;
 }
 export function renderWebReport(parent,data){
- const {show,report}=data,view=node('section','web-report'),disposers=[];
- const header=node('header','report-heading'),intro=node('div','report-heading-intro');intro.append(node('p','report-eyebrow','Showrapportage'),node('h1','',show.name),node('p','report-show-meta',show.dates.map(formatDate).join(' · ')+' · '+show.venue));header.append(intro);
+ const {show}=data,view=node('section','web-report'),header=node('header','report-heading'),intro=node('div','report-heading-intro');
+ intro.append(node('p','report-eyebrow','Showrapportage'),node('h1','',show.name),node('p','report-show-meta',show.venue));header.append(intro);
  const photo=reportPhoto(data.photo);
  if(photo){
   const link=node('a','report-artist-photo'),image=node('img','');link.href=photo.sourceUrl;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label',`Foto van ${show.name} op MOJO`);
   image.src=photo.imageUrl;image.alt=show.name;image.width=600;image.height=338;image.decoding='async';image.referrerPolicy='no-referrer';
   image.onerror=()=>{link.remove();header.classList.remove('report-heading-photo');};link.append(image);header.classList.add('report-heading-photo');header.append(link);
  }
- view.append(header);
+ const panel=node('section','report-date-content');panel.id='report-date-panel';panel.setAttribute('role','tabpanel');let disposeDaily=()=>{};
+ const dates=[...new Set(show.dates)].sort();
+ const tabs=createReportDateTabs(dates,(date,_index,tabId)=>{
+  disposeDaily();panel.setAttribute('aria-labelledby',tabId);
+  // Eén bronrapport nooit herhalen over andere showdagen; nachtincidenten blijven bij hun bronrapport.
+  const report=data.reportsByDate?.[date]||(dates.length===1?data.report:null);
+  if(report)disposeDaily=renderDailyReport(panel,report);
+  else{panel.replaceChildren(node('p','report-muted','Voor deze showdatum is nog geen rapportage beschikbaar.'));disposeDaily=()=>{};}
+ });
+ header.append(tabs.element);view.append(header,panel);parent.replaceChildren(view);tabs.select(dates[0]);
+ return()=>{tabs.dispose();disposeDaily();view.replaceChildren();};
+}
+function renderDailyReport(parent,report){
+ const view=node('div','report-day'),disposers=[];let activeFilter=null;
+ const selectFilter=filter=>{activeFilter=activeFilter===filter?null:filter;updateIncidents();incidents.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
  const grid=node('div','report-summary-grid');
  grid.append(statCard('Medisch',report.kpis.medical,[['treatments','Behandelingen'],['selfcare','Zelfzorg'],['unwell','Onwelwordingen'],['ambulance','Ambulancetransporten']],'report-medical'),
-  statCard('Beveiliging',report.kpis.security,[['verbal','Verbale agressie'],['physical','Fysieke agressie'],['evictions','Uitzettingen'],['arrests','Aanhoudingen']],'report-security'),
+  statCard('Beveiliging',report.kpis.security,[['verbal','Verbale agressie'],['physical','Fysieke agressie'],['evictions','Uitzettingen'],['arrests','Aanhoudingen']],'report-security',selectFilter),
   typesCard('Medisch · incidenttypes',report.types.medical,'report-medical-types'),typesCard('Beveiliging · incidenttypes',report.types.security,'report-security-types'));
  const timeline=card('Showverloop','report-timeline'),chart=node('div','report-line-chart');timeline.append(chart,node('p','report-card-caption','Aantal incidenten per halfuur'));
  const legend=node('div','report-line-legend');for(const [label,index]of [['Medisch',0],['Beveiliging',2]]){const item=node('span',''),line=node('span','report-line-key report-series-'+index);line.setAttribute('aria-hidden','true');item.append(line,node('span','',label));legend.append(item);}timeline.append(legend);
  const locations=card('Locaties incidenten','report-locations'),locationList=node('dl','report-location-list');for(const row of report.locations){const pair=node('div','');pair.append(node('dt','',row.name),node('dd','',String(row.count)));locationList.append(pair);}locations.append(locationList);grid.append(timeline,locations);view.append(grid);
- const visibleIncidents=visibleReportIncidents(report.incidents);
- const incidents=node('section','report-incidents'),incidentHeader=node('div','report-incident-header');incidentHeader.append(node('h2','','Individuele incidenten'),node('span','report-incident-count',`${visibleIncidents.length} incidenten`));incidents.append(incidentHeader);
- const list=node('div','report-incident-list');visibleIncidents.forEach((incident,index)=>list.append(incidentCard(incident,index)));if(!visibleIncidents.length)list.append(node('p','report-muted','Geen incidenten om te tonen.'));incidents.append(list);view.append(incidents);parent.replaceChildren(view);
+ const incidents=node('section','report-incidents'),incidentHeader=node('div','report-incident-header'),title=node('h2','','Individuele incidenten');
+ const filterControls=node('div','report-filter-controls'),filterSelect=node('select','report-filter-select'),clear=node('button','report-clear-filter','Filter wissen');filterControls.setAttribute('role','group');filterControls.setAttribute('aria-label','Incidentfilter');filterSelect.setAttribute('aria-label','Filter individuele incidenten');filterSelect.setAttribute('aria-controls','report-incident-list');
+ for(const filter of [{id:'',label:'Alle incidenten'},...securityReportFilters]){const option=node('option','',filter.label);option.value=filter.id;filterSelect.append(option);}
+ filterSelect.onchange=()=>{activeFilter=filterSelect.value||null;updateIncidents();};clear.type='button';clear.onclick=()=>{activeFilter=null;updateIncidents();filterSelect.focus();};filterControls.append(filterSelect,clear);
+ const counter=node('span','report-incident-count');counter.setAttribute('role','status');counter.setAttribute('aria-live','polite');counter.setAttribute('aria-atomic','true');
+ incidentHeader.append(title,filterControls,counter);incidents.append(incidentHeader);
+ const explanation=node('p','report-filter-explanation'),list=node('div','report-incident-list');list.id='report-incident-list';incidents.append(explanation,list);view.append(incidents);parent.replaceChildren(view);
+ function updateIncidents(){
+  const selection=securityReportFilters.find(filter=>filter.id===activeFilter),rows=selectedReportIncidents(report.incidents,activeFilter);
+  for(const button of view.querySelectorAll('[data-security-filter]'))button.setAttribute('aria-pressed',String(button.dataset.securityFilter===activeFilter));
+  filterSelect.value=activeFilter||'';clear.hidden=!selection;counter.textContent=`${rows.length} ${rows.length===1?'incident':'incidenten'}`;counter.setAttribute('aria-label',(selection?selection.label+': ':'')+counter.textContent);
+  explanation.hidden=!(['evictions','arrests'].includes(activeFilter)&&report.kpis.security[activeFilter]!==rows.length);explanation.textContent=explanation.hidden?'':'Het cijfer hierboven telt personen; dit overzicht toont de bijbehorende incidenten.';
+  list.replaceChildren();rows.forEach((incident,index)=>list.append(incidentCard(incident,index)));if(!rows.length)list.append(node('p','report-muted',selection?'Geen incidenten voor '+selection.label.toLocaleLowerCase('nl-NL')+'.':'Geen incidenten om te tonen.'));
+ }
+ updateIncidents();
  disposers.push(timelineChart(chart,report.timeline));
  return()=>{for(const dispose of disposers)dispose();view.replaceChildren();};
 }

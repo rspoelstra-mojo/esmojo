@@ -1,3 +1,4 @@
+import {groupReportMenu} from './lib/report-menu.js';
 import {reportPages,reportHref} from '../shared/report-routes.js';
 import {createWebReportPage} from './report-web.js';
 import {createOnTrackAdminView} from './ontrack-admin.js';
@@ -100,9 +101,13 @@ function renderPage() {
   }
   if(root==='rapportages'){
     let selected;try{selected=decodeURIComponent(route.split('/')[1]||'');}catch{selected=null;}
-    for(const report of reportPages){
-      const link=document.createElement('a');link.href=reportHref(report);link.className='submenu-link';link.textContent=report.label;submenu.append(link);
-      if(selected===report.concertId){link.setAttribute('aria-current','page');disposePage=createWebReportPage(content,link,{slug:report.slug});}
+    for(const group of groupReportMenu(reportPages)){
+      const heading=document.createElement('h3');heading.className='submenu-group-heading';heading.textContent=group.title;heading.dataset.submenuGroupHeading=group.id;submenu.append(heading);
+      if(!group.reports.length){const empty=document.createElement('p');empty.className='submenu-group-empty';empty.textContent='Geen rapportages';empty.dataset.submenuGroupEmpty=group.id;submenu.append(empty);}
+      for(const report of group.reports){
+        const link=document.createElement('a');link.href=reportHref(report);link.className='submenu-link';link.textContent=report.label;link.dataset.submenuTitle=report.label;link.dataset.submenuGroup=group.id;submenu.append(link);
+        if(selected===report.concertId){link.setAttribute('aria-current','page');disposePage=createWebReportPage(content,link,{slug:report.slug});}
+      }
     }
     if(!reportPages.some(report=>report.concertId===selected))content.textContent='Rapportage niet gevonden.';
   }
@@ -129,7 +134,7 @@ function renderPage() {
       renderAvatar(document.querySelector('.avatar'), profile);
     });
   }
-  submenuSearch.setSection(root, ['shows', 'artiest'].includes(root) || (root === 'beheerder' && isAdministrator(profile)));
+  submenuSearch.setSection(root, ['shows', 'artiest', 'rapportages'].includes(root) || (root === 'beheerder' && isAdministrator(profile)));
   document.querySelectorAll('[data-page]').forEach(link => {
     if (link.dataset.page === root) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');

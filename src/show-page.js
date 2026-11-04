@@ -1,3 +1,4 @@
+import './show-tabs.css';
 import './show-page.css';
 import {access} from './auth.js';
 import {loadShowPhoto} from './show-photo.js';
