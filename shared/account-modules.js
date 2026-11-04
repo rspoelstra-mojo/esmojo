@@ -13,5 +13,5 @@ export function hasModule(profile,id){
   if(profile.modules===undefined)return true; // Bestaande accounts behouden hun toegang.
   try{return validateAccountModules(profile.modules).includes(id);}catch{return false;}
 }
-export const moduleForPage=root=>({shows:'shows',artiest:'artists',statistieken:'reports'}[root]||null);
+export const moduleForPage=root=>({shows:'shows',artiest:'artists',rapportages:'reports',statistieken:'reports'}[root]||null);
 export const moduleFingerprint=profile=>JSON.stringify(accountModules.map(module=>hasModule(profile,module.id)));
