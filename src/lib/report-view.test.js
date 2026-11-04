@@ -36,3 +36,11 @@ test('Prioriteiten worden uitsluitend voor weergave Nederlands, ongeacht hoofdle
  const {reportPriorityLabel}=await import('./report-view.js');
  for(const [source,label]of [['Low','Laag'],[' medium ','Midden'],['HIGH','Hoog'],['Critical','Kritisch'],['Laag','Laag'],['Urgent','Urgent'],['__proto__','__proto__'],['','Niet opgegeven'],[null,'Niet opgegeven']])assert.equal(reportPriorityLabel(source),label);
 });
+
+test('Datumtabs tonen maximaal vijf unieke shows van nieuw naar oud; minder beschikbare shows worden niet aangevuld',async()=>{
+ const {reportTabDates}=await import('./report-view.js');
+ const source=['2002-06-01','2026-11-03','2026-10-31','2027-01-02','2026-11-04','2026-11-02','2026-11-03'],before=[...source];
+ assert.deepEqual(reportTabDates(source),['2027-01-02','2026-11-04','2026-11-03','2026-11-02','2026-10-31']);assert.deepEqual(source,before);
+ assert.deepEqual(reportTabDates(['2002-06-01','2026-11-03']),['2026-11-03','2002-06-01']);
+ assert.deepEqual(reportTabDates(['2026-11-03']),['2026-11-03']);assert.deepEqual(reportTabDates(['2026-11-03','2026-11-03']),['2026-11-03']);assert.deepEqual(reportTabDates([]),[]);
+});

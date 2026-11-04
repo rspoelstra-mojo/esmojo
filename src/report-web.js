@@ -1,7 +1,7 @@
 import {medicalReportFilters} from '../shared/report-medical.js';
 import {createReportDateTabs} from './report-date-tabs.js';
 import {securityReportFilters} from '../shared/report-security.js';
-import {selectedReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto,reportPriorityLabel} from './lib/report-view.js';
+import {selectedReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto,reportPriorityLabel,reportTabDates} from './lib/report-view.js';
 import './report-web.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
@@ -49,7 +49,7 @@ export function renderWebReport(parent,data){
   image.onerror=()=>{link.remove();header.classList.remove('report-heading-photo');};link.append(image);header.classList.add('report-heading-photo');header.append(link);
  }
  const panel=node('section','report-date-content');panel.id='report-date-panel';panel.setAttribute('role','tabpanel');let disposeDaily=()=>{};
- const dates=[...new Set(show.dates)].sort();
+ const dates=reportTabDates(show.dates);
  const tabs=createReportDateTabs(dates,(date,_index,tabId)=>{
   disposeDaily();panel.setAttribute('aria-labelledby',tabId);
   // Eén bronrapport nooit herhalen over andere showdagen; nachtincidenten blijven bij hun bronrapport.
