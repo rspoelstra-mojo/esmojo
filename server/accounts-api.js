@@ -24,7 +24,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -119,7 +119,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='report-web'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-        try{return reply(200,await createWebReportService({store:ontrackReportStore})(actor,req.body));}
+        try{return reply(200,await createWebReportService({store:ontrackReportStore,photo:photoService})(actor,req.body));}
         catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:503;return reply(status,{error:status===400?'Deze rapportage is niet beschikbaar.':status===403?'Je hebt geen toegang tot deze module.':'De rapportage kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
       }
       if(previewReads&&action==='shows'&&req.method==='GET')return reply(200,await previewReads.menu());
@@ -169,7 +169,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });
         const index = await shows('list');
         const concert = index.concerts.find(row => row.concertId === input.concertId);
-        return reply(200, { photo: concert ? await getMojoPhoto(concert.sourceUrl) : null });
+        return reply(200, { photo: concert ? await photoService(concert.sourceUrl) : null });
       }
       if (action === 'show-profile' && req.method === 'POST') {
         try {
