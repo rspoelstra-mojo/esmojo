@@ -17,14 +17,14 @@ function esmojoOnTrack_(input) {
     if(!accountFiles.hasNext())return denied();
     const profiles=JSON.parse(accountFiles.next().getBlob().getDataAsString('UTF-8')).profiles;
     if(accountFiles.hasNext()||!Array.isArray(profiles))return denied();
-    const actor=profiles.find(p=>p.id===request.actor&&p.activated&&!p.disabled&&p.role==='beheerder');
-    if(!actor)return denied();
+    const actor=profiles.find(p=>p.id===request.actor&&p.activated&&!p.disabled&&isAdministrator(p));
+    if(!actor||!hasModule(actor,'reports'))return denied();
     const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error();
     const registers=folder.getFilesByName('_esmojo_ontrack_v1.json'),file=registers.hasNext()?registers.next():null;
     if(registers.hasNext())throw Error();
     const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,revision:0,recipientIds:[],sources:[],reports:[],nonces:{}};
     if(state.version!==1||!Number.isSafeInteger(state.revision)||state.revision<0||!Array.isArray(state.recipientIds)||!Array.isArray(state.sources)||!Array.isArray(state.reports)||!state.nonces)throw Error();
-    const accounts=profiles.filter(p=>p.activated&&!p.disabled).map(p=>({id:p.id,firstName:p.firstName,lastName:p.lastName,email:p.email}));
+    const accounts=profiles.filter(p=>p.activated&&!p.disabled&&hasModule(p,'reports')).map(p=>({id:p.id,firstName:p.firstName,lastName:p.lastName,email:p.email}));
     let changed=false;
     if(request.operation==='recipients'){
       if(!Number.isSafeInteger(request.revision)||request.revision<0||!Array.isArray(request.recipientIds)||new Set(request.recipientIds).size!==request.recipientIds.length||request.recipientIds.some(id=>typeof id!=='string'||!accounts.some(p=>p.id===id)))return denied('VALIDATION');

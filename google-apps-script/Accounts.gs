@@ -1,3 +1,4 @@
+const ESMOJO_SUPER_ADMIN_EMAIL='r.spoelstra@mojo.nl';
 // Alleen ondertekend serververkeer. Profielen blijven binnen de vaste Drive-map.
 function esmojoAccounts_(input) {
   const secret = PropertiesService.getScriptProperties().getProperty('ESMOJO_SHARED_SECRET');
@@ -29,6 +30,15 @@ function esmojoAccounts_(input) {
     if (!Array.isArray(state.profiles) || !state.nonces || typeof state.nonces !== 'object') throw new Error();
     if (request.operation === 'bootstrap-check') return esmojoReply_({ ok: state.profiles.length === 0, code: state.profiles.length ? 'CONFLICT' : undefined, data: { empty: state.profiles.length === 0 } });
     const actor = state.profiles.find(profile => profile.id === request.actor && !profile.disabled);
+    // Eenmalige, expliciet opgedragen roltoekenning; uitsluitend het vaste bestaande account.
+    if(actor){
+      const superAccounts=state.profiles.filter(item=>typeof item.email==='string'&&item.email.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL);
+      if(superAccounts.length>1)throw Error('PROFILE_INVALID');
+      const superAccount=superAccounts[0];
+      if(superAccount&&superAccount.role!=='superbeheerder'){
+        superAccount.role='superbeheerder';stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));
+      }
+    }
     const denied = () => esmojoReply_({ ok: false, code: 'FORBIDDEN' });
     const conflict = () => esmojoReply_({ ok: false, code: 'CONFLICT' });
     if (request.operation === 'self') return actor ? esmojoReply_({ ok: true, data: actor }) : denied();
@@ -38,7 +48,7 @@ function esmojoAccounts_(input) {
       if (!actor || !actor.activated) return denied();
     } else if (request.operation === 'bootstrap') {
       if (state.profiles.length) return conflict();
-    } else if (!actor || actor.role !== 'beheerder' || !actor.activated) return denied();
+    } else if (!actor || !isAdministrator(actor) || !actor.activated) return denied();
     if (request.operation === 'list') return esmojoReply_({ ok: true, data: state.profiles.map(profile => {
       const copy = Object.assign({}, profile); delete copy.photo; return copy;
     }) });
@@ -49,18 +59,21 @@ function esmojoAccounts_(input) {
     const target = state.profiles.find(profile => profile.id === request.id);
     const profile = request.profile;
     if (['create', 'bootstrap', 'update'].includes(request.operation)) {
-      if (!profile || !['beheerder', 'gebruiker'].includes(profile.role)) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
+      if (!profile || !['beheerder', 'superbeheerder', 'gebruiker'].includes(profile.role)) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
+      const email=request.operation==='update'?target?.email:profile.email;
+      if(profile.role==='superbeheerder'&&(request.operation!=='update'||!isSuperAdministrator(target)||!isSuperAdministrator(actor)||target.id!==actor.id||typeof email!=='string'||email.toLowerCase()!==ESMOJO_SUPER_ADMIN_EMAIL))return denied();
       for (const key of ['firstName', 'lastName', 'jobTitle']) {
         if (typeof profile[key] !== 'string' || !profile[key].trim() || profile[key].length > 120) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       }
+      if(Object.prototype.hasOwnProperty.call(profile,'modules')){try{profile.modules=validateAccountModules(profile.modules);}catch(_){return esmojoReply_({ok:false,code:'PROFILE_INVALID'});}}
       if (profile.photo !== undefined && profile.photo !== '' && (typeof profile.photo !== 'string' || profile.photo.length > 100000 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(profile.photo))) return denied();
     }
     if (['create', 'bootstrap'].includes(request.operation)) {
       if (!/^[0-9a-f-]{36}$/i.test(profile.id || '') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email || '')) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       if (state.profiles.some(item => item.id === profile.id || item.email.toLowerCase() === profile.email.toLowerCase())) return conflict();
       state.profiles.push({ id: profile.id, email: profile.email.toLowerCase(), firstName: profile.firstName,
-        lastName: profile.lastName, jobTitle: profile.jobTitle, role: request.operation === 'bootstrap' ? 'beheerder' : profile.role,
-        photo: profile.photo || '', activated: false, disabled: false });
+        lastName: profile.lastName, jobTitle: profile.jobTitle, role: profile.email.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL?'superbeheerder':request.operation === 'bootstrap' ? 'beheerder' : profile.role,
+        modules:profile.modules===undefined?accountModules.map(module=>module.id):profile.modules, photo: profile.photo || '', activated: false, disabled: false });
     } else if (request.operation === 'photo') {
       if (Object.keys(request).some(key => !['operation', 'actor', 'photo'].includes(key))
           || typeof request.photo !== 'string' || request.photo.length > 100000
@@ -70,11 +83,12 @@ function esmojoAccounts_(input) {
       actor.activated = true;
     } else if (['update', 'disable', 'delete'].includes(request.operation)) {
       if (!target) return conflict();
-      if (target.id === actor.id && (request.operation !== 'update' || profile.role !== 'beheerder')) return conflict();
-      if (target.role === 'beheerder' && !target.disabled && (request.operation !== 'update' || profile.role !== 'beheerder')
-          && state.profiles.filter(item => item.role === 'beheerder' && !item.disabled).length <= 1) return conflict();
+      if(isSuperAdministrator(target)&&(!isSuperAdministrator(actor)||request.operation!=='update'||profile.role!=='superbeheerder'))return conflict();
+      if (target.id === actor.id && (request.operation !== 'update' || !isAdministrator({role:profile.role,email:target.email}))) return conflict();
+      if (isAdministrator(target) && !target.disabled && (request.operation !== 'update' || !isAdministrator({role:profile.role,email:target.email}))
+          && state.profiles.filter(item => isAdministrator(item) && !item.disabled).length <= 1) return conflict();
       if (request.operation === 'update') {
-        ['firstName', 'lastName', 'jobTitle', 'role', 'photo'].forEach(key => { if (profile[key] !== undefined) target[key] = profile[key]; });
+        ['firstName', 'lastName', 'jobTitle', 'role', 'photo', 'modules'].forEach(key => { if (profile[key] !== undefined) target[key] = profile[key]; });
       } else if (request.operation === 'disable') target.disabled = true;
       else state.profiles = state.profiles.filter(item => item.id !== target.id);
     } else return denied();
