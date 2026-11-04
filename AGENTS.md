@@ -747,3 +747,18 @@ behoud per-datum datasets en de bestaande compacte header. Submenu ongewijzigd.
 
 In de individuele rapportagewebsite-incidenten heet het bestaande note-veld
 Afhandeling (voorheen Notitie); bronveld en inhoud blijven ongewijzigd.
+
+
+## Homepage planningdashboard (in voorbereiding)
+
+De op 4 november 2026 aangeleverde overdracht/HTML bepalen de homepage: uitsluitend
+hoofdmenu, geen submenu, fluid 1/2/1-kolommen en lichte dashboardstijl. Bestaand
+hoofdmenu blijft ongewijzigd. Foto's exact 320:213, alleen echte MOJO-foto's;
+ontbrekende tijden/foto's niet invullen met demo's. De expliciete referentie-
+clamps/cqw-typografie zijn uitsluitend voor de linker concertkaarten toegestaan.
+Gebruik alleen de canonieke Gashouder-catalogus, nooit het OnTrack-locatieregister.
+Hergebruik bestaande reeksidentiteit en src/lib/show-planning.js; geen alternatieve
+intervallen of fictieve afrondingen. Zie docs/homepage-dashboard.md voor de
+minimale beveiligde readroute, statusbronnen en nog openstaande bevestigingen.
+Managerrelaties/toewijzingsbackfill en neutralisering van ontbrekende algemene
+showstatussen zijn nog niet bevestigd of naar productie gepubliceerd.

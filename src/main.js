@@ -1,3 +1,4 @@
+import {createHomeDashboard} from './home-dashboard.js';
 import {groupReportMenu} from './lib/report-menu.js';
 import {reportPages,reportHref} from '../shared/report-routes.js';
 import {createWebReportPage} from './report-web.js';
@@ -87,6 +88,10 @@ function renderPage() {
   const requiredModule=moduleForPage(root);
   if(requiredModule&&!hasModule(profile,requiredModule)){
     submenuSearch.setSection(root,false);content.textContent='Je hebt geen toegang tot deze module.';return;
+  }
+  if(root===''){
+    if(hasModule(profile,'shows'))disposePage=createHomeDashboard(content);
+    else content.textContent='Je hebt geen toegang tot de module Shows.';
   }
   if (root === 'shows') {
     let selected = '';
