@@ -24,7 +24,7 @@ function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exis
     } }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
-  vm.runInContext(readFileSync(new URL('../google-apps-script/Code.gs', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../google-apps-script/AccountModules.gs',import.meta.url),'utf8'),context);vm.runInContext(readFileSync(new URL('../google-apps-script/Code.gs', import.meta.url), 'utf8'), context);
   vm.runInContext(readFileSync(new URL('../google-apps-script/Accounts.gs', import.meta.url), 'utf8'), context);
   return { send: input => context.doPost({ postData: { contents: JSON.stringify(input) } }), state: () => JSON.parse(state), writes: () => writes };
 }
@@ -122,4 +122,23 @@ test('editorinstelling ondertekent het profiel, verwijdert tijdelijke invoer en 
     else { assert.throws(() => context.setupFirstAdministrator(), /bestaat al/); assert.ok(properties.ESMOJO_FIRST_ADMIN_PROFILE); }
     for (const message of messages) { assert.equal(message.includes(input.email), false); assert.equal(message.includes(input.id), false); }
   }
+});
+test('Drive bewaart modulekeuzes alleen via beheer en behoudt bestaande keuzes bij een update zonder moduleveld',()=>{
+ const h=harness();let result=h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules:['reports']}}));assert.equal(result.ok,true);assert.deepEqual(h.state().profiles[1].modules,['reports']);
+ result=h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),jobTitle:'Nieuwe functie'}}));assert.equal(result.ok,true);assert.deepEqual(h.state().profiles[1].modules,['reports']);
+ assert.equal(h.send(signed({operation:'update',actor:user,id:user,profile:{...profile(user,'gebruiker'),modules:['shows','artists','reports']}})).ok,false);
+ assert.equal(h.send(signed({operation:'photo',actor:user,photo:'data:image/png;base64,AAAA',modules:['reports']})).ok,false);
+ for(const modules of [null,['reports','reports'],['onbekend']])assert.equal(h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules}})).ok,false);
+ assert.deepEqual(h.state().profiles[1].modules,['reports']);
+ result=h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules:[]}}));assert.equal(result.ok,true);assert.deepEqual(h.state().profiles[1].modules,[]);
+});
+test('Alleen vaste codetoekenning promoveert Richard; geen website-/Drive-toekenning aan andere accounts of degradatie door gewone beheerders',()=>{
+ const richard={...profile(user,'gebruiker'),email:'redacted@example.invalid',modules:[]},h=harness([profile(admin),richard]);
+ const initial=h.send(signed({operation:'self',actor:user}));assert.equal(initial.ok,true);assert.equal(initial.data.role,'superbeheerder');assert.equal(h.state().profiles[1].role,'superbeheerder');assert.equal(h.writes(),1);
+ assert.equal(h.send(signed({operation:'self',actor:user})).data.role,'superbeheerder');assert.equal(h.writes(),1);
+ for(const operation of ['disable','delete'])assert.equal(h.send(signed({operation,actor:admin,id:user})).ok,false);
+ assert.equal(h.send(signed({operation:'update',actor:admin,id:user,profile:{...richard,role:'beheerder'}})).ok,false);
+ assert.equal(h.send(signed({operation:'update',actor:admin,id:admin,profile:{...profile(admin),role:'superbeheerder'}})).ok,false);
+ const copy={...profile('33333333-3333-4333-8333-333333333333'),role:'superbeheerder'};assert.equal(h.send(signed({operation:'create',actor:user,profile:copy})).ok,false);
+ assert.equal(h.send(signed({operation:'update',actor:user,id:user,profile:{...richard,role:'superbeheerder',jobTitle:'Aangepaste functie'}})).ok,true);assert.equal(h.state().profiles[1].role,'superbeheerder');
 });

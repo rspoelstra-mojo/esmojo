@@ -1,3 +1,4 @@
+import {isAdministrator,hasModule} from '../shared/account-modules.js';
 import {createMailingConcertsStore} from './ontrack-concerts.js';
 import {emailTemplates} from './email-template-registry.js';
 import {upcomingShows} from './mojo-agenda.js';
@@ -24,12 +25,12 @@ export function createEmailTestService({mail,shows,mailingConcerts=createMailing
   function recipients(profile){
     const own=recipient(profile).email;
     // Uitsluitend het serverzijdig geladen beheerdersaccount, nooit een browseradres.
-    return profile.role==='beheerder'&&own.toLowerCase()==='redacted@example.invalid'
+    return isAdministrator(profile)&&own.toLowerCase()==='redacted@example.invalid'
       ?[own,'redacted@example.invalid']:[own];
   }
   return{
     async catalog(profile,canSend){
-      const templates=await registry.list();
+      const templates=(await registry.list()).filter(template=>template.concertCatalog!=='ontrack'||hasModule(profile,'reports'));
       const shows=templates.some(t=>t.requiresShow)?await concertList():[];
       const catalog={templates,recipient:recipient(profile).email,recipients:recipients(profile),canSend,shows};
       if(templates.some(t=>t.concertCatalog==='ontrack')){
@@ -41,6 +42,7 @@ export function createEmailTestService({mail,shows,mailingConcerts=createMailing
     async send(profile,input){
       const request=validateEmailTestRequest(input),template=await registry.get(request.templateId);
       if(!template)throw Error('EMAIL_TEMPLATE_NOT_FOUND');
+      if(template.concertCatalog==='ontrack'&&!hasModule(profile,'reports'))throw Error('FORBIDDEN');
       if(template.requiresShow?!request.concertId:request.concertId!==undefined)throw Error('VALIDATION');
       const target=recipient(profile);let show=template.requiresShow?(await concertList()).find(row=>row.key===request.concertId):null;
       if(template.requiresShow&&!show&&template.concertCatalog==='ontrack')show=(await extraConcerts(profile)).find(row=>row.key===request.concertId);

@@ -65,6 +65,7 @@ test('Alle testtemplates hebben alleen voor Richards beheerdersaccount twee vast
   assert.equal(renderEmailTemplate(calls[0].message).html,renderEmailTemplate(calls[1].message).html);
   assert.equal(calls[0].message.attachments,calls[1].message.attachments);
  }
+ calls.length=0;await service.send({...own,role:'superbeheerder',modules:[]},{...input,templateId:'account-activation'});assert.deepEqual(calls.map(row=>row.message.to),[own.email,'redacted@example.invalid']);
  for(const profile of [{...own,email:'ander@example.invalid'},{...own,role:'medewerker'},{...own,email:'redacted@example.invalid.example.invalid'}]){
   calls.length=0;assert.deepEqual((await service.catalog(profile,true)).recipients,[profile.email]);
   await service.send(profile,{...input,templateId:'account-activation'});assert.deepEqual(calls.map(row=>row.message.to),[profile.email]);
@@ -78,4 +79,9 @@ test('Herhalen na mislukte extra testmail gebruikt dezelfde afzonderlijke idempo
  const profile={role:'beheerder',email:'redacted@example.invalid',firstName:'Richard'},request={templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'};
  await assert.rejects(service.send(profile,request),/Tijdelijke mailfout/);assert.deepEqual(await service.send(profile,request),{ok:true});
  assert.deepEqual(calls.slice(0,2),calls.slice(2));
+});
+test('Showrapportage-test is zonder Rapportages-module niet opvraagbaar of verzendbaar, ook niet als beheerder',async()=>{
+ let calls=0;const service=createEmailTestService({mail:async()=>{calls++;},shows:async()=>{throw Error('Geen showgegevens zonder toegang nodig');}});
+ const profile={role:'beheerder',email:'fixture@example.invalid',modules:['artists']};const catalog=await service.catalog(profile,true);assert.deepEqual(catalog.templates.map(template=>template.id),['account-activation']);
+ await assert.rejects(service.send(profile,{templateId:'show-report',requestId:'11111111-1111-4111-8111-111111111111',concertId:'bekende-show'}),/FORBIDDEN/);assert.equal(calls,0);
 });

@@ -1,3 +1,4 @@
+import {accountModules,hasModule,isSuperAdministrator} from '../shared/account-modules.js';
 import { access } from './auth.js';
 import { cropPhoto } from './photo-crop.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
@@ -15,7 +16,7 @@ function element(tag, text, className) {
   return node;
 }
 
-export function createAccountsView(container, currentUser, submenuLink) {
+export function createAccountsView(container, currentUser, submenuLink,{onSaved=()=>{}}={}) {
   let disposed = false;
   const loading = createSubmenuLoading(submenuLink, container);
   const controller = new AbortController();
@@ -90,23 +91,32 @@ export function createAccountsView(container, currentUser, submenuLink) {
     }
     const roleLabel = element('label', 'Rol'), select = element('select'); select.name = 'role';
     for (const [value, title] of [['gebruiker', 'Gebruiker'], ['beheerder', 'Beheerder']]) { const option = element('option', title); option.value = value; select.append(option); }
-    select.value = account?.role || 'gebruiker';
+    select.value = isSuperAdministrator(account)?'beheerder':account?.role || 'gebruiker';
     if (account?.id === currentUser.id) select.disabled = true;
-    roleLabel.append(select); form.append(roleLabel);
+    if(isSuperAdministrator(account)){const fixedRole=element('input');fixedRole.type='text';fixedRole.readOnly=true;fixedRole.value='Super beheerder';roleLabel.append(fixedRole);}else roleLabel.append(select);
+    form.append(roleLabel);
+    const modules=element('fieldset','','account-modules'),legend=element('legend','Modules');modules.append(legend);
+    const moduleInputs=accountModules.map(module=>{
+      const label=element('label',module.label),input=element('input');input.type='checkbox';input.checked=account?hasModule(account,module.id):true;input.disabled=isSuperAdministrator(account);input.value=module.id;input.dataset.module=module.id;label.prepend(input);modules.append(label);return input;
+    });form.append(modules);
+    if(isSuperAdministrator(account))form.append(element('p','Super beheerder heeft altijd toegang tot alle huidige en toekomstige modules.','account-notice'));
     const photoLabel = element('label', 'Profielfoto (optioneel)'), photo = element('input');
     photo.type = 'file'; photo.accept = 'image/png,image/jpeg,image/webp'; photoLabel.append(photo); form.append(photoLabel);
     const clearLabel = element('label', 'Bestaande profielfoto verwijderen'), clear = element('input'); clear.type = 'checkbox'; clearLabel.append(clear);
     if (account) form.append(clearLabel);
     const message = element('p', '', 'form-message'); message.setAttribute('role', 'alert');
     const buttons = element('div', '', 'form-actions'), save = element('button', account ? 'Opslaan' : 'Account aanmaken', 'primary-button');
+    if(isSuperAdministrator(account)&&!isSuperAdministrator(currentUser))save.disabled=true;
     const cancel = element('button', 'Annuleren', 'secondary-button'); cancel.type = 'button'; cancel.addEventListener('click', load);
     buttons.append(save, cancel); form.append(message, buttons); view.append(form);
     form.addEventListener('submit', async event => {
       event.preventDefault(); save.disabled = true; message.textContent = '';
       try {
         const fields = Object.fromEntries(new FormData(form));
+        fields.modules=moduleInputs.filter(input=>input.checked).map(input=>input.value);
         if (account) fields.id = account.id;
-        if (select.disabled) fields.role = account.role;
+        if(isSuperAdministrator(account))delete fields.role;
+        else if (select.disabled) fields.role = account.role;
         if (clear.checked) fields.photo = '';
         if (photo.files[0]) {
           const cropped = await cropPhoto(photo.files[0], { signal: controller.signal });
@@ -117,8 +127,9 @@ export function createAccountsView(container, currentUser, submenuLink) {
         if (disposed) return;
         await load();
         if (result.warning) report(result.warning, true);
+        if(account?.id===currentUser.id)onSaved();
       } catch (error) { message.textContent = error.message; }
-      finally { save.disabled = false; }
+      finally { save.disabled = isSuperAdministrator(account)&&!isSuperAdministrator(currentUser); }
     });
   }
   load();
