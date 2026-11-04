@@ -19,6 +19,9 @@ function esmojoShows_(input) {
   try {
     const request = JSON.parse(input.body);
     if(!['report-commit','barrier-upload'].includes(request.operation)&&input.body.length>110000)throw Error('VALIDATION');
+    if(['home-dashboard','home-metadata'].includes(request.operation)){
+      return esmojoReply_({ok:true,data:esmojoHomeDashboard_(request)});
+    }
     if(request.operation==='show-open'){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
       return esmojoReply_({ok:true,data:esmojoOpenShow_(request)});
@@ -162,7 +165,7 @@ function esmojoShows_(input) {
     const updated = { version: 1, concerts: rows, active: Array.from(incoming), checkedAt: snapshot.checkedAt };
     esmojoWriteShowJson_(root, indexFile, '_esmojo_shows_v1.json', updated);
     return esmojoReply_({ ok: true, data: { concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
-  } catch (error) { return esmojoReply_({ ok: false, code: ['TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
+  } catch (error) { return esmojoReply_({ ok: false, code: ['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
   finally { if (lock) lock.releaseLock(); }
 }
 

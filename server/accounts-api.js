@@ -115,8 +115,17 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=['home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
+      if(action==='home-dashboard'||action==='home-metadata'){
+        const metadata=action==='home-metadata',method=metadata?'POST':'GET';
+        if(req.method!==method){res.setHeader('Allow',method);return reply(405,{error:'Niet toegestaan.'});}
+        try{
+          if(!metadata&&req.body&&Object.keys(req.body).length)throw Error('VALIDATION');
+          return reply(200,await shows(action,{...(metadata?validateRiskViewRequest(req.body):{}),actor}));
+        }catch(error){const code=error.message,status=code==='FORBIDDEN'?403:code==='VALIDATION'?400:code==='NOT_FOUND'?404:503;
+          return reply(status,{error:status===403?'Je hebt geen toegang tot Shows.':status===400?'Ongeldig verzoek.':status===404?'Deze show is niet beschikbaar.':'Het planningdashboard kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'shows'}:{})});}
+      }
       if(action==='report-web'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         try{return reply(200,await createWebReportService({store:ontrackReportStore,photo:photoService})(actor,req.body));}

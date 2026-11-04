@@ -8,7 +8,7 @@ let storage;try{storage=localStorage;}catch{}
 const catalogue=createShowMenuCache({seed,request:()=>access('shows'),storage});
 export function refreshShowsMenu(){return catalogue.refresh();}
 export function createShowsSubmenu(navigation, selected = '', content = null) {
-  let disposed = false, disposeShow = () => {}, pageKey=null;
+  let disposed = false, disposeShow = () => {}, pageKey=null, direct=null, resolving=false;
   function render(shows){
     const links = [], existing=new Map([...navigation.querySelectorAll('a.submenu-link')].map(link=>[link.getAttribute('href'),link]));
     for (const [group, title] of [['week', 'Komende week'], ['period', 'Komende periode']]) {
@@ -40,14 +40,17 @@ export function createShowsSubmenu(navigation, selected = '', content = null) {
     }
     navigation.replaceChildren(...links);
     if (selected && content) {
-      const show = shows.find(show => show.key === selected);
+      const show = shows.find(show => show.key === selected)||direct;
       if (show&&pageKey!==show.key){disposeShow();pageKey=show.key;disposeShow=createShowPage(content,show);}
-      else if(!show&&pageKey===null)content.textContent = 'Deze show is niet beschikbaar in het huidige menu.';
+      else if(!show&&pageKey===null&&!resolving){
+        resolving=true;content.setAttribute('aria-busy','true');
+        void access('home-metadata',{method:'POST',body:{concertId:selected}}).then(data=>{if(disposed||pageKey!==null)return;direct=data.show;render(catalogue.current());}).catch(()=>{if(disposed||pageKey!==null)return;const message=document.createElement('p');message.textContent='Deze show kon niet worden geladen.';message.setAttribute('role','alert');const retry=document.createElement('button');retry.type='button';retry.className='secondary-button';retry.textContent='Opnieuw laden';retry.onclick=()=>{resolving=false;content.replaceChildren();render(catalogue.current());};content.replaceChildren(message,retry);}).finally(()=>{if(!disposed&&pageKey===null)content.removeAttribute('aria-busy');});
+      }
     }
   }
   render(catalogue.current());
   const unsubscribe=catalogue.subscribe(shows=>{if(!disposed)render(shows);});
   void catalogue.refresh();
-  function dispose(){disposed=true;unsubscribe();disposeShow();}
+  function dispose(){disposed=true;unsubscribe();disposeShow();content?.removeAttribute('aria-busy');}
   return dispose;
 }
