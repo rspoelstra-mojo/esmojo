@@ -18,3 +18,17 @@ test('Interne klik gebruikt History; terug/vooruit en legacywijziging renderen; 
 test('Hostingfallbacks omvatten alleen applicatiepaden en laten API/discovery/assets ongemoeid',()=>{
  const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));for(const rule of config.rewrites.filter(rule=>rule.source!=='/test/fluid-layout')){assert.equal(rule.destination,'/index.html');assert.ok(isAppPath(rule.source.replace('/:path*','')));assert.ok(!rule.source.startsWith('/api'));}assert.equal(config.rewrites.length,7);assert.deepEqual(config.rewrites.at(-1),{source:'/test/fluid-layout',destination:'/index.html'});assert.equal(isAppPath('/test/fluid-layout'),true);assert.equal(isAppPath('/test/other'),false);
 });
+test('Rapportages gebruikt het opgeslagen concert-ID en normaliseert oude URL’s, root, query’s en hashbladwijzers',()=>{
+ const canonical='/rapportages/Jungle_Ziggo-Dome_03112026';
+ for(const path of ['/statistieken/jungle','/statistieken','/rapportages','/rapportages/jungle','/statistieken/Jungle_Ziggo-Dome_03112026',canonical]){
+  let location=new URL('https://esmojo.nl'+path+'?view=voorbeeld');const listeners={},clicks={};let renders=0;
+  const win={get location(){return location;},history:{replaceState(_,__,target){location=new URL(target,location);},pushState(_,__,target){location=new URL(target,location);}},addEventListener:(name,fn)=>listeners[name]=fn,removeEventListener:name=>delete listeners[name]};
+  const doc={addEventListener:(name,fn)=>clicks[name]=fn,removeEventListener:name=>delete clicks[name]};
+  const dispose=installRouter({win,doc,onNavigate:()=>renders++});assert.equal(location.pathname,canonical);assert.equal(location.search,'?view=voorbeeld');assert.equal(renders,0);
+  location=new URL('https://esmojo.nl/');clicks.click({button:0,target:{closest:()=>({href:'https://esmojo.nl/rapportages',target:'',hasAttribute:()=>false})},preventDefault(){}});assert.equal(location.pathname,canonical);assert.equal(renders,1);dispose();
+ }
+ assert.equal(legacyPageUrl(new URL('https://esmojo.nl/#/statistieken/jungle?view=voorbeeld')),canonical+'?view=voorbeeld');
+ assert.equal(isAppPath('/rapportages/Jungle_Ziggo-Dome_03112026'),true);
+ const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));assert.ok(config.rewrites.some(row=>row.source==='/rapportages/:path*'));
+ assert.equal(config.redirects.find(row=>row.source==='/statistieken/jungle').destination,canonical);assert.equal(config.redirects.find(row=>row.source==='/rapportages/jungle').destination,canonical);assert.ok(config.redirects.every(row=>row.permanent));
+});

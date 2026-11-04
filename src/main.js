@@ -1,3 +1,4 @@
+import {reportPages,reportHref} from '../shared/report-routes.js';
 import {createWebReportPage} from './report-web.js';
 import {createOnTrackAdminView} from './ontrack-admin.js';
 import {enableFluidLayout} from './layouts/fluid-layout.js';
@@ -39,11 +40,11 @@ const paths = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
-const pages = { '': 'Homepage', shows: 'Shows', artiest: 'Artiesten', statistieken: 'Rapportages', beheerder: 'Beheerder', account: 'Accountinstellingen' };
+const pages = { '': 'Homepage', shows: 'Shows', artiest: 'Artiesten', rapportages: 'Rapportages', beheerder: 'Beheerder', account: 'Accountinstellingen' };
 document.querySelector('#admin-icon').innerHTML = icon('settings');
 document.querySelector('#navigation').innerHTML = [
   ['', 'home', 'Homepage'], ['shows', 'music', 'Shows'], ['artiest', 'person', 'Artiesten'],
-  ['statistieken', 'report', 'Rapportages'],
+  ['rapportages', 'report', 'Rapportages'],
 ].map(([route, glyph, label]) => `<a class="rail-item" href="/${route}" data-page="${route}" aria-label="${label}">${icon(glyph)}<span class="tooltip" role="tooltip">${label}</span></a>`).join('');
 
 function updateModuleProfile(current){
@@ -97,10 +98,13 @@ function renderPage() {
       disposePage=()=>{disposeTest();disposeMenu();};
     }else disposePage = createShowsSubmenu(submenu, selected, content);
   }
-  if(root==='statistieken'){
-    const link=document.createElement('a');link.href='/statistieken/jungle';link.className='submenu-link';link.textContent='Jungle';submenu.append(link);
-    if(route==='statistieken'||route==='statistieken/jungle'){link.setAttribute('aria-current','page');disposePage=createWebReportPage(content,link);}
-    else content.textContent='Rapportage niet gevonden.';
+  if(root==='rapportages'){
+    let selected;try{selected=decodeURIComponent(route.split('/')[1]||'');}catch{selected=null;}
+    for(const report of reportPages){
+      const link=document.createElement('a');link.href=reportHref(report);link.className='submenu-link';link.textContent=report.label;submenu.append(link);
+      if(selected===report.concertId){link.setAttribute('aria-current','page');disposePage=createWebReportPage(content,link,{slug:report.slug});}
+    }
+    if(!reportPages.some(report=>report.concertId===selected))content.textContent='Rapportage niet gevonden.';
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
