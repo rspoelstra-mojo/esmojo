@@ -37,3 +37,12 @@ test('Beveiligings-drilldown en KPI’s delen exacte criteria; alleen afgeleide 
  assert.deepEqual(result.report.incidents[0].securityFilters,['evictions','arrests']);assert.deepEqual(result.report.incidents[1].securityFilters,['verbal']);assert.deepEqual(result.report.incidents[2].securityFilters,['physical']);
  assert.equal('resolvedStatus' in result.report.incidents[0],false);
 });
+test('Medische selectie correspondeert met KPI’s en projecteert alleen afgeleide labels, ook bij ambulance buiten Medisch',async()=>{
+ const entries=[{ID:'a',Division:'Medisch',Type:'Zelfzorg contact',Description:'PCM'},{ID:'b',Division:'Medisch',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'2'},{ID:'c',Division:'Medisch',Type:'Controle'},{ID:'d',Division:'Beveiliging',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'3'}];
+ const input=ONTRACK_HEADERS.join(',')+'\n'+entries.map(row=>ONTRACK_HEADERS.map(key=>'"'+String(({...row,'Date and Time':'2026-11-03 - 06:00 PM'})[key]||'').replaceAll('"','""')+'"').join(',')).join('\n');
+ const service=createWebReportService({photo:async()=>null,store:async()=>({csvBase64:Buffer.from(input).toString('base64'),modifiedAt:'2026-11-04T00:00:00Z'})});
+ const {report}=await service('actor',{slug:'jungle'});assert.deepEqual(report.kpis.medical,{total:3,selfcare:1,treatments:2,unwell:1,ambulance:5});
+ assert.deepEqual(report.incidents.map(row=>row.medicalFilters),[['selfcare'],['treatments','unwell','ambulance'],['treatments'],['ambulance']]);
+ for(const key of ['selfcare','treatments','unwell'])assert.equal(report.incidents.filter(row=>row.medicalFilters.includes(key)).length,report.kpis.medical[key]);
+ assert.equal(report.incidents.filter(row=>row.medicalFilters.includes('ambulance')).length,2);assert.ok(report.incidents.every(row=>!('resolvedStatus' in row)&&!('affectedPerson' in row)&&!('division' in row)));
+});
