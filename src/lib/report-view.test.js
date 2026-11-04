@@ -18,3 +18,10 @@ test('Foto accepteert uitsluitend bestaande MOJO-afbeeldingen en concertpaginaâ€
  const photo={imageUrl:'https://www.mojo.nl/media/test/image.jpg?width=600',sourceUrl:'https://www.mojo.nl/concerten/test'};assert.deepEqual(reportPhoto(photo),photo);
  for(const invalid of [null,{...photo,imageUrl:'https://evil.invalid/image.jpg'},{...photo,imageUrl:'javascript:alert(1)'},{...photo,imageUrl:'https://www.mojo.nl/media/test/image.svg'},{...photo,sourceUrl:'https://evil.invalid/test'},{...photo,imageUrl:'https://user:pass@www.mojo.nl/media/test/image.jpg'}])assert.equal(reportPhoto(invalid),null);
 });
+test('Expliciete beveiligingsfilter vindt alle passende records, inclusief standaard verborgen zelfzorg, en wissen herstelt default',async()=>{
+ const {selectedReportIncidents}=await import('./report-view.js');
+ const source=[{id:'zorg',type:'Zelfzorg',securityFilters:['evictions','arrests']},{id:'verbaal',type:'Verbale agressie',securityFilters:['verbal']},{id:'fysiek',type:'Fysieke agressie',securityFilters:['physical']},{id:'ander',type:'Overig'}];
+ assert.deepEqual(selectedReportIncidents(source).map(row=>row.id),['verbaal','fysiek','ander']);
+ for(const [filter,expected]of [['verbal','verbaal'],['physical','fysiek'],['evictions','zorg'],['arrests','zorg']])assert.deepEqual(selectedReportIncidents(source,filter).map(row=>row.id),[expected]);
+ assert.deepEqual(selectedReportIncidents(source,'onbekend'),[]);assert.deepEqual(selectedReportIncidents(source,null),visibleReportIncidents(source));
+});

@@ -1,0 +1,8 @@
+.show-tabs { position: relative; display: flex; flex-wrap: wrap; gap: 0 12px; align-items: center; margin-top: 12px; border-bottom: 1px solid var(--line); }
+.show-tab { border: 0; padding: 16px 14px; color: var(--text); background: transparent; font: inherit; font-size: 14px; line-height: 22px; white-space: nowrap; cursor: pointer; }
+.show-tab[aria-selected="true"] { color: #002ff4; font-weight: 600; }
+:root[data-theme="dark"] .show-tab[aria-selected="true"] { color: #7296ff; }
+.show-tab-indicator { position: absolute; top: 0; left: 0; height: 3px; border-radius: 2px; background: #002ff4; pointer-events: none; }
+.show-tabs-ready .show-tab-indicator { transition: transform .28s cubic-bezier(.22,.68,.2,1), width .28s cubic-bezier(.22,.68,.2,1); }
+:root[data-theme="dark"] .show-tab-indicator { background: #7296ff; }
+@media (prefers-reduced-motion: reduce) { .show-tabs-ready .show-tab-indicator { transition: none; } }

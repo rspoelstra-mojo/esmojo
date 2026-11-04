@@ -29,3 +29,11 @@ test('Webtypes vullen herhaalde meldingen aan tot vijf echte types en behouden d
  const many=Array.from({length:6},(_,i)=>[{division:'Medisch',type:String(i),position:i*2},{division:'Medisch',type:String(i),position:i*2+1}]).flat();assert.equal(webReportTypes(many,'medisch').length,6);
  assert.equal(webReportTypes([{division:'Medisch',type:'Een'}],'medisch').length,1);assert.deepEqual(webReportTypes([],'beveiliging'),[]);
 });
+test('Beveiligings-drilldown en KPI’s delen exacte criteria; alleen afgeleide labels worden aan incidenten toegevoegd',async()=>{
+ const entries=[{ID:'a',Type:'Zelfzorg contact',Description:'PCM','Resolved Status':'Eviction, Arrest','Affected Person':'3'},{ID:'b',Type:'Verbale agressie'},{ID:'c',Type:'Fysieke agressie'}];
+ const input=ONTRACK_HEADERS.join(',')+'\n'+entries.map(row=>ONTRACK_HEADERS.map(key=>'"'+String(({...row,'Date and Time':'2026-11-03 - 06:00 PM',Division:'Anders'})[key]||'').replaceAll('"','""')+'"').join(',')).join('\n');
+ const service=createWebReportService({photo:async()=>null,store:async()=>({csvBase64:Buffer.from(input).toString('base64'),modifiedAt:'2026-11-04T00:00:00Z'})});
+ const result=await service('actor',{slug:'jungle'});assert.deepEqual(result.report.kpis.security,{total:0,verbal:1,physical:1,evictions:3,arrests:3});
+ assert.deepEqual(result.report.incidents[0].securityFilters,['evictions','arrests']);assert.deepEqual(result.report.incidents[1].securityFilters,['verbal']);assert.deepEqual(result.report.incidents[2].securityFilters,['physical']);
+ assert.equal('resolvedStatus' in result.report.incidents[0],false);
+});

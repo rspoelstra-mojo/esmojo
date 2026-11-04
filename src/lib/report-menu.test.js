@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import {groupReportMenu} from './report-menu.js';
+const item=(label,...dates)=>({label,concertId:label,dates});
+const reports=[item('Oud','2026-10-01'),item('Acht dagen','2026-10-27'),item('Gister','2026-11-03'),item('Zeven dagen','2026-10-28'),item('Reeks','2026-10-20','2026-11-02'),item('Toekomst','2026-11-05'),item('Geen rapportdatum')];
+let [week,period]=groupReportMenu(reports,new Date('2026-11-04T12:00:00Z'));
+assert.deepEqual(week.reports.map(r=>r.label),['Gister','Reeks','Zeven dagen']);assert.deepEqual(period.reports.map(r=>r.label),['Acht dagen','Oud']);
+[week,period]=groupReportMenu([item('Grens','2026-10-28')],new Date('2026-11-04T23:30:00Z'));assert.equal(week.reports.length,0);assert.equal(period.reports.length,1,'Nederlandse kalenderdag, ook na middernacht');
+assert.deepEqual(reports[0].dates,['2026-10-01']);
+console.log('PASS rapportmenu: echte datums, 7/8-daggrens, nieuwste eerst, reeks en Nederlandse tijd');
