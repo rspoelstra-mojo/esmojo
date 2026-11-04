@@ -646,7 +646,7 @@ indeling. Behoud tweederdebreedte, thema’s, deadlines en echte afrondstatussen
 
 ## Jungle-webrapportage onder Rapportages
 
-Vanaf 4 november 2026 bestaat /statistieken/jungle met submenu Jungle. Het is een
+Vanaf 4 november 2026 bestaat /rapportages/Jungle_Ziggo-Dome_03112026 met submenu Jungle. Het is een
 vaste vormgevingsvoorbeeldpagina; automatische pagina’s voor nieuwe CSV’s volgen
 later. De bestaande CSV in de private OnTrack-map is expliciet als bron bevestigd.
 Geen echte CSV/PDF/incidentteksten in Git, builds of CI-fixtures opnemen. Vercel
@@ -664,3 +664,13 @@ no-store. De browser bewaart niets persistent en ruimt weergave/observer op bij
 verlaten/rechtenwijziging. Gebruik dezelfde renderer later voor echte koppelingen.
 De incidenten zelf en PDF-kop zijn 3 november; de CSV-bestandsnaam heeft 2 november
 maar wordt niet stilzwijgend hernoemd of als datumbron gebruikt.
+
+Vanaf 4 november 2026 is het canonieke Rapportages-pad /rapportages/<concert-ID>.
+Gebruik het werkelijke opgeslagen concert-ID, niet alleen de artiestnaam en niet
+het mogelijk afwijkende CSV-bestandslabel. De huidige vaste voorbeeldroute is
+Jungle_Ziggo-Dome_03112026, geverifieerd in het private rapportregister. Centrale
+routeconfig staat in shared/report-routes.js; frontend en rapportmetadata delen
+hetzelfde ID. Oude /statistieken-paden en /rapportages/jungle blijven via redirects
+of History-normalisatie werken, inclusief oude hashbladwijzers. Beide rootnamen
+blijven onder de Reports-modulecontrole vallen. Geen wijzigingen aan CSV-inhoud,
+bronselectie, accountrechten of mail-/verwerkingsacties voor een routewijziging.

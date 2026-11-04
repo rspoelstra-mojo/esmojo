@@ -6,7 +6,7 @@ const csv=ONTRACK_HEADERS.join(',')+'\n'+[0,1,2].map(i=>ONTRACK_HEADERS.map(key=
 test('Webvoorbeeld rekent met bestaande parser en geeft uitsluitend nodige velden terug zonder bron of vrije bestandskeuze',async()=>{
  const calls=[],read=createWebReportService({store:async(...args)=>{calls.push(args);return{csvBase64:Buffer.from(csv).toString('base64'),modifiedAt:'2026-11-04T00:00:00Z'};}});
  const data=await read('geverifieerde-actor',{slug:'jungle'});assert.deepEqual(calls,[['web-preview','geverifieerde-actor',{slug:'jungle'}]]);
- assert.equal(data.report.kpis.medical.total,1);assert.equal(data.report.kpis.security.total,2);assert.equal(data.report.incidents.length,3);assert.equal(data.report.types.security[0].count,2);
+ assert.equal(data.show.key,'Jungle_Ziggo-Dome_03112026');assert.equal(data.report.kpis.medical.total,1);assert.equal(data.report.kpis.security.total,2);assert.equal(data.report.incidents.length,3);assert.equal(data.report.types.security[0].count,2);
  assert.equal(data.report.incidents[0].description,'Fictieve omschrijving');assert.equal('resolvedStatus' in data.report.incidents[0],false);assert.equal('csvBase64' in data,false);
 });
 test('Ongeldige keuzes of toegevoegde actor/bestandvelden bereiken Drive nooit; ongeldige bron wordt geweigerd',async()=>{

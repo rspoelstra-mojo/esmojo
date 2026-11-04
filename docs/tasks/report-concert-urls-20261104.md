@@ -11,3 +11,14 @@ routecontrole met equivalente Drive-definitie, servermetadata, tests/docs en V1.
 Behoud echte inhoud, vaste private bronadapter en alle Rapportages/MFA-controles.
 Geen wijzigingen aan rapporten, accounts, CSV-worker of e-mailverzending.
 Publiceren via bestaande PR/main/Apps Script-flow na gerichte checks.
+
+Geïmplementeerd: gedeelde route-identiteit in shared/report-routes.js, navigatie
+naar /rapportages/<concert-ID>, servermetadata met dezelfde key. History-router
+normaliseert root, oude slugs/paden en hashbladwijzers met behoud van query’s.
+Vercel stuurt oude directe URL’s permanent door en serveert nieuwe deep links via
+de bestaande SPA. Beide oude/nieuwe rootnamen blijven beschermd door Reports.
+
+Controles geslaagd: 4 routertests (init, klikken, geschiedenis, legacy/hash/query,
+hostingregels), 3 module-/pariteitstests, 2 rapportadaptertests, 31 account-/module-
+API-tests, 6 Apps Script-tests en 4 publicatietests. Build en diffcontrole geslaagd.
+Geen rapportinhoud/bronbestand gewijzigd en geen mails verstuurd. Versie V1.33.

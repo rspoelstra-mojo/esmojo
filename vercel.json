@@ -59,7 +59,7 @@
       "destination": "/index.html"
     },
     {
-      "source": "/statistieken/:path*",
+      "source": "/rapportages/:path*",
       "destination": "/index.html"
     },
     {
@@ -77,6 +77,28 @@
     {
       "source": "/test/fluid-layout",
       "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/statistieken/jungle",
+      "destination": "/rapportages/Jungle_Ziggo-Dome_03112026",
+      "permanent": true
+    },
+    {
+      "source": "/rapportages/jungle",
+      "destination": "/rapportages/Jungle_Ziggo-Dome_03112026",
+      "permanent": true
+    },
+    {
+      "source": "/statistieken",
+      "destination": "/rapportages/Jungle_Ziggo-Dome_03112026",
+      "permanent": true
+    },
+    {
+      "source": "/statistieken/:path*",
+      "destination": "/rapportages/:path*",
+      "permanent": true
     }
   ]
 }
