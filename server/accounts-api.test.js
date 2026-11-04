@@ -23,7 +23,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
       updateUserById: async (...args) => { calls.push(['password', ...args]); return {}; },
     },
   } });
-  const handler = makeAccountsHandler({ env: configuration, clientFactory,
+  const handler = makeAccountsHandler({ env: configuration, clientFactory, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-preview'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
