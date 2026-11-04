@@ -37,13 +37,21 @@ function esmojoOnTrackReports_(input){
  const lock=LockService.getScriptLock();if(!lock.tryLock(20000))return reply(false,null,'BUSY');
  try{
   const request=JSON.parse(input.body),operation=request.operation,adminOps=['link','retry','download','send'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail'];
-  if(!adminOps.includes(operation)&&!workerOps.includes(operation))throw Error('VALIDATION');
+  if(!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview')throw Error('VALIDATION');
   const profiles=esmojoOnTrackProfiles_();if(adminOps.includes(operation)&&!profiles.some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
+  const cache=CacheService.getScriptCache(),nonceKey='ontrack-reports:'+input.nonce;if(cache.get(nonceKey))throw Error('FORBIDDEN');cache.put(nonceKey,'1',180);
+  if(operation==='web-preview'){
+   if(!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
+   if(Object.keys(request).sort().join(',')!=='actor,operation,slug'||request.slug!=='jungle')throw Error('VALIDATION');
+   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');
+   const file=esmojoOnTrackFile_(folder,'incidents_JUNGLE_ZIGGO_DOME_02112026.csv');if(!file)throw Error('SOURCE_MISSING');
+   const csv=esmojoOnTrackSourceFile_(file.getId());if(csv.getMimeType()!=='text/csv'||csv.getSize()>2*1024*1024)throw Error('REPORT_UNAVAILABLE');
+   return reply(true,{csvBase64:Utilities.base64Encode(csv.getBlob().getBytes()),modifiedAt:csv.getLastUpdated().toISOString()});
+  }
   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');const file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json');
   const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,revision:0,recipientIds:[],sources:[],reports:[],nonces:{}};
   if(state.version!==1||!Array.isArray(state.sources)||!Array.isArray(state.reports)||!Array.isArray(state.recipientIds))throw Error('REGISTER_INVALID');
   const save=()=>{const text=JSON.stringify(state);if(file)file.setContent(text);else folder.createFile(Utilities.newBlob(text,'application/json','_esmojo_ontrack_v1.json'));};
-  const cache=CacheService.getScriptCache(),nonceKey='ontrack-reports:'+input.nonce;if(cache.get(nonceKey))throw Error('FORBIDDEN');cache.put(nonceKey,'1',180);
   if(operation==='scan'){if(esmojoOnTrackScan_(folder,state))save();return reply(true,{sources:esmojoOnTrackQueue_(state)});}
   if(operation==='pipeline'){if(!['idle','running','assets-missing'].includes(request.status))throw Error('VALIDATION');state.pipeline={status:request.status,updatedAt:new Date().toISOString()};save();return reply(true,{ok:true});}
   const source=state.sources.find(source=>source.id===request.sourceId);

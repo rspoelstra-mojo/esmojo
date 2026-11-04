@@ -1,3 +1,4 @@
+import {createWebReportPage} from './report-web.js';
 import {createOnTrackAdminView} from './ontrack-admin.js';
 import {enableFluidLayout} from './layouts/fluid-layout.js';
 import {createFluidPreviewPage} from './fluid-preview/page.js';
@@ -95,6 +96,11 @@ function renderPage() {
       const disposeTest=createFluidPreviewPage(content,{onShow:show=>{if(show.key!==selected){disposeMenu();submenu.replaceChildren();selected=show.key;disposeMenu=createShowsSubmenu(submenu,selected,null);}}});
       disposePage=()=>{disposeTest();disposeMenu();};
     }else disposePage = createShowsSubmenu(submenu, selected, content);
+  }
+  if(root==='statistieken'){
+    const link=document.createElement('a');link.href='/statistieken/jungle';link.className='submenu-link';link.textContent='Jungle';submenu.append(link);
+    if(route==='statistieken'||route==='statistieken/jungle'){link.setAttribute('aria-current','page');disposePage=createWebReportPage(content,link);}
+    else content.textContent='Rapportage niet gevonden.';
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
