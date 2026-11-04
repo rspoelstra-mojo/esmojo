@@ -1,7 +1,7 @@
 import {medicalReportFilters} from '../shared/report-medical.js';
 import {createReportDateTabs} from './report-date-tabs.js';
 import {securityReportFilters} from '../shared/report-security.js';
-import {selectedReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto,reportPriorityLabel} from './lib/report-view.js';
+import {selectedReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto,reportPriorityLabel,reportTabDates} from './lib/report-view.js';
 import './report-web.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
@@ -32,7 +32,7 @@ function incidentCard(incident,index){
  const element=node('article','report-card report-incident');element.dataset.incidentId=incident.id;if(highlightedReportIncident(incident))element.dataset.highlight='true';
  const heading=node('h3','visually-hidden',`Incident ${index+1} · ${value(incident.zone)} · ${incident.time}`);element.append(heading);
  const fields=node('dl','report-incident-fields');
- for(const [key,label,content]of [['location','Locatie & tijd',null],['type','Incident type',value(incident.type)],['description','Omschrijving',value(incident.description)],['priority','Prioriteit',reportPriorityLabel(incident.priority)],['note','Notitie',value(incident.note)]]){
+ for(const [key,label,content]of [['location','Locatie & tijd',null],['type','Incident type',value(incident.type)],['description','Omschrijving',value(incident.description)],['priority','Prioriteit',reportPriorityLabel(incident.priority)],['note','Afhandeling',value(incident.note)]]){
   const field=node('div','report-incident-field report-field-'+key),definition=node('dd','');field.append(node('dt','',label),definition);
   if(key==='location'){const time=node('time','report-incident-time',shortIncidentDate(incident.localDate)+' · '+incident.time);time.dateTime=incident.localDate+'T'+incident.time;definition.append(node('span','',value(incident.zone)),time);}else definition.textContent=content;
   fields.append(field);
@@ -49,7 +49,7 @@ export function renderWebReport(parent,data){
   image.onerror=()=>{link.remove();header.classList.remove('report-heading-photo');};link.append(image);header.classList.add('report-heading-photo');header.append(link);
  }
  const panel=node('section','report-date-content');panel.id='report-date-panel';panel.setAttribute('role','tabpanel');let disposeDaily=()=>{};
- const dates=[...new Set(show.dates)].sort();
+ const dates=reportTabDates(show.dates);
  const tabs=createReportDateTabs(dates,(date,_index,tabId)=>{
   disposeDaily();panel.setAttribute('aria-labelledby',tabId);
   // Eén bronrapport nooit herhalen over andere showdagen; nachtincidenten blijven bij hun bronrapport.
