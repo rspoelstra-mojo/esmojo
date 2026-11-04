@@ -99,3 +99,11 @@ test('Een reeds klaargezette rapportmail wordt bij ingetrokken moduletoegang nie
  await service.run();const state=f.state();state.reports[0].deliveries[0]={recipientId:receiver,status:'pending',attempts:0};state.reports[0].emailStatus='pending';f.setState(state);
  f.profiles.find(profile=>profile.id===receiver).modules=[];f.updateProfiles();assert.equal((await service.run()).sent,0);assert.equal(f.state().reports[0].deliveries[0].status,'skipped');
 });
+test('Webvoorbeeld is alleen-lezen voor actieve Rapportages-gebruikers, controleert actuele rechten in Drive en staat geen vrije bron toe',async()=>{
+ const f=harness();f.source.name='incidents_JUNGLE_ZIGGO_DOME_02112026.csv';const before=f.register.bytes.toString('utf8');
+ f.profiles.find(profile=>profile.id===receiver).modules=['reports'];f.updateProfiles();
+ const data=await f.store('web-preview',receiver,{slug:'jungle'});assert.equal(Buffer.from(data.csvBase64,'base64').toString('utf8'),csv());assert.equal(f.register.bytes.toString('utf8'),before);assert.equal(f.pdfCount(),0);
+ await assert.rejects(f.store('web-preview',receiver,{slug:'jungle',fileId:'vrij-bestand'}),/VALIDATION/);await assert.rejects(f.store('web-preview',receiver,{slug:'onbekend'}),/VALIDATION/);
+ f.profiles.find(profile=>profile.id===receiver).modules=['shows'];f.updateProfiles();await assert.rejects(f.store('web-preview',receiver,{slug:'jungle'}),/FORBIDDEN/);
+ f.profiles.find(profile=>profile.id===admin).modules=[];f.updateProfiles();await assert.rejects(f.store('web-preview',admin,{slug:'jungle'}),/FORBIDDEN/);
+});
