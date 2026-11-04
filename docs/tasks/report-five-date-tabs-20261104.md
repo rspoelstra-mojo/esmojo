@@ -16,3 +16,6 @@ Chromium licht/donker 700/1440/1920 px: 1/2/6 shows, nieuwste default, correcte
 per-datum dataset, End/ArrowRight begrensd tot vijf, oude datum rechts als die
 binnen de vijf valt, geen opvulling/extra knop, gelijke headerhoogte/geen overflow.
 Geen bron-/rechten-/opslagwijzigingen. Private browserfixture buiten Git.
+
+Aanvullend verzoek: label Notitie in de individuele incidentenlijst wordt
+Afhandeling. Alleen labelwijziging, bronveld Resolution Note/note blijft intact.
