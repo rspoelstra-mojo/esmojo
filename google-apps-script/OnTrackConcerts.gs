@@ -14,7 +14,7 @@ function esmojoOnTrackConcerts_(input){
     if(request.operation==='list'){
       const files=DriveApp.getFolderById(ESMOJO_FOLDER_ID).getFilesByName('_esmojo_accounts_v1.json');if(!files.hasNext())return reply(false,null,'FORBIDDEN');
       const profiles=JSON.parse(files.next().getBlob().getDataAsString('UTF-8')).profiles;
-      if(files.hasNext()||!Array.isArray(profiles)||!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&p.role==='beheerder'))return reply(false,null,'FORBIDDEN');
+      if(files.hasNext()||!Array.isArray(profiles)||!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&isAdministrator(p)&&hasModule(p,'reports')))return reply(false,null,'FORBIDDEN');
     }
     stage='MAILING_CONCERTS_FOLDER';
     const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error();

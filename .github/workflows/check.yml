@@ -20,6 +20,7 @@ jobs:
       - name: Authentication, authorization and existing server tests
         run: |
           node server/accounts-api.test.js
+          node server/account-modules.test.js
           node server/email-template.test.js
           node server/email-tests.test.js
           node server/ontrack.test.js

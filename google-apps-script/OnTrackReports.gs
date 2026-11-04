@@ -38,7 +38,7 @@ function esmojoOnTrackReports_(input){
  try{
   const request=JSON.parse(input.body),operation=request.operation,adminOps=['link','retry','download','send'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail'];
   if(!adminOps.includes(operation)&&!workerOps.includes(operation))throw Error('VALIDATION');
-  const profiles=esmojoOnTrackProfiles_();if(adminOps.includes(operation)&&!profiles.some(p=>p.id===request.actor&&p.role==='beheerder'&&p.activated&&!p.disabled))throw Error('FORBIDDEN');
+  const profiles=esmojoOnTrackProfiles_();if(adminOps.includes(operation)&&!profiles.some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');const file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json');
   const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,revision:0,recipientIds:[],sources:[],reports:[],nonces:{}};
   if(state.version!==1||!Array.isArray(state.sources)||!Array.isArray(state.reports)||!Array.isArray(state.recipientIds))throw Error('REGISTER_INVALID');
@@ -77,7 +77,7 @@ function esmojoOnTrackReports_(input){
   if(operation==='send'){
    const report=state.reports.find(report=>report.id===request.reportId),linked=report&&state.sources.find(source=>source.id===report.sourceId);
    if(!report||!linked||linked.status!=='ready'||linked.latestReportId!==report.id||linked.modifiedAt!==linked.processedModifiedAt)throw Error('REPORT_CONFLICT');
-   const targets=Array.from(new Set(state.recipientIds)).filter(id=>profiles.some(p=>p.id===id&&p.activated&&!p.disabled));if(!targets.length)throw Error('VALIDATION');
+   const targets=Array.from(new Set(state.recipientIds)).filter(id=>profiles.some(p=>p.id===id&&p.activated&&!p.disabled&&hasModule(p,'reports')));if(!targets.length)throw Error('VALIDATION');
    report.deliveries=report.deliveries||[];for(const id of targets)if(!report.deliveries.some(delivery=>delivery.recipientId===id))report.deliveries.push({recipientId:id,status:'pending',attempts:0});
    report.emailStatus=report.deliveries.every(delivery=>delivery.status==='sent')?'sent':'pending';report.mailRequestedBy=request.actor;report.mailRequestedAt=new Date().toISOString();save();return reply(true,{ok:true});
   }
@@ -93,7 +93,7 @@ function esmojoOnTrackReports_(input){
    const part=value=>value.replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/\s+/g,'_'),fileName='SR_'+part(job.show.name).slice(0,60)+'_'+part(job.show.venue).slice(0,45)+'_'+job.show.dates[0].split('-').reverse().join('')+'_v'+job.version+'.0_'+job.key.slice(0,12)+'.pdf';
    const candidates=folder.getFilesByName(fileName);let pdf=null;while(candidates.hasNext()){const candidate=candidates.next();if(!candidate.isTrashed()&&candidate.getMimeType()==='application/pdf'&&candidate.getSize()<=3*1024*1024&&esmojoOnTrackHash_(candidate.getBlob().getBytes())===request.sha256){pdf=candidate;break;}}
    if(!pdf)pdf=folder.createFile(Utilities.newBlob(bytes,'application/pdf',fileName));if(esmojoOnTrackHash_(pdf.getBlob().getBytes())!==request.sha256)throw Error('REPORT_UNAVAILABLE');
-   const active=new Set(profiles.filter(p=>p.activated&&!p.disabled).map(p=>p.id)),recipients=Array.from(new Set(state.recipientIds)).filter(id=>active.has(id));
+   const active=new Set(profiles.filter(p=>p.activated&&!p.disabled&&hasModule(p,'reports')).map(p=>p.id)),recipients=Array.from(new Set(state.recipientIds)).filter(id=>active.has(id));
    state.reports.push({id:job.key,sourceId:source.id,sourceHash:job.sourceHash,name:source.name,pdfId:pdf.getId(),fileName,sha256:request.sha256,show:job.show,version:job.version+'.0',layoutVersion:ESMOJO_ONTRACK_REPORT_LAYOUT,exportGeneratedAt:job.generatedAt,timeZone:'Europe/Amsterdam',convertedAt:new Date().toISOString(),pageCount:request.pageCount,warnings:Array.isArray(request.warnings)?request.warnings.filter(w=>w&&['DST_AMBIGUOUS_EARLIEST','GRAPH_DATES_AFTER_SECOND'].includes(w.code)).map(w=>({code:w.code,row:Number.isSafeInteger(w.row)?w.row:null,count:Number.isSafeInteger(w.count)?w.count:null})):[],emailStatus:recipients.length?'pending':'no-recipients',deliveries:recipients.map(id=>({recipientId:id,status:'pending',attempts:0}))});
    source.duplicateOf=null;source.latestReportId=job.key;source.status='ready';source.job=null;source.errorCode=null;source.processedModifiedAt=job.modifiedAt;source.processedLayout=ESMOJO_ONTRACK_REPORT_LAYOUT;save();return reply(true,{state:'ready',reportId:job.key});
   }
@@ -106,7 +106,7 @@ function esmojoOnTrackReports_(input){
    if(typeof request.jobId!=='string'||!/^[0-9a-f-]{36}$/i.test(request.jobId))throw Error('VALIDATION');let changed=false;
    for(const report of state.reports){if(!report.id||!Array.isArray(report.deliveries)||!report.show)continue;const linked=state.sources.find(source=>source.id===report.sourceId);if(!linked||linked.status!=='ready'||linked.processedModifiedAt!==linked.modifiedAt||linked.showKey!==report.show.key||linked.latestReportId!==report.id)continue;
     for(const delivery of report.deliveries){if(delivery.status==='sent'||delivery.status==='review'||delivery.status==='skipped'||delivery.attempts>=3||delivery.job&&Date.parse(delivery.job.expiresAt)>Date.now()||delivery.lastAttemptAt&&Date.now()-Date.parse(delivery.lastAttemptAt)<300000)continue;
-     const profile=profiles.find(p=>p.id===delivery.recipientId&&p.activated&&!p.disabled);if(!profile){delivery.status='skipped';report.emailStatus='failed';changed=true;continue;}
+     const profile=profiles.find(p=>p.id===delivery.recipientId&&p.activated&&!p.disabled&&hasModule(p,'reports'));if(!profile){delivery.status='skipped';report.emailStatus='failed';changed=true;continue;}
      if(delivery.firstAttemptAt&&Date.now()-Date.parse(delivery.firstAttemptAt)>23*3600000){delivery.status='review';report.emailStatus='failed';changed=true;continue;}
      const pdf=esmojoOnTrackSourceFile_(report.pdfId),bytes=pdf.getBlob().getBytes();if(pdf.getMimeType()!=='application/pdf'||bytes.length>3*1024*1024||esmojoOnTrackHash_(bytes)!==report.sha256)throw Error('REPORT_UNAVAILABLE');
      if(!delivery.target)delivery.target={email:profile.email,firstName:profile.firstName};const now=new Date().toISOString();delivery.firstAttemptAt=delivery.firstAttemptAt||now;delivery.lastAttemptAt=now;delivery.attempts=(delivery.attempts||0)+1;delivery.status='processing';delivery.job={id:request.jobId,expiresAt:new Date(Date.now()+300000).toISOString()};save();

@@ -1,3 +1,4 @@
+import {isAdministrator,hasModule} from '../shared/account-modules.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles } from './account-profiles.js';
 import { sessionDeadline } from './session-cookie.js';
@@ -5,7 +6,7 @@ import { sessionDeadline } from './session-cookie.js';
 export function createMcpOwnerCheck({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), now = Date.now } = {}) {
   const active = async actor => {
     const own = await profiles('self', actor);
-    if (!own.activated || own.disabled || own.role !== 'beheerder') throw Error('FORBIDDEN');
+    if (!own.activated || own.disabled || !isAdministrator(own)||!hasModule(own,'shows')) throw Error('FORBIDDEN');
     return actor;
   };
   return { active, login: async req => {
