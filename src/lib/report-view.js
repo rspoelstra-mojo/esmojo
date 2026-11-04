@@ -1,3 +1,4 @@
+import {securityReportFilters} from '../../shared/report-security.js';
 // Alleen webpresentatie; bronrecords, KPI’s, grafieken en PDF blijven ongewijzigd.
 const contains=(value,keyword)=>String(value||'').toLocaleLowerCase('nl-NL').includes(keyword);
 export function visibleReportIncidents(incidents){
@@ -13,4 +14,10 @@ export function reportPhoto(photo){
   if(image.origin!=='https://www.mojo.nl'||image.username||image.password||!/^\/media\/[\w/.-]+\.(?:jpe?g|png|webp)$/i.test(image.pathname)||source.origin!=='https://www.mojo.nl'||source.username||source.password||!/^\/concerten\/[\w%/-]+$/.test(source.pathname))return null;
   return{imageUrl:image.href,sourceUrl:source.href};
  }catch{return null;}
+}
+
+export function selectedReportIncidents(incidents,filter=null){
+ if(!filter)return visibleReportIncidents(incidents);
+ if(!securityReportFilters.some(row=>row.id===filter))return[];
+ return incidents.filter(incident=>Array.isArray(incident.securityFilters)&&incident.securityFilters.includes(filter));
 }

@@ -696,3 +696,27 @@ De vaste Jungle-bron komt uit de bestaande concertcatalogus. Geen browser-URL
 als scraperinput, geen Shows-moduletoegang vereisen voor een Reports-gebruiker.
 Server en browser beperken foto’s tot MOJO; fout/onbereikbare foto mag het rapport
 niet blokkeren. Standaard typography/thema’s en de canonieke URL blijven intact.
+
+
+## Webrapportage: datumtabs, submenu en beveiligingsfilter
+
+Op 4 november 2026: rapportheader heeft dezelfde tabvormgeving als Shows, één tab
+per echte showdatum, datum alleen in de tab en tekst bovenaan gelijk met foto.
+Header niet hoger maken. Gemeenschappelijke stijlen src/show-tabs.css; wissel per
+showdatum de bijbehorende rapportdataset, nooit één rapport dupliceren of
+nachtincidenten op kalenderdatum verkeerd scheiden. Onbeschikbare dag expliciet
+melden. Automatische CSV-koppeling blijft een afzonderlijke toekomstige taak.
+
+Rapportages-submenu gebruikt Shows-klassen en lokaal titelzoeken. Alleen
+beschikbare rapporten, nieuwste eerst. Nederlandse kalenderdag: t/m zeven dagen
+onder Afgelopen week, vanaf acht dagen onder Afgelopen periode; reeks groeperen
+op recentste beschikbare rapportdatum, geen toekomstige agenda importeren.
+
+Beveiligings-KPI's verbale/fysieke agressie, uitzettingen en aanhoudingen zijn
+klikbare filters, met dropdown/reset naast Individuele incidenten. Criteria staan
+centraal in shared/report-security.js en blijven gelijk aan bestaande tellingen.
+Uitkomst-KPI's tellen personen, incidentlijst telt bronrecords; licht verschil toe.
+Actieve filter doorzoekt alle originele incidenten, ook standaard verborgen
+zelfzorgrecords. Wissen herstelt standaard lijstselectie. KPI's/grafieken/PDF
+blijven ongewijzigd. Stuur uitsluitend afgeleide labels mee, geen extra ruwe
+CSV-velden. Bestaande Rapportages-modulecontrole, MFA en private bron blijven.

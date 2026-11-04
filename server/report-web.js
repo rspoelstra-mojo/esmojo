@@ -1,8 +1,9 @@
+import {securityReportTags} from '../shared/report-security.js';
 import {getMojoPhoto} from './mojo-photo.js';
 import {reportPages} from '../shared/report-routes.js';
 import {calculateReport,displayValue} from './ontrack-report/data.js';
 // Alleen vaste voorbeeldkeuze; automatische rapport-/CSV-koppeling volgt later.
-const examples={jungle:{key:reportPages.find(report=>report.slug==='jungle').concertId,name:'Jungle',venue:'Ziggo Dome',dates:['2026-11-03'],sourceUrl:'https://www.mojo.nl/concerten/jungle'}};
+const examples={jungle:{key:reportPages.find(report=>report.slug==='jungle').concertId,name:'Jungle',venue:'Ziggo Dome',dates:reportPages.find(report=>report.slug==='jungle').dates,sourceUrl:'https://www.mojo.nl/concerten/jungle'}};
 export function validateWebReportRequest(input){
  if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).join(',')!=='slug'||typeof input.slug!=='string'||!Object.hasOwn(examples,input.slug))throw Error('VALIDATION');
  return input.slug;
@@ -25,7 +26,7 @@ export function createWebReportService({store,photo=getMojoPhoto}){
   const report=calculateReport(Buffer.from(source.csvBase64,'base64'),{generatedAt:source.modifiedAt});
   let photoData=null;try{photoData=await photo(examples[slug].sourceUrl);}catch{/* Optionele foto mag het rapport niet blokkeren. */}
   return{show:examples[slug],photo:photoData,report:{kpis:report.kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:report.timeline,locations:report.locations,
-   incidents:report.incidents.map(({id,localDate,time,zone,type,priority,description,note,highlight})=>({id,localDate,time,zone,type,priority,description,note,highlight})),
+   incidents:report.incidents.map(incident=>{const {id,localDate,time,zone,type,priority,description,note,highlight}=incident;return{id,localDate,time,zone,type,priority,description,note,highlight,securityFilters:securityReportTags(incident)};}),
   }};
  };
 }
