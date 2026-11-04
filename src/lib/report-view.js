@@ -1,3 +1,4 @@
+import {medicalReportFilters} from '../../shared/report-medical.js';
 import {securityReportFilters} from '../../shared/report-security.js';
 // Alleen webpresentatie; bronrecords, KPI’s, grafieken en PDF blijven ongewijzigd.
 const contains=(value,keyword)=>String(value||'').toLocaleLowerCase('nl-NL').includes(keyword);
@@ -18,6 +19,13 @@ export function reportPhoto(photo){
 
 export function selectedReportIncidents(incidents,filter=null){
  if(!filter)return visibleReportIncidents(incidents);
- if(!securityReportFilters.some(row=>row.id===filter))return[];
- return incidents.filter(incident=>Array.isArray(incident.securityFilters)&&incident.securityFilters.includes(filter));
+ const field=medicalReportFilters.some(row=>row.id===filter)?'medicalFilters':securityReportFilters.some(row=>row.id===filter)?'securityFilters':null;
+ if(!field)return[];
+ return incidents.filter(incident=>Array.isArray(incident[field])&&incident[field].includes(filter));
+}
+
+export function reportPriorityLabel(priority){
+ const value=typeof priority==='string'?priority.trim():'';
+ const labels={low:'Laag',medium:'Midden',high:'Hoog',critical:'Kritisch'},key=value.toLowerCase();
+ return Object.hasOwn(labels,key)?labels[key]:value||'Niet opgegeven';
 }

@@ -1,3 +1,4 @@
+import {medicalReportTags} from '../shared/report-medical.js';
 import {securityReportTags} from '../shared/report-security.js';
 import {getMojoPhoto} from './mojo-photo.js';
 import {reportPages} from '../shared/report-routes.js';
@@ -26,7 +27,7 @@ export function createWebReportService({store,photo=getMojoPhoto}){
   const report=calculateReport(Buffer.from(source.csvBase64,'base64'),{generatedAt:source.modifiedAt});
   let photoData=null;try{photoData=await photo(examples[slug].sourceUrl);}catch{/* Optionele foto mag het rapport niet blokkeren. */}
   return{show:examples[slug],photo:photoData,report:{kpis:report.kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:report.timeline,locations:report.locations,
-   incidents:report.incidents.map(incident=>{const {id,localDate,time,zone,type,priority,description,note,highlight}=incident;return{id,localDate,time,zone,type,priority,description,note,highlight,securityFilters:securityReportTags(incident)};}),
+   incidents:report.incidents.map(incident=>{const {id,localDate,time,zone,type,priority,description,note,highlight}=incident;return{id,localDate,time,zone,type,priority,description,note,highlight,securityFilters:securityReportTags(incident),medicalFilters:medicalReportTags(incident)};}),
   }};
  };
 }
