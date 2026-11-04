@@ -593,3 +593,47 @@ content wordt het één kolom. Gebruik de show-overview-grid en de eigen contain
 van de planning; behoud lettergroottes en responsive herschikking.
 Hoofdmenu Statistieken heet vanaf deze versie Rapportages met een documenticoon;
 het bestaande interne pad blijft bereikbaar.
+
+## Vertrouwelijke moduletoegang per account
+
+Op 4 november 2026 heeft de gebruiker modulekeuzes Shows, Artiesten en Rapportages
+expliciet als Vertrouwelijk bevestigd in het bestaande Drive-accountprofiel.
+Bewaar modules uitsluitend daar, niet in Supabase/JWT, logs of browseropslag.
+Shared account-modules.js en de gegenereerde Apps Script-versie bepalen de drie
+onafhankelijke modules. Bestaande profielen zonder veld behouden hun toegang;
+expliciet lege selectie betekent geen modules. Ongeldige waarden falen gesloten.
+Alleen bestaande beheerdersroutes mogen de modules aanpassen; geen zelftoekenning
+via accountinstellingen, foto of browservelden. Beheerderrol is geen modulebypass.
+
+Verberg niet-toegekende menu-items en weiger directe pagina’s. Elke module-API
+controleert het actuele Drive-profiel na MFA, vóór metadata, downloaden of muteren.
+Rapportages omvat ook de bestaande beheerder-OnTrack-routes, private PDF-download,
+showrapportage-testtemplate en extra concertcatalogus. De Drive-brug controleert
+rapporttoegang opnieuw; geen openbare PDF-links. Rapportontvangers vereisen de
+Reports-module, opnieuw gecontroleerd vóór reservering van verzending; intrekken
+blokkeert nieuwe leveringen. OnTrack-beheer vereist daarnaast de beheerderrol.
+Service-/cronintegraties behouden hun eigen getekende machineautorisatie.
+
+Nieuwe module-eindpunten moeten de centrale modulecontrole toepassen. Houd geen
+rol-/modulebeslissing uit clientdata of oude JWT-claims aan. Verversen van de
+sessiecontrole bij focus, terugkeer en iedere minuut werkt menu en open pagina bij;
+intrekken wist gedeeld showgeheugen. Serverweigeringen zijn direct leidend, ook
+voordat die visuele verversing plaatsvindt. Bewaar de bestaande rol-/MFA-beveiliging.
+
+## Super beheerder uitsluitend via code
+
+Op 4 november 2026 heeft de gebruiker het bestaande account r.spoelstra@mojo.nl
+expliciet aangewezen als Super beheerder. Alleen de vaste code in de ondertekende
+Drive-accountbrug kent die rol toe; bestaande profielcontrole promoveert dit
+account eenmaal in hetzelfde register. Geen rolwijziging via websitekeuzes of
+browserpayload. Gewone beheerders kunnen dit account niet degraderen, blokkeren
+of verwijderen. Andere accounts krijgen deze rol niet.
+
+Gebruik gedeelde isAdministrator/isSuperAdministrator/hasModule voor alle nieuwe
+beheer- en modulecontroles. Super beheerder krijgt alle huidige en toekomstige
+modules ongeacht selecties. MFA, activatie, sessiecontrole, gegevensvalidatie en
+vertrouwelijke opslag blijven verplicht. De website toont de rol alleen-lezen;
+geen toewijsbare optie, API weigert expliciete superroltoekenning. Eigen reguliere
+profielwijzigingen behouden de rol serverzijdig. Codewaarden zijn superbeheerder,
+zichtbare titel is Super beheerder. Identiteit/e-mailbinding blijft serverzijdig,
+zet het vertrouwelijke adres niet in publieke frontend-bundels.

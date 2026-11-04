@@ -236,3 +236,7 @@ test('ChatGPT OAuth-toolmetadata en foutresultaat leiden naar nieuwe consent zon
   assert.equal((await call(token.access_token,'tools/call',params)).structuredContent.promptVersion,1);assert.equal(calls,1);
   assert.equal((await call(oldToken.access_token,'tools/call',params)).isError,true);assert.equal(calls,1);
 });
+test('Onderzoeksbeheer gebruikt dezelfde modulecontrole en blijft beschikbaar voor Super beheerder',async()=>{
+ const denied=createMcpOwnerCheck({profiles:async()=>({activated:true,role:'beheerder',modules:['reports']})});await assert.rejects(denied.active('fixture'),/FORBIDDEN/);
+ const allowed=createMcpOwnerCheck({profiles:async()=>({activated:true,role:'superbeheerder',modules:[]})});assert.equal(await allowed.active('fixture'),'fixture');
+});

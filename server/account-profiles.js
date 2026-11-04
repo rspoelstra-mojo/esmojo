@@ -1,3 +1,4 @@
+import {validateAccountModules} from '../shared/account-modules.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 // Dit verkeer bevat vertrouwelijke profielen. Geen logging of persistente cache.
@@ -31,6 +32,7 @@ export function validateProfile(input) {
   }
   if (!['beheerder', 'gebruiker'].includes(input.role)) throw new Error('VALIDATION');
   output.role = input.role;
+  if(Object.hasOwn(input,'modules'))output.modules=validateAccountModules(input.modules);
   if (input.photo !== undefined) {
     validatePhoto(input.photo);
     output.photo = input.photo;

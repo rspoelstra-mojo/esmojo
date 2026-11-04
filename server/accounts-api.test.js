@@ -172,3 +172,31 @@ test('Rapportacties zijn beheerder/MFA-only en accepteren geen eigen showmetadat
  for(const extra of [{show:{name:'Vrije artiest'}},{to:'other@example.invalid'},{pdfBase64:'vrije bijlage'},{actor:other},{operation:'reserve'}]){const r=await run({action:'ontrack-report',method:'POST',body:{...body,...extra}});assert.equal(r.response.code,400);assert.equal(r.calls.some(c=>c[0]==='ontrack-report'),false);}
  assert.equal((await run({action:'ontrack-report',method:'GET'})).response.code,405);
 });
+
+test('Modules zijn onafhankelijk: ieder niet-toegekend onderdeel wordt vóór gegevensophaal/download en ongeacht beheerdersrol geweigerd',async()=>{
+ const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
+ for(const modules of [[],['shows'],['artists'],['reports']])for(const role of ['gebruiker','beheerder'])for(const [required,action,method]of actions){
+  if(modules.includes(required))continue;
+  const {response,calls}=await run({own:{...profile,role,modules},action,method,body:{operation:'download',reportId:'bekend-id',modules:['shows','artists','reports']}});
+  assert.equal(response.code,403,role+' '+modules+' '+action);assert.equal(response.data.code,'MODULE_FORBIDDEN');assert.equal(response.data.module,required);assert.deepEqual(calls.map(call=>call[0]),['self']);
+ }
+});
+test('Accountprofiel mag door een beheerder modules wijzigen, een gebruiker mag zichzelf geen modules geven',async()=>{
+ const body={...profile,id:other,modules:['reports']};delete body.email;
+ const saved=await run({method:'PATCH',body});assert.equal(saved.response.code,200);assert.deepEqual(saved.calls.find(call=>call[0]==='update')[2].profile.modules,['reports']);
+ const denied=await run({own:{...profile,role:'gebruiker',modules:[]},method:'PATCH',body});assert.equal(denied.response.code,403);assert.equal(denied.calls.some(call=>call[0]==='update'),false);
+ const photo=await run({own:{...profile,role:'gebruiker',modules:[]},action:'photo',method:'PATCH',body:{photo:'data:image/png;base64,AAAA',modules:['reports']}});assert.equal(photo.response.code,400);
+ const session=await run({own:{...profile,modules:[]},action:'session'});assert.equal(session.response.code,200);assert.deepEqual(session.response.data.profile.modules,[]);
+});
+test('Super beheerder behoudt alle modules maar de website-API kent die rol nooit toe',async()=>{
+ const own={...profile,role:'superbeheerder',email:'r.spoelstra@mojo.nl',modules:[]};
+ const admin=await run({own});assert.equal(admin.response.code,200);
+ assert.equal((await run({own,aal:'aal1'})).response.code,403);assert.equal((await run({own:{...own,activated:false},action:'ontrack'})).response.data.code,'SETUP_REQUIRED');
+ for(const action of ['show-open','show-profile','ontrack','ontrack-report']){
+  const result=await run({own,action,method:action==='ontrack'?'GET':'POST',body:{concertId:'Fixture',operation:'read'}});assert.notEqual(result.response.data.code,'MODULE_FORBIDDEN');
+ }
+ for(const method of ['POST','PATCH']){
+  const result=await run({own,method,body:{...profile,id:other,role:'superbeheerder',email:'other@example.invalid'}});assert.equal(result.response.code,400);assert.equal(result.calls.some(call=>call[0]==='update'||call[0]==='createAuth'),false);
+ }
+ const body={...profile,id:own.id,modules:[]};delete body.role;const preserved=await run({own,method:'PATCH',body});assert.equal(preserved.response.code,200);assert.equal(preserved.calls.find(call=>call[0]==='update')[2].profile.role,'superbeheerder');
+});

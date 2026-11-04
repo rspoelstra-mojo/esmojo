@@ -16,6 +16,7 @@ import { validateProductionRiskSelection } from '../shared/production-risks.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles, validateProfile, validatePhoto } from './account-profiles.js';
 import { sendEmail } from './email.js';
+import {isSuperAdministrator,isAdministrator,hasModule} from '../shared/account-modules.js';
 import {createEmailTestService} from './email-tests.js';
 import { accountActivationEmail } from './account-email.js';
 import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCookie } from './session-cookie.js';
@@ -82,7 +83,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       // Drive controleert de actuele rol opnieuw; gebruikersmetadata is geen autorisatiebron.
       const own = await ownProfile();
       if(isFluidPreview(env)){
-        if(own.role!=='beheerder'||!own.activated)return reply(403,{error:'Deze testomgeving vereist een geactiveerd beheerderaccount met MFA.'});
+        if(!isAdministrator(own)||!own.activated)return reply(403,{error:'Deze testomgeving vereist een geactiveerd beheerderaccount met MFA.'});
         if(!fluidAccountRead(action,req.method,req.body))return reply(403,{error:'Deze testomgeving is uitsluitend alleen-lezen.'});
       }
       let expiresAt = sessionDeadline(claims);
@@ -113,6 +114,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
+      const requiredModule=['shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(previewReads&&action==='shows'&&req.method==='GET')return reply(200,await previewReads.menu());
       if(previewReads&&action==='show-photo'&&req.method==='POST'){const input=validateRiskViewRequest(req.body);return reply(200,await previewReads.photo(input.concertId));}
       if(action==='fluid-preview'){
@@ -185,7 +188,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         const profile = await profiles('photo', actor, { photo });
         return reply(200, { profile });
       }
-      if (own.role !== 'beheerder') return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
       if(action==='ontrack-report'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         try{const service=createOnTrackReportService({store:ontrackReportStore,mail}),result=await service.action(actor,req.body);if(['link','retry','send'].includes(req.body.operation))background(service.run().catch(()=>{}));return reply(200,result);}
@@ -261,7 +264,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (typeof input.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(input.id)) throw new Error('VALIDATION');
       if (req.method === 'PATCH') {
         // E-mailadres blijft de authenticatie-identiteit; wijziging vergt een aparte verificatiestroom.
-        await profiles('update', actor, { id: input.id, profile: validateProfile(input) });
+        let changed;
+        if(input.role===undefined&&input.id===own.id&&isSuperAdministrator(own)){
+          changed=validateProfile({...input,role:'beheerder'});changed.role=own.role;
+        }else changed=validateProfile(input);
+        await profiles('update', actor, { id: input.id, profile: changed });
         return reply(200, { ok: true });
       }
       if (req.method === 'DELETE') {

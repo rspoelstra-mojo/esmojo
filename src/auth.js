@@ -32,6 +32,7 @@ export async function access(action, { method = 'GET', body } = {}) {
   let result;
   try { result = await response.json(); } catch { throw new Error('De accountdienst is niet beschikbaar.'); }
   if (!response.ok) {
+    if(result.code==='MODULE_FORBIDDEN')window.dispatchEvent(new Event('esmojo-module-forbidden'));
     if (response.status === 401 || ['ACCOUNT_DISABLED', 'MFA_REQUIRED'].includes(result.code)) await logout();
     throw new Error(result.error || 'Het verzoek is mislukt.');
   }

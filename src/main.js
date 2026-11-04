@@ -8,7 +8,8 @@ import { clearProfileSaves } from './lib/profile-saves.js';
 import { installRouter, pageRoute } from './lib/router.js';
 import './style.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
-import { startAuth } from './auth.js';
+import {isAdministrator,hasModule,moduleForPage,moduleFingerprint} from '../shared/account-modules.js';
+import { access, startAuth } from './auth.js';
 import { createAccountsView } from './accounts.js';
 import {createEmailAdminView} from './email-admin.js';
 import { createProfileView, renderAvatar } from './profile.js';
@@ -37,13 +38,33 @@ const paths = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
-const pages = { '': 'Homepage', shows: 'Shows', artiest: 'Artiest', statistieken: 'Rapportages', beheerder: 'Beheerder', account: 'Accountinstellingen' };
+const pages = { '': 'Homepage', shows: 'Shows', artiest: 'Artiesten', statistieken: 'Rapportages', beheerder: 'Beheerder', account: 'Accountinstellingen' };
 document.querySelector('#admin-icon').innerHTML = icon('settings');
 document.querySelector('#navigation').innerHTML = [
-  ['', 'home', 'Homepage'], ['shows', 'music', 'Shows'], ['artiest', 'person', 'Artiest'],
+  ['', 'home', 'Homepage'], ['shows', 'music', 'Shows'], ['artiest', 'person', 'Artiesten'],
   ['statistieken', 'report', 'Rapportages'],
 ].map(([route, glyph, label]) => `<a class="rail-item" href="/${route}" data-page="${route}" aria-label="${label}">${icon(glyph)}<span class="tooltip" role="tooltip">${label}</span></a>`).join('');
 
+function updateModuleProfile(current){
+  const changed=profile?.id!==current.id||profile?.role!==current.role||moduleFingerprint(profile)!==moduleFingerprint(current);
+  if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();}
+  profile=current;
+  document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=Boolean(module&&!hasModule(profile,module));});
+  document.querySelector('[data-page="beheerder"]').hidden=!isAdministrator(profile);
+  return changed;
+}
+let refreshingModules=false;
+async function refreshModuleAccess(){
+  if(!profile||refreshingModules)return;refreshingModules=true;const id=profile.id;
+  try{const data=await access('session');if(!profile||profile.id!==id||data.profile.id!==id)return;
+    if(updateModuleProfile(data.profile)){renderAvatar(document.querySelector('.avatar'),profile);renderPage();}
+    if(hasModule(profile,'shows'))void refreshShowsMenu();
+  }catch{/* Serverweigeringen blijven leidend; geen oude rechten aan de server aanbieden. */}
+  finally{refreshingModules=false;}
+}
+window.addEventListener('focus',()=>{void refreshModuleAccess();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshModuleAccess();});
+window.addEventListener('esmojo-module-forbidden',()=>{void refreshModuleAccess();});
 function renderPage() {
   disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
   const content = document.querySelector('.content-box');
@@ -60,11 +81,15 @@ function renderPage() {
   document.querySelector('#submenu-title').textContent = title;
   document.title = `${title} · ESMOJO`;
   const submenu = document.querySelector('#submenu-navigation'); submenu.replaceChildren();
+  const requiredModule=moduleForPage(root);
+  if(requiredModule&&!hasModule(profile,requiredModule)){
+    submenuSearch.setSection(root,false);content.textContent='Je hebt geen toegang tot deze module.';return;
+  }
   if (root === 'shows') {
     let selected = '';
     try { selected = decodeURIComponent(route.split('/')[1] || ''); } catch { selected = 'invalid'; }
     if(fluidPreview){
-      if(profile.role!=='beheerder'){content.textContent='Geen toegang tot deze testpagina.';return;}
+      if(!isAdministrator(profile)){content.textContent='Geen toegang tot deze testpagina.';return;}
       selected=previewShows.shows.find(show=>show.name.toLowerCase()==='puscifer')?.key||'';
       let disposeMenu=createShowsSubmenu(submenu,selected,null);
       const disposeTest=createFluidPreviewPage(content,{onShow:show=>{if(show.key!==selected){disposeMenu();submenu.replaceChildren();selected=show.key;disposeMenu=createShowsSubmenu(submenu,selected,null);}}});
@@ -72,18 +97,20 @@ function renderPage() {
     }else disposePage = createShowsSubmenu(submenu, selected, content);
   }
   if (root === 'beheerder') {
-    if (profile.role !== 'beheerder') { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
+    if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
     const link = document.createElement('a'); link.href = '/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
     if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');
     submenu.append(link);
     link.dataset.submenuTitle = 'Accounts';
-    if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile, link);
+    if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile, link,{onSaved:()=>void refreshModuleAccess()});
     const emailLink=document.createElement('a');emailLink.href='/beheerder/email';emailLink.className='submenu-link';emailLink.textContent='Email';emailLink.dataset.submenuTitle='Email';
     if(route==='beheerder/email')emailLink.setAttribute('aria-current','page');submenu.append(emailLink);
     if(route==='beheerder/email')disposePage=createEmailAdminView(content,emailLink);
+    if(hasModule(profile,'reports')){
     const ontrackLink=document.createElement('a');ontrackLink.href='/beheerder/ontrack';ontrackLink.className='submenu-link';ontrackLink.textContent='OnTrack';ontrackLink.dataset.submenuTitle='OnTrack';
     if(route==='beheerder/ontrack')ontrackLink.setAttribute('aria-current','page');submenu.append(ontrackLink);
     if(route==='beheerder/ontrack')disposePage=createOnTrackAdminView(content,ontrackLink);
+    }else if(route==='beheerder/ontrack')content.textContent='Je hebt geen toegang tot deze module.';
   }
   if (root === 'account') {
     disposePage = createProfileView(content, profile, updated => {
@@ -92,7 +119,7 @@ function renderPage() {
       renderAvatar(document.querySelector('.avatar'), profile);
     });
   }
-  submenuSearch.setSection(root, ['shows', 'artiest'].includes(root) || (root === 'beheerder' && profile.role === 'beheerder'));
+  submenuSearch.setSection(root, ['shows', 'artiest'].includes(root) || (root === 'beheerder' && isAdministrator(profile)));
   document.querySelectorAll('[data-page]').forEach(link => {
     if (link.dataset.page === root) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -102,14 +129,13 @@ installRouter({onNavigate:renderPage});
 renderPage();
 startAuth({
   onReady(current) {
-    if(profile?.id!==current.id||profile?.role!==current.role){clearProfileSaves();clearAssessmentSaves();showMemory.clear();}
-    profile = current;
+    updateModuleProfile(current);
     clearInterval(menuRefreshTimer);
-    void refreshShowsMenu();
-    menuRefreshTimer=setInterval(()=>{if(!document.hidden)void refreshShowsMenu();},60000);
+    if(hasModule(profile,'shows'))void refreshShowsMenu();
+    menuRefreshTimer=setInterval(()=>{if(!document.hidden)void refreshModuleAccess();},60000);
     document.querySelector('.rail').hidden = false;
     document.querySelector('.workspace').hidden = false;
-    document.querySelector('[data-page="beheerder"]').hidden = profile.role !== 'beheerder';
+    document.querySelector('[data-page="beheerder"]').hidden = !isAdministrator(profile);
     renderAvatar(document.querySelector('.avatar'), profile);
     renderPage();
   },
