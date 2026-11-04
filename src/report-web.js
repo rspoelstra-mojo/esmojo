@@ -32,7 +32,7 @@ function incidentCard(incident,index){
  const element=node('article','report-card report-incident');element.dataset.incidentId=incident.id;if(highlightedReportIncident(incident))element.dataset.highlight='true';
  const heading=node('h3','visually-hidden',`Incident ${index+1} · ${value(incident.zone)} · ${incident.time}`);element.append(heading);
  const fields=node('dl','report-incident-fields');
- for(const [key,label,content]of [['location','Locatie & tijd',null],['type','Incident type',value(incident.type)],['description','Omschrijving',value(incident.description)],['priority','Prioriteit',reportPriorityLabel(incident.priority)],['note','Notitie',value(incident.note)]]){
+ for(const [key,label,content]of [['location','Locatie & tijd',null],['type','Incident type',value(incident.type)],['description','Omschrijving',value(incident.description)],['priority','Prioriteit',reportPriorityLabel(incident.priority)],['note','Afhandeling',value(incident.note)]]){
   const field=node('div','report-incident-field report-field-'+key),definition=node('dd','');field.append(node('dt','',label),definition);
   if(key==='location'){const time=node('time','report-incident-time',shortIncidentDate(incident.localDate)+' · '+incident.time);time.dateTime=incident.localDate+'T'+incident.time;definition.append(node('span','',value(incident.zone)),time);}else definition.textContent=content;
   fields.append(field);

@@ -744,3 +744,6 @@ showdatums, nieuwste links en oudste rechts; standaard de nieuwste actief.
 Bij minder beschikbare datums geen tabs aanvullen. Zesde/oudere show geen tab of
 extra archiefbediening geven. Gebruik reportTabDates in src/lib/report-view.js;
 behoud per-datum datasets en de bestaande compacte header. Submenu ongewijzigd.
+
+In de individuele rapportagewebsite-incidenten heet het bestaande note-veld
+Afhandeling (voorheen Notitie); bronveld en inhoud blijven ongewijzigd.
