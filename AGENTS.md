@@ -637,3 +637,9 @@ geen toewijsbare optie, API weigert expliciete superroltoekenning. Eigen regulie
 profielwijzigingen behouden de rol serverzijdig. Codewaarden zijn superbeheerder,
 zichtbare titel is Super beheerder. Identiteit/e-mailbinding blijft serverzijdig,
 zet het vertrouwelijke adres niet in publieke frontend-bundels.
+
+Op 4 november 2026 vroeg de gebruiker de planning compacter en weer horizontaal
+zoals de oorspronkelijke referentie. Gebruik 14px staptitels, 12px datums/voetregel,
+11px badges, kleinere punten en minder witruimte; geen tekstschaling per viewport.
+De eigen planningscontainer gaat pas onder 680px over naar de compacte verticale
+indeling. Behoud tweederdebreedte, thema’s, deadlines en echte afrondstatussen.
