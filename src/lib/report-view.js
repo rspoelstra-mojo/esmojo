@@ -29,3 +29,6 @@ export function reportPriorityLabel(priority){
  const labels={low:'Laag',medium:'Midden',high:'Hoog',critical:'Kritisch'},key=value.toLowerCase();
  return Object.hasOwn(labels,key)?labels[key]:value||'Niet opgegeven';
 }
+
+// Nieuwste echte showdatum eerst, zonder opvullen of archiefbediening.
+export const reportTabDates=dates=>[...new Set(dates)].sort((a,b)=>b.localeCompare(a)).slice(0,5);
