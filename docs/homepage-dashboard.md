@@ -68,7 +68,8 @@ precies de betrokken reeks bij, onder dezelfde Drive UserLock. PDF-commit is
 onderdeel hiervan. De bestaande OIDC-middagworkflow bouwt de projectie ook op
 na de catalogusimport, via de eigen audience /api/home-planning-sync. Langdurige
 broncontroles houden geen globaal schrijfslot vast; uitsluitend de korte eindmerge
-wordt vergrendeld. Ondertussen bevestigde bronwijzigingen blijven daarbij leidend. Geen vrije
+wordt vergrendeld en leest de actuele Drive-projectie buiten de leescache om.
+Ondertussen bevestigde bronwijzigingen blijven daarbij leidend. Geen vrije
 browser-, preview- of client-data-schrijfroute. Supabase is toegestaan maar voor
 deze uitvoering niet nodig: geen nieuw databaseschema of persoonsgegevenscache.
 
