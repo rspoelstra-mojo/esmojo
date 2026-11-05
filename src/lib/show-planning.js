@@ -27,10 +27,17 @@ export function productionComplete(show,snapshot){
     return Boolean(key&&risk.assessments?.[key]?.completed);
   }));
 }
+export function operationalComplete(snapshot){
+ const risks=snapshot.risks,review=risks?.operational;
+ return risks?.state==='ready'&&Array.isArray(risks.risks)&&risks.risks.length<=30&&Boolean(review?.source&&['revision','sha256'].every(key=>/^[a-f0-9]{64}$/.test(review.source[key]||'')))&&risks.risks.every(risk=>{
+  const row=review.assessments?.[risk.id];
+  return /^R[0-9]{2}$/.test(risk.id)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&['none','low','medium','high'].includes(row.riskLevel)&&typeof row.riskNote==='string'&&(row.riskLevel==='low'||Boolean(row.riskNote.trim()))&&Number.isFinite(Date.parse(row.completedAt));
+ });
+}
 export function showPlanning(show,snapshot={},now=new Date()){
   const dates=[...(show.dates||[])].sort();if(!dates.length||dates.some(date=>calendarDay(date)===null))return null;
   const start=calendarDay(dates[0]),today=dutchToday(now),todayTime=calendarDay(today);
-  const completed=snapshot.completion||{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot)};
+  const completed=snapshot.completion||{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot),operational:operationalComplete(snapshot),measures:false};
   const profileDates=Object.values(snapshot.profile?.finalization?.categories||{}).map(row=>row.completedAt).filter(value=>Number.isFinite(Date.parse(value))).sort();
   const steps=definitions.map(([id,label,offset])=>{
     const date=new Date(start-offset*DAY).toISOString().slice(0,10),days=Math.round((calendarDay(date)-todayTime)/DAY),done=completed[id]===true;

@@ -13,6 +13,7 @@ import { validateFinalRequest } from '../shared/analysis-finalization.js';
 import { validateTicketRequest } from './ticket-data.js';
 import { getMojoPhoto } from './mojo-photo.js';
 import { validateShowProfile } from './show-profile.js';
+import {validateOperationalReview} from '../shared/operational-risk.js';
 import { validateRiskViewRequest } from './show-risks.js';
 import { validateProductionRiskSelection } from '../shared/production-risks.js';
 import { createClient } from '@supabase/supabase-js';
@@ -117,7 +118,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=['home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='home-dashboard'||action==='home-metadata'){
         const metadata=action==='home-metadata',method=metadata?'POST':'GET';
@@ -153,6 +154,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if(['barrier-layout','floor-pressure'].includes(action)&&req.method==='POST'){
         try{const input=action==='barrier-layout'?validateBarrierRequest(req.body):validateFloorRequest(req.body),{operation,...payload}=input;return reply(200,await shows((action==='barrier-layout'?'barrier-':'floor-')+operation,{...payload,actor}));}
         catch(error){const code=error.message;return reply(code==='VALIDATION'?400:['ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?409:503,{code:['VALIDATION','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(code)?code:'UNAVAILABLE',error:code==='VALIDATION'?(action==='barrier-layout'?'Controleer de verplichte velden en kies een geldige PNG of PDF (maximaal 2 MB).':'Controleer de publieksvakken, bezoekersaantallen, oppervlakten en verplichte beoordeling.'):code==='ASSESSMENT_CONFLICT'?'Deze beoordeling of de brongegevens zijn intussen gewijzigd. Laad opnieuw; je invoer is behouden.':code==='ASSESSMENT_COMPLETED'?'Dit onderdeel is al afgerond. Open de actuele beoordeling of kies eerst Bewerken.':'Laden of opslaan is niet gelukt. Je invoer is behouden. Probeer opnieuw.'});}
+      }
+      if(action==='operational-risk'&&req.method==='POST'){
+        try{return reply(200,await shows('risk-operational-save',{...validateOperationalReview(req.body),actor}));}
+        catch(error){const conflict=['SOURCE_CHANGED','ASSESSMENT_CONFLICT','CONFLICT','REPORT_NOT_READY'].includes(error.message);return reply(error.message==='VALIDATION'?400:conflict?409:503,{error:error.message==='VALIDATION'?'Kies een risicoklasse en vul de verplichte toelichting of beheersmaatregel in.':conflict?'Het risico of de beoordeling is intussen gewijzigd. Laad de actuele risico’s; je invoer is behouden.':'Opslag niet bevestigd. Je invoer is behouden; probeer opnieuw.'});}
       }
       if (action === 'show-risks' && req.method === 'POST') {
         try { return reply(200, await shows('risk-view', validateRiskViewRequest(req.body))); }

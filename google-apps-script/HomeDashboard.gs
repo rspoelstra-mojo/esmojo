@@ -23,7 +23,8 @@ function esmojoHomeSnapshot_(target){
  const storage=esmojoReadProductionRisks_(target),document=storage.document;
  const pdfFile=esmojoShowFile_(target.folder,'showprofiel-pdf.json');let pdf={state:'not-ready'};
  if(pdfFile){try{const status=esmojoShowProfilePdf_({operation:'report-status',concertId:target.primary.concertId},target);pdf={state:status.state};}catch(error){if(error.message!=='REPORT_NOT_READY')throw error;}}
- return{pdf,risks:{production:{choices:document.choices},assessments:{barrier:{completed:esmojoBarrierSummary_(document).completed},floor:{completed:esmojoFloorSummary_(document)?.completed===true}}}};
+ const operational=pdf.state==='ready'?esmojoShowProfileRisks_({operation:'risk-view',concertId:target.primary.concertId},target):{};
+ return{pdf,risks:{state:operational.state,risks:operational.risks,operational:operational.operational,production:{choices:document.choices},assessments:{barrier:{completed:esmojoBarrierSummary_(document).completed},floor:{completed:esmojoFloorSummary_(document)?.completed===true}}}};
 }
 function esmojoHomePublicCatalogue_(root){
  const folders=root.getFoldersByName('Productie'),folder=folders.hasNext()?folders.next():null;if(!folder||folders.hasNext()||folder.isTrashed())throw Error('DASHBOARD_UNAVAILABLE');

@@ -176,7 +176,7 @@ test('Rapportacties zijn beheerder/MFA-only en accepteren geen eigen showmetadat
 });
 
 test('Modules zijn onafhankelijk: ieder niet-toegekend onderdeel wordt vóór gegevensophaal/download en ongeacht beheerdersrol geweigerd',async()=>{
- const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['reports','report-menu','GET'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
+ const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['shows','operational-risk','POST'],['reports','report-menu','GET'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
  for(const modules of [[],['shows'],['artists'],['reports']])for(const role of ['gebruiker','beheerder'])for(const [required,action,method]of actions){
   if(modules.includes(required))continue;
   const {response,calls}=await run({own:{...profile,role,modules},action,method,body:{operation:'download',reportId:'bekend-id',modules:['shows','artists','reports']}});
@@ -208,4 +208,11 @@ test('Rapportages-only gebruiker leest het vaste webvoorbeeld zonder Shows of be
  const csv=ONTRACK_HEADERS.join(',')+'\n'+ONTRACK_HEADERS.map(key=>fields[key]||'').join(',');
  const result=await run({own:{...profile,role:'gebruiker',modules:['reports']},action:'report-web',method:'POST',body:{slug:'jungle'},reportSource:{csvBase64:Buffer.from(csv).toString('base64'),modifiedAt:'2026-11-04T00:00:00Z',sourceHash:createHash('sha256').update(csv).digest('hex'),show:{key:'Jungle_Ziggo-Dome_03112026',name:'Jungle',venue:'Ziggo Dome',date:'2026-11-03',sourceUrl:'https://www.mojo.nl/concerten/jungle'},series:{dates:['2026-11-03'],shows:[{concertId:'Jungle_Ziggo-Dome_03112026',date:'2026-11-03'}]}}});
  assert.equal(result.response.code,200);assert.equal(result.response.data.report.incidents.length,1);assert.equal(result.calls.some(call=>call[0]==='shows'),false);assert.match(result.response.headers['Cache-Control'],/no-store/);assert.equal(JSON.stringify(result.response.data).includes('csvBase64'),false);
+});
+
+test('Operationele beoordeling vereist MFA/Shows en bindt actor uitsluitend aan de sessie',async()=>{
+ const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},riskId:'R01',revision:0,riskLevel:'medium',riskNote:'Synthetische maatregel'};
+ for(const config of [{auth:false},{aal:'aal1'},{own:{...profile,modules:['reports']}}]){const result=await run({action:'operational-risk',method:'POST',body,...config});assert.ok([401,403].includes(result.response.code));assert.equal(result.calls.some(call=>call[0]==='shows'),false);}
+ const ok=await run({action:'operational-risk',method:'POST',body});assert.equal(ok.response.code,200);assert.equal(ok.calls.find(call=>call[0]==='shows')[1],'risk-operational-save');assert.equal(ok.calls.find(call=>call[0]==='shows')[2].actor,id);
+ for(const change of [{actor:other},{riskNote:''},{riskLevel:null}]){const rejected=await run({action:'operational-risk',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(call=>call[0]==='shows'),false);}
 });

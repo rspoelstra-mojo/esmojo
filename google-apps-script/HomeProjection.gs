@@ -21,7 +21,7 @@ function esmojoHomeProjectionSave_(folder,storage){
 }
 function esmojoHomeCompletion_(show,target){
  const snapshot=esmojoHomeSnapshot_(target);
- return{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot),operational:false,measures:false};
+ return{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot),operational:operationalComplete(snapshot),measures:false};
 }
 function esmojoHomeRefresh_(concertId){
  const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),{state,folder}=esmojoHomeIndex_(root),show=homeCatalogue(state,'',[],{includeHistory:true}).find(show=>show.key===concertId||show.concerts.some(row=>row.key===concertId));
@@ -29,7 +29,7 @@ function esmojoHomeRefresh_(concertId){
  try{row.completion=esmojoHomeCompletion_(show,esmojoHomeTarget_(state,folder,show.key));}catch{row.planningUnavailable=true;}
  storage.document.entries[show.key]=row;esmojoHomeProjectionSave_(folder,storage);return row;
 }
-function esmojoHomeChanged_(operation){return /^(profile-save|ticket-(review|reopen)|final-complete|risk-production-save|barrier-(draft|complete|reopen|upload|remove-upload)|floor-(draft|complete|reopen)|report-(commit|fail))$/.test(operation);}
+function esmojoHomeChanged_(operation){return /^(profile-save|ticket-(review|reopen)|final-complete|risk-(save|(production|operational)-save)|barrier-(draft|complete|reopen|upload|remove-upload)|floor-(draft|complete|reopen)|report-(commit|fail))$/.test(operation);}
 function esmojoHomeResult_(request,result){
  if(!esmojoHomeChanged_(request.operation))return result;
  try{const row=esmojoHomeRefresh_(request.concertId);return row?Object.assign({},result,{homePlanning:row}):result;}

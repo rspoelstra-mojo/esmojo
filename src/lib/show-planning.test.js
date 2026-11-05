@@ -28,3 +28,10 @@ test('Operationeel en maatregelen worden nooit fictief voltooid; showdag blijft 
  assert.equal(model.steps[1].completed,false);assert.equal(model.steps[3].completed,false);assert.equal(model.steps[4].completed,false);assert.equal(model.steps[4].badge,'Showdag');
  assert.equal(showPlanning(show,{},new Date('2026-10-01T12:00:00Z')).todayPosition,10);assert.equal(showPlanning(show,{},new Date('2026-12-01T12:00:00Z')).todayPosition,90);
 });
+
+test('Actuele operationele analyse rondt pas af na alle geldige individuele beoordelingen',()=>{
+ const source={revision:'a'.repeat(64),sha256:'b'.repeat(64)},row={revision:1,riskLevel:'low',riskNote:'',completedAt:'2026-11-05T10:00:00Z'},risks={state:'ready',risks:[{id:'R01'},{id:'R02'},{id:'R03'}],operational:{source,assessments:{R01:row,R02:row}}};
+ assert.equal(showPlanning(show,{risks},now).steps[1].completed,false);risks.operational.assessments.R03=row;assert.equal(showPlanning(show,{risks},now).steps[1].completed,true);
+ for(const change of [v=>v.state='pending',v=>v.operational.source=null,v=>v.operational.assessments.R03={...row,riskLevel:'high',riskNote:' '},v=>v.operational.assessments.R03={...row,completedAt:null}]){const copy=structuredClone(risks);change(copy);assert.equal(showPlanning(show,{risks:copy},now).steps[1].completed,false);}
+ assert.equal(showPlanning(show,{risks:{...risks,risks:[]}},now).steps[1].completed,true,'Een beschikbare analyse zonder geïdentificeerde risico’s heeft geen open beoordelingen');
+});
