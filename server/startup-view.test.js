@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 test('Tijdens sessieherstel blijft de loginfoto verborgen; menu wordt voorbereid vóór het logo verdwijnt',async()=>{
  const boot={hidden:false},panel={hidden:true,replaceChildren(){}},profile={id:'synthetic-only'};let restore,entered=false;
- const sandbox={console,Date,Promise,navigator:{},location:{hash:''},document:{querySelector:selector=>selector==='#app-boot'?boot:panel,addEventListener(){}},window:{addEventListener(){}},setTimeout(){},clearTimeout(){},fetch:()=>new Promise(resolve=>restore=resolve),getSupabase:async()=>({auth:{onAuthStateChange(){},setSession:async()=>({data:{session:{user:profile}}})}})};
+ const sandbox={homeDashboardCache:{bind(){},accept(){}},console,Date,Promise,navigator:{},location:{hash:''},document:{querySelector:selector=>selector==='#app-boot'?boot:panel,addEventListener(){}},window:{addEventListener(){}},setTimeout(){},clearTimeout(){},fetch:()=>new Promise(resolve=>restore=resolve),getSupabase:async()=>({auth:{onAuthStateChange(){},setSession:async()=>({data:{session:{user:profile}}})}})};
  let source=readFileSync(new URL('../src/auth.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ','');vm.createContext(sandbox);vm.runInContext(source,sandbox);
  const start=sandbox.startAuth({onReady:current=>{assert.equal(current.id,profile.id);assert.equal(boot.hidden,false);entered=true;},onSignedOut(){}});
  await new Promise(resolve=>setImmediate(resolve));assert.equal(boot.hidden,false);assert.equal(panel.hidden,true);assert.equal(entered,false);

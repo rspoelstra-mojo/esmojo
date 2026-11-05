@@ -1,3 +1,4 @@
+import {homeDashboardCache} from './lib/home-cache.js';
 import { getSupabase } from './lib/supabase.js';
 import './accounts.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
@@ -26,6 +27,7 @@ export async function access(action, { method = 'GET', body } = {}) {
   const { data } = await client.auth.getSession();
   if (!data.session) throw new Error('Log opnieuw in.');
   activeSession = data.session;
+  const homeContext=homeDashboardCache.context();
   const response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store',
     headers: { Authorization: `Bearer ${data.session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}) });
@@ -36,6 +38,9 @@ export async function access(action, { method = 'GET', body } = {}) {
     if (response.status === 401 || ['ACCOUNT_DISABLED', 'MFA_REQUIRED'].includes(result.code)) await logout();
     throw new Error(result.error || 'Het verzoek is mislukt.');
   }
+  if(result.profile&&result.profile.id===data.session.user.id&&homeContext.ticket===homeDashboardCache.context().ticket&&['session','restore'].includes(action)){homeDashboardCache.bind(result.profile);if(result.homeDashboard)homeDashboardCache.accept(result.homeDashboard,{actor:result.profile.id});}
+  if(action==='show-profile-pdf'&&body?.concertId&&result.state)homeDashboardCache.confirmProfile(body.concertId,result.state,{...homeContext,actor:data.session.user.id});
+  if(result.homePlanning)homeDashboardCache.patch(result.homePlanning,{...homeContext,actor:data.session.user.id});
   return result;
 }
 
@@ -50,6 +55,7 @@ async function restoreRemembered() {
     const result = await client.auth.setSession({ access_token: restored.session.access_token, refresh_token: restored.session.refresh_token });
     if (result.error) return null;
     activeSession = result.data.session;
+    homeDashboardCache.bind(restored.profile);if(restored.homeDashboard)homeDashboardCache.accept(restored.homeDashboard,{actor:restored.profile.id});
     return restored;
   };
   restoring = (navigator.locks ? navigator.locks.request('esmojo-session-refresh', run) : run()).finally(() => { restoring = null; });
@@ -70,6 +76,7 @@ async function remember(session) {
   return result.expiresAt;
 }
 function enter(profile, deadline) {
+  homeDashboardCache.bind(profile);
   armExpiry(deadline);
   panel().hidden = true; panel().replaceChildren(); onReady(profile);
   document.querySelector('#app-boot').hidden=true;

@@ -14,10 +14,12 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['sync', 'profile-save','show-open'].includes(JSON.parse(input.body).operation) || /^(ticket-|final-|report-|risk-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['sync', 'profile-save','show-open','home-photo-cache'].includes(JSON.parse(input.body).operation) || /^(ticket-|final-|report-|risk-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    const finish=data=>esmojoReply_({ok:true,data:typeof esmojoHomeResult_==='function'?esmojoHomeResult_(request,data):data});
+    if(['home-rebuild','home-photo-cache'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return finish(request.operation==='home-rebuild'?esmojoHomeRebuild_(request):esmojoHomePhotosSave_(request));}
     if(!['report-commit','barrier-upload'].includes(request.operation)&&input.body.length>110000)throw Error('VALIDATION');
     if(['home-dashboard','home-metadata'].includes(request.operation)){
       return esmojoReply_({ok:true,data:esmojoHomeDashboard_(request)});
@@ -28,24 +30,24 @@ function esmojoShows_(input) {
     }
     if(/^(barrier-|floor-)/.test(request.operation)){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
-      return esmojoReply_({ok:true,data:request.operation.startsWith('barrier-')?esmojoBarrierLayout_(request):esmojoFloorPressure_(request)});
+      return finish(request.operation.startsWith('barrier-')?esmojoBarrierLayout_(request):esmojoFloorPressure_(request));
     }
     if(request.operation.startsWith('risk-')){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
-      return esmojoReply_({ok:true,data:esmojoShowProfileRisks_(request)});
+      return finish(esmojoShowProfileRisks_(request));
     }
     if(request.operation.startsWith('report-')){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
-      return esmojoReply_({ok:true,data:esmojoShowProfilePdf_(request)});
+      return finish(esmojoShowProfilePdf_(request));
     }
     if (request.operation.startsWith('final-')) {
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
-      return esmojoReply_({ok:true,data:esmojoAnalysisFinal_(request)});
+      return finish(esmojoAnalysisFinal_(request));
     }
     if (request.operation.startsWith('ticket-')) {
       const cache = CacheService.getScriptCache(), key = 'shows:' + input.nonce;
       if (cache.get(key)) throw Error('FORBIDDEN'); cache.put(key, '1', 180);
-      return esmojoReply_({ ok: true, data: esmojoTicketData_(request) });
+      return finish(esmojoTicketData_(request));
     }
     if (['profile-read', 'profile-save'].includes(request.operation)) {
       if (request.operation === 'profile-save') {
@@ -53,7 +55,7 @@ function esmojoShows_(input) {
         if (cache.get(key)) throw new Error('FORBIDDEN');
         cache.put(key, '1', 180);
       }
-      return esmojoReply_({ ok: true, data: esmojoShowProfile_(request) });
+      return finish(esmojoShowProfile_(request));
     }
     if (!['list', 'sync'].includes(request.operation)) throw new Error();
     const esmojo = DriveApp.getFolderById(ESMOJO_FOLDER_ID);

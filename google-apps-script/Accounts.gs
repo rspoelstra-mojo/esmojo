@@ -41,7 +41,12 @@ function esmojoAccounts_(input) {
     }
     const denied = () => esmojoReply_({ ok: false, code: 'FORBIDDEN' });
     const conflict = () => esmojoReply_({ ok: false, code: 'CONFLICT' });
-    if (request.operation === 'self') return actor ? esmojoReply_({ ok: true, data: actor }) : denied();
+    if (request.operation === 'self') {
+      if(!actor)return denied();
+      let homeDashboard=null;
+      if(request.includeHome===true&&actor.activated&&hasModule(actor,'shows')){try{homeDashboard=esmojoHomeDashboard_({operation:'home-dashboard',actor:actor.id},folder);}catch{/* Fout in de homepage blokkeert nooit aanmelden. */}}
+      return esmojoReply_({ok:true,data:request.includeHome===true?Object.assign({},actor,{homeDashboard}):actor});
+    }
     if (request.operation === 'activate') {
       if (!actor) return denied();
     } else if (request.operation === 'photo') {
