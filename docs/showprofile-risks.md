@@ -227,3 +227,33 @@ staan in operational-review-memory binnen de bestaande showcontext. SPA-navigati
 stopt opslag niet; afmelden/rolwissel wist invoer en annuleert niet-gestarte jobs.
 Bij een fout verschijnt bij het risico een melding; openen bewaart de invoer en
 biedt Opnieuw proberen. Geen extra API, Drive-schema of persistente browsercache.
+
+
+## Beheersmaatregelenlijst (V1.46)
+
+Het bestaande Maatregelen-tabblad gebruikt createShowMeasures met de bestaande
+showcontext. showMeasures projecteert de expliciete Midden/Hoog-notities uit
+productiebeoordelingen (barrier.riskNote, floor.note, later overige geregistreerde
+productieonderwerpen) en actuele operationele risico’s. De lijst behoudt losse
+items, brononderwerp en oorspronkelijke tekst. Geen ontwerpnotities of Geen
+risico-toelichtingen als maatregel presenteren. Productienotities worden via de
+bestaande vertrouwelijke beoordelingssamenvattingen doorgegeven; geen nieuwe API
+of opslag en geen extra reads bij openen van de tab.
+
+Klikken opent een eigen detailweergave met status en volledige maatregeltekst.
+De huidige afgeleide items zijn Nog niet geïmplementeerd. Het label Geïmplementeerd
+is beschikbaar voor de later te bouwen echte workflow; nu geen afvinkmogelijkheid
+of fictieve implementatie. De lijst reageert op bevestigde beoordelingwijzigingen
+en sluit een detail als de maatregel door een bronwijziging niet meer bestaat.
+
+Alleen alle toepasselijke productiebeoordelingen en alle huidige operationele
+risico’s afgerond én geen maatregelen: exacte leegtekst Geen beheersmaatregelen
+voor deze show en de implementatiestap afgerond. showMeasures.complete is gedeeld
+met de Apps Script-homeprojectie; uitsluitend de openbare afrondvlag verlaat de
+private bron voor de homepagecache. Ontbrekende/legacy-notities zijn geen bewijs
+van afwezigheid van maatregelen. Met maatregelen blijft de implementatiestap open.
+
+Tests: show-planning.test.js (selectie, lege/volledige workflow, bronfilter),
+show-measures.test.js (kaart/details/status/tekstveiligheid/live wijzigingen),
+operational-risks.test.js (ondertekende Drive-/home-integratie en privacy).
+Browser: licht/donker, 1920/1440/900/700/390px, eigen details en lege planning.

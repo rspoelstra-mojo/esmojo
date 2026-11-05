@@ -4,7 +4,7 @@ function esmojoBarrierRecord_(document){
   if(typeof record.completed!=='boolean'||(record.completed&&(!record.completedBy||!Number.isFinite(Date.parse(record.completedAt)))))throw Error('CONFLICT');
   return record;
 }
-function esmojoBarrierSummary_(document){const r=esmojoBarrierRecord_(document);return {revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,active:r.completed&&r.riskLevel!=='none'};}
+function esmojoBarrierSummary_(document){const r=esmojoBarrierRecord_(document);return {revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,riskNote:r.riskNote??null,active:r.completed&&r.riskLevel!=='none'};}
 function esmojoBarrierFile_(target,attachment){
   if(!attachment||!validUploadId(attachment.uploadId)||!['image/png','application/pdf'].includes(attachment.mime)||typeof attachment.fileId!=='string'||!/^[a-f0-9]{64}$/.test(attachment.sha256||''))throw Error('ATTACHMENT_INVALID');
   const file=DriveApp.getFileById(attachment.fileId),parents=file.getParents();
