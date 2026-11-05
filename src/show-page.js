@@ -3,6 +3,7 @@ import './show-page.css';
 import {access} from './auth.js';
 import {loadShowPhoto} from './show-photo.js';
 import {createShowProfile} from './show-profile.js';
+import {createShowMeasures} from './show-measures.js';
 import {createRiskAnalysis} from './risk-analysis.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 import {createShowMemory} from './lib/show-memory.js';
@@ -18,8 +19,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
   async function open(){
     if(disposed||opening)return;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
-    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},risks=null,observer=null,frame=null;
-    const cleanup=()=>{disposePlanning();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
+    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeMeasures=()=>{},risks=null,observer=null,frame=null;
+    const cleanup=()=>{disposePlanning();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
       const [context,photoData]=await Promise.all([lease.ready,lease.view.photo?Promise.resolve(lease.view.photo):loadPhoto(show.key).catch(()=>null)]);
       if(disposed)return;
@@ -56,6 +57,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           layout.append(planning);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
         }
         if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
+        if(label==='Maatregelen')disposeMeasures=createShowMeasures(panel,{show,data});
         if(label==='Risicoanalyse')risks=createRiskAnalysis(panel,{show,readOnly,requestAccess,version:data.version,choices:data.productionChoices,reviewMemory:data.operationalReviews});
         button.addEventListener('click',()=>select(index));button.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();select(next,true);}});
         buttons.push(button);views.push(panel);bar.append(button);panels.append(panel);

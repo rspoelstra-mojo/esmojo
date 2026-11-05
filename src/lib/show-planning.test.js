@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {calendarDay,dutchToday,showPlanning} from './show-planning.js';
+import {calendarDay,dutchToday,showPlanning,showMeasures} from './show-planning.js';
 const show={dates:['2026-11-05'],venue:'Gashouder'},now=new Date('2026-11-03T12:00:00Z');
 const snapshot=()=>({pdf:{state:'ready'},profile:{finalization:{categories:{visitors:{completedAt:'2026-10-23T12:00:00Z'},artist:{completedAt:'2026-10-24T12:00:00Z'}}}},risks:{production:{choices:{escape_routes:false,fireworks:false,open_fire:false,lasers:false,drones:false}},assessments:{barrier:{completed:true},floor:{completed:true}}}});
 test('De vijf kalenderdeadlines gebruiken de vroegste reeksdatum; vandaag wordt correct tussen mijlpalen geplaatst',()=>{
@@ -34,4 +34,20 @@ test('Actuele operationele analyse rondt pas af na alle geldige individuele beoo
  assert.equal(showPlanning(show,{risks},now).steps[1].completed,false);risks.operational.assessments.R03=row;assert.equal(showPlanning(show,{risks},now).steps[1].completed,true);
  for(const change of [v=>v.state='pending',v=>v.operational.source=null,v=>v.operational.assessments.R03={...row,riskLevel:'high',riskNote:' '},v=>v.operational.assessments.R03={...row,completedAt:null}]){const copy=structuredClone(risks);change(copy);assert.equal(showPlanning(show,{risks:copy},now).steps[1].completed,false);}
  assert.equal(showPlanning(show,{risks:{...risks,risks:[]}},now).steps[1].completed,true,'Een beschikbare analyse zonder geïdentificeerde risico’s heeft geen open beoordelingen');
+});
+
+const completeMeasureSnapshot=()=>({risks:{state:'ready',risks:[{id:'R01',title:'Synthetisch risico'}],production:{choices:{escape_routes:false,fireworks:false,open_fire:false,lasers:false,drones:false}},assessments:{barrier:{completed:true,riskLevel:'none',riskNote:'Geen maatregel, wel toelichting.'},floor:{completed:true,riskLevel:'low',note:''}},operational:{source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},assessments:{R01:{revision:1,riskLevel:'low',riskNote:'',completedAt:'2026-11-05T10:00:00Z'}}}}});
+test('Geen maatregelen: alleen na alle actuele operationele en toepasselijke productiebeoordelingen afronden',()=>{
+ const snapshot=completeMeasureSnapshot();assert.equal(showMeasures(show,snapshot).rows.length,0);assert.equal(showMeasures(show,snapshot).complete,true);assert.equal(showPlanning(show,snapshot,now).steps[3].completed,true);
+ for(const change of [v=>v.risks.state='pending',v=>delete v.risks.operational.assessments.R01,v=>v.risks.assessments.floor.completed=false,v=>delete v.risks.production.choices.lasers,v=>v.risks.production.choices.lasers=true]){const copy=structuredClone(snapshot);change(copy);assert.equal(showMeasures(show,copy).complete,false);}
+ assert.equal(showMeasures({...show,venue:'AFAS Live'},snapshot).complete,false);
+});
+test('Midden/Hoog leveren losse maatregelen uit productie en actuele operationele bron; geen toelichtingen of oude risico’s',()=>{
+ const snapshot=completeMeasureSnapshot();snapshot.risks.assessments.barrier={completed:true,riskLevel:'medium',riskNote:' Extra toezicht barrier. '};snapshot.risks.assessments.floor={completed:false,riskLevel:'high',note:'Vloervak vrijhouden.'};snapshot.risks.operational.assessments.R01={revision:1,riskLevel:'high',riskNote:'Afzonderlijke operationele maatregel.',completedAt:'2026-11-05T10:00:00Z'};snapshot.risks.operational.assessments.R02={revision:1,riskLevel:'high',riskNote:'Historisch en niet in huidige analyse.',completedAt:'2026-11-05T10:00:00Z'};
+ const model=showMeasures(show,snapshot);assert.deepEqual(model.rows.map(row=>row.text),['Extra toezicht barrier.','Vloervak vrijhouden.','Afzonderlijke operationele maatregel.']);assert.equal(new Set(model.rows.map(row=>row.id)).size,3);assert.ok(model.rows.every(row=>row.implemented===false));assert.equal(model.complete,false);
+ snapshot.risks.assessments.floor.completed=true;assert.equal(showMeasures(show,snapshot).allRisksCompleted,true);assert.equal(showMeasures(show,snapshot).complete,false);
+ snapshot.risks.state='not-ready';assert.equal(showMeasures(show,snapshot).rows.length,2);
+});
+test('Historische afgeronde Midden/Hoog zonder expliciete maatregel niet stilzwijgend als maatregelenvrij afronden',()=>{
+ const snapshot=completeMeasureSnapshot();snapshot.risks.assessments.barrier={completed:true,riskLevel:'medium',riskNote:null};assert.equal(showMeasures(show,snapshot).complete,false);
 });

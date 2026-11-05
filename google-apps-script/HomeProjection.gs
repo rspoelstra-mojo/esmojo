@@ -21,7 +21,7 @@ function esmojoHomeProjectionSave_(folder,storage){
 }
 function esmojoHomeCompletion_(show,target){
  const snapshot=esmojoHomeSnapshot_(target);
- return{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot),operational:operationalComplete(snapshot),measures:false};
+ return{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot),operational:operationalComplete(snapshot),measures:showMeasures(show,snapshot).complete};
 }
 function esmojoHomeRefresh_(concertId){
  const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),{state,folder}=esmojoHomeIndex_(root),show=homeCatalogue(state,'',[],{includeHistory:true}).find(show=>show.key===concertId||show.concerts.some(row=>row.key===concertId));
