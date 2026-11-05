@@ -1,3 +1,4 @@
+import {homeDashboardCache} from './lib/home-cache.js';
 import {createHomeDashboard} from './home-dashboard.js';
 import {groupReportMenu} from './lib/report-menu.js';
 import {reportPages,reportHref} from '../shared/report-routes.js';
@@ -52,6 +53,7 @@ document.querySelector('#navigation').innerHTML = [
 function updateModuleProfile(current){
   const changed=profile?.id!==current.id||profile?.role!==current.role||moduleFingerprint(profile)!==moduleFingerprint(current);
   if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();}
+  homeDashboardCache.bind(current);
   profile=current;
   document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=Boolean(module&&!hasModule(profile,module));});
   document.querySelector('[data-page="beheerder"]').hidden=!isAdministrator(profile);
@@ -162,6 +164,7 @@ startAuth({
   onSignedOut() {
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
+    homeDashboardCache.clear();
     profile = null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
     document.querySelector('.content-box').replaceChildren();
     document.querySelector('.avatar').replaceChildren();

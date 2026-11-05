@@ -27,7 +27,7 @@ jobs:
           }
           const failures=new Set();
           // Tijdschema vóór de imports vastleggen; daarna nogmaals voor nieuw ontdekte concerten.
-          for (const endpoint of ['https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/shows-sync','https://esmojo.nl/api/ontrack-concerts-sync','https://esmojo.nl/api/timetables-sync']) {
+          for (const endpoint of ['https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/shows-sync','https://esmojo.nl/api/ontrack-concerts-sync','https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/home-planning-sync']) {
             try {
               const identityUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
               identityUrl.searchParams.set('audience', endpoint);

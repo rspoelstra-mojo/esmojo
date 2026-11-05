@@ -50,6 +50,7 @@ jobs:
           node server/shows-store.test.js
           node server/home-dashboard.test.js
           node shared/home-planning.test.js
+          node src/lib/home-cache.test.js
       - name: Install pinned publication tool
         run: npm ci --prefix tools/apps-script --no-audit --no-fund
       - name: Update existing webapp
