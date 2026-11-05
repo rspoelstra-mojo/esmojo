@@ -12,13 +12,9 @@ function esmojoWebInventory_(folder){
  const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'),catalogue=esmojoTimetableCatalogue_(),choices=[...catalogue.values()].filter(show=>show.date<=today).map(show=>({key:show.concertId,name:show.artist,venue:show.venue,dates:[show.date]})),files=folder.getFiles(),sources=[];let unlinked=0;
  while(files.hasNext()){
   const file=files.next();if(file.isTrashed()||!/\.csv$/i.test(file.getName()))continue;
-  const linked=mail.sources.find(source=>source.id===file.getId());let choice=linked?.showKey?choices.find(show=>show.key===linked.showKey):esmojoOnTrackAutoShow_(file.getName(),choices),show;
+  const linked=mail.sources.find(source=>source.id===file.getId()),automatic=linked?.showKey?null:reportConcertMatch(file.getName(),choices,ESMOJO_WEB_REPORT_VENUES,today);let choice=linked?.showKey?choices.find(show=>show.key===linked.showKey):automatic.show,show;
   if(choice){const canonical=catalogue.get(choice.key);show={key:choice.key,name:choice.name,venue:choice.venue,date:canonical.date,sourceUrl:canonical.sourceUrl||null,origin:'catalogue'};}
-  else if(!linked?.showKey){
-   const match=/^incidents_(.+)\.csv$/i.exec(file.getName()),normalize=value=>value.normalize('NFC').toUpperCase().replace(/[\s_-]+/g,'_');
-   const ambiguous=match&&choices.filter(item=>normalize(item.key)===normalize(match[1])).length>1;
-   if(!ambiguous)show=reportFilenameShow(file.getName(),ESMOJO_WEB_REPORT_VENUES,today,[...catalogue.values()].map(show=>show.artist));
-  }
+  else if(!linked?.showKey&&automatic.state!=='ambiguous')show=reportFilenameShow(file.getName(),ESMOJO_WEB_REPORT_VENUES,today,[...catalogue.values()].map(show=>show.artist));
   if(!show){unlinked++;continue;}
   const source={id:file.getId(),name:file.getName(),modifiedAt:file.getLastUpdated().toISOString(),mime:file.getMimeType(),size:file.getSize(),show,validationVersion:'csv-web-v2'};
   source.context=esmojoOnTrackHash_(JSON.stringify(source));const entry=index.document.entries[source.id];source.entry=entry?.context===source.context?entry:null;sources.push(source);
@@ -32,6 +28,21 @@ function esmojoWebSource_(source){
  const file=esmojoOnTrackSourceFile_(source.id);if(file.getName()!==source.name||file.getLastUpdated().toISOString()!==source.modifiedAt)throw Error('SOURCE_CHANGED');
  if(!['text/csv','application/csv','text/plain','application/vnd.ms-excel'].includes(file.getMimeType())||file.getSize()>2*1024*1024)throw Error('REPORT_UNAVAILABLE');
  const bytes=file.getBlob().getBytes();if(bytes.length>2*1024*1024)throw Error('REPORT_UNAVAILABLE');return{bytes,hash:esmojoOnTrackHash_(bytes)};
+}
+function esmojoWebTimetable_(show){
+ const folder=esmojoTimetableFolder_();if(!folder)return null;
+ const exact=esmojoTimetableRead_(folder,{concertId:show.key,date:show.date});if(exact)return exact.snapshot;
+ const expected=reportFilenameShow('incidents_'+show.key+'.csv',ESMOJO_WEB_REPORT_VENUES,show.date),venue=ESMOJO_WEB_REPORT_VENUES.find(venue=>venue.name===show.venue||reportVenueName(venue)===show.venue);
+ if(!expected||expected.date!==show.date||!venue||expected.venue!==reportVenueName(venue))return null;
+ const files=folder.getFiles(),matches=[];
+ while(files.hasNext()){
+  const file=files.next();if(file.isTrashed())continue;
+  const match=/^Tijdschema_(.+)\.json$/.exec(file.getName());if(!match)continue;
+  const candidate=reportFilenameShow('incidents_'+match[1]+'.csv',ESMOJO_WEB_REPORT_VENUES,show.date);
+  if(candidate?.date===show.date&&candidate.key===expected.key)matches.push(match[1]);
+ }
+ if(matches.length>1)throw Error('REPORT_CONFLICT');if(!matches.length)return null;
+ return esmojoTimetableRead_(folder,{concertId:matches[0],date:show.date})?.snapshot||null;
 }
 function esmojoWebReports_(request){
  const operation=request.operation,allowed={ 'web-menu':['operation','actor'],'web-scan':['operation','actor'],'web-source':['operation','actor','sourceId','context'],'web-commit':['operation','actor','sourceId','context','sourceHash','state','errorCode','mojo'],'web-read':['operation','actor','concertId']}[operation];
@@ -59,6 +70,6 @@ function esmojoWebReports_(request){
  }
  const series=inventory.reports.find(report=>report.shows.some(show=>show.concertId===request.concertId));if(!series)throw Error('NOT_FOUND');
  const data=esmojoWebSource_(source);if(data.hash!==source.entry.sourceHash)throw Error('SOURCE_CHANGED');let timetable=null;
- try{const show=inventory.catalogue.get(source.show.key);if(show)timetable=esmojoTimetableRead_(esmojoTimetableFolder_(),show)?.snapshot||null;}catch{/* Een onleesbaar schema verzint geen geplande tijden. */}
+ try{timetable=esmojoWebTimetable_(source.show);}catch{/* Een onleesbaar schema verzint geen geplande tijden. */}
  return{show:{...source.show,...(source.entry.mojo.sourceUrl?{sourceUrl:source.entry.mojo.sourceUrl}:{})},photo:source.entry.mojo.photo,series,csvBase64:Utilities.base64Encode(data.bytes),sourceHash:data.hash,modifiedAt:source.modifiedAt,timetable};
 }
