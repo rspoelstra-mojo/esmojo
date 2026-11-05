@@ -1,7 +1,7 @@
 // Alleen Openbaar: vier afrondvlaggen per canonieke Gashouder-reeks.
 // Geen keuzes, ticketinhoud, account-ID of persoonlijke relatie in deze projectie/cache.
-function esmojoHomeProjectionRead_(folder){
- const cache=CacheService.getScriptCache(),key='home-public-planning-v1:'+folder.getId(),cached=cache.get(key);
+function esmojoHomeProjectionRead_(folder,fresh=false){
+ const cache=CacheService.getScriptCache(),key='home-public-planning-v1:'+folder.getId(),cached=fresh?null:cache.get(key);
  const file=cached?null:esmojoShowFile_(folder,'_esmojo_home_planning_v1.json');
  const document=cached?JSON.parse(cached):file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{managedBy:'ESMOJO/HomePlanning-v1',classification:'openbaar',version:1,entries:{}};
  if(Object.keys(document).sort().join(',')!=='classification,entries,managedBy,version'||document.managedBy!=='ESMOJO/HomePlanning-v1'||document.classification!=='openbaar'||document.version!==1||!document.entries||Array.isArray(document.entries))throw Error('DASHBOARD_UNAVAILABLE');
@@ -25,7 +25,7 @@ function esmojoHomeCompletion_(show,target){
 }
 function esmojoHomeRefresh_(concertId){
  const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),{state,folder}=esmojoHomeIndex_(root),show=homeCatalogue(state,'',[],{includeHistory:true}).find(show=>show.key===concertId||show.concerts.some(row=>row.key===concertId));
- if(!show)return null;const storage=esmojoHomeProjectionRead_(folder),row={key:show.key,updatedAt:new Date().toISOString()};
+ if(!show)return null;const storage=esmojoHomeProjectionRead_(folder,true),row={key:show.key,updatedAt:new Date().toISOString()};
  try{row.completion=esmojoHomeCompletion_(show,esmojoHomeTarget_(state,folder,show.key));}catch{row.planningUnavailable=true;}
  storage.document.entries[show.key]=row;esmojoHomeProjectionSave_(folder,storage);return row;
 }
@@ -42,7 +42,7 @@ function esmojoHomeRebuild_(request){
  for(const show of catalogue){const row={key:show.key,updatedAt:new Date().toISOString()};try{row.completion=esmojoHomeCompletion_(show,esmojoHomeTarget_(state,folder,show.key));}catch{row.planningUnavailable=true;}computed[show.key]=row;}
  const lock=LockService.getUserLock();if(!lock.tryLock(20000))throw Error('BUSY');
  try{
-  const storage=esmojoHomeProjectionRead_(folder);
+  const storage=esmojoHomeProjectionRead_(folder,true);
   for(const [key,row]of Object.entries(computed)){
    // Een bronwijziging die tijdens de controle klaar is, blijft altijd leidend.
    if(JSON.stringify(storage.document.entries[key]||null)===JSON.stringify(before[key]||null))storage.document.entries[key]=row;
