@@ -901,7 +901,7 @@ showcontext en bestaande beoordelingsresponses; lees niets extra bij tabwissels.
 
 ## Jaartellers homepage
 
-Vanaf V1.47 heten de cijfers Mijn shows dit jaar en Afgerond dit jaar. Gebruik
+Vanaf V1.47 heten de cijfers Mijn shows dit jaar en Afgerond. Gebruik
 het Nederlandse huidige kalenderjaar, 1 januari t/m 31 december, op basis van
 de daadwerkelijke showdatum (niet de datum waarop het voorbereidingswerk af is).
 Tel gekoppelde werkelijke concertdagen, ook verleden in hetzelfde jaar; reeksen

@@ -144,7 +144,7 @@ De gepubliceerde versie en workflowresultaten staan in de taaknotitie.
 
 ## Kalenderjaartellingen (V1.47)
 
-Mijn shows dit jaar en Afgerond dit jaar tellen unieke aan de actuele gebruiker
+Mijn shows dit jaar en Afgerond tellen unieke aan de actuele gebruiker
 gekoppelde concertdagen met een datum binnen 1 januari t/m 31 december van het
 huidige Nederlandse kalenderjaar. Afgerond volgt alle vier bevestigde
 voorbereidingsstappen, zonder te wachten op Showdag. De voltooiingsdatum bepaalt
