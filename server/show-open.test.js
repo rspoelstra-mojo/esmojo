@@ -50,3 +50,17 @@ test('Bevestigde operationele beoordeling werkt showgeheugen en planning direct 
  await data.request('operational-risk',{body:{concertId:'Test',riskId:'R01',source,revision:0,riskLevel:'low',riskNote:''}});
  assert.equal(data.planningSnapshot().risks.operational.assessments.R01.riskLevel,'low');assert.equal(notified,1);assert.equal(data.version(),1);assert.equal((await data.request('show-risks',{body:{}})).operational.assessments.R01.revision,1);assert.equal(calls,1);data.dispose();
 });
+
+test('Achtergrondbeoordelingen blijven in showgeheugen en worden in volgorde uitgevoerd',async()=>{
+ const bundle=await openFixture(),calls=[],waiting=[],data=createShowData(bundle,async(action)=>{calls.push(action);return new Promise(resolve=>waiting.push(resolve));});
+ const memory=data.operationalReviews;memory.source='same-source';memory.drafts.set('R01',{riskNote:'Synthetische invoer',busy:true});
+ const a=memory.run(()=>data.request('operational-risk',{body:{riskId:'R01'}})),b=memory.run(()=>data.request('operational-risk',{body:{riskId:'R02'}}));assert.equal(data.busy,true);
+ await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.length,1);waiting.shift()({});await a;await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.length,2);waiting.shift()({});await b;await memory.whenSettled();assert.equal(data.busy,false);assert.equal(memory.drafts.get('R01').riskNote,'Synthetische invoer');
+ data.dispose();assert.equal(memory.drafts.size,0);await assert.rejects(memory.run(()=>{throw Error('Mag niet starten');}),/gewist/);
+});
+
+test('Afmelden wist achtergrondinvoer en voorkomt dat wachtende beoordelingen alsnog starten',async()=>{
+ const bundle=await openFixture(),data=createShowData(bundle,async()=>({})),memory=data.operationalReviews;let release,calls=0;
+ memory.drafts.set('R01',{riskNote:'Alleen tijdelijk'});const first=memory.run(()=>{calls++;return new Promise(done=>release=done);}),second=memory.run(()=>{calls++;});const denied=assert.rejects(second,/gewist/);
+ await new Promise(resolve=>setImmediate(resolve));data.dispose();release();await first;await denied;await memory.whenSettled();assert.equal(calls,1);assert.equal(memory.drafts.size,0);
+});

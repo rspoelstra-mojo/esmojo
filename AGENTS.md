@@ -863,3 +863,12 @@ ontbrekende of verouderde analyse blijft open. Planning en openbare homeprojecti
 ronden alleen af als alle actuele risico’s geldig beoordeeld zijn. Projecteer
 uitsluitend de afrondvlag; geen risicoklasse/tekst/historie in openbare cache.
 Maatregelen worden hier alleen bewaard; hun implementatiestap blijft open.
+
+Vanaf V1.45 keert Opslaan bij een operationeel risico direct terug naar het
+Risicoanalyse-overzicht. Toon de gekozen klasse direct; rond de planning pas af
+na bevestigde serveropslag. Operational-review-memory bewaart tijdelijke invoer,
+wachtrij en fouten in het bestaande showgeheugen, ook bij SPA-navigatie. Geen
+persistente browseropslag. Eén verzoek tegelijk; overige risico's blijven
+bedienbaar. Toon een fout bij het betreffende risico, behoud invoer en vereis
+een bewuste herpoging. Afmelden/rolwissel wist het geheugen en start geen nog
+niet begonnen schrijfacties meer. De bron-/revisiecontroles blijven behouden.
