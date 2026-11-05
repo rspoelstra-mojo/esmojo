@@ -391,7 +391,7 @@ Gebruik src/risk-review-card.js voor het standaardblok “Risico beoordeling”:
 gekleurde keuzes in twee kolommen. Geen risico vereist Toelichting; Laag heeft
 geen tekstveld; Midden/Hoog vereisen Beheersmaatregel. Opslaan rondt de geldige
 beoordeling af via de bestaande beveiligde revisie-/Drive-route. Momenteel wordt
-dit blok uitsluitend rechts van Barrieropstelling gebruikt, op dezelfde breedte
+dit blok rechts van Barrieropstelling en bij ieder operationeel risico gebruikt, op dezelfde breedte
 als de Showprofiel-zijkaart. Vloerdruk behoudt de bestaande component.
 De barrierbeoordeling bewaart riskNote afzonderlijk van notes voor een afwijkend
 ontwerp, binnen dezelfde Vertrouwelijke beoordeling in Drive. Historische
@@ -582,8 +582,8 @@ Gebruik de Nederlandse kalenderdag Europe/Amsterdam, ook rond zomertijd.
 Showprofiel alleen afgerond als de actuele PDF-status ready is; productionele
 risico’s alleen als alle toepasselijke beoordelingen afgerond zijn. Nee-keuzes
 en Entreeproces bij Gashouder zijn NVT; ontbrekende beoordelingen blijven open.
-Operationele risico’s en beheersmaatregelen blijven zichtbaar maar voorlopig
-altijd onafgerond totdat hun echte afrondfunctionaliteit expliciet gebouwd is.
+Operationele risico’s volgen vanaf V1.43 de actuele brongebonden individuele
+beoordelingen; beheersmaatregelen blijven voorlopig onafgerond.
 Geen handmatig afvinken of nieuwe statusopslag. De planning gebruikt uitsluitend
 de bestaande gedeelde showcontext en reageert op bevestigde wijzigingen.
 
@@ -844,3 +844,22 @@ wordt ook buiten de catalogus het bestaande Tijdschemas-archief gelezen: dezelfd
 artiest, canonieke zaal en datum, unieke match en ongewijzigde noonvalidatie.
 Geen archief herschrijven of ontbrekende tijden reconstrueren. Alleen de webflow;
 PDF-/mailregister, ontvangers en verzendmomenten blijven ongewijzigd.
+
+
+
+## Operationele risicobeoordeling
+
+Vanaf V1.43 gebruikt ieder operationeel risico de bestaande Risico beoordeling-
+kaart zonder standaardselectie. Geen risico vereist Toelichting; Laag bewaart
+geen tekst; Midden/Hoog vereisen Beheersmaatregel. Status is Nog te beoordelen
+of de bevestigde risicoklasse. Bewerken verandert pas na bevestigde Opslaan.
+Deze beoordelingen/toelichtingen/maatregelen vallen onder de bestaande
+Vertrouwelijke risicobeoordelingen: Vercel-verwerking, uitsluitend Drive-opslag.
+Bewaar operationalReviews per PDF-bronrevisie in productionele-risicos.json,
+met eigen revisie per risico, historie en readback. Geen AI-bron overschrijven.
+Nieuwe actuele PDF/analyses nemen oude beoordelingen nooit over. Een beschikbare
+analyse zonder geïdentificeerde risico’s heeft geen open beoordelingen; een
+ontbrekende of verouderde analyse blijft open. Planning en openbare homeprojectie
+ronden alleen af als alle actuele risico’s geldig beoordeeld zijn. Projecteer
+uitsluitend de afrondvlag; geen risicoklasse/tekst/historie in openbare cache.
+Maatregelen worden hier alleen bewaard; hun implementatiestap blijft open.

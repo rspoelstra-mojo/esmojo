@@ -37,6 +37,7 @@ function esmojoRiskStatus_(concertId) {
     analysis:{exists:Boolean(document),filename,promptVersion:RISK_PROMPT_VERSION}};
 }
 function esmojoShowProfileRisks_(request,openTarget) {
+  if(request.operation==='risk-operational-save')return esmojoOperationalSave_(request);
   const op=request.operation.slice(5),allowed={pending:['operation','after'],status:['operation','concertId'],view:['operation','concertId'],'production-save':['operation','concertId','field','value','revision','actor'],pdf:['operation','concertId','source'],read:['operation','concertId','source'],save:['operation','concertId','source','result']}[op];
   if(!allowed)throw Error('VALIDATION');riskKeys(request,allowed);
   if(op==='pending'){
@@ -62,7 +63,7 @@ function esmojoShowProfileRisks_(request,openTarget) {
     try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return{state:'not-ready',risks:[],production,assessments};throw error;}
     const document=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
     // Browser krijgt alleen de gevraagde definitie; geen PDF-bytes, ticketdata of Drive-IDs.
-    return {state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production,assessments};
+    return {state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production,assessments,...(document?{operational:esmojoOperationalState_(productionDocument,source.source)}:{})};
   }
   validateRiskReference(request.source);if(op==='save')validateRiskResult(request.result);
   // Nieuwe analyse uitsluitend voor de huidige definitieve PDF. Oude analyses blijven leesbaar.

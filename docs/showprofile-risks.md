@@ -182,3 +182,38 @@ zijn geladen. Historie en actor blijven uitsluitend in Drive. De keuzes volgen
 bij een nieuw toegevoegde eerdere reeksdatum de canonieke map, zonder conflicten
 stilzwijgend samen te voegen. Deze bestanden veranderen het bron-PDF en de
 ChatGPT-analyses niet. De MCP-tools krijgen geen nieuwe handmatige schrijfactie.
+
+
+## Individuele ESM-beoordeling (V1.43)
+
+Ieder actueel operationeel risico heeft naast de definitie de gedeelde kaart uit
+src/risk-review-card.js. Zonder opgeslagen beoordeling: Nog te beoordelen. Daarna
+toont het overzicht Geen risico, Laag, Midden of Hoog. Geen risico vereist een
+toelichting, Midden/Hoog een beheersmaatregel, Laag geen tekst. Geen voorselectie.
+Opslaan bevestigt de beoordeling; Bewerken maakt een nieuwe bevestiging mogelijk.
+
+POST /api/access?action=operational-risk vereist de actuele geactiveerde Shows-
+module, MFA en geldige sessie. De server bindt actor aan de sessie; input is exact
+concertId, source (revision/sha256), riskId, revision, riskLevel en riskNote. De
+ondertekende risk-operational-save-route kiest de canonieke reeksmap, controleert
+de actuele PDF-bron en het bestaande risico-ID en serialiseert met UserLock.
+
+Opslag blijft in het bestaande Vertrouwelijke productionele-risicos.json:
+operationalReviews[PDF-revisie] bevat source, assessments en history. Iedere
+risicobeoordeling heeft een eigen revision, riskLevel, riskNote en completedAt.
+Historie bewaart actor/before/after uitsluitend in Drive. Identieke retry na
+verloren antwoord schrijft niet dubbel; afwijkende oude revisie geeft conflict.
+Volledige readback vereist vóór bevestiging. AI-bestanden blijven immutable;
+oude beoordelingen worden bewaard maar niet toegepast op een nieuwe bron.
+
+De gedeelde operationalComplete-regel geldt voor concertplanning en homeprojectie:
+alle actuele risico’s moeten een geldige beoordeling hebben. Geen actuele analyse
+betekent open, een beschikbare lege analyse heeft geen open beoordelingen. Een
+bevestigde write werkt zowel sessiegeheugen als de bestaande openbare homepage-
+afrondvlag bij. Geen vertrouwelijke inhoud in browseropslag of openbare projectie.
+Beheersmaatregelen krijgen nog geen taken-/implementatieworkflow.
+
+Controle: server/operational-risks.test.js (ondertekende Drive-flow, 3/3, conflict,
+retry, bronwissel, privacy); accounts-api.test.js (module/MFA/serveractor);
+show-open.test.js en show-planning.test.js (cache/directe planning). Browsercontrole
+met uitsluitend synthetische fixtures op 1920/1440/900/700/390px, licht en donker.

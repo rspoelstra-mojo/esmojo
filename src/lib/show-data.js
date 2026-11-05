@@ -37,6 +37,7 @@ export function createShowData(bundle,request,concertId){
       if(!disposed){
         if(read){remember(action,data);overview(data);}
         else if(action==='show-profile-pdf'&&body.operation!=='download')remember(action,data);
+        else if(action==='operational-risk')overview(data);
         else if(action==='production-risks')overview({overview:{production:data}});
         else if(['show-profile','analysis-finalization','ticket-data','barrier-layout','floor-pressure'].includes(action)){
           if(body.operation==='download')return data;
@@ -67,6 +68,7 @@ export function createShowData(bundle,request,concertId){
     planningSnapshot(){
       const risks=values.get('show-risks');
       return structuredClone({profile:{finalization:values.get('show-profile')?.finalization},pdf:values.get('show-profile-pdf'),risks:{
+        state:risks?.state,risks:risks?.risks,operational:risks?.operational,
         production:risks?.production||productionChoices.server,
         assessments:risks?.assessments||{barrier:values.get('barrier-layout')?.record,floor:values.get('floor-pressure')?.record},
       }});

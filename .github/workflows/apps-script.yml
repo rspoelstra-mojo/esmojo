@@ -45,6 +45,7 @@ jobs:
           node --test tools/apps-script/deploy.test.mjs
           node server/mcp.test.js
           node server/showprofile-risks.test.js
+          node server/operational-risks.test.js
           node server/production-assessments.test.js
           node server/show-open.test.js
           node server/shows-store.test.js
@@ -63,3 +64,4 @@ jobs:
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
         run: node tools/apps-script/deploy.mjs
+
