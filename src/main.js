@@ -1,8 +1,7 @@
 import {homeDashboardCache} from './lib/home-cache.js';
 import {createHomeDashboard} from './home-dashboard.js';
-import {groupReportMenu} from './lib/report-menu.js';
-import {reportPages,reportHref} from '../shared/report-routes.js';
-import {createWebReportPage} from './report-web.js';
+import {createReportsPage} from './reports-page.js';
+import {reportCatalogueCache} from './lib/report-catalogue-cache.js';
 import {createOnTrackAdminView} from './ontrack-admin.js';
 import {enableFluidLayout} from './layouts/fluid-layout.js';
 import {createFluidPreviewPage} from './fluid-preview/page.js';
@@ -53,7 +52,7 @@ document.querySelector('#navigation').innerHTML = [
 function updateModuleProfile(current){
   const changed=profile?.id!==current.id||profile?.role!==current.role||moduleFingerprint(profile)!==moduleFingerprint(current);
   if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();}
-  homeDashboardCache.bind(current);
+  homeDashboardCache.bind(current);reportCatalogueCache.bind(current);
   profile=current;
   document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=Boolean(module&&!hasModule(profile,module));});
   document.querySelector('[data-page="beheerder"]').hidden=!isAdministrator(profile);
@@ -107,16 +106,8 @@ function renderPage() {
     }else disposePage = createShowsSubmenu(submenu, selected, content);
   }
   if(root==='rapportages'){
-    let selected;try{selected=decodeURIComponent(route.split('/')[1]||'');}catch{selected=null;}
-    for(const group of groupReportMenu(reportPages)){
-      const heading=document.createElement('h3');heading.className='submenu-group-heading';heading.textContent=group.title;heading.dataset.submenuGroupHeading=group.id;submenu.append(heading);
-      if(!group.reports.length){const empty=document.createElement('p');empty.className='submenu-group-empty';empty.textContent='Geen rapportages';empty.dataset.submenuGroupEmpty=group.id;submenu.append(empty);}
-      for(const report of group.reports){
-        const link=document.createElement('a');link.href=reportHref(report);link.className='submenu-link';link.textContent=report.label;link.dataset.submenuTitle=report.label;link.dataset.submenuGroup=group.id;submenu.append(link);
-        if(selected===report.concertId){link.setAttribute('aria-current','page');disposePage=createWebReportPage(content,link,{slug:report.slug});}
-      }
-    }
-    if(!reportPages.some(report=>report.concertId===selected))content.textContent='Rapportage niet gevonden.';
+    let selected;try{selected=decodeURIComponent(route.split('/')[1]||'')||null;}catch{selected='invalid';}
+    disposePage=createReportsPage(content,submenu,{selected});
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
@@ -154,6 +145,7 @@ startAuth({
     updateModuleProfile(current);
     clearInterval(menuRefreshTimer);
     if(hasModule(profile,'shows'))void refreshShowsMenu();
+    if(hasModule(profile,'reports'))void reportCatalogueCache.refresh(access).catch(()=>{});
     menuRefreshTimer=setInterval(()=>{if(!document.hidden)void refreshModuleAccess();},60000);
     document.querySelector('.rail').hidden = false;
     document.querySelector('.workspace').hidden = false;
@@ -164,7 +156,7 @@ startAuth({
   onSignedOut() {
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
-    homeDashboardCache.clear();
+    homeDashboardCache.clear();reportCatalogueCache.clear();
     profile = null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
     document.querySelector('.content-box').replaceChildren();
     document.querySelector('.avatar').replaceChildren();

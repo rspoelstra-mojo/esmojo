@@ -92,7 +92,7 @@
     },
     {
       "source": "/statistieken",
-      "destination": "/rapportages/Jungle_Ziggo-Dome_03112026",
+      "destination": "/rapportages",
       "permanent": true
     },
     {
