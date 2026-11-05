@@ -70,11 +70,12 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       }
       const actor = data.user.id;
       const previewReads=isFluidPreview(env)?(previewSource||createFluidPreviewSource({token})):null;
-      let previewDeadline=null;
+      let previewDeadline=null,homeDashboard=null;
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          return await profiles('self', actor);
+          const result=await profiles('self',actor,['session','restore'].includes(action)?{includeHome:true}:{});
+          const {homeDashboard:home,...profile}=result;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
           if (failure.message === 'FORBIDDEN') throw new Error('ACCOUNT_DISABLED');
@@ -91,11 +92,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if(previewDeadline)expiresAt=Math.min(expiresAt||0,previewDeadline);
       if (remembered) expiresAt = Math.min(expiresAt || 0, remembered.expiresAt);
       if (own.activated && (!expiresAt || expiresAt <= Date.now())) return expired();
-      if (action === 'session' && req.method === 'GET') return reply(200, { profile: own, expiresAt });
+      if (action === 'session' && req.method === 'GET') return reply(200, { profile: own, expiresAt,homeDashboard });
       if (action === 'restore' && req.method === 'POST') {
         if (!own.activated) return expired();
         writeSessionCookie(res, { userId: actor, refreshToken: restored.refresh_token, expiresAt }, env);
-        return reply(200, { profile: own, session: restored, expiresAt });
+        return reply(200, { profile: own, session: restored, expiresAt,homeDashboard });
       }
       if (action === 'remember' && req.method === 'POST') {
         if (!own.activated) return reply(403, { error: 'Stel eerst je account in.' });
@@ -177,7 +178,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         const input = req.body;
         if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });
         const index = await shows('list');
-        const concert = index.concerts.find(row => row.concertId === input.concertId);
+        let concert = index.concerts.find(row => row.concertId === input.concertId);
+        if(!concert){try{concert=(await shows('home-metadata',{concertId:input.concertId,actor})).show;}catch{/* Geen vrije URL/andere zaal als fallback. */}}
         return reply(200, { photo: concert ? await photoService(concert.sourceUrl) : null });
       }
       if (action === 'show-profile' && req.method === 'POST') {

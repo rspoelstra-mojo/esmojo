@@ -16,7 +16,7 @@ export function dutchToday(now=new Date()){
   const value=type=>parts.find(part=>part.type===type).value;return `${value('year')}-${value('month')}-${value('day')}`;
 }
 export const planningDate=value=>new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z')).replace(/\.$/,'');
-function productionComplete(show,snapshot){
+export function productionComplete(show,snapshot){
   const risk=snapshot.risks;if(!risk?.production)return false;
   return productionRiskGroups.every(group=>group.items.every(item=>{
     if(item.id==='entrance_process'&&show.venue?.trim().toLocaleLowerCase('nl-NL')==='gashouder')return true;
@@ -30,7 +30,7 @@ function productionComplete(show,snapshot){
 export function showPlanning(show,snapshot={},now=new Date()){
   const dates=[...(show.dates||[])].sort();if(!dates.length||dates.some(date=>calendarDay(date)===null))return null;
   const start=calendarDay(dates[0]),today=dutchToday(now),todayTime=calendarDay(today);
-  const completed={profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot)};
+  const completed=snapshot.completion||{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot)};
   const profileDates=Object.values(snapshot.profile?.finalization?.categories||{}).map(row=>row.completedAt).filter(value=>Number.isFinite(Date.parse(value))).sort();
   const steps=definitions.map(([id,label,offset])=>{
     const date=new Date(start-offset*DAY).toISOString().slice(0,10),days=Math.round((calendarDay(date)-todayTime)/DAY),done=completed[id]===true;

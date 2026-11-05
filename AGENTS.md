@@ -785,3 +785,25 @@ verzinnen voor historische rapporten zonder opname. Meerdere acts, surprise,
 pauzes en nachtelijke tijden krijgen eigen chronologische tussenkoppen in de
 incidentenlijst; geen incident/KPI/grafiek/PDF-wijziging. Houd filtering en alle
 Reports/MFA-/Drive-controles intact. Zie docs/report-timetables.md.
+
+
+## Homepage: openbare cache en achtergrondstatus
+
+Op 5 november 2026 heeft de gebruiker expliciet openbare homepagegegevens in
+lokale browseropslag toegestaan: concertmetadata, MOJO-foto-URL's en openbare
+plannings-/afrondstatussen. Accountgegevens, rechten en persoonlijke showkoppelingen
+nooit mee opslaan. home-cache.js whitelists deze gegevens en voegt privérelaties
+pas na de bestaande beveiligde sessie toe in geheugen. Bij hercontrole altijd de
+laatst bevestigde status laten staan totdat een nieuwe status bevestigd is; geen
+zichtbare laadbeurt bij navigatie/verversen. Oude/late accountreacties negeren.
+Een openbare statusprojectie in Drive en CacheService vervangt N bronlezingen;
+bronwijzigingen werken de betreffende reeks bij. Session/restore levert de
+projectie mee, met alle actuele module-/MFA-controles. Supabase is toegestaan voor
+openbare planning maar niet vereist en hiervoor niet toegevoegd.
+
+Homepage volgt nu ook donker systeemthema. Groepeer kaarten per canonieke reeks,
+toon alle showdatums samen, maximaal vijf aankomende en zes Mijn shows, eerstvolgende
+bovenaan. Teller telt alle toekomstige eigen reeksen. Haal afgeronde taken en
+volledig afgelopen reeksen uit de deadline-lijst, behoud ze in de kalender.
+Bereken daggroepen opnieuw om Nederlandse middernacht. Nog niet gebouwde
+operationele/maatregelafrondingen blijven open. Zie docs/homepage-dashboard.md.
