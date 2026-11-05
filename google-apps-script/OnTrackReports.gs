@@ -34,23 +34,21 @@ function esmojoOnTrackReports_(input){
  const secret=PropertiesService.getScriptProperties().getProperty('ESMOJO_SHARED_SECRET'),reply=(ok,data,code)=>esmojoReply_({ok,data,code});
  if(!secret||secret.length<32||typeof input.body!=='string'||input.body.length>4500000||!Number.isSafeInteger(input.timestamp)||Math.abs(Date.now()-input.timestamp)>120000||!/^[a-f0-9]{32}$/.test(input.nonce||'')||!/^[a-f0-9]{64}$/.test(input.signature||''))return reply(false,null,'FORBIDDEN');
  const hex=bytes=>bytes.map(byte=>('0'+((byte+256)%256).toString(16)).slice(-2)).join(''),digest=esmojoOnTrackHash_(input.body),expected=hex(Utilities.computeHmacSha256Signature('ontrack-reports\n'+input.timestamp+'\n'+input.nonce+'\n'+digest,secret,Utilities.Charset.UTF_8));let difference=0;for(let i=0;i<expected.length;i++)difference|=expected.charCodeAt(i)^input.signature.charCodeAt(i);if(difference)return reply(false,null,'FORBIDDEN');
- const lock=LockService.getScriptLock();if(!lock.tryLock(20000))return reply(false,null,'BUSY');
+ let parsedRequest;try{parsedRequest=JSON.parse(input.body);if(!parsedRequest||typeof parsedRequest!=='object'||Array.isArray(parsedRequest))throw Error('VALIDATION');}catch{return reply(false,null,'VALIDATION');}
+ const web=typeof parsedRequest.operation==='string'&&parsedRequest.operation.startsWith('web-'),lock=web?(parsedRequest.operation==='web-commit'?LockService.getUserLock():null):LockService.getScriptLock();if(lock&&!lock.tryLock(20000))return reply(false,null,'BUSY');
  try{
-  const request=JSON.parse(input.body),operation=request.operation,adminOps=['link','retry','download','send'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail','timetable-candidates','timetable-save'];
-  if(!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview'&&operation!=='timetable-read')throw Error('VALIDATION');
+  const request=parsedRequest,operation=request.operation,adminOps=['link','retry','download','send'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail','timetable-candidates','timetable-save','web-scan','web-source','web-commit'];
+  if(!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview'&&operation!=='web-menu'&&operation!=='web-read'&&operation!=='timetable-read')throw Error('VALIDATION');
   const profiles=esmojoOnTrackProfiles_();if(adminOps.includes(operation)&&!profiles.some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
   const cache=CacheService.getScriptCache(),nonceKey='ontrack-reports:'+input.nonce;if(cache.get(nonceKey))throw Error('FORBIDDEN');cache.put(nonceKey,'1',180);
   if(operation.startsWith('timetable-')){
    if(operation==='timetable-read'&&!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
    return reply(true,esmojoShowTimetables_(request));
   }
-  if(operation==='web-preview'){
-   if(!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
-   if(Object.keys(request).sort().join(',')!=='actor,operation,slug'||request.slug!=='jungle')throw Error('VALIDATION');
-   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');
-   const file=esmojoOnTrackFile_(folder,'incidents_JUNGLE_ZIGGO_DOME_02112026.csv');if(!file)throw Error('SOURCE_MISSING');
-   const csv=esmojoOnTrackSourceFile_(file.getId());if(csv.getMimeType()!=='text/csv'||csv.getSize()>2*1024*1024)throw Error('REPORT_UNAVAILABLE');
-   return reply(true,{csvBase64:Utilities.base64Encode(csv.getBlob().getBytes()),modifiedAt:csv.getLastUpdated().toISOString()});
+  if(operation.startsWith('web-')){
+   if(operation==='web-preview')throw Error('VALIDATION');
+   if((['web-menu','web-read'].includes(operation)||request.actor!==undefined)&&!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
+   return reply(true,esmojoWebReports_(request));
   }
   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');const file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json');
   const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,revision:0,recipientIds:[],sources:[],reports:[],nonces:{}};
@@ -132,5 +130,5 @@ function esmojoOnTrackReports_(input){
   if(operation==='delivery-commit'){if(typeof request.providerId!=='string'||request.providerId.length>120||!/^[A-Za-z0-9_-]+$/.test(request.providerId))throw Error('VALIDATION');delivery.status='sent';delivery.providerId=request.providerId;delivery.sentAt=new Date().toISOString();}
   else{delivery.status=delivery.attempts>=3?'review':'pending';delivery.errorCode='DELIVERY_UNCONFIRMED';}
   delivery.job=null;report.emailStatus=report.deliveries.length&&report.deliveries.every(delivery=>delivery.status==='sent')?'sent':report.deliveries.some(delivery=>delivery.status==='review'||delivery.status==='skipped')?'failed':'pending';save();return reply(true,{ok:true});
- }catch(error){const codes=['FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','REGISTER_INVALID'];return reply(false,null,codes.includes(error.message)?error.message:'ONTRACK_REPORT_UNAVAILABLE');}finally{lock.releaseLock();}
+ }catch(error){const codes=['FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','REGISTER_INVALID','NOT_FOUND'];return reply(false,null,codes.includes(error.message)?error.message:'ONTRACK_REPORT_UNAVAILABLE');}finally{if(lock)lock.releaseLock();}
 }

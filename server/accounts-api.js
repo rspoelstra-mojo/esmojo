@@ -1,3 +1,4 @@
+import {createWebCatalogueService} from './web-report-catalogue.js';
 import {createWebReportService} from './report-web.js';
 import {createOnTrackReportStore,createOnTrackReportService} from './ontrack-report/service.js';
 import {createMailingConcertsStore} from './ontrack-concerts.js';
@@ -127,10 +128,14 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }catch(error){const code=error.message,status=code==='FORBIDDEN'?403:code==='VALIDATION'?400:code==='NOT_FOUND'?404:503;
           return reply(status,{error:status===403?'Je hebt geen toegang tot Shows.':status===400?'Ongeldig verzoek.':status===404?'Deze show is niet beschikbaar.':'Het planningdashboard kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'shows'}:{})});}
       }
+      if(action==='report-menu'){
+        if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await createWebCatalogueService({store:ontrackReportStore}).menu(actor));}catch(error){return reply(error.message==='FORBIDDEN'?403:503,{error:'Het rapportagesmenu kon niet worden geladen.',...(error.message==='FORBIDDEN'?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
+      }
       if(action==='report-web'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         try{return reply(200,await createWebReportService({store:ontrackReportStore,photo:photoService})(actor,req.body));}
-        catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:503;return reply(status,{error:status===400?'Deze rapportage is niet beschikbaar.':status===403?'Je hebt geen toegang tot deze module.':'De rapportage kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
+        catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:error.message==='NOT_FOUND'?404:503;return reply(status,{error:status===400?'Deze rapportage is niet beschikbaar.':status===403?'Je hebt geen toegang tot deze module.':'De rapportage kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
       }
       if(previewReads&&action==='shows'&&req.method==='GET')return reply(200,await previewReads.menu());
       if(previewReads&&action==='show-photo'&&req.method==='POST'){const input=validateRiskViewRequest(req.body);return reply(200,await previewReads.photo(input.concertId));}

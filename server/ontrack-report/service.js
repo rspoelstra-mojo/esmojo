@@ -12,7 +12,7 @@ export function createOnTrackReportStore({env=process.env,request=fetch,now=Date
   if(parsed.origin!=='https://script.google.com'||!/^\/macros\/s\/[\w-]+\/exec$/.test(parsed.pathname)||parsed.search||parsed.hash||parsed.username||parsed.password)throw Error('ONTRACK_REPORT_UNAVAILABLE');
   const body=JSON.stringify({operation,...(actor?{actor}:{}),...payload}),timestamp=now(),nonce=randomBytes(16).toString('hex'),digest=hash(body),signature=createHmac('sha256',secret).update(`ontrack-reports\n${timestamp}\n${nonce}\n${digest}`).digest('hex');
   let response;try{response=await request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'ontrack-reports',timestamp,nonce,signature,body}),signal:AbortSignal.timeout(60000)});}catch{throw Error('ONTRACK_REPORT_UNAVAILABLE');}
-  if(!response.ok)throw Error('ONTRACK_REPORT_UNAVAILABLE');let result;try{result=await response.json();}catch{throw Error('ONTRACK_REPORT_UNAVAILABLE');}if(!result.ok)throw Error(['FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE'].includes(result.code)?result.code:'ONTRACK_REPORT_UNAVAILABLE');return result.data;
+  if(!response.ok)throw Error('ONTRACK_REPORT_UNAVAILABLE');let result;try{result=await response.json();}catch{throw Error('ONTRACK_REPORT_UNAVAILABLE');}if(!result.ok)throw Error(['FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','NOT_FOUND'].includes(result.code)?result.code:'ONTRACK_REPORT_UNAVAILABLE');return result.data;
  };
 }
 export function validateOnTrackReportRequest(input){

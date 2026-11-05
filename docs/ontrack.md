@@ -68,3 +68,11 @@ wisselt per mailtype en wist een oude concertkeuze. De server controleert dezelf
 scheiding bij verzending. Alleen actieve beheerders met MFA kunnen de inventaris
 lezen, ook gecontroleerd tegen het actuele Drive-profiel. Bij tijdelijke fouten
 blijven normale mailtests/Gashouderkeuzes beschikbaar met een gerichte melding.
+
+## Dynamische rapportagewebsite
+
+Vanaf V1.41 worden geldige gekoppelde CSV's onafhankelijk van de PDF/mailjobs
+ook zichtbaar onder Rapportages. Zie [dynamic-web-reports.md](dynamic-web-reports.md).
+De website leest alleen gekoppelde rapportmetadata voor gewone Reports-gebruikers;
+de beheerdercatalogus/ontvangers/PDF-download blijven onder hun bestaande rechten.
+Geen wijziging aan mailflow of bronbestanden.
