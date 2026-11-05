@@ -29,7 +29,7 @@ function esmojoHomeDashboard_(request){
  const metadata=request.operation==='home-metadata',allowed=metadata?['actor','concertId','operation']:['actor','operation'];
  if(Object.keys(request).sort().join(',')!==allowed.join(','))throw Error('VALIDATION');
  if(metadata&&(typeof request.concertId!=='string'||!request.concertId||request.concertId.length>240||/[\x00-\x1f/\\]/.test(request.concertId)))throw Error('VALIDATION');
- const root=esmojoHomeActor_(request.actor),{state,folder}=esmojoHomeIndex_(root),catalogue=homeCatalogue(state,request.actor);
+ const root=esmojoHomeActor_(request.actor),{state,folder}=esmojoHomeIndex_(root),catalogue=homeCatalogue(state,request.actor,esmojoHomeAssignments_(folder).document.assignments);
  if(metadata){const show=catalogue.find(show=>show.key===request.concertId);if(!show)throw Error('NOT_FOUND');return{show:{key:show.key,name:show.name,dates:show.dates,venue:show.venue,city:show.city}};}
  const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd');
  const next=catalogue.filter(show=>show.dates.some(date=>date>=today)).sort((a,b)=>{const first=a.dates.find(date=>date>=today),second=b.dates.find(date=>date>=today);return first.localeCompare(second)||(a.times[first]||'').localeCompare(b.times[second]||'')||a.key.localeCompare(b.key);}).slice(0,5),needed=new Set(next.map(show=>show.key));

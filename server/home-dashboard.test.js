@@ -4,9 +4,9 @@ const actor='home-test-actor';
 function homeHarness(){
  const h=harness();h.ctx.Utilities.formatDate=date=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
  h.ctx.esmojoPdfSnapshot_=(id,target)=>({target,revision:Object.keys(JSON.parse(h.registerFile.content).reports)[0]});
- for(const name of ['AccountModules.gs','HomeCatalogue.gs','HomeDashboard.gs'])vm.runInContext(readFileSync('google-apps-script/'+name,'utf8'),h.ctx);
+ for(const name of ['AccountModules.gs','ShowAssignments.gs','HomeCatalogue.gs','HomeDashboard.gs'])vm.runInContext(readFileSync('google-apps-script/'+name,'utf8'),h.ctx);
  const root=h.ctx.DriveApp.getFolderById('1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk');h.add(root,'_esmojo_accounts_v1.json',{profiles:[{id:actor,activated:true,modules:['shows']},{id:'reports-only',activated:true,modules:['reports']},{id:'disabled',activated:true,disabled:true,modules:['shows']}]});
- h.index.active=[h.concertId,h.laterId];h.index.checkedAt=new Date().toISOString();h.index.concerts[0].assignments=[{userId:actor,role:'event-safety-manager'}];h.indexFile.content=JSON.stringify(h.index);return h;
+ h.index.active=[h.concertId,h.laterId];h.index.checkedAt=new Date().toISOString();h.add(h.production,'_esmojo_show_assignments_v1.json',{managedBy:'ESMOJO/ShowAssignments-v1',classification:'vertrouwelijk',version:1,revision:1,assignments:[{concertId:h.concertId,userId:actor,role:'event-safety-manager'}]});h.indexFile.content=JSON.stringify(h.index);return h;
 }
 test('Ondertekende dashboard-read hergebruikt canonieke planningmetadata, geen ticketinhoud/PDF-bytes of writes',async()=>{
  const h=homeHarness(),data=await h.shows('home-dashboard',{actor});assert.equal(data.shows.length,1);const show=data.shows[0];assert.equal(show.key,h.concertId);assert.equal(show.assigned,true);assert.deepEqual(show.dates,['2026-11-06','2026-11-07']);assert.equal(show.snapshot.pdf.state,'ready');assert.equal(show.snapshot.risks.assessments.barrier.completed,false);assert.equal(h.writes(),0);

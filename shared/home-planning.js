@@ -1,5 +1,5 @@
 import {calendarDay,dutchToday,showPlanning} from '../src/lib/show-planning.js';
-export const showHref=show=>'/shows/'+encodeURIComponent(show.key);
+export const showHref=show=>'/shows/'+encodeURIComponent(show.routeKey||show.key);
 const addDays=(date,days)=>new Date(calendarDay(date)+days*86400000).toISOString().slice(0,10);
 const compare=(a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||'')||a.key.localeCompare(b.key);
 export function homePlanning(data,now=new Date()){
@@ -10,8 +10,10 @@ export function homePlanning(data,now=new Date()){
   const status=!planning?'unknown':preparation.some(step=>!step.completed&&step.date<today)?'behind':'ontrack';
   return{...show,date,dates,time:show.times?.[date]||null,planning,status};
  }).filter(show=>show.date).sort(compare);
- const assigned=shows.filter(show=>show.assigned),upcoming=shows.filter(show=>show.dates.some(date=>date>=today)).slice(0,5);
- const tasks=assigned.flatMap(show=>show.planning?show.planning.steps.filter(step=>!step.completed).map(step=>({...step,id:show.key+':'+step.id,kind:step.id,showKey:show.key,showName:show.name,venue:show.venue,href:showHref(show)})):[]).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+ const occurrences=shows.flatMap(show=>(show.concerts||[{key:show.key,date:show.date,time:show.time,assigned:show.assigned}]).filter(concert=>calendarDay(concert.date)!==null).map(concert=>({...show,...concert,routeKey:show.key}))).sort(compare);
+ const assigned=occurrences.filter(show=>show.assigned),upcoming=occurrences.filter(show=>show.date>=today).slice(0,5);
+ const planningShows=shows.filter(show=>show.assigned);
+ const tasks=planningShows.flatMap(show=>show.planning?show.planning.steps.filter(step=>!step.completed).map(step=>({...step,id:show.key+':'+step.id,kind:step.id,showKey:show.key,showName:show.name,venue:show.venue,href:showHref(show)})):[]).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
  const groups=[{id:'overdue',title:'Verlopen',tasks:tasks.filter(task=>task.date<today)},{id:'today',title:'Vandaag',tasks:tasks.filter(task=>task.date===today)},{id:'week',title:'Deze week',tasks:tasks.filter(task=>task.date>today&&task.date<=sunday)}].filter(group=>group.tasks.length);
  const weekCount=tasks.filter(task=>task.date>=monday&&task.date<=sunday).length;
  return{today,monday,sunday,shows,upcoming,assigned:[...assigned.filter(show=>show.date>=today),...assigned.filter(show=>show.date<today).reverse()],tasks,groups,openCount:tasks.length,weekCount,completedCount:null,unavailableCount:assigned.filter(show=>!show.planning).length};

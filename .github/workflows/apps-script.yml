@@ -45,6 +45,7 @@ jobs:
           node server/showprofile-risks.test.js
           node server/production-assessments.test.js
           node server/show-open.test.js
+          node server/shows-store.test.js
           node server/home-dashboard.test.js
           node shared/home-planning.test.js
       - name: Install pinned publication tool

@@ -20,10 +20,13 @@ reeksdatums blijven de deadlinebasis bepalen; active bepaalt welke groepen nog
 actueel in de geïmporteerde catalogus staan. Verdwenen groepen worden niet als
 actieve planning verzonnen. Onderliggende historie wordt niet gewijzigd.
 
-De vijf linkerkaarten gebruiken de eerstvolgende relevante datum in iedere
-reeks, chronologisch op datum, bekende tijd en stabiel ID. Vandaag blijft
+De vijf linkerkaarten gebruiken echte afzonderlijke showdagen, chronologisch
+op datum, bekende tijd en stabiel concert-ID. Reeksen delen hun bestaande pagina
+en voorbereiding; de rechter lijst en Mijn shows tellen alle gekoppelde showdagen,
+terwijl gedeelde reeksdeadlines één keer tellen. Vandaag blijft
 zichtbaar; een onbekende starttijd blijft leeg. Er is geen nieuwe tijdscrape.
-Alle gekoppelde actieve reeksen blijven voor deadlines/rechterlijst meetellen,
+Alle gekoppelde actieve showdagen blijven voor de rechterlijst meetellen,
+met hun gedeelde voorbereiding voor het deadlineoverzicht,
 ook buiten vijf kaarten of het 90-dagenvenster van het gewone Shows-submenu.
 
 ## Bestaande planning hergebruiken
@@ -42,8 +45,8 @@ Achterstallige vereiste voorbereiding betekent Aandacht nodig. Zonder achterstan
 betekent Op schema; ontbrekende/onleesbare bron betekent Planning ontbreekt,
 met waarschuwing dat de betreffende deadlines niet kunnen worden meegeteld.
 Er bestaat geen bevestigde voorsprongregel of algemene showafronding.
-Voorlopig alleen als voorstel: geen Voor op schema en Afgerond als — met uitleg.
-Dit voorstel en de classificatie van managertoewijzingen wachten nog op antwoord.
+Op 5 november 2026 bevestigd: geen Voor op schema en Afgerond als — met uitleg.
+Account-showkoppelingen zijn bevestigd Vertrouwelijk in Drive, via de bestaande Vercel-route.
 Geen verlopen datum automatisch als afgeronde show behandelen.
 
 Lijstgroepen: verlopen, vandaag en resterend tot zondag; oudere achterstand telt
@@ -80,8 +83,9 @@ verversen. Opruimen bij verlaten, afmelden en modulewijziging.
 
 Echte index, exacte accountmatch en bestaande statusdocumenten via de toegestane
 Drive-koppeling gelezen. Alleen lokaal buiten Git verwerkt. De nieuwe readprojectie
-is lokaal met die echte documenten en officiële MOJO-foto's uitgevoerd. Geen
-nieuwe managerrelaties geschreven; backfill/importhook wacht op classificatie.
+is lokaal met die echte documenten en officiële MOJO-foto's uitgevoerd. De backfill is op 5 november uitgevoerd in het aparte vertrouwelijke register
+_esmojo_show_assignments_v1.json in Productie en via Drive teruggelezen. Geen
+manager-ID of relatie wordt in de openbare concertindex opgeslagen.
 
 Unit-/integratiecontroles voor scope, volledige versus vijfshowsselectie,
 reeksidentiteit, echte afrondingen, ontbrekende data, kalender-/weekgrenzen,
@@ -91,5 +95,14 @@ systeemthema's: lichte dashboardstijl, 1/2/3 kolommen, 320:213-fotoverhouding,
 uitlijning, rechter cijferblok gelijk aan eerste kaart, geen paginaoverflow,
 kalendernavigatie/refreshbehoud en lege/fout/herlaadstatus.
 
-Nog niet gepubliceerd. Managerbackfill, importkoppeling en persoonlijke
-end-to-endcontrole kunnen pas na de openstaande bevestigingen worden afgerond.
+De centrale tijdelijke regel staat in google-apps-script/ShowAssignments.gs.
+Zij zoekt het bestaande account op exacte mail, gebruikt diens stabiele ID en
+voegt ontbrekende concert/user/rol-combinaties toe. Bestaande relaties/rollen
+blijven behouden. Herhaling schrijft niets; ontbrekend/ambigu account blokkeert
+uitsluitend toewijzing en geeft een veilige importstatus. De normale getekende
+shows-import gebruikt dezelfde regel voor alle bestaande en nieuwe showdagen.
+Uitschakelen/vervangen van die beleidsfunctie bereidt echte managerkeuzes voor.
+Alle overige accounts blijven zonder persoonlijke toewijzing tenzij er een echte
+relatie bestaat; beheerder/superrol maakt iemand niet automatisch eigenaar.
+
+De gepubliceerde versie en workflowresultaten staan in de taaknotitie.
