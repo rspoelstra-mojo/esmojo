@@ -771,3 +771,17 @@ bestaande rollen/relaties blijven behouden, geen nieuw account. Alle gewone
 module-/MFA-controles blijven gelden; een managerrelatie verleent geen modules.
 Showlijsten en Mijn shows tellen werkelijke gekoppelde concertdagen, met de
 canonieke reeksroute als bestemming. Gedeelde reeksdeadlines tellen één keer.
+
+
+## MOJO-tijdschema's in rapportages
+
+Op 5 november 2026 heeft de gebruiker de online geplande showtijden Openbaar
+verklaard. Alleen canonieke mojo.nl-concertpagina's; vastleggen op de eigen
+showdag om 12:00 Nederland via de bestaande middagworkflow, nooit een vroegere
+of latere opname als 12:00 presenteren. Bewaar werkelijke capturedAt en bron.
+GitHub-vertraging wordt niet verborgen. Beschikbare opnamen blijven immutable
+in OnTrack/Tijdschemas, ook na verdwijnen van de bron. Geen retroactieve tijden
+verzinnen voor historische rapporten zonder opname. Meerdere acts, surprise,
+pauzes en nachtelijke tijden krijgen eigen chronologische tussenkoppen in de
+incidentenlijst; geen incident/KPI/grafiek/PDF-wijziging. Houd filtering en alle
+Reports/MFA-/Drive-controles intact. Zie docs/report-timetables.md.

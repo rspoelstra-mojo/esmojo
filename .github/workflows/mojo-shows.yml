@@ -25,9 +25,9 @@ jobs:
             console.log('Geen Nederlandse middagrun; zomer-/wintertijd wordt gerespecteerd.');
             process.exit(0);
           }
-          const failures=[];
-          // Beide inventarissen dezelfde dagelijkse run; een fout slaat de andere niet over.
-          for (const endpoint of ['https://esmojo.nl/api/shows-sync','https://esmojo.nl/api/ontrack-concerts-sync']) {
+          const failures=new Set();
+          // Tijdschema vóór de imports vastleggen; daarna nogmaals voor nieuw ontdekte concerten.
+          for (const endpoint of ['https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/shows-sync','https://esmojo.nl/api/ontrack-concerts-sync','https://esmojo.nl/api/timetables-sync']) {
             try {
               const identityUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
               identityUrl.searchParams.set('audience', endpoint);
@@ -39,8 +39,8 @@ jobs:
               const data = await result.json();
               if (!result.ok) { console.log(JSON.stringify({endpoint,status:result.status,code:data.code,stage:data.stage,venue:data.venue,sourceStatus:data.sourceStatus})); throw new Error('Import mislukt.'); }
               if (!data.ok) throw new Error('Import niet bevestigd.');
-              console.log(JSON.stringify({endpoint,...data}));
-            } catch { failures.push(endpoint); console.log('Import niet bevestigd: '+endpoint+'; bestaande inventaris blijft behouden.'); }
+              failures.delete(endpoint);console.log(JSON.stringify({endpoint,...data}));
+            } catch { failures.add(endpoint); console.log('Import niet bevestigd: '+endpoint+'; bestaande inventaris blijft behouden.'); }
           }
-          if(failures.length)throw new Error('Een of meer concertinventarissen konden niet worden vernieuwd.');
+          if(failures.size)throw new Error('Een of meer concertinventarissen konden niet worden vernieuwd.');
           JS
