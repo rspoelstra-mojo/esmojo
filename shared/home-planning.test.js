@@ -31,7 +31,7 @@ test('Catalogus behoudt reeksidentiteit/historische eerste datum en toont alleen
 
 test('Showlijsten combineren echte reeksen; gedeelde reeksdeadlines blijven uniek en linken naar de bestaande reeks',()=>{
  const source=show('reeks','2026-11-05',{dates:['2026-11-05','2026-11-06','2026-11-07'],concerts:[{key:'dag1',date:'2026-11-05',assigned:true},{key:'dag2',date:'2026-11-06',assigned:true},{key:'dag3',date:'2026-11-07',assigned:true}]});
- const model=homePlanning({shows:[source]},now);assert.equal(model.assigned.length,1);assert.equal(model.upcoming.length,1);assert.equal(model.tasks.length,5);assert.equal(new Set(model.tasks.map(task=>task.id)).size,5);assert.deepEqual(model.upcoming.map(show=>show.key),['reeks']);assert.equal(homeShowDates(model.upcoming[0].dates),'5, 6, 7 november 2026');assert.ok(model.tasks.every(task=>task.href==='/shows/reeks'));
+ const model=homePlanning({shows:[source]},now);assert.equal(model.assigned.length,1);assert.equal(model.upcoming.length,1);assert.equal(model.tasks.length,5);assert.equal(new Set(model.tasks.map(task=>task.id)).size,5);assert.deepEqual(model.upcoming.map(show=>show.key),['reeks']);assert.equal(homeShowDates(model.upcoming[0].dates),'5, 6, 7 november 2026');assert.ok(model.tasks.every(task=>task.href.startsWith('/shows/reeks?tab=')));
 });
 
 test('Maximaal zes eigen reeksen; verleden en afgeronde taken uit lijst maar behouden in kalender',()=>{
@@ -66,4 +66,9 @@ test('Reeksen over jaargrenzen tellen uitsluitend werkelijk gekoppelde kalenderd
 });
 test('Een bevestigde afronding/heropening wijzigt de jaarteller onmiddellijk zonder wachten op de showdatum',()=>{
  const data={shows:[show('aankomend','2026-12-31',{snapshot:{completion:{...ready,measures:false}}})]};assert.equal(homePlanning(data,now).completedCount,0);data.shows[0].snapshot.completion.measures=true;assert.equal(homePlanning(data,now).completedCount,1);data.shows[0].snapshot.completion.operational=false;assert.equal(homePlanning(data,now).completedCount,0);
+});
+
+test('Elke deadline linkt in één klik naar de canonieke show en het bijbehorende tabblad',()=>{
+ const model=homePlanning({shows:[show('BUNT._Gashouder_01122026','2026-12-01',{routeKey:'canonieke reeks'})]},now);
+ assert.deepEqual(model.calendarTasks.map(task=>new URL(task.href,'https://esmojo.nl').searchParams.get('tab')),['showprofiel','risicoanalyse','risicoanalyse','maatregelen','overzicht']);assert.ok(model.calendarTasks.every(task=>task.href.startsWith('/shows/canonieke%20reeks?tab=')));
 });

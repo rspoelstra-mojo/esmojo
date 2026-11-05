@@ -915,3 +915,16 @@ showdag; die blijft een datum, geen fictieve afvinkstatus. Heropening trekt de
 afrondtelling direct terug. Onbekende planning telt niet als afgerond. Beide
 cijfers gebruiken uitsluitend de bestaande beveiligde homepagegegevens/cache,
 zonder nieuwe opslag of extra reads, en wisselen op Nederlandse Nieuwjaarsdag.
+
+
+## Directe navigatie vanuit deadlines
+
+Vanaf V1.49 is iedere deadline-rij een echte interne link naar de canonieke show
+met een gewhitelist tab-query: profile → showprofiel, operational/production →
+risicoanalyse, measures → maatregelen, show → overzicht. Kalenderlinks gebruiken
+dezelfde bestemming. Lees ?tab= via shared/show-navigation.js en kies het expliciete
+tabblad vóór de eerste zichtbare showweergave; dit gaat vóór de onthouden tab in
+showgeheugen. Zonder geldige tab-query blijft bestaande tabherinnering werken.
+Geen tussenpagina, programmatische tweede klik of extra nieuwe API/leesronde.
+Bestaande module-/MFA-controle, canonieke reeksroute en SPA-router blijven gelden;
+gewone links ondersteunen toetsenbord, nieuw tabblad en terug-/vooruitnavigatie.
