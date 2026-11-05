@@ -217,3 +217,13 @@ Controle: server/operational-risks.test.js (ondertekende Drive-flow, 3/3, confli
 retry, bronwissel, privacy); accounts-api.test.js (module/MFA/serveractor);
 show-open.test.js en show-planning.test.js (cache/directe planning). Browsercontrole
 met uitsluitend synthetische fixtures op 1920/1440/900/700/390px, licht en donker.
+
+### Direct terugkeren na Opslaan (V1.45)
+
+Opslaan keert synchroon terug naar Risicoanalyse, nog voordat de API-opslag is
+voltooid. De gekozen klasse is direct zichtbaar; planning/homepage krijgen alleen
+bevestigde afrondingen. De serialiserende wachtrij en tijdelijke invoer/fouten
+staan in operational-review-memory binnen de bestaande showcontext. SPA-navigatie
+stopt opslag niet; afmelden/rolwissel wist invoer en annuleert niet-gestarte jobs.
+Bij een fout verschijnt bij het risico een melding; openen bewaart de invoer en
+biedt Opnieuw proberen. Geen extra API, Drive-schema of persistente browsercache.

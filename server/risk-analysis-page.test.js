@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
-function harness(request,saveSelection){
+function harness(request,saveSelection,extra={}){
   let focused;
   class Element{
     constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.attributes={};this.className='';this.value='';this._text='';this.classList={toggle(){}};}
@@ -17,8 +17,8 @@ function harness(request,saveSelection){
   const panel=new Element('section'),menu=new Element('a');
   const openAssessment=(section,{onBack})=>{section.replaceChildren();const back=new Element('button');back.textContent='Terug';back.onclick=onBack;const title=new Element('h2');title.textContent='Barrieropstelling';section.append(back,title);return()=>{};};
   const context=vm.createContext({access:async()=>{throw Error("Unexpected API request");},Promise,structuredClone,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{addEventListener(){},scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
-  for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','shared/barrier-layout.js','shared/operational-risk.js','src/production-assessment-ui.js','src/risk-review-card.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
-  const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection});
+  for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','src/lib/operational-review-memory.js','shared/barrier-layout.js','shared/operational-risk.js','src/production-assessment-ui.js','src/risk-review-card.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
+  const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection,...extra});
   return{page,panel,menu,focused:()=>focused,buttons:()=>panel.querySelectorAll('[data-risk-id]'),text:()=>panel.textContent};
 }
 const risks=[{id:'R01',title:'Eerste risico',description:'Beschrijving één',consequence:'Gevolg één'},{id:'R02',title:'Tweede risico',description:'Beschrijving twee',consequence:'Gevolg twee'}];
@@ -85,4 +85,13 @@ test('Fout behoudt keuzes en hervat pas na expliciet Opnieuw proberen, niet bij 
   h.page.activate();await tick();h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').onclick();await tick();
   await h.page.prepare();assert.equal(calls,1);assert.equal(h.panel.querySelectorAll('[data-field]').find(b=>b.dataset.field==='lasers'&&b.dataset.choice==='true').attributes['aria-pressed'],'true');
   fail=false;state={revision:7,choices:{}};h.panel.querySelectorAll('button').find(b=>b.textContent==='Opnieuw proberen').onclick();await tick();await tick();assert.equal(calls,2);assert.ok(!h.text().includes('nog niet bevestigd'));h.page.dispose();
+});
+
+test('Opslaan keert synchroon terug, toont gekozen klasse en bewaart fout/invoer voor herpoging',async()=>{
+ const source={revision:'a'.repeat(64),sha256:'b'.repeat(64)},data={state:'ready',risks,production:{revision:0,choices:{}},operational:{source,assessments:{}}};let reject;
+ const h=harness(async()=>data,undefined,{requestAccess:()=>new Promise((_,fail)=>reject=fail)});await h.page.prepare();h.buttons()[0].onclick();
+ const radios=h.panel.querySelectorAll('input');radios.find(el=>el.value==='medium').checked=true;radios.find(el=>el.value==='medium').onchange();
+ const note=h.panel.querySelectorAll('textarea')[0];note.value='Synthetische maatregel blijft bewaard';note.oninput();const form=h.panel.querySelectorAll('form')[0];form.reportValidity=()=>true;form.onsubmit({preventDefault(){}});
+ assert.equal(h.buttons().length,2,'Direct overzicht vóór de opslag begint');assert.match(h.buttons()[0].textContent,/Midden/);assert.equal(h.panel.querySelectorAll('textarea').length,0);
+ await tick();reject(Error('Geen private details tonen'));await tick();assert.match(h.text(),/Opslaan is niet gelukt/);assert.doesNotMatch(h.text(),/private details/);h.buttons()[0].onclick();assert.equal(h.panel.querySelectorAll('textarea')[0].value,'Synthetische maatregel blijft bewaard');assert.match(h.text(),/Opnieuw proberen/);h.page.dispose();
 });
