@@ -32,3 +32,9 @@ test('Rapportages gebruikt het opgeslagen concert-ID en normaliseert oude URL’
  const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));assert.ok(config.rewrites.some(row=>row.source==='/rapportages/:path*'));
  assert.equal(config.redirects.find(row=>row.source==='/statistieken/jungle').destination,canonical);assert.equal(config.redirects.find(row=>row.source==='/rapportages/jungle').destination,canonical);assert.ok(config.redirects.every(row=>row.permanent));
 });
+
+test('Showtab-query is expliciet gewhitelist en blijft beschikbaar bij schone en oude URL’s',async()=>{
+ const {requestedShowTab}=await import('../../shared/show-navigation.js');
+ for(const [tab,index]of [['overzicht',0],['showprofiel',1],['risicoanalyse',2],['maatregelen',3],['documenten',4]]){assert.equal(requestedShowTab('?tab='+tab),index);assert.equal(legacyPageUrl(new URL('https://esmojo.nl/#/shows/BUNT._Gashouder_01122026?tab='+tab)),'/shows/BUNT._Gashouder_01122026?tab='+tab);}
+ for(const query of ['', '?tab=onbekend','?tab=https://example.invalid','?tab=showprofiel&tab=maatregelen'])assert.equal(requestedShowTab(query),null);
+});
