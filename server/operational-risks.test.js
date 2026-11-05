@@ -42,3 +42,13 @@ test('Homepage krijgt onmiddellijk alleen de openbare afrondvlag, geen maatregel
  assert.equal(a.homePlanning.completion.operational,false);assert.equal(b.homePlanning.completion.operational,false);assert.equal(c.homePlanning.completion.operational,true);assert.equal(c.homePlanning.completion.measures,false);
  const projection=h.production.files.find(file=>file.name==='_esmojo_home_planning_v1.json').content;assert.equal(projection.includes('maatregel'),false);assert.equal(projection.includes(actor),false);assert.equal(projection.includes('R01'),false);
 });
+
+test('Geen maatregelen na alle beoordelingen: planning/home direct afgerond; productie- en operationele notities blijven privé',async()=>{
+ const h=await setup();h.index.active=[h.concertId,h.laterId];h.index.checkedAt=new Date().toISOString();h.indexFile.content=JSON.stringify(h.index);h.ctx.Utilities.formatDate=date=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);h.ctx.esmojoPdfSnapshot_=(id,target)=>({target,revision:h.source.revision});
+ for(const name of ['AccountModules.gs','ShowAssignments.gs','HomeCatalogue.gs','HomeCompletion.gs','HomeProjection.gs','HomePhotos.gs','HomeDashboard.gs'])vm.runInContext(readFileSync('google-apps-script/'+name,'utf8'),h.ctx);
+ await h.shows('barrier-complete',{concertId:h.concertId,actor,revision:0,data:{barrierType:'seated',riskLevel:'none',riskNote:'',notes:null,uploadId:null}});
+ for(const field of ['escape_routes','fireworks','open_fire','lasers','drones']){const view=await h.view();await h.shows('risk-production-save',{concertId:h.concertId,actor,revision:view.production.revision,field,value:false});}
+ await h.save('R01');await h.save('R02');const done=await h.save('R03');assert.equal(done.homePlanning.completion.measures,true);
+ const changed=await h.save('R03','high','Vertrouwelijke uitvoeringstaak.',1);assert.equal(changed.homePlanning.completion.measures,false);assert.equal(h.production.files.find(file=>file.name==='_esmojo_home_planning_v1.json').content.includes('Vertrouwelijke uitvoeringstaak'),false);
+ const view=await h.view();assert.equal(view.assessments.barrier.riskNote,'');assert.equal(view.assessments.floor.note,'');assert.equal(view.operational.assessments.R03.riskNote,'Vertrouwelijke uitvoeringstaak.');
+});
