@@ -162,3 +162,23 @@ bestaande geautoriseerde gegevens en laatst bevestigde openbare planningsstatus.
 Getest: shared/home-planning.test.js voor jaargrenzen, Nieuwjaarsdag, historie,
 gekoppelde dagen, de vier verplichte stappen en heropening; browsercontrole van
 de cijfers/statussen, beide thema’s en 1920/1440/900/700/390px.
+
+
+## Deadline-links (V1.49)
+
+Een klik op de volledige deadline-rij opent direct het juiste bestaande showtabblad:
+Showprofiel afronden → Showprofiel; operationele/productionele risico’s →
+Risicoanalyse; beheersmaatregelen → Maatregelen; Showdag → Overzicht. De canonieke
+reeks-/show-ID blijft de routebasis; ?tab= kiest alleen een gewhitelist tabnaam.
+De kalender gebruikt dezelfde links. Er is geen nieuwe API of extra tussennavigatie.
+
+De expliciete tab wordt vóór de eerste zichtbare render geselecteerd, ook wanneer
+het showgeheugen een andere tab onthield. Zonder expliciete geldige tab-query
+blijft die herinnering behouden. De bestaande History-router bewaart de query bij
+klik en terug/vooruit; normale ankerelementen ondersteunen ook nieuw tabblad en
+toetsenbord. Bestaande Shows-module-/MFA-controles blijven ongewijzigd.
+
+Controle: show-page.test.js (eerste zichtbare selectie incl. onthouden tab),
+home-planning.test.js (bestemming per deadline), router.test.js (veilige tabnamen/
+legacy-URLs), bestaande directe-show- en geheugentests. Browser met synthetische
+inhoud: BUNT./Overmono, één klik, onthouden tab, refresh, terug en licht/donker mobiel.

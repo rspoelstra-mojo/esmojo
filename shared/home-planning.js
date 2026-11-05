@@ -1,3 +1,4 @@
+import {deadlineTab} from './show-navigation.js';
 import {calendarDay,dutchToday,showPlanning} from '../src/lib/show-planning.js';
 export const showHref=show=>'/shows/'+encodeURIComponent(show.routeKey||show.key);
 const addDays=(date,days)=>new Date(calendarDay(date)+days*86400000).toISOString().slice(0,10);
@@ -23,7 +24,7 @@ export function homePlanning(data,now=new Date()){
  }
  const yearlyShows=[...annual.values()];
  const planningShows=shows.filter(show=>show.assigned&&(future(show)||show.dates.some(date=>date<today)));
- const calendarTasks=planningShows.flatMap(show=>show.planning?show.planning.steps.map(step=>({...step,id:show.key+':'+step.id,kind:step.id,showKey:show.key,showName:show.name,venue:show.venue,href:showHref(show),lastShowDate:show.dates.at(-1),activeFuture:future(show)})):[]).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+ const calendarTasks=planningShows.flatMap(show=>show.planning?show.planning.steps.map(step=>({...step,id:show.key+':'+step.id,kind:step.id,showKey:show.key,showName:show.name,venue:show.venue,href:showHref(show)+'?tab='+deadlineTab(step.id),lastShowDate:show.dates.at(-1),activeFuture:future(show)})):[]).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
  const tasks=calendarTasks.filter(task=>!task.completed&&task.activeFuture);
  const groups=[{id:'overdue',title:'Verlopen',tasks:tasks.filter(task=>task.date<today)},{id:'today',title:'Vandaag',tasks:tasks.filter(task=>task.date===today)},{id:'week',title:'Deze week',tasks:tasks.filter(task=>task.date>today&&task.date<=sunday)}].filter(group=>group.tasks.length);
  const weekCount=tasks.filter(task=>task.date>=monday&&task.date<=sunday).length;
