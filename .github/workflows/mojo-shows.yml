@@ -4,6 +4,11 @@ on:
     # Nederland is UTC+2 in de zomer en UTC+1 in de winter.
     - cron: '0 10,11 * * *'
   workflow_dispatch:
+    inputs:
+      planning_only:
+        description: Alleen de bestaande openbare homepageplanning vernieuwen
+        type: boolean
+        default: false
 permissions:
   contents: read
   id-token: write
@@ -18,6 +23,7 @@ jobs:
       - name: Daily noon import (or manual first run)
         env:
           EVENT_NAME: ${{ github.event_name }}
+          PLANNING_ONLY: ${{ inputs.planning_only }}
         run: |
           node --input-type=module <<'JS'
           const hour = new Intl.DateTimeFormat('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', hourCycle: 'h23' }).format(new Date());
@@ -27,7 +33,8 @@ jobs:
           }
           const failures=new Set();
           // Tijdschema vóór de imports vastleggen; daarna nogmaals voor nieuw ontdekte concerten.
-          for (const endpoint of ['https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/shows-sync','https://esmojo.nl/api/ontrack-concerts-sync','https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/home-planning-sync']) {
+          const endpoints = process.env.EVENT_NAME === 'workflow_dispatch' && process.env.PLANNING_ONLY === 'true' ? ['https://esmojo.nl/api/home-planning-sync'] : ['https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/shows-sync','https://esmojo.nl/api/ontrack-concerts-sync','https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/home-planning-sync'];
+          for (const endpoint of endpoints) {
             try {
               const identityUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
               identityUrl.searchParams.set('audience', endpoint);
