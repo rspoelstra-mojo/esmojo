@@ -21,6 +21,9 @@ jobs:
         run: |
           node server/accounts-api.test.js
           node server/account-modules.test.js
+          node server/home-dashboard.test.js
+          node shared/home-planning.test.js
+          node src/lib/show-direct-route.test.js
           node server/report-web.test.js
           node src/lib/report-view.test.js
           node shared/report-security.test.js

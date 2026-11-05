@@ -747,3 +747,27 @@ behoud per-datum datasets en de bestaande compacte header. Submenu ongewijzigd.
 
 In de individuele rapportagewebsite-incidenten heet het bestaande note-veld
 Afhandeling (voorheen Notitie); bronveld en inhoud blijven ongewijzigd.
+
+
+## Homepage planningdashboard
+
+De op 4 november 2026 aangeleverde overdracht/HTML bepalen de homepage: uitsluitend
+hoofdmenu, geen submenu, fluid 1/2/1-kolommen en lichte dashboardstijl. Bestaand
+hoofdmenu blijft ongewijzigd. Foto's exact 320:213, alleen echte MOJO-foto's;
+ontbrekende tijden/foto's niet invullen met demo's. De expliciete referentie-
+clamps/cqw-typografie zijn uitsluitend voor de linker concertkaarten toegestaan.
+Gebruik alleen de canonieke Gashouder-catalogus, nooit het OnTrack-locatieregister.
+Hergebruik bestaande reeksidentiteit en src/lib/show-planning.js; geen alternatieve
+intervallen of fictieve afrondingen. Zie docs/homepage-dashboard.md voor de
+minimale beveiligde readroute en statusbronnen.
+
+Op 5 november 2026 heeft de gebruiker de account-showkoppeling expliciet
+Vertrouwelijk in Drive bevestigd, plus Afgerond als — en geen Voor op schema
+zolang algemene afrond-/voorsprongregels ontbreken. Bewaar relaties uitsluitend
+in Productie/_esmojo_show_assignments_v1.json, nooit in de openbare concertindex.
+ShowAssignments.gs bevat één vervangbare tijdelijke regel voor Richards bestaande
+exacte account. Backfill en nieuwe import gebruiken dezelfde idempotente regel;
+bestaande rollen/relaties blijven behouden, geen nieuw account. Alle gewone
+module-/MFA-controles blijven gelden; een managerrelatie verleent geen modules.
+Showlijsten en Mijn shows tellen werkelijke gekoppelde concertdagen, met de
+canonieke reeksroute als bestemming. Gedeelde reeksdeadlines tellen één keer.
