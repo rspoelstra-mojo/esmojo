@@ -115,3 +115,13 @@ De bestaande echte Jungle-bronhash en bevestigde koppeling zijn lokaal gecontrol
 met de nieuwe code; cijfers blijven ongewijzigd. Browsercontrole gebruikt dezelfde
 renderer met drie synthetische showdagen en de echte bestaande Jungle-rapportage:
 luie tabselectie, late reacties, caching, filters, photo/header en beide thema's.
+
+
+Rapportagekoppeling V1.42: concert-ID's vergelijken hoofdletterongevoelig met
+spaties, underscores en koppeltekens als equivalente scheidingstekens, plus de
+centrale zaalaliassen. Een exacte of unieke match behoudt het bestaande concert;
+ambiguïteit wordt niet als nieuwe filenamefallback omzeild. Bij filenamefallback
+wordt ook buiten de catalogus het bestaande Tijdschemas-archief gelezen: dezelfde
+artiest, canonieke zaal en datum, unieke match en ongewijzigde noonvalidatie.
+Geen archief herschrijven of ontbrekende tijden reconstrueren. Alleen de webflow;
+PDF-/mailregister, ontvangers en verzendmomenten blijven ongewijzigd.
