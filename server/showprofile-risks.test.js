@@ -44,7 +44,7 @@ function harness(){
     Utilities:{Charset:{UTF_8:'utf8'},DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(a,b)=>[...createHash(a).update(typeof b==='string'?b:Buffer.from(b)).digest()],computeHmacSha256Signature:(b,k)=>[...createHmac('sha256',k).update(b).digest()],base64Encode:b=>Buffer.from(b).toString('base64'),newBlob:(content,type,name)=>({content,type,name})},
     LockService:{getUserLock:()=>({tryLock:()=>!blocked,releaseLock(){}})},CacheService:{getScriptCache:()=>({get:k=>nonces.get(k),put:(k,v)=>nonces.set(k,v)})},
     DriveApp:{getFolderById:id=>all.get(id),getFileById:id=>all.get(id)},ContentService:{MimeType:{JSON:'json'},createTextOutput:s=>({setMimeType:()=>JSON.parse(s)})}});
-  for(const name of ['Code.gs','Shows.gs','Research.gs','ShowProfile.gs','TicketData.gs','TicketValidators.gs','FinalValidators.gs','AnalysisFinal.gs','ShowProfilePdf.gs','RiskValidators.gs','ProductionRiskValidators.gs','ProductionRisks.gs','ShowProfileRisks.gs'])vm.runInContext(readFileSync(new URL('../google-apps-script/'+name,import.meta.url),'utf8'),ctx);
+  for(const name of ['Code.gs','Shows.gs','Research.gs','ShowProfile.gs','TicketData.gs','TicketValidators.gs','FinalValidators.gs','AnalysisFinal.gs','ShowProfilePdf.gs','RiskValidators.gs','ProductionRiskValidators.gs','ProductionRisks.gs','OperationalRiskValidators.gs','OperationalRisks.gs','ShowProfileRisks.gs'])vm.runInContext(readFileSync(new URL('../google-apps-script/'+name,import.meta.url),'utf8'),ctx);
   // De PDF-generator en accountflow hebben hun eigen bestaande integratietests.
   // Varieer hier de actuele revisie om races tussen lezen en bewaren te testen.
   const realSnapshot=ctx.esmojoPdfSnapshot_;
@@ -81,7 +81,7 @@ test('Websiteweergave leest alleen risico-definities voor de actuele PDF, zonder
   assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'pending',risks:[],production:{revision:0,choices:{}},assessments:{barrier:null,floor:null}});
   await h.service({operation:'save',concertId:h.concertId,source:reference,result});
   const view=await h.shows('risk-view',{concertId:h.laterId});
-  assert.deepEqual(view,{state:'ready',risks:result.risks.map(({id,title,description,consequence})=>({id,title,description,consequence})),production:{revision:0,choices:{}},assessments:{barrier:null,floor:null}});
+  assert.deepEqual(view,{state:'ready',risks:result.risks.map(({id,title,description,consequence})=>({id,title,description,consequence})),production:{revision:0,choices:{}},assessments:{barrier:null,floor:null},operational:{source:reference,assessments:{}}});
   assert.equal(h.writes(),1);
   h.ctx.esmojoPdfSnapshot_=()=>({revision:'b'.repeat(64)});
   assert.deepEqual(await h.shows('risk-view',{concertId:h.concertId}),{state:'not-ready',risks:[],production:{revision:0,choices:{}},assessments:{barrier:null,floor:null}});assert.equal(h.writes(),1);
