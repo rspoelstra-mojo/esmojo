@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const now=new Date('2026-11-04T12:00:00Z'),show=(key,date,extra={})=>({key,name:key,venueId:'gashouder',venue:'Gashouder',city:'Amsterdam',dates:[date],assigned:true,snapshot:{},...extra});
 test('Alleen Gashouder; vijf kaarten maar volledige persoonlijke deadline- en showverzameling',()=>{
  const data={shows:[...Array.from({length:8},(_,i)=>show('show-'+i,`2026-11-${String(i+5).padStart(2,'0')}`)),show('andere-zaal','2026-11-04',{venueId:'ziggo-dome',venue:'Ziggo Dome'}),show('verwijderd','2026-11-04',{deleted:true}),show('ongekoppeld','2026-11-04',{assigned:false})]};
- const model=homePlanning(data,now);assert.equal(model.shows.length,9);assert.equal(model.upcoming.length,5);assert.equal(model.upcoming[0].key,'ongekoppeld');assert.equal(model.assigned.length,8);assert.equal(model.tasks.length,40);assert.equal(model.completedCount,null);assert.ok(model.tasks.every(task=>task.showKey.startsWith('show-')));assert.equal(model.groups.at(-1).tasks.some(task=>task.date>'2026-11-08'),false);assert.equal(model.tasks.some(task=>task.date>'2026-11-08'),true);
+ const model=homePlanning(data,now);assert.equal(model.shows.length,9);assert.equal(model.upcoming.length,5);assert.equal(model.upcoming[0].key,'ongekoppeld');assert.equal(model.assigned.length,8);assert.equal(model.tasks.length,40);assert.equal(model.completedCount,0);assert.ok(model.tasks.every(task=>task.showKey.startsWith('show-')));assert.equal(model.groups.at(-1).tasks.some(task=>task.date>'2026-11-08'),false);assert.equal(model.tasks.some(task=>task.date>'2026-11-08'),true);
 });
 test('Bestaande planning eerste reeksdatum; ontbrekende gegevens worden geen verzonnen tijden/statussen',()=>{
  const data={shows:[show('reeks','2026-11-03',{dates:['2026-11-03','2026-11-04','2026-11-05'],times:{'2026-11-04':'19:30'},snapshot:{pdf:{state:'ready'}}}),show('onleesbaar','2026-11-05',{planningUnavailable:true})]};
@@ -49,4 +49,21 @@ test('Daggroepen wisselen exact om Nederlandse middernacht, ook bij zomer/winter
 
 test('Importhistorie behoudt afgelopen shows in kalender maar herintroduceert geen verdwenen toekomstige concerten',()=>{
  const model=homePlanning({shows:[show('verdwenen','2026-11-07',{activeDates:[]}),show('afgelopen','2026-11-01',{activeDates:[]}),show('actueel','2026-11-06',{activeDates:['2026-11-06']})]},now);assert.deepEqual(model.upcoming.map(show=>show.key),['actueel']);assert.deepEqual(model.myShows.map(show=>show.key),['actueel']);assert.equal(model.tasks.some(task=>task.showKey!=='actueel'),false);assert.equal(model.calendarTasks.some(task=>task.showKey==='afgelopen'),true);assert.equal(model.calendarTasks.some(task=>task.showKey==='verdwenen'),false);
+});
+
+const ready={profile:true,operational:true,production:true,measures:true};
+test('Jaartellers gebruiken gekoppelde showdagen van januari t/m december, inclusief verleden en al voorbereide toekomstige shows',()=>{
+ const shows=[show('verleden','2026-01-01',{activeDates:[],snapshot:{completion:ready}}),show('vandaag','2026-11-04',{activeDates:[],snapshot:{completion:ready}}),show('toekomst','2026-12-31',{snapshot:{completion:ready}}),show('open','2026-11-05'),show('vorig','2025-12-31',{snapshot:{completion:ready}}),show('volgend','2027-01-01',{snapshot:{completion:ready}}),show('ongekoppeld','2026-11-06',{assigned:false,snapshot:{completion:ready}}),show('geannuleerd','2026-11-07',{cancelled:true,snapshot:{completion:ready}}),show('verdwenen-toekomst','2026-11-08',{activeDates:[],snapshot:{completion:ready}}),show('andere-zaal','2026-11-09',{venueId:'afas-live',venue:'AFAS Live',snapshot:{completion:ready}})];
+ const model=homePlanning({shows},now);assert.equal(model.yearCount,4);assert.equal(model.completedCount,3);assert.equal(model.yearStart,'2026-01-01');assert.equal(model.yearEnd,'2026-12-31');assert.equal(model.shows.find(show=>show.key==='toekomst').status,'completed');assert.equal(model.shows.find(show=>show.key==='toekomst').planning.steps[4].completed,false);
+ for(const key of Object.keys(ready)){const model=homePlanning({shows:[show('incompleet','2026-12-31',{snapshot:{completion:{...ready,[key]:false}}})]},now);assert.equal(model.yearCount,1);assert.equal(model.completedCount,0);}
+ assert.equal(homePlanning({shows:[show('onbekend','2026-11-06',{planningUnavailable:true,snapshot:{completion:ready}})]},now).completedCount,0);
+});
+test('Reeksen over jaargrenzen tellen uitsluitend werkelijk gekoppelde kalenderdagen; kaarten en deadlines blijven gegroepeerd',()=>{
+ const source=show('reeks','2026-12-31',{dates:['2026-12-30','2026-12-31','2027-01-01'],snapshot:{completion:ready},concerts:[{key:'dag1',date:'2026-12-30',assigned:true},{key:'dag2',date:'2026-12-31',assigned:false},{key:'dag3',date:'2027-01-01',assigned:true}]});
+ const a=homePlanning({shows:[source,source]},now);assert.equal(a.yearCount,1);assert.equal(a.completedCount,1);
+ const b=homePlanning({shows:[source]},new Date('2026-12-31T23:00:01Z'));assert.equal(b.today,'2027-01-01');assert.equal(b.yearCount,1);assert.equal(b.completedCount,1);assert.equal(b.upcoming.length,1);assert.equal(b.myShows.length,1);
+ const full={...source,concerts:source.concerts.map(day=>({...day,assigned:true}))};assert.equal(homePlanning({shows:[full]},now).yearCount,2);assert.equal(homePlanning({shows:[show('reeks-zonder-dagmetadata','2026-11-06',{dates:['2026-11-06','2026-11-07','2026-11-07'],snapshot:{completion:ready}})]},now).yearCount,2);
+});
+test('Een bevestigde afronding/heropening wijzigt de jaarteller onmiddellijk zonder wachten op de showdatum',()=>{
+ const data={shows:[show('aankomend','2026-12-31',{snapshot:{completion:{...ready,measures:false}}})]};assert.equal(homePlanning(data,now).completedCount,0);data.shows[0].snapshot.completion.measures=true;assert.equal(homePlanning(data,now).completedCount,1);data.shows[0].snapshot.completion.operational=false;assert.equal(homePlanning(data,now).completedCount,0);
 });

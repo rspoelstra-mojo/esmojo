@@ -897,3 +897,21 @@ af. Onbekende/onvolledige/historische Midden/Hoog-notities nooit als maatregelen
 behandelen. Met maatregelen blijft de planning open tot de latere implementatie-
 workflow echt is gebouwd. Geen nieuwe opslag of API; hergebruik beveiligde
 showcontext en bestaande beoordelingsresponses; lees niets extra bij tabwissels.
+
+
+## Jaartellers homepage
+
+Vanaf V1.47 heten de cijfers Mijn shows dit jaar en Afgerond dit jaar. Gebruik
+het Nederlandse huidige kalenderjaar, 1 januari t/m 31 december, op basis van
+de daadwerkelijke showdatum (niet de datum waarop het voorbereidingswerk af is).
+Tel gekoppelde werkelijke concertdagen, ook verleden in hetzelfde jaar; reeksen
+blijven één kaart maar meerdere showdatums tellen apart. Gebruik de bestaande
+persoonlijke dagkoppelingen, geen rechten afleiden uit de openbare catalogus.
+Geannuleerd/verwijderd/andere zaal en verdwenen toekomstige dagen tellen niet.
+
+Een show is direct Afgerond zodra alle vier bevestigde voorbereidingsstappen
+af zijn: showprofiel, operationeel, productie en maatregelen. Wacht niet op de
+showdag; die blijft een datum, geen fictieve afvinkstatus. Heropening trekt de
+afrondtelling direct terug. Onbekende planning telt niet als afgerond. Beide
+cijfers gebruiken uitsluitend de bestaande beveiligde homepagegegevens/cache,
+zonder nieuwe opslag of extra reads, en wisselen op Nederlandse Nieuwjaarsdag.

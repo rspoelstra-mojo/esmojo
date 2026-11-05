@@ -140,3 +140,25 @@ Alle overige accounts blijven zonder persoonlijke toewijzing tenzij er een echte
 relatie bestaat; beheerder/superrol maakt iemand niet automatisch eigenaar.
 
 De gepubliceerde versie en workflowresultaten staan in de taaknotitie.
+
+
+## Kalenderjaartellingen (V1.47)
+
+Mijn shows dit jaar en Afgerond dit jaar tellen unieke aan de actuele gebruiker
+gekoppelde concertdagen met een datum binnen 1 januari t/m 31 december van het
+huidige Nederlandse kalenderjaar. Afgerond volgt alle vier bevestigde
+voorbereidingsstappen, zonder te wachten op Showdag. De voltooiingsdatum bepaalt
+niet het teljaar. Gedeeltelijke dagkoppelingen en reeksen over een jaargrens
+worden per werkelijk gekoppelde showdatum geteld; kaarten/deadlines behouden
+hun canonieke groepering en bestaande selectielimieten.
+
+Afgelopen dagen blijven meetellen, toekomstig verdwenen shows niet. Geannuleerde
+/verwijderde shows en andere zalen blijven buiten het dashboard. Geen verzonnen
+afronding bij ontbrekende planning. Een bevestigde heropening verandert de teller
+direct; de bestaande middernachttimer verzorgt ook de Nederlandse jaarwisseling.
+Geen extra opslag of netwerkread: homePlanning leidt de cijfers af uit de
+bestaande geautoriseerde gegevens en laatst bevestigde openbare planningsstatus.
+
+Getest: shared/home-planning.test.js voor jaargrenzen, Nieuwjaarsdag, historie,
+gekoppelde dagen, de vier verplichte stappen en heropening; browsercontrole van
+de cijfers/statussen, beide thema’s en 1920/1440/900/700/390px.
