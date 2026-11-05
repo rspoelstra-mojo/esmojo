@@ -1,4 +1,4 @@
-// Minimale vertrouwelijke planningsprojectie; geen ticketinhoud, onderzoek of PDF-bytes.
+// Persoonlijke koppelingen blijven alleen in Drive; openbare projectie wordt apart gelezen.
 function esmojoHomeActor_(actor){
  if(typeof actor!=='string'||!actor||actor.length>100)throw Error('VALIDATION');
  const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),file=esmojoShowFile_(root,'_esmojo_accounts_v1.json');
@@ -25,17 +25,24 @@ function esmojoHomeSnapshot_(target){
  if(pdfFile){try{const status=esmojoShowProfilePdf_({operation:'report-status',concertId:target.primary.concertId},target);pdf={state:status.state};}catch(error){if(error.message!=='REPORT_NOT_READY')throw error;}}
  return{pdf,risks:{production:{choices:document.choices},assessments:{barrier:{completed:esmojoBarrierSummary_(document).completed},floor:{completed:esmojoFloorSummary_(document)?.completed===true}}}};
 }
-function esmojoHomeDashboard_(request){
+function esmojoHomePublicCatalogue_(root){
+ const folders=root.getFoldersByName('Productie'),folder=folders.hasNext()?folders.next():null;if(!folder||folders.hasNext()||folder.isTrashed())throw Error('DASHBOARD_UNAVAILABLE');
+ const cache=CacheService.getScriptCache(),cached=cache.get('home-public-catalogue-v1');
+ if(cached){const data=JSON.parse(cached);if(data.version===1&&Array.isArray(data.shows))return{folder,...data};}
+ const {state}=esmojoHomeIndex_(root),data=esmojoHomeCacheCatalogue_(state,folder);return{folder,...data};
+}
+function esmojoHomeCacheCatalogue_(state,folder){
+ const photos=esmojoHomePhotosRead_(folder).data.photos;
+ const shows=homeCatalogue(state,'',[],{includeHistory:true}).map(show=>{const {assigned,...publicShow}=show;return{...publicShow,...(photos[show.key]?.sourceUrl===show.sourceUrl?{photo:photos[show.key]}:{}),concerts:show.concerts.map(({assigned,...concert})=>concert)};});
+ const data={version:1,checkedAt:state.checkedAt,shows},text=JSON.stringify(data);if(text.length<90000)CacheService.getScriptCache().put('home-public-catalogue-v1',text,21600);return data;
+}
+function esmojoHomeDashboard_(request,verifiedRoot){
  const metadata=request.operation==='home-metadata',allowed=metadata?['actor','concertId','operation']:['actor','operation'];
  if(Object.keys(request).sort().join(',')!==allowed.join(','))throw Error('VALIDATION');
  if(metadata&&(typeof request.concertId!=='string'||!request.concertId||request.concertId.length>240||/[\x00-\x1f/\\]/.test(request.concertId)))throw Error('VALIDATION');
- const root=esmojoHomeActor_(request.actor),{state,folder}=esmojoHomeIndex_(root),catalogue=homeCatalogue(state,request.actor,esmojoHomeAssignments_(folder).document.assignments);
- if(metadata){const show=catalogue.find(show=>show.key===request.concertId);if(!show)throw Error('NOT_FOUND');return{show:{key:show.key,name:show.name,dates:show.dates,venue:show.venue,city:show.city}};}
- const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd');
- const next=catalogue.filter(show=>show.dates.some(date=>date>=today)).sort((a,b)=>{const first=a.dates.find(date=>date>=today),second=b.dates.find(date=>date>=today);return first.localeCompare(second)||(a.times[first]||'').localeCompare(b.times[second]||'')||a.key.localeCompare(b.key);}).slice(0,5),needed=new Set(next.map(show=>show.key));
- for(const show of catalogue)if(show.assigned||needed.has(show.key)){
-  try{show.snapshot=esmojoHomeSnapshot_(esmojoHomeTarget_(state,folder,show.key));}
-  catch{show.planningUnavailable=true;}
- }
- return{shows:catalogue,checkedAt:state.checkedAt};
+ const root=verifiedRoot||esmojoHomeActor_(request.actor),{folder,shows,checkedAt}=esmojoHomePublicCatalogue_(root),links=esmojoHomeAssignments_(folder).document.assignments,catalogue=shows.map(show=>({...show,assigned:show.concerts.some(concert=>links.some(link=>link.concertId===concert.key&&link.userId===request.actor&&link.role==='event-safety-manager')),concerts:show.concerts.map(concert=>({...concert,assigned:links.some(link=>link.concertId===concert.key&&link.userId===request.actor&&link.role==='event-safety-manager')}))}));
+ if(metadata){const show=catalogue.find(show=>show.key===request.concertId);if(!show)throw Error('NOT_FOUND');return{show:{key:show.key,name:show.name,dates:show.dates,venue:show.venue,city:show.city,...(show.sourceUrl?{sourceUrl:show.sourceUrl}:{})}};}
+ const projection=esmojoHomeProjectionRead_(folder).document;
+ for(const show of catalogue){const row=projection.entries[show.key];if(row?.completion)show.snapshot={completion:row.completion};else show.planningUnavailable=true;if(row)show.planningUpdatedAt=row.updatedAt;}
+ return{shows:catalogue,checkedAt};
 }

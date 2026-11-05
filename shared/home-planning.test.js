@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {homePlanning,calendarMonth,shiftMonth,deadlineSummary} from './home-planning.js';
+import {homePlanning,calendarMonth,shiftMonth,deadlineSummary,homeShowDates,nextHomeMidnight} from './home-planning.js';
 import {homeCatalogue} from './home-catalogue.js';
 import {readFileSync} from 'node:fs';
 const now=new Date('2026-11-04T12:00:00Z'),show=(key,date,extra={})=>({key,name:key,venueId:'gashouder',venue:'Gashouder',city:'Amsterdam',dates:[date],assigned:true,snapshot:{},...extra});
@@ -29,7 +29,24 @@ test('Catalogus behoudt reeksidentiteit/historische eerste datum en toont alleen
  assert.equal(readFileSync('google-apps-script/HomeCatalogue.gs','utf8').split('\n').slice(1).join('\n'),readFileSync('shared/home-catalogue.js','utf8').replaceAll('export ',''));
 });
 
-test('Showlijsten en Mijn shows tellen echte concertdagen; gedeelde reeksdeadlines blijven uniek en linken naar de bestaande reeks',()=>{
+test('Showlijsten combineren echte reeksen; gedeelde reeksdeadlines blijven uniek en linken naar de bestaande reeks',()=>{
  const source=show('reeks','2026-11-05',{dates:['2026-11-05','2026-11-06','2026-11-07'],concerts:[{key:'dag1',date:'2026-11-05',assigned:true},{key:'dag2',date:'2026-11-06',assigned:true},{key:'dag3',date:'2026-11-07',assigned:true}]});
- const model=homePlanning({shows:[source]},now);assert.equal(model.assigned.length,3);assert.equal(model.upcoming.length,3);assert.equal(model.tasks.length,5);assert.equal(new Set(model.tasks.map(task=>task.id)).size,5);assert.deepEqual(model.upcoming.map(show=>show.key),['dag1','dag2','dag3']);assert.ok(model.tasks.every(task=>task.href==='/shows/reeks'));
+ const model=homePlanning({shows:[source]},now);assert.equal(model.assigned.length,1);assert.equal(model.upcoming.length,1);assert.equal(model.tasks.length,5);assert.equal(new Set(model.tasks.map(task=>task.id)).size,5);assert.deepEqual(model.upcoming.map(show=>show.key),['reeks']);assert.equal(homeShowDates(model.upcoming[0].dates),'5, 6, 7 november 2026');assert.ok(model.tasks.every(task=>task.href==='/shows/reeks'));
+});
+
+test('Maximaal zes eigen reeksen; verleden en afgeronde taken uit lijst maar behouden in kalender',()=>{
+ const shows=[show('verleden','2026-11-01'),show('klaar','2026-11-05',{snapshot:{completion:{profile:true,production:true,operational:false,measures:false}}}),...Array.from({length:8},(_,i)=>show('volgend-'+i,'2026-11-'+String(i+6).padStart(2,'0')))];const model=homePlanning({shows},now);
+ assert.equal(model.upcoming.length,5);assert.equal(model.myShows.length,6);assert.equal(model.myShows[0].key,'klaar');assert.equal(model.assigned.length,9);
+ assert.equal(model.tasks.some(task=>task.showKey==='verleden'),false);assert.equal(model.calendarTasks.filter(task=>task.showKey==='verleden').length,5);
+ assert.equal(model.tasks.some(task=>task.showKey==='klaar'&&['profile','production'].includes(task.kind)),false);assert.equal(model.calendarTasks.filter(task=>task.showKey==='klaar'&&task.completed).length,2);
+ assert.equal(homeShowDates(['2026-11-30','2026-12-01']),'30 november 2026 · 1 december 2026');assert.equal(homeShowDates(['2026-11-08','2026-11-06','2026-11-07','2026-11-06']),'6, 7, 8 november 2026');
+});
+
+test('Daggroepen wisselen exact om Nederlandse middernacht, ook bij zomer/wintertijd',()=>{
+ for(const date of ['2026-11-05T22:59:59.000Z','2026-03-29T21:59:59.000Z','2026-10-25T22:59:59.000Z','2026-12-31T22:59:59.000Z'])assert.equal(nextHomeMidnight(new Date(date)),1000);
+ assert.equal(nextHomeMidnight(new Date('2026-03-28T23:00:00Z')),23*3600000);assert.equal(nextHomeMidnight(new Date('2026-10-24T22:00:00Z')),25*3600000);
+});
+
+test('Importhistorie behoudt afgelopen shows in kalender maar herintroduceert geen verdwenen toekomstige concerten',()=>{
+ const model=homePlanning({shows:[show('verdwenen','2026-11-07',{activeDates:[]}),show('afgelopen','2026-11-01',{activeDates:[]}),show('actueel','2026-11-06',{activeDates:['2026-11-06']})]},now);assert.deepEqual(model.upcoming.map(show=>show.key),['actueel']);assert.deepEqual(model.myShows.map(show=>show.key),['actueel']);assert.equal(model.tasks.some(task=>task.showKey!=='actueel'),false);assert.equal(model.calendarTasks.some(task=>task.showKey==='afgelopen'),true);assert.equal(model.calendarTasks.some(task=>task.showKey==='verdwenen'),false);
 });

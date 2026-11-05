@@ -4,8 +4,8 @@
 
 De aangeleverde overdracht bepaalt functionaliteit, de HTML bepaalt het uiterlijk.
 De homepage `/` heeft uitsluitend het bestaande hoofdmenu en geen submenu.
-De eigen `.home-*` componenten gebruiken het lichte schema uit de referentie,
-ook als het hoofdmenu het bestaande donkere systeemthema volgt. De expliciet
+De eigen `.home-*` componenten volgen het bestaande systeemthema: het lichte
+schema uit de referentie en een donker schema in dezelfde kleuren als de site. De expliciet
 gevraagde cqw-tekstverhoudingen zijn alleen op de linker concertkaarten toegepast.
 Andere pagina's, lettergroottes en het hoofdmenu blijven ongewijzigd.
 
@@ -20,14 +20,13 @@ reeksdatums blijven de deadlinebasis bepalen; active bepaalt welke groepen nog
 actueel in de geïmporteerde catalogus staan. Verdwenen groepen worden niet als
 actieve planning verzonnen. Onderliggende historie wordt niet gewijzigd.
 
-De vijf linkerkaarten gebruiken echte afzonderlijke showdagen, chronologisch
-op datum, bekende tijd en stabiel concert-ID. Reeksen delen hun bestaande pagina
-en voorbereiding; de rechter lijst en Mijn shows tellen alle gekoppelde showdagen,
-terwijl gedeelde reeksdeadlines één keer tellen. Vandaag blijft
-zichtbaar; een onbekende starttijd blijft leeg. Er is geen nieuwe tijdscrape.
-Alle gekoppelde actieve showdagen blijven voor de rechterlijst meetellen,
-met hun gedeelde voorbereiding voor het deadlineoverzicht,
-ook buiten vijf kaarten of het 90-dagenvenster van het gewone Shows-submenu.
+De vijf linkerkaarten gebruiken canonieke reeksen, chronologisch op eerstvolgende
+showdag, bekende tijd en stabiel reeks-ID. Alle echte dagen staan samen op één
+kaart, bijvoorbeeld 6, 7, 8 november 2026. Mijn shows toont maximaal zes gekoppelde
+reeksen met een resterende showdag; de teller telt alle toekomstige gekoppelde
+reeksen. Beide lijsten linken naar dezelfde bestaande reeksroute. Geen samenvoegen
+van losse reeksen op alleen artiestnaam. Historische catalogusgroepen blijven
+beschikbaar voor de kalender; alleen Gashouder, ook buiten het 90-dagenmenu.
 
 ## Bestaande planning hergebruiken
 
@@ -50,34 +49,69 @@ Account-showkoppelingen zijn bevestigd Vertrouwelijk in Drive, via de bestaande 
 Geen verlopen datum automatisch als afgeronde show behandelen.
 
 Lijstgroepen: verlopen, vandaag en resterend tot zondag; oudere achterstand telt
-in totaal maar alleen maandag–zondag telt als deze week. Kalender heeft vorige/
-volgende maand en alle open mijlpalen. Nederlandse kalenderdagen gebruiken
+in totaal maar alleen maandag–zondag telt als deze week. De lijst bevat alleen open mijlpalen van reeksen waarvan de laatste showdag
+nog niet voorbij is. Afgeronde taken verdwijnen direct uit deze lijst. De kalender
+heeft vorige/volgende maand en behoudt alle mijlpalen, inclusief afgeronde taken
+en deadlines van afgelopen shows; afgeronde taken krijgen hun eigen markering. Nederlandse kalenderdagen gebruiken
 Europe/Amsterdam; geen datumverschuiving door UTC/zomertijd. Maandraster start
 maandag. Deadline-items wijzigen geen afrondstatus.
 
-## Minimale beveiligde gegevensroute
+## Snelle beveiligde projectie en cache
 
-`home-dashboard` vereist dezelfde actuele Shows-module, activatie, MFA en sessie
-als de bestaande showroutes. De getekende Drive-brug controleert de actieve
-accountmodule nogmaals. Zij bundelt uitsluitend canonieke metadata en noodzakelijke
-statusvlaggen; geen analyses, ticketinhoud, historie, manager-ID, PDF-bytes of
-Drive-ID's naar de browser. Statuslezing schrijft niets en genereert geen PDF.
-Snapshotfouten worden expliciet onbekend en niet stilzwijgend onafgerond/groen.
+`home-dashboard` vereist actuele Shows-module, activatie, MFA en sessie; de
+Drive-brug controleert de module opnieuw. In Productie staat de apart Openbaar
+geclassificeerde `_esmojo_home_planning_v1.json`: uitsluitend canonieke reeks-ID's,
+vier afrondbooleans en een controletijd. Geen keuzes, teksten, account-ID's,
+bezoekersdata of PDF-bytes. HomeCompletion.gs is exact uit de bestaande
+productionComplete-bron gegenereerd. HomeProjection.gs werkt na bronwijzigingen
+precies de betrokken reeks bij, onder dezelfde Drive UserLock. PDF-commit is
+onderdeel hiervan. De bestaande OIDC-middagworkflow bouwt de projectie ook op
+na de catalogusimport, via de eigen audience /api/home-planning-sync. Langdurige
+broncontroles houden geen globaal schrijfslot vast; uitsluitend de korte eindmerge
+wordt vergrendeld en leest de actuele Drive-projectie buiten de leescache om.
+Ondertussen bevestigde bronwijzigingen blijven daarbij leidend. Geen vrije
+browser-, preview- of client-data-schrijfroute. Supabase is toegestaan maar voor
+deze uitvoering niet nodig: geen nieuw databaseschema of persoonsgegevenscache.
 
-Foto's komen via de bestaande beveiligde show-photo-route en openbare MOJO-bron.
-Alleen zichtbare foto's worden op de achtergrond opgehaald; ontbrekende foto
-blijft een neutraal vlak met dezelfde verhouding. Geen Unsplash of andere foto.
+Een homepage-read opent geen onderliggende analyse-, ticket-, productie- of
+PDF-bronnen meer. Openbare metadata en statusprojectie mogen maximaal zes uur
+in Apps Script CacheService staan; nooit de persoonlijke koppelingen of profielen.
+Die blijven in het vertrouwelijke Drive-register. Session/restore vraagt de
+home-projectie in dezelfde getekende Drive-aanroep mee als de actuele profiel-
+controle. Dat voorkomt de vroegere tweede browserlaadronde na het aanmelden.
+Andere modules krijgen deze dashboardgegevens niet. Fout in een optionele
+projectie mag de aanmelding niet blokkeren.
 
-Beide lijsten linken naar `/shows/<generalConcertId>`. De beveiligde
-home-metadata-read maakt ook de bestaande showpagina bereikbaar voor een
-canonieke actuele reeks buiten het 90-dagenmenu, zonder dat menu uit te breiden.
-Late reacties mogen een reeds geopende show of een nieuwe pagina niet vervangen.
+Op 5 november heeft de gebruiker expliciet openbare homepagegegevens in de browser
+toegestaan. src/lib/home-cache.js whitelists metadata, geverifieerde MOJO-foto-URL's
+en afrondbooleans naar `esmojo-public-home-v1` (maximaal zeven dagen). Er staat geen
+account-ID, assigned-vlag, relatie, token, recht, keuze of broninhoud in deze opslag.
+Persoonlijke relaties worden pas in geheugen toegevoegd vanuit de geverifieerde
+sessieresponse. Zonder die bevestiging kan een bewaarde openbare cache niet als
+persoonlijk dashboard worden getoond. Wis persoonlijke toestand en negeer late
+reacties bij afmelden/account-/rol-/modulewissel; bestaande serverrechten blijven
+leidend. Geblokkeerde/corrupte opslag is optioneel en blokkeert de applicatie niet.
 
-Gegevens uitsluitend in componentgeheugen, niet in localStorage/IndexedDB.
-Verversen bij navigatie, focus/zichtbaar worden en periodiek; ongewijzigde
-snapshots vervangen de DOM niet. Dag-/weekgrenzen worden ook zonder nieuwe read
-opnieuw berekend. Wissel Lijst/Kalender en de gekozen maand blijven behouden bij
-verversen. Opruimen bij verlaten, afmelden en modulewijziging.
+Navigatie en geverifieerde sessie-opstart tekenen meteen uit dit geheugen. De
+normale globale sessiecontrole ververst op focus/zichtbaarheid en iedere minuut
+op de achtergrond; de homepage doet geen tweede periodieke Drive-read. Na een
+geslaagde bronwijziging bevat het antwoord de bevestigde nieuwe reeksstatus en
+werkt de cache/list direct bij. Een bevestigde PDF-status werkt dezelfde vlag bij.
+Openbare cachewijzigingen worden tussen tabbladen doorgegeven, zonder relaties.
+Bij een lopende of mislukte controle blijft de laatst bevestigde status zichtbaar;
+geen skeleton of leeg dashboard bij verversing. Alleen bij een allereerste bezoek
+zonder bruikbare geverifieerde gegevens is een initiële read nodig. De beveiligde
+aanmelding en het ophalen van nog niet gecachte afbeeldingen blijven netwerkwerk.
+
+Nederlandse middernacht wordt exact gepland, ook op een dag van 23/25 uur. Dan
+worden datums, vijf/zes lijsten en deadlines opnieuw berekend zonder serverread.
+Kalender-/lijstkeuze en de gekozen maand blijven bij updates behouden.
+De middagworker haalt geverifieerde MOJO-foto-URL's vooraf op en bewaart ze
+Openbaar in Productie/_esmojo_home_photos_v1.json. De bootstrap levert deze URLs
+direct mee; het beeld zelf laadt via normale browsercache. Er is alleen bij een
+ontbrekende foto een extra achtergrondlookup nodig; ook die URL wordt gecachet. Geen tijdelijke foto. Ook een reeks
+waarvan de eerste dag al voorbij is krijgt via de beveiligde metadatafallback
+de juiste foto en bestaande showpagina.
 
 ## Verificatie en status
 
@@ -91,7 +125,7 @@ Unit-/integratiecontroles voor scope, volledige versus vijfshowsselectie,
 reeksidentiteit, echte afrondingen, ontbrekende data, kalender-/weekgrenzen,
 MFA/moduleweigering op server en Drive, directe showroutes en late reacties.
 Browsercontrole op 320, 700, 900, 1100, 1280, 1440, 1920 en 2560 px, met beide
-systeemthema's: lichte dashboardstijl, 1/2/3 kolommen, 320:213-fotoverhouding,
+systeemthema's: bijpassend licht/donker dashboard, 1/2/3 kolommen, 320:213-fotoverhouding,
 uitlijning, rechter cijferblok gelijk aan eerste kaart, geen paginaoverflow,
 kalendernavigatie/refreshbehoud en lege/fout/herlaadstatus.
 

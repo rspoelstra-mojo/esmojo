@@ -23,6 +23,7 @@ jobs:
           node server/account-modules.test.js
           node server/home-dashboard.test.js
           node shared/home-planning.test.js
+          node src/lib/home-cache.test.js
           node src/lib/show-direct-route.test.js
           node server/report-web.test.js
           node src/lib/report-view.test.js
