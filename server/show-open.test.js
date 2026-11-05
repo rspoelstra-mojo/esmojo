@@ -41,3 +41,12 @@ test('Een heropende show bindt bestaande conceptwachtrij aan de nieuwe laadconte
  const first=profileSaves('local-show-fixture',async()=>{old++;throw Error('oude context');});first.sync({revision:1,analyses:{}});
  const reopened=profileSaves('local-show-fixture',async()=>{fresh++;return{revision:2,analyses:{1:{status:'draft',summary:'test'}}};});assert.equal(first,reopened);reopened.enqueue(1,'draft','test');await new Promise(done=>setImmediate(done));assert.equal(old,0);assert.equal(fresh,1);assert.equal(reopened.server.revision,2);clearProfileSaves();
 });
+
+test('Bevestigde operationele beoordeling werkt showgeheugen en planning direct bij zonder nieuwe laadronde',async()=>{
+ const bundle=await openFixture(),source={revision:'a'.repeat(64),sha256:'b'.repeat(64)},record={revision:1,riskLevel:'low',riskNote:'',completedAt:'2026-11-05T12:00:00Z'};
+ bundle.risks={...bundle.risks,state:'ready',risks:[{id:'R01',title:'Synthetisch risico',description:'Test',consequence:'Test'}],operational:{source,assessments:{}}};let calls=0,notified=0;
+ const overview={...bundle.risks,operational:{source,assessments:{R01:record}}},data=createShowData(bundle,async(action)=>{calls++;assert.equal(action,'operational-risk');return{record,overview};});
+ data.subscribe(()=>notified++);assert.equal(data.planningSnapshot().risks.operational.assessments.R01,undefined);
+ await data.request('operational-risk',{body:{concertId:'Test',riskId:'R01',source,revision:0,riskLevel:'low',riskNote:''}});
+ assert.equal(data.planningSnapshot().risks.operational.assessments.R01.riskLevel,'low');assert.equal(notified,1);assert.equal(data.version(),1);assert.equal((await data.request('show-risks',{body:{}})).operational.assessments.R01.revision,1);assert.equal(calls,1);data.dispose();
+});

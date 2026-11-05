@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';
 function harness(request,saveSelection){
   let focused;
   class Element{
-    constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.attributes={};this.className='';this.value='';this._text='';}
+    constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.attributes={};this.className='';this.value='';this._text='';this.classList={toggle(){}};}
     append(...items){for(const item of items){item.parent=this;this.children.push(item);}}
     replaceChildren(...items){this.children=[];this._text='';this.append(...items);}
     set textContent(text){this._text=text;this.children=[];}get textContent(){return this._text+this.children.map(c=>c.textContent).join(' ');}
@@ -17,7 +17,7 @@ function harness(request,saveSelection){
   const panel=new Element('section'),menu=new Element('a');
   const openAssessment=(section,{onBack})=>{section.replaceChildren();const back=new Element('button');back.textContent='Terug';back.onclick=onBack;const title=new Element('h2');title.textContent='Barrieropstelling';section.append(back,title);return()=>{};};
   const context=vm.createContext({access:async()=>{throw Error("Unexpected API request");},Promise,structuredClone,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{addEventListener(){},scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
-  for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
+  for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','shared/barrier-layout.js','shared/operational-risk.js','src/production-assessment-ui.js','src/risk-review-card.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
   const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection});
   return{page,panel,menu,focused:()=>focused,buttons:()=>panel.querySelectorAll('[data-risk-id]'),text:()=>panel.textContent};
 }
@@ -28,7 +28,7 @@ test('Risico’s laden pas bij tabselectie, krijgen ieder eigen pagina en terugk
   assert.deepEqual(h.panel.querySelectorAll('h3').map(el=>el.textContent),['Zaalindeling',"Operationele risico's",'Special effects']);assert.match(h.text(),/Operationele risico's/);assert.equal(calls,0);
   h.page.activate();h.page.activate();assert.equal(calls,1);assert.equal(h.panel.attributes['aria-busy'],'true');
   resolve({state:'ready',risks,production:{revision:0,choices:{}}});await tick();assert.equal(h.buttons().length,2);assert.equal(h.panel.attributes['aria-busy'],undefined);
-  for(const risk of risks){h.buttons().find(b=>b.dataset.riskId===risk.id).onclick();assert.ok(h.text().includes(risk.title));assert.ok(h.text().includes(risk.description));assert.ok(h.text().includes(risk.consequence));assert.equal(h.panel.querySelectorAll('textarea').length,0);h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.buttons().length,2);assert.equal(h.focused().dataset.riskId,risk.id);}
+  for(const risk of risks){h.buttons().find(b=>b.dataset.riskId===risk.id).onclick();assert.ok(h.text().includes(risk.title));assert.ok(h.text().includes(risk.description));assert.ok(h.text().includes(risk.consequence));assert.equal(h.panel.querySelectorAll('textarea').length,1);assert.ok(h.text().includes('Risico beoordeling'));h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.buttons().length,2);assert.equal(h.focused().dataset.riskId,risk.id);}
   h.page.activate();assert.equal(calls,1);h.page.dispose();assert.equal(h.text(),'');assert.equal(h.menu.children.length,0);
 });
 test('Ontbrekende analyse, nul risico’s en laadfout hebben verschillende uitkomsten met veilige herpoging',async()=>{
