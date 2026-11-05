@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {ONTRACK_HEADERS} from './ontrack-report/data.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,7 +25,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({ env: configuration, clientFactory, photoService:async()=>null,
-    ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-preview'&&reportSource?reportSource:{ok:true};},
+    ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
     shows:async(operation,input)=>{calls.push(['shows',operation,input]);return operation==='list'?{shows:[]}:{record:{revision:0}};},
@@ -175,7 +176,7 @@ test('Rapportacties zijn beheerder/MFA-only en accepteren geen eigen showmetadat
 });
 
 test('Modules zijn onafhankelijk: ieder niet-toegekend onderdeel wordt vóór gegevensophaal/download en ongeacht beheerdersrol geweigerd',async()=>{
- const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
+ const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['reports','report-menu','GET'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
  for(const modules of [[],['shows'],['artists'],['reports']])for(const role of ['gebruiker','beheerder'])for(const [required,action,method]of actions){
   if(modules.includes(required))continue;
   const {response,calls}=await run({own:{...profile,role,modules},action,method,body:{operation:'download',reportId:'bekend-id',modules:['shows','artists','reports']}});
@@ -205,6 +206,6 @@ test('Super beheerder behoudt alle modules maar de website-API kent die rol nooi
 test('Rapportages-only gebruiker leest het vaste webvoorbeeld zonder Shows of beheerderrol; geen bronbytes in de HTTP-response',async()=>{
  const fields={ID:'fixture','Date and Time':'2026-11-03 - 06:00 PM',Division:'Medisch',Type:'Testmelding',Zone:'Fixture',Priority:'Low',Description:'Fictieve beschrijving','Affected Person':'1'};
  const csv=ONTRACK_HEADERS.join(',')+'\n'+ONTRACK_HEADERS.map(key=>fields[key]||'').join(',');
- const result=await run({own:{...profile,role:'gebruiker',modules:['reports']},action:'report-web',method:'POST',body:{slug:'jungle'},reportSource:{csvBase64:Buffer.from(csv).toString('base64'),modifiedAt:'2026-11-04T00:00:00Z'}});
+ const result=await run({own:{...profile,role:'gebruiker',modules:['reports']},action:'report-web',method:'POST',body:{slug:'jungle'},reportSource:{csvBase64:Buffer.from(csv).toString('base64'),modifiedAt:'2026-11-04T00:00:00Z',sourceHash:createHash('sha256').update(csv).digest('hex'),show:{key:'Jungle_Ziggo-Dome_03112026',name:'Jungle',venue:'Ziggo Dome',date:'2026-11-03',sourceUrl:'https://www.mojo.nl/concerten/jungle'},series:{dates:['2026-11-03'],shows:[{concertId:'Jungle_Ziggo-Dome_03112026',date:'2026-11-03'}]}}});
  assert.equal(result.response.code,200);assert.equal(result.response.data.report.incidents.length,1);assert.equal(result.calls.some(call=>call[0]==='shows'),false);assert.match(result.response.headers['Cache-Control'],/no-store/);assert.equal(JSON.stringify(result.response.data).includes('csvBase64'),false);
 });

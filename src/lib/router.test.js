@@ -24,8 +24,8 @@ test('Rapportages gebruikt het opgeslagen concert-ID en normaliseert oude URL’
   let location=new URL('https://esmojo.nl'+path+'?view=voorbeeld');const listeners={},clicks={};let renders=0;
   const win={get location(){return location;},history:{replaceState(_,__,target){location=new URL(target,location);},pushState(_,__,target){location=new URL(target,location);}},addEventListener:(name,fn)=>listeners[name]=fn,removeEventListener:name=>delete listeners[name]};
   const doc={addEventListener:(name,fn)=>clicks[name]=fn,removeEventListener:name=>delete clicks[name]};
-  const dispose=installRouter({win,doc,onNavigate:()=>renders++});assert.equal(location.pathname,canonical);assert.equal(location.search,'?view=voorbeeld');assert.equal(renders,0);
-  location=new URL('https://esmojo.nl/');clicks.click({button:0,target:{closest:()=>({href:'https://esmojo.nl/rapportages',target:'',hasAttribute:()=>false})},preventDefault(){}});assert.equal(location.pathname,canonical);assert.equal(renders,1);dispose();
+  const dispose=installRouter({win,doc,onNavigate:()=>renders++});assert.equal(location.pathname,['/statistieken','/rapportages'].includes(path)?'/rapportages':canonical);assert.equal(location.search,'?view=voorbeeld');assert.equal(renders,0);
+  location=new URL('https://esmojo.nl/');clicks.click({button:0,target:{closest:()=>({href:'https://esmojo.nl/rapportages',target:'',hasAttribute:()=>false})},preventDefault(){}});assert.equal(location.pathname,'/rapportages');assert.equal(renders,1);dispose();
  }
  assert.equal(legacyPageUrl(new URL('https://esmojo.nl/#/statistieken/jungle?view=voorbeeld')),canonical+'?view=voorbeeld');
  assert.equal(isAppPath('/rapportages/Jungle_Ziggo-Dome_03112026'),true);

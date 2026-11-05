@@ -646,9 +646,8 @@ indeling. Behoud tweederdebreedte, thema’s, deadlines en echte afrondstatussen
 
 ## Jungle-webrapportage onder Rapportages
 
-Vanaf 4 november 2026 bestaat /rapportages/Jungle_Ziggo-Dome_03112026 met submenu Jungle. Het is een
-vaste vormgevingsvoorbeeldpagina; automatische pagina’s voor nieuwe CSV’s volgen
-later. De bestaande CSV in de private OnTrack-map is expliciet als bron bevestigd.
+Vanaf 4 november 2026 bestaat /rapportages/Jungle_Ziggo-Dome_03112026 met submenu Jungle. Het begon als vaste vormgevingsvoorbeeldpagina; vanaf V1.41 werkt de
+rapportagewebsite dynamisch volgens docs/dynamic-web-reports.md. De bestaande CSV in de private OnTrack-map is expliciet als bron bevestigd.
 Geen echte CSV/PDF/incidentteksten in Git, builds of CI-fixtures opnemen. Vercel
 rekent met de bestaande calculateReport-functie. De gedeelde web-renderer toont
 zes fluid kaarten en alle incidenten, met normale 14px tekst en beide thema’s.
@@ -656,9 +655,9 @@ Geen iframe, nieuwe PDF, AI-research, showwijziging of mailactie voor deze weerg
 
 Actie report-web vereist de actuele Rapportages-module na MFA. De getekende
 Drive-operatie web-preview controleert opnieuw actieve moduletoegang, ook voor
-gewone gebruikers. Alleen vaste slug jungle; geen vrije bestands-ID, naam, actor,
-URL of pad uit de browser. De Drive-leesoperatie accepteert uitsluitend de vaste
-geverifieerde CSV, juiste map, MIME en grootte; rapportregister/CSV blijven intact.
+gewone gebruikers. Vanaf V1.41 uitsluitend bekende canonieke concert-ID’s; geen vrije bestands-ID,
+naam, actor, URL of pad uit de browser. Oude Jungle-slug alleen als alias. De Drive-leesoperatie accepteert uitsluitend de bij dat concert gevalideerde CSV,
+juiste map, MIME, grootte en bronhash; rapportregister/CSV blijven intact.
 Bronbytes blijven serverzijdig, de HTTP-response bevat alleen benodigde velden en
 no-store. De browser bewaart niets persistent en ruimt weergave/observer op bij
 verlaten/rechtenwijziging. Gebruik dezelfde renderer later voor echte koppelingen.
@@ -705,7 +704,8 @@ per echte showdatum, datum alleen in de tab en tekst bovenaan gelijk met foto.
 Header niet hoger maken. Gemeenschappelijke stijlen src/show-tabs.css; wissel per
 showdatum de bijbehorende rapportdataset, nooit één rapport dupliceren of
 nachtincidenten op kalenderdatum verkeerd scheiden. Onbeschikbare dag expliciet
-melden. Automatische CSV-koppeling blijft een afzonderlijke toekomstige taak.
+melden. Automatische CSV-webkoppeling is vanaf V1.41 geïmplementeerd volgens
+docs/dynamic-web-reports.md, onafhankelijk van PDF/mail.
 
 Rapportages-submenu gebruikt Shows-klassen en lokaal titelzoeken. Alleen
 beschikbare rapporten, nieuwste eerst. Nederlandse kalenderdag: t/m zeven dagen
@@ -807,3 +807,30 @@ bovenaan. Teller telt alle toekomstige eigen reeksen. Haal afgeronde taken en
 volledig afgelopen reeksen uit de deadline-lijst, behoud ze in de kalender.
 Bereken daggroepen opnieuw om Nederlandse middernacht. Nog niet gebouwde
 operationele/maatregelafrondingen blijven open. Zie docs/homepage-dashboard.md.
+
+
+## Automatische CSV-webrapportages
+
+Op 5 november 2026 heeft de gebruiker gevraagd iedere geldige gekoppelde CSV in
+OnTrack automatisch als webrapportage te tonen, met één submenu-item per artiest
+en maximaal vijf nieuwste eigen datumdatasets in de header. Reeds opgeslagen
+concertkoppeling vóór exacte/unieke concert-ID-bestandsnaammatch. De gebruiker heeft historische fallback expliciet bevestigd: artiest, bekende
+zaal en geldige datum uit het concert-ID, mits CSV-datums aansluiten. Alleen
+webmetadata, geen nieuw Shows-/mailconcert. Gebruik mooie zaalnamen, zoals Ziggo
+Dome, AFAS Live en Johan Cruijff Arena. Ambigue bestaande matches niet omzeilen.
+
+WebReports.gs bewaart uitsluitend validatiemetadata in het aparte Vertrouwelijke
+_esmojo_web_reports_v1.json in dezelfde private Drive-map. Geen wijziging aan het
+bestaande PDF-/mailregister, bronbestanden, ontvangers of verzendtriggers. De aparte
+vijfminutenworker en controle bij openen/herladen starten geen PDF of mail.
+Nieuwe API's vallen onder actuele Reports/MFA- en signed Drive-controle; geen
+anonieme rapport-/CSV-links. Menu en incidentdatasets uitsluitend sessiegeheugen,
+geen homepage-localStorage-toestemming overnemen voor vertrouwelijke rapporten.
+Datumtabs lezen lui de eigen gevalideerde bron, eigen metadata/foto/tijdschema;
+late reacties negeren. Zie docs/dynamic-web-reports.md.
+
+Historische webfoto's mogen alleen van een echte MOJO-pagina waarvan artiest,
+exacte datum en zaal/stad overeenkomen. report-source.js doet dat uitsluitend op
+de achtergrond; geen gegokte bron-URL tonen of bewaren en geen tijdschema achteraf
+als showdagopname presenteren. De afzonderlijke webindex bewaart openbare foto-
+URL's naast validatiemetadata; de incident-/CSV-inhoud blijft eigen Drive-bestand.

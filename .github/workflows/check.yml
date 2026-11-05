@@ -22,6 +22,11 @@ jobs:
           node server/accounts-api.test.js
           node server/account-modules.test.js
           node server/home-dashboard.test.js
+          node server/web-report-catalogue.test.js
+          node shared/report-catalogue.test.js
+          node shared/report-filename.test.js
+          node server/report-source.test.js
+          node src/lib/report-catalogue-cache.test.js
           node shared/home-planning.test.js
           node src/lib/home-cache.test.js
           node src/lib/show-direct-route.test.js
