@@ -28,3 +28,21 @@ kalendernavigatie, leeg/fout/herproberen en late reacties. Geen fictieve tijden,
 Unsplash of productiegegevens in broncode. Build en passende server/Drive/module/
 planning/directe-route-tests worden vóór draftoplevering afgerond. Geen publicatie
 naar main zolang noodzakelijke bevestigingen ontbreken.
+
+
+5 november: gebruiker bevestigt Vertrouwelijk in Drive voor account-showrelaties
+en de neutrale algemene statusweergave. Toewijzingen staan apart van de openbare
+concertindex. Nieuwe centrale ShowAssignments.gs-regel via dezelfde normale
+importworkflow; duplicaten voorkomen, andere relaties/rollen/accountrechten
+behouden, ontbrekend/ambigu account alleen als afhankelijke fout behandelen.
+De eenmalige backfill is vóór publicatie uitgevoerd met deze regel op de echte
+gegevens, in het juiste Productie-register geüpload en byte-exact teruggelezen;
+geen openbare deling. Alle canonieke Gashouder-showdagen en het bestaande juiste
+account geverifieerd, geen andere zaal gekoppeld. Lokale herhaling schrijft niets.
+
+Persoonlijke dashboardprojectie opnieuw getest met het teruggelezen echte
+register en bestaande statusdocumenten. Alle eigen planningssnapshots leesbaar;
+geen ruwe documenten in Git/CI/logs. Showdagen in lijsten/teller onderscheiden
+van gedeelde reeksdeadlines, om dubbel tellen te voorkomen. Aanvullende echte
+importintegratietests voor bestaande relaties, nieuwe shows, herhaalbaarheid en
+ontbrekend/ambigu account. Publicatiecontrole volgt hieronder.

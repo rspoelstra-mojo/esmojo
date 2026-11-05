@@ -164,7 +164,11 @@ function esmojoShows_(input) {
     }
     const updated = { version: 1, concerts: rows, active: Array.from(incoming), checkedAt: snapshot.checkedAt };
     esmojoWriteShowJson_(root, indexFile, '_esmojo_shows_v1.json', updated);
-    return esmojoReply_({ ok: true, data: { concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
+    // De import en herhaalbare backfill delen dezelfde centrale regel; toewijzingen
+    // staan uitsluitend in hun eigen vertrouwelijke register, nooit in deze index.
+    let managerAssignment=null;
+    if(typeof esmojoSyncHomeManagers_==='function'){try{managerAssignment=esmojoSyncHomeManagers_(esmojo,root,updated);}catch{managerAssignment={state:'unavailable'};}}
+    return esmojoReply_({ ok: true, data: { ...(managerAssignment?{managerAssignment:managerAssignment.state}:{}), concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
   } catch (error) { return esmojoReply_({ ok: false, code: ['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
   finally { if (lock) lock.releaseLock(); }
 }
