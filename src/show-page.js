@@ -1,4 +1,5 @@
 import './show-tabs.css';
+import {requestedShowTab} from '../shared/show-navigation.js';
 import './show-page.css';
 import {access} from './auth.js';
 import {loadShowPhoto} from './show-photo.js';
@@ -13,7 +14,7 @@ import {createShowPlanning} from './show-planning.js';
 export function formatShowDates(dates){return dates.map(date=>new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(`${date}T12:00:00Z`))).join(' · ');}
 const tabs=['Overzicht','Showprofiel','Risicoanalyse','Maatregelen','Documenten'];
 const svg=paths=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
-export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,memory=request===access?showMemory:createShowMemory({request})}={}){
+export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,initialTab=requestedShowTab(globalThis.location?.search||''),memory=request===access?showMemory:createShowMemory({request})}={}){
   let disposed=false,opening=false,releasePage=()=>{};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,content):null;
   async function open(){
@@ -45,7 +46,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       if(disposed)return;
       const bar=document.createElement('div');bar.className='show-tabs';bar.setAttribute('role','tablist');bar.setAttribute('aria-label','Showonderdelen');
       const indicator=document.createElement('span');indicator.className='show-tab-indicator';indicator.setAttribute('aria-hidden','true');
-      const panels=document.createElement('div');panels.className='show-panels';const buttons=[],views=[];let active=lease.view.tab;
+      const panels=document.createElement('div');panels.className='show-panels';const buttons=[],views=[];let active=Number.isInteger(initialTab)&&initialTab>=0&&initialTab<tabs.length?initialTab:lease.view.tab;
       function position(){const button=buttons[active];indicator.style.width=`${button.offsetWidth}px`;indicator.style.transform=`translate(${button.offsetLeft}px, ${button.offsetTop+button.offsetHeight-3}px)`;}
       function select(index,focus=false){active=index;lease.view.tab=index;buttons.forEach((button,i)=>{button.setAttribute('aria-selected',String(i===index));button.tabIndex=i===index?0:-1;views[i].hidden=i!==index;});position();if(focus)buttons[index].focus();if(tabs[index]==='Risicoanalyse')risks?.activate();}
       tabs.forEach((label,index)=>{
@@ -65,7 +66,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       const heading=document.createElement('div');heading.className='show-heading';const intro=document.createElement('div');intro.className='show-heading-intro';intro.append(title,meta);bar.append(indicator);heading.append(intro,photo,bar);page.append(heading,panels);
       // Bouw onzichtbaar; publiceer pas wanneer alle bestaande controllers gereed zijn.
       await Promise.all([disposeProfile.ready,risks.prepare()]);if(disposed)return;
-      content.replaceChildren(page);document.title=`${show.name} · Shows · ESMOJO`;select(active);
+      select(active);content.replaceChildren(page);position();document.title=`${show.name} · Shows · ESMOJO`;
       observer=new ResizeObserver(position);observer.observe(bar);frame=requestAnimationFrame(()=>bar.classList.add('show-tabs-ready'));
     }catch{
       cleanup();if(disposed)return;
