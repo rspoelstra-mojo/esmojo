@@ -28,7 +28,7 @@ eigen audience; geen algemene webschrijfroute. Parser/store/module/tijdzone- en
 bestaande rapporttests worden gecontroleerd vóór publicatie via PR/main.
 
 Gecontroleerd: parser 4, opslag/worker 4, rapportprojectie 7, machine-identiteit 6,
-Apps Script 8, Drive 7 en deploymenttests geslaagd; productiebuild en diff-check
+Apps Script 6, Drive 7 en deploymenttests geslaagd; productiebuild en diff-check
 geslaagd. Browseracceptatie met uitsluitend synthetische records op 700, 1280,
 1440, 1920 en 2560px in licht/donker: gecentreerde volle-breedtetussenkoppen,
 correcte nachtgrens en volgorde, alle acht incidentfilters, ongewijzigde
