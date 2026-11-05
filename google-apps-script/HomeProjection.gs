@@ -37,7 +37,18 @@ function esmojoHomeResult_(request,result){
 }
 function esmojoHomeRebuild_(request){
  if(Object.keys(request).join(',')!=='operation'||request.operation!=='home-rebuild')throw Error('VALIDATION');
- const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),{state,folder}=esmojoHomeIndex_(root),catalogue=homeCatalogue(state,'',[],{includeHistory:true}),storage=esmojoHomeProjectionRead_(folder);let ready=0,unavailable=0;
- for(const show of catalogue){const row={key:show.key,updatedAt:new Date().toISOString()};try{row.completion=esmojoHomeCompletion_(show,esmojoHomeTarget_(state,folder,show.key));ready++;}catch{row.planningUnavailable=true;unavailable++;}storage.document.entries[show.key]=row;}
- esmojoHomeProjectionSave_(folder,storage);esmojoHomeCacheCatalogue_(state,folder);return{ok:true,ready,unavailable,photoSources:catalogue.filter(show=>show.dates.at(-1)>=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd')&&/^https:\/\/www\.mojo\.nl\/concerten\/[\w%/-]+$/.test(show.sourceUrl||'')).map(show=>({key:show.key,sourceUrl:show.sourceUrl}))};
+ const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),{state,folder}=esmojoHomeIndex_(root),catalogue=homeCatalogue(state,'',[],{includeHistory:true}),before=esmojoHomeProjectionRead_(folder).document.entries,computed={};
+ // Langdurige broncontroles bezetten geen slot voor interactieve showwijzigingen.
+ for(const show of catalogue){const row={key:show.key,updatedAt:new Date().toISOString()};try{row.completion=esmojoHomeCompletion_(show,esmojoHomeTarget_(state,folder,show.key));}catch{row.planningUnavailable=true;}computed[show.key]=row;}
+ const lock=LockService.getUserLock();if(!lock.tryLock(20000))throw Error('BUSY');
+ try{
+  const storage=esmojoHomeProjectionRead_(folder);
+  for(const [key,row]of Object.entries(computed)){
+   // Een bronwijziging die tijdens de controle klaar is, blijft altijd leidend.
+   if(JSON.stringify(storage.document.entries[key]||null)===JSON.stringify(before[key]||null))storage.document.entries[key]=row;
+  }
+  esmojoHomeProjectionSave_(folder,storage);const latest=esmojoHomeIndex_(root).state;esmojoHomeCacheCatalogue_(latest,folder);
+  const rows=catalogue.map(show=>storage.document.entries[show.key]),today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd');
+  return{ok:true,ready:rows.filter(row=>row?.completion).length,unavailable:rows.filter(row=>!row?.completion).length,photoSources:homeCatalogue(latest,'',[],{includeHistory:true}).filter(show=>show.activeDates.some(date=>date>=today)&&/^https:\/\/www\.mojo\.nl\/concerten\/[\w%/-]+$/.test(show.sourceUrl||'')).map(show=>({key:show.key,sourceUrl:show.sourceUrl}))};
+ }finally{lock.releaseLock();}
 }
