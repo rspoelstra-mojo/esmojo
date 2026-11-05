@@ -1,13 +1,15 @@
 import {medicalReportTags} from '../shared/report-medical.js';
 import {securityReportTags} from '../shared/report-security.js';
 import {getMojoPhoto} from './mojo-photo.js';
-import {reportPages} from '../shared/report-routes.js';
+import {reportVenueName} from '../shared/report-filename.js';
+import {legacyReportId} from '../shared/report-routes.js';
+import {validateReportDay} from './web-report-catalogue.js';
+import {createHash} from 'node:crypto';
 import {calculateReport,displayValue} from './ontrack-report/data.js';
-// Alleen vaste voorbeeldkeuze; automatische rapport-/CSV-koppeling volgt later.
-const examples={jungle:{key:reportPages.find(report=>report.slug==='jungle').concertId,name:'Jungle',venue:'Ziggo Dome',dates:reportPages.find(report=>report.slug==='jungle').dates,sourceUrl:'https://www.mojo.nl/concerten/jungle'}};
 export function validateWebReportRequest(input){
- if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).join(',')!=='slug'||typeof input.slug!=='string'||!Object.hasOwn(examples,input.slug))throw Error('VALIDATION');
- return input.slug;
+ if(!input||typeof input!=='object'||Array.isArray(input))throw Error('VALIDATION');
+ const key=Object.keys(input).join(','),id=key==='slug'?legacyReportId(input.slug):key==='concertId'?input.concertId:null;
+ if(typeof id!=='string'||!id||id.length>240||/[\x00-\x1f/\\]/.test(id))throw Error('VALIDATION');return id;
 }
 export function webReportTypes(incidents,division){
  const groups=new Map();
@@ -22,13 +24,12 @@ export function webReportTypes(incidents,division){
 }
 export function createWebReportService({store,photo=getMojoPhoto}){
  return async(actor,input)=>{
-  const slug=validateWebReportRequest(input),[sourceResult,photoResult,timetableResult]=await Promise.allSettled([store('web-preview',actor,{slug}),photo(examples[slug].sourceUrl),store('timetable-read',actor,{concertId:examples[slug].key})]);
-  if(sourceResult.status==='rejected')throw sourceResult.reason;const source=sourceResult.value;
-  if(typeof source?.csvBase64!=='string'||source.csvBase64.length>2800000||!Number.isFinite(Date.parse(source.modifiedAt)))throw Error('REPORT_UNAVAILABLE');
-  const report=calculateReport(Buffer.from(source.csvBase64,'base64'),{generatedAt:source.modifiedAt});
-  if(timetableResult.status==='rejected'&&timetableResult.reason?.message==='FORBIDDEN')throw timetableResult.reason;
-  const photoData=photoResult.status==='fulfilled'?photoResult.value:null,timetable=timetableResult.status==='fulfilled'?timetableResult.value?.timetable||null:null;
-  return{show:examples[slug],photo:photoData,report:{timetable,kpis:report.kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:report.timeline,locations:report.locations,
+  const concertId=validateWebReportRequest(input),source=await store('web-read',actor,{concertId}),show=source.show;
+  if(show?.key!==concertId||typeof show.name!=='string'||!show.name||typeof show.venue!=='string'||typeof source?.csvBase64!=='string'||source.csvBase64.length>2800000||!Number.isFinite(Date.parse(source.modifiedAt))||!Array.isArray(source.series?.shows)||!source.series.shows.some(row=>row.concertId===concertId&&row.date===show.date))throw Error('REPORT_UNAVAILABLE');
+  const bytes=Buffer.from(source.csvBase64,'base64');if(createHash('sha256').update(bytes).digest('hex')!==source.sourceHash)throw Error('SOURCE_CHANGED');
+  const report=validateReportDay(calculateReport(bytes,{generatedAt:source.modifiedAt}),show.date);
+  let photoData=source.photo||null;try{if(!photoData)photoData=await photo(show.sourceUrl);}catch{/* Optionele foto mag het rapport niet blokkeren. */}
+  return{show:{key:show.key,name:show.name,venue:reportVenueName({name:show.venue}),dates:source.series.dates},selectedDate:show.date,availableShows:source.series.shows,photo:photoData,report:{timetable:source.timetable||null,kpis:report.kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:report.timeline,locations:report.locations,
    incidents:report.incidents.map(incident=>{const {id,localDate,time,zone,type,priority,description,note,highlight}=incident;return{id,localDate,time,zone,type,priority,description,note,highlight,securityFilters:securityReportTags(incident),medicalFilters:medicalReportTags(incident)};}),
   }};
  };

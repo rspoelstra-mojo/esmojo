@@ -40,26 +40,33 @@ function incidentCard(incident,index){
  }
  element.append(fields);return element;
 }
-export function renderWebReport(parent,data){
- const {show}=data,view=node('section','web-report'),header=node('header','report-heading'),intro=node('div','report-heading-intro');
- intro.append(node('p','report-eyebrow','Showrapportage'),node('h1','',show.name),node('p','report-show-meta',show.venue));header.append(intro);
- const photo=reportPhoto(data.photo);
- if(photo){
+export function renderWebReport(parent,data,{loadDate=null,onSelected=()=>{}}={}){
+ const {show}=data,view=node('section','web-report'),header=node('header','report-heading'),intro=node('div','report-heading-intro'),venue=node('p','report-show-meta',show.venue);
+ intro.append(node('p','report-eyebrow','Showrapportage'),node('h1','',show.name),venue);header.append(intro);let photoLink=null;
+ function updateHeader(day){
+  venue.textContent=day.show?.venue||show.venue;photoLink?.remove();photoLink=null;header.classList.remove('report-heading-photo');const photo=reportPhoto(day.photo);if(!photo)return;
   const link=node('a','report-artist-photo'),image=node('img','');link.href=photo.sourceUrl;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label',`Foto van ${show.name} op MOJO`);
-  image.src=photo.imageUrl;image.alt=show.name;image.width=600;image.height=338;image.decoding='async';image.referrerPolicy='no-referrer';
-  image.onerror=()=>{link.remove();header.classList.remove('report-heading-photo');};link.append(image);header.classList.add('report-heading-photo');header.append(link);
+  image.src=photo.imageUrl;image.alt=show.name;image.width=600;image.height=338;image.decoding='async';image.referrerPolicy='no-referrer';image.onerror=()=>{if(photoLink===link){link.remove();photoLink=null;header.classList.remove('report-heading-photo');}};link.append(image);header.classList.add('report-heading-photo');header.append(link);photoLink=link;
  }
- const panel=node('section','report-date-content');panel.id='report-date-panel';panel.setAttribute('role','tabpanel');let disposeDaily=()=>{};
- const dates=reportTabDates(show.dates);
- const tabs=createReportDateTabs(dates,(date,_index,tabId)=>{
-  disposeDaily();panel.setAttribute('aria-labelledby',tabId);
-  // Eén bronrapport nooit herhalen over andere showdagen; nachtincidenten blijven bij hun bronrapport.
-  const report=data.reportsByDate?.[date]||(dates.length===1?data.report:null);
-  if(report)disposeDaily=renderDailyReport(panel,report);
+ updateHeader(data);const panel=node('section','report-date-content');panel.id='report-date-panel';panel.setAttribute('role','tabpanel');let disposeDaily=()=>{},disposed=false,selection=0;
+ const dates=reportTabDates(show.dates),days=new Map(),pending=new Map(),loaders=new Map();
+ for(const date of dates){if(data.reportsByDate?.[date])days.set(date,{show,photo:data.photo,report:data.reportsByDate[date]});}
+ const initial=data.selectedDate||(dates.length===1?dates[0]:null);if(initial&&data.report)days.set(initial,data);
+ const tabs=createReportDateTabs(dates,(date,_index,tabId)=>{void selectDay(date,tabId);});
+ async function selectDay(date,tabId){
+  const ticket=++selection,tab=tabs.element.querySelector('#'+tabId);panel.setAttribute('aria-labelledby',tabId);
+  if(!days.has(date)&&loadDate){
+   if(!loaders.has(date))loaders.set(date,createSubmenuLoading(tab,tab));const loader=loaders.get(date),finish=loader.start();panel.setAttribute('aria-busy','true');
+   try{if(!pending.has(date))pending.set(date,Promise.resolve().then(()=>loadDate(date)).finally(()=>pending.delete(date)));const next=await pending.get(date);if(disposed)return;days.set(date,next);}
+   catch{if(!disposed&&ticket===selection){disposeDaily();const message=node('p','form-message','Deze showrapportage kon niet worden geladen.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>void selectDay(date,tabId);panel.replaceChildren(message,retry);disposeDaily=()=>{};}return;}
+   finally{finish();if(!disposed&&ticket===selection)panel.removeAttribute('aria-busy');}
+  }
+  if(disposed||ticket!==selection)return;disposeDaily();const day=days.get(date);
+  if(day?.report){updateHeader(day);disposeDaily=renderDailyReport(panel,day.report);onSelected(date,day.show?.key||data.availableShows?.find(show=>show.date===date)?.concertId);}
   else{panel.replaceChildren(node('p','report-muted','Voor deze showdatum is nog geen rapportage beschikbaar.'));disposeDaily=()=>{};}
- });
- header.append(tabs.element);view.append(header,panel);parent.replaceChildren(view);tabs.select(dates[0]);
- return()=>{tabs.dispose();disposeDaily();view.replaceChildren();};
+ }
+ header.append(tabs.element);view.append(header,panel);parent.replaceChildren(view);tabs.select(dates.includes(initial)?initial:dates[0]);
+ return()=>{disposed=true;selection++;tabs.dispose();for(const loader of loaders.values())loader.dispose();disposeDaily();days.clear();pending.clear();view.replaceChildren();};
 }
 function renderDailyReport(parent,report){
  const view=node('div','report-day'),disposers=[];let activeFilter=null;
@@ -94,13 +101,16 @@ function renderDailyReport(parent,report){
  disposers.push(timelineChart(chart,report.timeline));
  return()=>{for(const dispose of disposers)dispose();view.replaceChildren();};
 }
-export function createWebReportPage(content,submenuLink,{slug='jungle',request=access}={}){
- let disposed=false,cleanup=()=>{};const loading=createSubmenuLoading(submenuLink,content);
+export function createWebReportPage(content,submenuLink,{concertId,request=access,onSelected=()=>{}}={}){
+ let disposed=false,cleanup=()=>{},currentConcertId=concertId,revision=0,rendered=false,loading=createSubmenuLoading(submenuLink,content);
  async function load(){
-  cleanup();content.replaceChildren();const finish=loading.start();
-  try{const data=await request('report-web',{method:'POST',body:{slug}});if(disposed)return;cleanup=renderWebReport(content,data);document.title=`${data.show.name} · Rapportages · ESMOJO`;}
-  catch{if(!disposed){const message=node('p','form-message','De rapportage kon niet worden geladen. Probeer opnieuw.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>void load();content.replaceChildren(message,retry);}}
+  const ticket=++revision,finish=loading.start(),id=currentConcertId;
+  try{const data=await request('report-web',{method:'POST',body:{concertId:id}});if(disposed||ticket!==revision)return;cleanup();
+   cleanup=renderWebReport(content,data,{onSelected:(date,id)=>{currentConcertId=id;onSelected(date,id);},loadDate:async date=>{const show=data.availableShows.find(show=>show.date===date);if(!show)throw Error('NOT_FOUND');return request('report-web',{method:'POST',body:{concertId:show.concertId}});}});rendered=true;document.title=`${data.show.name} · Rapportages · ESMOJO`;
+  }
+  catch{if(!disposed&&ticket===revision){const message=node('p','form-message','De rapportage kon niet worden geladen. Probeer opnieuw.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>void load();if(!rendered)content.replaceChildren(message,retry);}}
   finally{finish();}
  }
- void load();return()=>{disposed=true;cleanup();loading.dispose();content.replaceChildren();};
+ void load();const dispose=()=>{disposed=true;revision++;cleanup();loading.dispose();content.replaceChildren();};
+ dispose.reload=(nextId,nextLink)=>{currentConcertId=nextId;if(nextLink!==submenuLink){loading.dispose();submenuLink=nextLink;loading=createSubmenuLoading(submenuLink,content);}void load();};return dispose;
 }
