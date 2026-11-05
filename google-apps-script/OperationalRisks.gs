@@ -23,7 +23,7 @@ function esmojoOperationalSave_(request){
   return{record:previous,overview:esmojoShowProfileRisks_({operation:'risk-view',concertId:input.concertId},source.target)};
  }
  if(document.operationalReviews!==undefined&&(!document.operationalReviews||Array.isArray(document.operationalReviews)||typeof document.operationalReviews!=='object'))throw Error('CONFLICT');
- document.operationalReviews ||= {};
+ document.operationalReviews = document.operationalReviews || {};
  const stored=document.operationalReviews[source.source.revision]||{source:source.source,assessments:{},history:[]};
  const record={revision:input.revision+1,riskLevel:input.riskLevel,riskNote:input.riskNote,completedAt:new Date().toISOString()};
  stored.history.push({at:record.completedAt,actor,riskId:input.riskId,before:previous||null,after:record});stored.assessments[input.riskId]=record;document.operationalReviews[source.source.revision]=stored;
