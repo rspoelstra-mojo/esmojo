@@ -37,6 +37,8 @@ jobs:
       - name: Run script and publication checks
         run: |
           node server/apps-script.test.js
+          node server/mojo-timetable.test.js
+          node server/show-timetables.test.js
           node server/ontrack.test.js
           node server/ontrack-concerts.test.js
           node --test server/ontrack-report/*.test.js

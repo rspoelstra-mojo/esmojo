@@ -1,3 +1,4 @@
+import {reportChronology,timetableEntryLabel} from '../shared/show-timetable.js';
 import {medicalReportFilters} from '../shared/report-medical.js';
 import {createReportDateTabs} from './report-date-tabs.js';
 import {securityReportFilters} from '../shared/report-security.js';
@@ -76,6 +77,10 @@ function renderDailyReport(parent,report){
  filterSelect.onchange=()=>{activeFilter=filterSelect.value||null;updateIncidents();};clear.type='button';clear.onclick=()=>{activeFilter=null;updateIncidents();filterSelect.focus();};filterControls.append(filterSelect,clear);
  const counter=node('span','report-incident-count');counter.setAttribute('role','status');counter.setAttribute('aria-live','polite');counter.setAttribute('aria-atomic','true');
  incidentHeader.append(title,filterControls,counter);incidents.append(incidentHeader);
+ const timetableInfo=node('p','report-timetable-caption');
+ if(report.timetable?.status==='available'){const captured=new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Amsterdam'}).format(new Date(report.timetable.capturedAt));timetableInfo.textContent='Geplande tijden volgens MOJO · vastgelegd '+captured;}
+ else timetableInfo.textContent='Geen op de showdag opgeslagen MOJO-tijdschema beschikbaar.';
+ incidents.append(timetableInfo);
  const explanation=node('p','report-filter-explanation'),list=node('div','report-incident-list');list.id='report-incident-list';incidents.append(explanation,list);view.append(incidents);parent.replaceChildren(view);
  function updateIncidents(){
   const selection=reportFilters.find(filter=>filter.id===activeFilter),rows=selectedReportIncidents(report.incidents,activeFilter);
@@ -83,7 +88,7 @@ function renderDailyReport(parent,report){
   filterSelect.value=activeFilter||'';clear.hidden=!selection;counter.textContent=`${rows.length} ${rows.length===1?'incident':'incidenten'}`;counter.setAttribute('aria-label',(selection?selection.label+': ':'')+counter.textContent);
   const statistics=activeFilter==='ambulance'?report.kpis.medical:report.kpis.security;
   explanation.hidden=!(['evictions','arrests','ambulance'].includes(activeFilter)&&statistics[activeFilter]!==rows.length);explanation.textContent=explanation.hidden?'':'Het cijfer hierboven telt personen; dit overzicht toont de bijbehorende incidenten.';
-  list.replaceChildren();rows.forEach((incident,index)=>list.append(incidentCard(incident,index)));if(!rows.length)list.append(node('p','report-muted',selection?'Geen incidenten voor '+selection.label.toLocaleLowerCase('nl-NL')+'.':'Geen incidenten om te tonen.'));
+  list.replaceChildren();for(const item of reportChronology(rows,report.timetable)){if(item.type==='incident')list.append(incidentCard(item.value,item.index));else{const marker=node('div','report-timetable-marker');marker.setAttribute('role','heading');marker.setAttribute('aria-level','3');const time=node('time','',item.value.time);time.dateTime=item.value.localDate+'T'+item.value.time;marker.append(time,document.createTextNode(' - '+timetableEntryLabel(item.value)));list.append(marker);}}if(!rows.length)list.append(node('p','report-muted',selection?'Geen incidenten voor '+selection.label.toLocaleLowerCase('nl-NL')+'.':'Geen incidenten om te tonen.'));
  }
  updateIncidents();
  disposers.push(timelineChart(chart,report.timeline));
