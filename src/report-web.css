@@ -95,3 +95,8 @@
 .report-date-tabs::-webkit-scrollbar { display:none; }
 .report-date-tabs .show-tab { padding:6px 14px; }
 .report-date-tabs .show-tab:focus-visible { outline:2px solid var(--report-blue); outline-offset:-3px; }
+
+.report-timetable-caption { margin:0 0 16px; color:var(--muted); font-size:12px; line-height:1.5; }
+.report-timetable-marker { grid-column:1 / -1; padding:12px 16px; background:#f1f3f6; border:1px solid #e5e9ef; border-radius:10px; text-align:center; color:var(--text); font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.report-timetable-marker time { font-variant-numeric:tabular-nums; }
+:root[data-theme="dark"] .report-timetable-marker { background:#122039; border-color:#25334b; }

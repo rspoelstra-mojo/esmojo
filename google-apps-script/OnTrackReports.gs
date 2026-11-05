@@ -36,10 +36,14 @@ function esmojoOnTrackReports_(input){
  const hex=bytes=>bytes.map(byte=>('0'+((byte+256)%256).toString(16)).slice(-2)).join(''),digest=esmojoOnTrackHash_(input.body),expected=hex(Utilities.computeHmacSha256Signature('ontrack-reports\n'+input.timestamp+'\n'+input.nonce+'\n'+digest,secret,Utilities.Charset.UTF_8));let difference=0;for(let i=0;i<expected.length;i++)difference|=expected.charCodeAt(i)^input.signature.charCodeAt(i);if(difference)return reply(false,null,'FORBIDDEN');
  const lock=LockService.getScriptLock();if(!lock.tryLock(20000))return reply(false,null,'BUSY');
  try{
-  const request=JSON.parse(input.body),operation=request.operation,adminOps=['link','retry','download','send'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail'];
-  if(!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview')throw Error('VALIDATION');
+  const request=JSON.parse(input.body),operation=request.operation,adminOps=['link','retry','download','send'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail','timetable-candidates','timetable-save'];
+  if(!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview'&&operation!=='timetable-read')throw Error('VALIDATION');
   const profiles=esmojoOnTrackProfiles_();if(adminOps.includes(operation)&&!profiles.some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
   const cache=CacheService.getScriptCache(),nonceKey='ontrack-reports:'+input.nonce;if(cache.get(nonceKey))throw Error('FORBIDDEN');cache.put(nonceKey,'1',180);
+  if(operation.startsWith('timetable-')){
+   if(operation==='timetable-read'&&!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
+   return reply(true,esmojoShowTimetables_(request));
+  }
   if(operation==='web-preview'){
    if(!profiles.some(p=>p.id===request.actor&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
    if(Object.keys(request).sort().join(',')!=='actor,operation,slug'||request.slug!=='jungle')throw Error('VALIDATION');
