@@ -834,3 +834,13 @@ exacte datum en zaal/stad overeenkomen. report-source.js doet dat uitsluitend op
 de achtergrond; geen gegokte bron-URL tonen of bewaren en geen tijdschema achteraf
 als showdagopname presenteren. De afzonderlijke webindex bewaart openbare foto-
 URL's naast validatiemetadata; de incident-/CSV-inhoud blijft eigen Drive-bestand.
+
+
+Rapportagekoppeling V1.42: concert-ID's vergelijken hoofdletterongevoelig met
+spaties, underscores en koppeltekens als equivalente scheidingstekens, plus de
+centrale zaalaliassen. Een exacte of unieke match behoudt het bestaande concert;
+ambiguïteit wordt niet als nieuwe filenamefallback omzeild. Bij filenamefallback
+wordt ook buiten de catalogus het bestaande Tijdschemas-archief gelezen: dezelfde
+artiest, canonieke zaal en datum, unieke match en ongewijzigde noonvalidatie.
+Geen archief herschrijven of ontbrekende tijden reconstrueren. Alleen de webflow;
+PDF-/mailregister, ontvangers en verzendmomenten blijven ongewijzigd.
