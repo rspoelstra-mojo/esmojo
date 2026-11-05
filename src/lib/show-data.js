@@ -1,3 +1,4 @@
+import {createOperationalReviewMemory} from './operational-review-memory.js';
 import {createProductionChoiceQueue} from './production-choice-saves.js';
 // Eén showcontext. Vertrouwelijke waarden uitsluitend in tijdelijk sessiegeheugen.
 export function createShowData(bundle,request,concertId){
@@ -6,7 +7,7 @@ export function createShowData(bundle,request,concertId){
     ||!['ready','pending','not-ready'].includes(bundle.risks?.state)||!Array.isArray(bundle.risks.risks))throw Error('Onvolledige showgegevens.');
   const values=new Map([['show-profile',bundle.profile],['ticket-data',bundle.tickets],['barrier-layout',bundle.barrier],['floor-pressure',bundle.floor],['show-risks',bundle.risks],['analysis-finalization',bundle.profile]]);
   if(bundle.pdf)values.set('show-profile-pdf',bundle.pdf);
-  let disposed=false,riskVersion=0;const pendingWrites=new Set(),listeners=new Set();
+  let disposed=false,riskVersion=0;const pendingWrites=new Set(),listeners=new Set(),operationalReviews=createOperationalReviewMemory();
   const notify=()=>{for(const listener of listeners)listener();};
   const settled=async()=>{while(pendingWrites.size)await Promise.allSettled([...pendingWrites]);};
   const isRead=(action,body)=>action==='show-risks'||body.operation==='read'||(action==='show-profile-pdf'&&body.operation==='status');
@@ -19,7 +20,7 @@ export function createShowData(bundle,request,concertId){
       values.set('analysis-finalization',profile);
     }else values.set(action,data);
   }
-  function overview(data){if(data.overview&&values.has('show-risks')){values.set('show-risks',{...values.get('show-risks'),...data.overview});if(data.overview.production)productionChoices.sync(data.overview.production);riskVersion++;}}
+  function overview(data){if(data.overview&&(values.has('show-risks')||Array.isArray(data.overview.risks)&&['ready','pending','not-ready'].includes(data.overview.state))){values.set('show-risks',{...values.get('show-risks'),...data.overview});if(data.overview.production)productionChoices.sync(data.overview.production);riskVersion++;}}
   const context={
     async request(action,options){
       const body=options.body||{},read=isRead(action,body);
@@ -53,8 +54,8 @@ export function createShowData(bundle,request,concertId){
       }
       notify();return data;
     },
-    get busy(){return pendingWrites.size>0||productionChoices.busy;},
-    async whenSettled(){await productionChoices.whenSettled();await settled();},
+    get busy(){return pendingWrites.size>0||productionChoices.busy||operationalReviews.busy;},
+    async whenSettled(){await operationalReviews.whenSettled();await productionChoices.whenSettled();await settled();},
     async prepare(){
       await context.whenSettled();if(disposed)throw Error('Show gesloten.');
       const read=action=>context.request(action,{method:'POST',body:{operation:'read',concertId}});
@@ -75,7 +76,8 @@ export function createShowData(bundle,request,concertId){
     },
     subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
     version:()=>riskVersion,
-    dispose(){disposed=true;productionChoices.cancel();values.clear();listeners.clear();},
+    operationalReviews,
+    dispose(){disposed=true;operationalReviews.clear();productionChoices.cancel();values.clear();listeners.clear();},
   };
   const productionChoices=createProductionChoiceQueue({
     save:body=>context.request('production-risks',{method:'POST',body:{concertId,...body}}),

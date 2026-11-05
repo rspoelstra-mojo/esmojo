@@ -30,3 +30,4 @@
 .risk-analysis .analysis-status[data-status="low"] { background: #fff4dc; color: #805b10; }
 .risk-analysis .analysis-status[data-status="medium"] { background: #ffead5; color: #99500d; }
 .risk-analysis .analysis-status[data-status="high"] { background: #fde8e8; color: #a22929; }
+.operational-save-error { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
