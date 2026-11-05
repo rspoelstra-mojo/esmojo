@@ -30,7 +30,7 @@ function fakeDrive() {
   const root = new Folder('ESMOJO', '1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk');
   return { root, all, writes: () => writes, DriveApp: { getFolderById: id => { assert.ok(all.has(id)); return all.get(id); } } };
 }
-function harness() {
+function harness(withManagers=false) {
   const drive = fakeDrive(), nonces = new Map(); let lastEnvelope;
   const context = vm.createContext({ console, PropertiesService: { getScriptProperties: () => ({ getProperty: () => secret }) },
     Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (algo, body) => [...createHash(algo).update(body).digest()], computeHmacSha256Signature: (message, key) => [...createHmac('sha256', key).update(message).digest()], newBlob: (content, type, name) => ({ content, type, name }), formatDate: date => calendarDate(date) },
@@ -38,9 +38,10 @@ function harness() {
     DriveApp: drive.DriveApp, ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
   for (const name of ['Code.gs', 'Shows.gs']) vm.runInContext(readFileSync(new URL(`../google-apps-script/${name}`, import.meta.url), 'utf8'), context);
+  if(withManagers){vm.runInContext("const ESMOJO_SUPER_ADMIN_EMAIL='manager@example.invalid';",context);vm.runInContext(readFileSync(new URL('../google-apps-script/ShowAssignments.gs',import.meta.url),'utf8'),context);drive.root.createFile({name:'_esmojo_accounts_v1.json',content:JSON.stringify({profiles:[{id:'existing-manager-id',email:'manager@example.invalid',activated:true,disabled:false}]})});}
   const store = createShowsStore({ env, request: async (_, options) => { lastEnvelope = JSON.parse(options.body); return Response.json(context.doPost({ postData: { contents: options.body } })); } });
   const raw = input => context.doPost({ postData: { contents: JSON.stringify(input) } });
-  return { ...drive, store, raw, envelope: () => lastEnvelope };
+  return { ...drive, context, store, raw, envelope: () => lastEnvelope };
 }
 const date = calendarDate(), row = (artist, offset) => { const day = addDays(date, offset); return { artist, date: day, concertId: concertId(artist, day), venue: 'Gashouder', city: 'Amsterdam', sourceUrl: 'https://www.mojo.nl/concerten/test' }; };
 const snapshot = concerts => ({ from: date, until: addDays(date, 365), checkedAt: new Date().toISOString(), concerts });
@@ -102,4 +103,20 @@ test('gelijknamige niet-beheerde gebruikersbestanden worden niet overschreven', 
   const file = folder.createFile({ name: 'algemeen.json', content: '{"eigen":"document"}' });
   await assert.rejects(h.store('sync', { snapshot: snapshot([row('A', 4)]) }), /SHOWS_UNAVAILABLE/);
   assert.equal(file.content, '{"eigen":"document"}');
+});
+
+test('Import/backfill gebruikt bestaand exact account, bewaart relaties privé, herhaalt zonder writes en koppelt nieuwe shows',async()=>{
+ const h=harness(true),s=snapshot([row('Eerste',2)]);const result=await h.store('sync',{snapshot:s});assert.equal(result.managerAssignment,'ready');
+ const production=h.root.folders[0],file=production.files.find(file=>file.name==='_esmojo_show_assignments_v1.json');let data=JSON.parse(file.content);assert.equal(data.classification,'vertrouwelijk');assert.equal(data.assignments.length,1);assert.equal(data.assignments[0].userId,'existing-manager-id');assert.equal(data.assignments[0].concertId,s.concerts[0].concertId);
+ assert.equal(JSON.stringify(jsonFile(production,'_esmojo_shows_v1.json')).includes('existing-manager-id'),false);assert.equal(JSON.stringify(await h.store('list')).includes('assignments'),false);
+ const writes=h.writes();await h.store('sync',{snapshot:s});assert.equal(h.writes(),writes);assert.equal(JSON.parse(file.content).assignments.length,1);
+ data.assignments.push({concertId:s.concerts[0].concertId,userId:'andere-manager',role:'event-safety-manager',note:'Behouden'}, {concertId:'Andere_Ziggo_01012027',userId:'andere-rol',role:'production'});file.setContent(JSON.stringify(data));
+ await h.store('sync',{snapshot:snapshot([...s.concerts,row('Nieuw',3)])});data=JSON.parse(file.content);assert.equal(data.assignments.length,4);assert.ok(data.assignments.some(link=>link.note==='Behouden'));assert.equal(data.assignments.filter(link=>link.userId==='existing-manager-id').length,2);assert.equal(data.assignments.filter(link=>link.userId==='existing-manager-id'&&link.concertId.includes('Ziggo')).length,0);
+ const before=file.content;h.context.esmojoSyncHomeManagers_(h.root,production,{concerts:[{concertId:'Niet_Gashouder',venue:'Ziggo Dome',city:'Amsterdam'}]});assert.equal(file.content,before);
+});
+test('Ontbrekend/ambigu account blokkeert alleen toewijzing; import/accountrelaties worden niet verzonnen',async()=>{
+ for(const profiles of [[],[{id:'a',email:'manager@example.invalid',activated:true},{id:'b',email:'manager@example.invalid',activated:true}]]){
+  const h=harness(true);h.root.files.find(file=>file.name==='_esmojo_accounts_v1.json').setContent(JSON.stringify({profiles}));
+  const result=await h.store('sync',{snapshot:snapshot([row('Test',2)])});assert.equal(result.managerAssignment,profiles.length?'ambiguous-account':'missing-account');assert.equal((await h.store('list')).concerts.length,1);assert.equal(h.root.folders[0].files.some(file=>file.name==='_esmojo_show_assignments_v1.json'),false);
+ }
 });
