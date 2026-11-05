@@ -21,7 +21,7 @@ function esmojoSyncFloor_(document,barrier,actor){
   return true;
 }
 function esmojoFloorData_(record){return {rows:record.rows.map(({id,name,visitors,area})=>({id,name,visitors,area})),riskLevel:record.riskLevel,note:record.note};}
-function esmojoFloorSummary_(document){const r=document.floorPressure;return r?{revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,active:r.completed&&r.riskLevel!=='none'}:null;}
+function esmojoFloorSummary_(document){const r=document.floorPressure;return r?{revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,note:r.note,active:r.completed&&r.riskLevel!=='none'}:null;}
 function esmojoFloorPressure_(request,openTarget){
   const op=request.operation.slice(6),fields={read:[],draft:['revision','basis','data'],complete:['revision','basis','data'],reopen:['revision','basis']}[op];
   if(!fields)throw Error('VALIDATION');riskKeys(request,['operation','concertId','actor',...fields]);assessmentConcert(request.concertId);

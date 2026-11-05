@@ -1,0 +1,12 @@
+.show-measures .measure-summary { min-height: 48px; gap: 16px; align-items: center; }
+.measure-summary-text { display: grid; gap: 5px; min-width: 0; flex: 1; text-align: left; }
+.measure-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); }
+.measure-origin, .measure-empty { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); overflow-wrap: anywhere; }
+.show-measures .measure-origin { font-size: 12px; }
+.show-measures .analysis-editor-card .measure-text { max-inline-size: 72ch; }
+@container fluid (max-width: 620px) {
+ .show-measures .measure-summary { flex-wrap: wrap; }
+ .show-measures .measure-summary-text { flex-basis: calc(100% - 36px); }
+ .show-measures .measure-summary > .analysis-status { order: 3; margin-right: auto; }
+ .show-measures .analysis-editor-header { flex-wrap: wrap; }
+}

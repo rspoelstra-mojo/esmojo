@@ -872,3 +872,28 @@ persistente browseropslag. Eén verzoek tegelijk; overige risico's blijven
 bedienbaar. Toon een fout bij het betreffende risico, behoud invoer en vereis
 een bewuste herpoging. Afmelden/rolwissel wist het geheugen en start geen nog
 niet begonnen schrijfacties meer. De bron-/revisiecontroles blijven behouden.
+
+
+## Beheersmaatregelen op het showtabblad
+
+Vanaf V1.46 bundelt Maatregelen alle expliciete Midden/Hoog-notities uit de
+productie- en actuele operationele beoordelingen. Gebruik showMeasures uit
+src/lib/show-planning.js ook voor de server/homeprojectie. Barrier gebruikt
+riskNote (geen ontwerpnotities), Vloerdruk note; Geen risico/Laag-toelichtingen
+zijn geen maatregel. Operationele maatregelen alleen uit de actuele analyse,
+nooit een oude PDF-bron of een niet meer geïdentificeerd risico.
+
+De kaart Beheersmaatregelen gebruikt bestaande showkaarten in licht/donker.
+Iedere maatregel heeft een eigen leesbare detailweergave en de status Nog niet
+geïmplementeerd; de renderer kent ook Geïmplementeerd voor de latere workflow.
+Voeg nu geen implementatieformulier of afvinkknop toe. Er is geen implementatie-
+status opgeslagen of verzonnen. Het betreft bestaande Vertrouwelijke inhoud;
+alleen de al toegestane afrondvlag mag in de openbare homeprojectie/cache staan.
+
+Alleen als alle toepasselijke productiebeoordelingen én alle huidige operationele
+risico’s zijn afgerond en er geen maatregelen bestaan, toon exact “Geen
+beheersmaatregelen voor deze show” en rond de implementatieplanning automatisch
+af. Onbekende/onvolledige/historische Midden/Hoog-notities nooit als maatregelenvrij
+behandelen. Met maatregelen blijft de planning open tot de latere implementatie-
+workflow echt is gebouwd. Geen nieuwe opslag of API; hergebruik beveiligde
+showcontext en bestaande beoordelingsresponses; lees niets extra bij tabwissels.
