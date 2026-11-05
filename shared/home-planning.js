@@ -7,17 +7,27 @@ export function homePlanning(data,now=new Date()){
  const shows=(data.shows||[]).filter(show=>show.venueId==='gashouder'&&show.venue==='Gashouder'&&!show.cancelled&&!show.deleted).map(show=>{
   const dates=(show.dates||[]).filter(date=>calendarDay(date)!==null).sort(),date=dates.find(date=>date>=today&&(!show.activeDates||show.activeDates.includes(date)))||dates.at(-1)||'';
   const planning=show.planningUnavailable||!show.snapshot?null:showPlanning(show,show.snapshot,now),preparation=planning?.steps.filter(step=>step.id!=='show')||[];
-  const status=!planning?'unknown':preparation.some(step=>!step.completed&&step.date<today)?'behind':'ontrack';
-  return{...show,date,dates,time:show.times?.[date]||null,planning,status};
+  const completed=preparation.length===4&&preparation.every(step=>step.completed);
+  const status=!planning?'unknown':completed?'completed':preparation.some(step=>!step.completed&&step.date<today)?'behind':'ontrack';
+  return{...show,date,dates,completed,time:show.times?.[date]||null,planning,status};
  }).filter(show=>show.date).sort(compare);
  const future=show=>show.dates.some(date=>date>=today&&(!show.activeDates||show.activeDates.includes(date)));
  const assigned=shows.filter(show=>show.assigned&&future(show)),upcoming=shows.filter(future).slice(0,5);
+ const year=today.slice(0,4),yearStart=year+'-01-01',yearEnd=year+'-12-31',annual=new Map();
+ for(const show of shows){
+  const days=Array.isArray(show.concerts)?show.concerts.map(concert=>({...concert,assigned:concert.assigned===true})):show.dates.map(date=>({key:show.key+':'+date,date,assigned:show.assigned===true}));
+  for(const day of days){
+   if(!day.assigned||!show.dates.includes(day.date)||day.date<yearStart||day.date>yearEnd||day.date>today&&show.activeDates&&!show.activeDates.includes(day.date))continue;
+   const previous=annual.get(day.key);annual.set(day.key,{...day,completed:show.completed&&(!previous||previous.completed)});
+  }
+ }
+ const yearlyShows=[...annual.values()];
  const planningShows=shows.filter(show=>show.assigned&&(future(show)||show.dates.some(date=>date<today)));
  const calendarTasks=planningShows.flatMap(show=>show.planning?show.planning.steps.map(step=>({...step,id:show.key+':'+step.id,kind:step.id,showKey:show.key,showName:show.name,venue:show.venue,href:showHref(show),lastShowDate:show.dates.at(-1),activeFuture:future(show)})):[]).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
  const tasks=calendarTasks.filter(task=>!task.completed&&task.activeFuture);
  const groups=[{id:'overdue',title:'Verlopen',tasks:tasks.filter(task=>task.date<today)},{id:'today',title:'Vandaag',tasks:tasks.filter(task=>task.date===today)},{id:'week',title:'Deze week',tasks:tasks.filter(task=>task.date>today&&task.date<=sunday)}].filter(group=>group.tasks.length);
  const weekCount=tasks.filter(task=>task.date>=monday&&task.date<=sunday).length;
- return{today,monday,sunday,shows,upcoming,assigned,myShows:assigned.slice(0,6),calendarTasks,tasks,groups,openCount:tasks.length,weekCount,completedCount:null,unavailableCount:assigned.filter(show=>!show.planning).length};
+ return{today,monday,sunday,year,yearStart,yearEnd,yearCount:yearlyShows.length,shows,upcoming,assigned,myShows:assigned.slice(0,6),calendarTasks,tasks,groups,openCount:tasks.length,weekCount,completedCount:yearlyShows.filter(show=>show.completed).length,unavailableCount:assigned.filter(show=>!show.planning).length};
 }
 export function calendarMonth(month){
  const first=month+'-01';if(calendarDay(first)===null)throw Error('Ongeldige maand');
