@@ -37,7 +37,7 @@ async function performAccess(action, { method = 'GET', body } = {}) {
   activeSession = data.session;
   const homeContext=homeDashboardCache.context();
   let response;try{response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store',
-    headers: { Authorization: `Bearer ${data.session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    headers: { Authorization: `Bearer ${data.session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}), ...(action==='production-risks'?{'X-ESMOJO-Planning-Envelope':'1'}:{}) },
     ...(body ? { body: JSON.stringify(body) } : {}) });}catch{throw Object.assign(new Error('De dienst is tijdelijk niet bereikbaar.'),{retryable:true});}
   let result;
   try { result = await response.json(); } catch { throw Object.assign(new Error('De accountdienst is niet beschikbaar.'),{retryable:response.status>=500||response.ok}); }

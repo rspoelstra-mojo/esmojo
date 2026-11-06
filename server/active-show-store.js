@@ -1,3 +1,4 @@
+import {isDeepStrictEqual} from 'node:util';
 import {createClient} from '@supabase/supabase-js';
 import {createHash,randomUUID} from 'node:crypto';
 import {archiveAfterShow,validateActiveSnapshot} from '../shared/active-show-storage.js';
@@ -67,7 +68,24 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
   async request(operation,payload={}){
    if(!applies(operation)||!payload.concertId)return drive(operation,payload);
    if(!await enabled())return drive(operation,payload);
-   let row=await find(payload.concertId);if(!row)return drive(operation,payload);
+   let row;
+   if(operation==='show-open'){
+    row=await repository.get(payload.concertId);
+    if(!row){
+     let source;try{source=await drive('active-open',payload);}catch(error){if(error.message!=='VALIDATION')throw error;}
+     if(source){
+      if(!source.bundle?.profile||!source.bundle?.tickets||!source.bundle?.risks)throw Error('STORAGE_CONTRACT');
+      if(source.archived){row=await repository.get(payload.concertId);if(!row)return source.bundle;}
+      else{
+       const snapshot=validateActiveSnapshot(source.snapshot);row=await repository.seed(snapshot);
+       // Een andere gebruiker kan tussen export en insert al hebben opgeslagen.
+       // Alleen exact dezelfde gecommitteerde stand direct uit de bundel tonen.
+       if(isDeepStrictEqual(row.snapshot,snapshot))return{...source.bundle,homePlanning:publicActivePlanning(row.snapshot,new Date(now()).toISOString())};
+      }
+     }
+    }
+   }
+   row ||= await find(payload.concertId);if(!row)return drive(operation,payload);
    if((nonblocking(operation)||operation==='risk-view'&&activeRiskView(row.snapshot).state!=='ready')&&Date.parse(archiveAfterShow(row.snapshot.dates))>now()){
     // Lezen/PDF/bestanden mogen geen snelle beoordelingswrite blokkeren.
     const frozen={...row,lease:null,lease_until:new Date(now()+15*60000).toISOString()};
@@ -137,14 +155,22 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
   async verify(){
    const health=repository.health?await repository.health():{schemaReady:true,enabled:await enabled()};
    const catalogue=await drive('list'),today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now()));
-   const concerts=catalogue.concerts.filter(row=>row.venue==='Gashouder'&&row.date>=today).sort((a,b)=>a.date.localeCompare(b.date));let verifiedShows=0;
+   const concerts=catalogue.concerts.filter(row=>row.venue==='Gashouder'&&row.date>=today).sort((a,b)=>a.date.localeCompare(b.date));let verifiedShows=0,openReady=false,driveOpenMs=null;
    for(const concert of concerts.slice(0,1)){
     const source=await drive('active-export',{concertId:concert.concertId});if(source.archived)continue;
     const snapshot=validateActiveSnapshot(source.snapshot);
-    if(health.enabled){const row=await find(concert.concertId);if(!row||row.snapshot.concertId!==snapshot.concertId)throw Error('VERIFY');validateActiveSnapshot(row.snapshot);}
+    if(health.enabled){
+     const row=await find(concert.concertId);if(!row||row.snapshot.concertId!==snapshot.concertId)throw Error('VERIFY');validateActiveSnapshot(row.snapshot);
+     // Alleen lezen, onder de bestaande main/OIDC-workerautoriteit. Technische
+     // actor wordt nergens opgeslagen; de virtuele overlay schrijft geen brondata.
+     const started=now(),frozen={...row,lease:null,lease_until:new Date(now()+15*60000).toISOString()};
+     const opened=await bridge(frozen,'virtual',{operation:'show-open',concertId:row.concert_id,actor:'storage-worker-read'},true);
+     if(!opened.verified||opened.errorCode||!opened.result?.profile||!opened.result?.tickets||!opened.result?.risks)throw Error('VERIFY');
+     validateActiveSnapshot(opened.snapshot);openReady=true;driveOpenMs=Math.max(0,now()-started);
+    }
     verifiedShows++;
    }
-   return{...health,verifiedShows,driveBridge:true};
+   return{...health,verifiedShows,driveBridge:true,openReady,...(openReady?{driveOpenMs}:{})};
   },
   async alerts(){if(!await enabled())return[];return(repository.alertRows?await repository.alertRows():(await repository.all()).filter(row=>row.archive_error)).map(row=>({key:row.concert_id}));},
  };
