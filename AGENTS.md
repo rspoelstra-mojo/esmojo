@@ -1191,3 +1191,18 @@ late antwoorden na sessiewissel niet tonen/bewaren. Actuele lege lijsten moeten
 de eerdere lijst vervangen. Sortering en week-/periodegroepen blijven lokaal
 uit echte beschikbare datums berekend; geselecteerde rapportage niet wisselen
 als nieuwe rapportages binnenkomen.
+
+## Eenmalige geautoriseerde bezorgproef (V1.63)
+
+Op 6 november heeft de gebruiker expliciet drie testmails via Resend naar het
+eigen zakelijke adres gevraagd om Proofpoint-aflevering te onderzoeken. De vaste
+main/OIDC-workflow email-deliverability.yml mag uitsluitend de vaste batch in
+server/email-deliverability.js uitvoeren. Geen vrije ontvanger, afzender, inhoud
+of provider-ID; statusreads vereisen HMAC-bewijzen voor eigen test-ID's. Sleutel
+blijft serverzijdig, IDs/bewijzen uitsluitend tijdelijk workflowgeheugen. Alleen
+variantlabels en technische statussen in logs. Geen echte verzending in tests/CI.
+
+De route sluit automatisch op 7 november 00:00 Nederlandse tijd. Vaste
+idempotentiesleutels binnen die beperkte periode voorkomen extra mails bij
+verloren bevestiging/herhaling. Geen schema, appfunctie of rapportagetrigger
+wijzigen. Geen datum/batch automatisch verlengen zonder nieuw gebruikersverzoek.
