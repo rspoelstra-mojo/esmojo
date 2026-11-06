@@ -68,7 +68,7 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
    if(!applies(operation)||!payload.concertId)return drive(operation,payload);
    if(!await enabled())return drive(operation,payload);
    let row=await find(payload.concertId);if(!row)return drive(operation,payload);
-   if((nonblocking(operation)||operation==='risk-view'&&activeRiskView(row.snapshot).state!=='ready')&&Date.parse(row.archive_after)>now()){
+   if((nonblocking(operation)||operation==='risk-view'&&activeRiskView(row.snapshot).state!=='ready')&&Date.parse(archiveAfterShow(row.snapshot.dates))>now()){
     // Lezen/PDF/bestanden mogen geen snelle beoordelingswrite blokkeren.
     const frozen={...row,lease:null,lease_until:new Date(now()+15*60000).toISOString()};
     const response=await bridge(frozen,'virtual',{operation,...payload,concertId:row.concert_id},true);
@@ -83,7 +83,7 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
    if(!external(operation)){const saved=await repository.receipt(row.concert_id,command);if(saved)return saved.result;}
    row=await acquire(row.concert_id);if(!row)return drive(operation,payload);let handedToDrive=false;
    try{
-    if(Date.parse(row.archive_after)<=now()){
+    if(Date.parse(archiveAfterShow(row.snapshot.dates))<=now()){
      handedToDrive=true;if(!await archive(row))return service.request(operation,payload);return drive(operation,payload);
     }
     const canonical={...payload,concertId:row.concert_id};let output;
@@ -117,14 +117,14 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
   async run({limit=3}={}){
    if(!await enabled())return{enabled:false,mirrored:0,archived:0,failed:0};
    const rows=repository.work?await repository.work():await repository.all();let mirrored=0,archived=0,failed=0;
-   for(const candidate of rows.filter(row=>row.external_command||row.pending||Date.parse(row.archive_after)<=now()).slice(0,limit)){
+   for(const candidate of rows.filter(row=>row.external_command||row.pending||Date.parse(archiveAfterShow(row.snapshot.dates))<=now()).slice(0,limit)){
     if(candidate.external_command){
      if(now()-Date.parse(candidate.external_started)<3*60000)continue;
      let current=candidate;if(Date.parse(current.lease_until)<=now())current=await repository.claim(current.concert_id);if(!current)continue;
      try{await recover(current);}catch{failed++;await repository.error(current).catch(()=>{});}continue;
     }
 
-    const due=Date.parse(candidate.archive_after)<=now();
+    const due=Date.parse(archiveAfterShow(candidate.snapshot.dates))<=now();
     const row=due?await repository.claim(candidate.concert_id):{...candidate,lease:null,lease_until:new Date(now()+15*60000).toISOString()};if(!row||!due&&candidate.lease)continue;
     try{
      if(due){if(await archive(row))archived++;}
