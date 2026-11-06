@@ -14,13 +14,13 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['sync', 'profile-save','show-open','home-photo-cache'].includes(JSON.parse(input.body).operation) || /^(ticket-|final-|report-|risk-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['sync', 'profile-save','show-open','home-photo-cache'].includes(JSON.parse(input.body).operation) || /^(ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
     const finish=data=>esmojoReply_({ok:true,data:typeof esmojoHomeResult_==='function'?esmojoHomeResult_(request,data):data});
     if(['home-rebuild','home-photo-cache'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return finish(request.operation==='home-rebuild'?esmojoHomeRebuild_(request):esmojoHomePhotosSave_(request));}
-    if(!['report-commit','barrier-upload'].includes(request.operation)&&input.body.length>110000)throw Error('VALIDATION');
+    if(!['report-commit','barrier-upload','measure-upload'].includes(request.operation)&&input.body.length>110000)throw Error('VALIDATION');
     if(['home-dashboard','home-metadata'].includes(request.operation)){
       return esmojoReply_({ok:true,data:esmojoHomeDashboard_(request)});
     }
@@ -31,6 +31,9 @@ function esmojoShows_(input) {
     if(/^(barrier-|floor-)/.test(request.operation)){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
       return finish(request.operation.startsWith('barrier-')?esmojoBarrierLayout_(request):esmojoFloorPressure_(request));
+    }
+    if(request.operation.startsWith('measure-')){
+      const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return finish(esmojoMeasureImplementation_(request));
     }
     if(request.operation.startsWith('risk-')){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);

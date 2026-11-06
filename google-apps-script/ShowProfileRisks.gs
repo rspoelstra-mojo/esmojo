@@ -60,10 +60,10 @@ function esmojoShowProfileRisks_(request,openTarget) {
     const target=openTarget||esmojoResearchTarget_(request.concertId),productionDocument=esmojoReadProductionRisks_(target).document,production=esmojoProductionRiskState_(productionDocument);
     const assessments={barrier:typeof esmojoBarrierSummary_==='function'?esmojoBarrierSummary_(productionDocument):null,floor:typeof esmojoFloorSummary_==='function'?esmojoFloorSummary_(productionDocument):null};
     let source;
-    try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return{state:'not-ready',risks:[],production,assessments};throw error;}
+    try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return Object.assign({state:'not-ready',risks:[],production,assessments},esmojoMeasuresOverview_(target,productionDocument,{state:'not-ready',risks:[],production,assessments}));throw error;}
     const document=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
     // Browser krijgt alleen de gevraagde definitie; geen PDF-bytes, ticketdata of Drive-IDs.
-    return {state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production,assessments,...(document?{operational:esmojoOperationalState_(productionDocument,source.source)}:{})};
+    const result={state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production,assessments,...(document?{operational:esmojoOperationalState_(productionDocument,source.source)}:{})};return Object.assign(result,esmojoMeasuresOverview_(target,productionDocument,result));
   }
   validateRiskReference(request.source);if(op==='save')validateRiskResult(request.result);
   // Nieuwe analyse uitsluitend voor de huidige definitieve PDF. Oude analyses blijven leesbaar.

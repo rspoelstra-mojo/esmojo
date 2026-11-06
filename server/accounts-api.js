@@ -13,6 +13,8 @@ import { validateFinalRequest } from '../shared/analysis-finalization.js';
 import { validateTicketRequest } from './ticket-data.js';
 import { getMojoPhoto } from './mojo-photo.js';
 import { validateShowProfile } from './show-profile.js';
+import {validateMeasureRequest,measureFileSignature,measureUploadLimit} from '../shared/measure-workflow.js';
+import {createHash} from 'node:crypto';
 import {validateOperationalReview} from '../shared/operational-risk.js';
 import { validateRiskViewRequest } from './show-risks.js';
 import { validateProductionRiskSelection } from '../shared/production-risks.js';
@@ -118,7 +120,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=['home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='home-dashboard'||action==='home-metadata'){
         const metadata=action==='home-metadata',method=metadata?'POST':'GET';
@@ -154,6 +156,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if(['barrier-layout','floor-pressure'].includes(action)&&req.method==='POST'){
         try{const input=action==='barrier-layout'?validateBarrierRequest(req.body):validateFloorRequest(req.body),{operation,...payload}=input;return reply(200,await shows((action==='barrier-layout'?'barrier-':'floor-')+operation,{...payload,actor}));}
         catch(error){const code=error.message;return reply(code==='VALIDATION'?400:['ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?409:503,{code:['VALIDATION','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(code)?code:'UNAVAILABLE',error:code==='VALIDATION'?(action==='barrier-layout'?'Controleer de verplichte velden en kies een geldige PNG of PDF (maximaal 2 MB).':'Controleer de publieksvakken, bezoekersaantallen, oppervlakten en verplichte beoordeling.'):code==='ASSESSMENT_CONFLICT'?'Deze beoordeling of de brongegevens zijn intussen gewijzigd. Laad opnieuw; je invoer is behouden.':code==='ASSESSMENT_COMPLETED'?'Dit onderdeel is al afgerond. Open de actuele beoordeling of kies eerst Bewerken.':'Laden of opslaan is niet gelukt. Je invoer is behouden. Probeer opnieuw.'});}
+      }
+      if(action==='measure'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Methode niet toegestaan.'});}
+        try{const input=validateMeasureRequest(req.body);if(input.operation==='upload'){const bytes=Buffer.from(input.base64,'base64');if(bytes.length>measureUploadLimit||!measureFileSignature(bytes,input.mime)||createHash('sha256').update(bytes).digest('hex')!==input.sha256)throw Error('VALIDATION');}const {operation,...payload}=input;return reply(200,await shows('measure-'+operation,{...payload,actor}));}
+        catch(error){const code=error.message;return reply(code==='FORBIDDEN'?403:code==='VALIDATION'?400:['SOURCE_CHANGED','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?409:503,{error:code==='VALIDATION'?'Controleer de verplichte beoordeling en kies een PDF, PNG of JPG van maximaal 2 MB.':code==='FORBIDDEN'?'Je hebt geen toegang tot deze module.':['SOURCE_CHANGED','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?'Het risico of de maatregel is intussen gewijzigd. Je invoer is behouden; laad de actuele maatregel.':'Opslag of documentcontrole niet bevestigd. Je invoer is behouden; probeer opnieuw.'});}
       }
       if(action==='operational-risk'&&req.method==='POST'){
         try{return reply(200,await shows('risk-operational-save',{...validateOperationalReview(req.body),actor}));}
