@@ -137,3 +137,19 @@ De gevraagde historische uitbreiding tot één maand terug is expliciet ingetrok
 Er zijn geen scraper-/vensterwijzigingen of nieuwe historische records toegevoegd.
 De bestaande toekomstinventaris en het behoud van eerder bekende concerten blijven
 intact. Onbekend concert-ID blijft wachten op een geldige opgeslagen koppeling.
+
+## V1.57: mail volgt webbeschikbaarheid
+
+PDF-verwerking en online afleveringen hebben eigen status. Een PDF-opmaakfout
+blokkeert geen online mail. OnlineReportMail.gs bewaart onlineReports binnen het
+bestaande private register; zie show-report-email.md voor migratie/idempotentie.
+De PDF-worker blijft werken maar begint met de online mailroute; de webworker
+verzendt direct na validatie. De beheerstatus projecteert de online mailstatus
+bij bijbehorende PDF-records en koppelt handmatig mailen aan dezelfde queue.
+
+GET /api/access?action=report-alerts is een beveiligde metadataread na login:
+alleen huidige zichtbare rapportages met bekende PDF-fout of ontbrekende assets;
+geen CSV-inhoud/bestands-IDs in de response. Actuele Rapportages-module plus
+beheerder of geselecteerde ontvanger vereist. Client toont de bestaande subtiele
+melding rechtsonder. De homepage wacht niet op deze read; sessiewissel wist/werpt
+late meldingen weg. PDF-fouten blijven bestaan tot de PDF-taak echt slaagt.
