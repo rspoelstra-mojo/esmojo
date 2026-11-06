@@ -1,3 +1,4 @@
+import {backgroundSaves} from './background-saves.js';
 import {productionRiskFields, validateProductionRiskState} from '../../shared/production-risks.js';
 
 // Alleen tijdelijk showgeheugen. Eén write tegelijk, met de laatst bevestigde revisie.
@@ -5,7 +6,8 @@ const unsaved = new Set();
 export function createProductionChoiceQueue({save, read}) {
   let server = null, alive = true, failed = false, task = null;
   const jobs = [], listeners = new Set();
-  const emit = () => { if (alive) for (const callback of listeners) { try { callback(); } catch { /* Opslag blijft doorlopen bij een weergavefout. */ } } };
+  const emit = () => { backgroundSaves.changed(); if (alive) for (const callback of listeners) { try { callback(); } catch { /* Opslag blijft doorlopen bij een weergavefout. */ } } };
+  const unwatch=backgroundSaves.watch(()=>alive&&(Boolean(task)||jobs.length>0));
   const queue = {
     get server() { return server; },
     get failed() { return failed; },
@@ -25,7 +27,7 @@ export function createProductionChoiceQueue({save, read}) {
     retry() { if (alive && failed && !task) { failed = false; pump(true); } return queue.whenSettled(); },
     async whenSettled() { while (task) await task; },
     subscribe(callback) { listeners.add(callback); return () => listeners.delete(callback); },
-    cancel() { alive = false; jobs.length = 0; server = null; listeners.clear(); unsaved.delete(queue); },
+    cancel() { alive = false; unwatch(); jobs.length = 0; server = null; listeners.clear(); unsaved.delete(queue); },
   };
   function pump(refresh = false) {
     if (!alive || task || failed || !jobs.length) return;
@@ -51,6 +53,3 @@ export function createProductionChoiceQueue({save, read}) {
   }
   return queue;
 }
-if (typeof window !== 'undefined') window.addEventListener('beforeunload', event => {
-  if (unsaved.size) { event.preventDefault(); event.returnValue = ''; }
-});

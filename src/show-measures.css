@@ -42,3 +42,6 @@
 .measure-briefing-option span { background: #f3f4f6; color: #4b5563; }
 .measure-briefing-option[data-choice="yes"] input:checked + span { background: #e7f5ed; color: #28734d; }
 @container fluid (max-width: 620px) { .measure-proposal-row { grid-template-columns: minmax(0,1fr); } }
+
+.measure-text-input { width: 100%; min-width: 0; min-height: 130px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); color: var(--text); font: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
+.measure-text-input[readonly] { cursor: default; }

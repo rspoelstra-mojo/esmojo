@@ -59,6 +59,7 @@ function esmojoMeasureImplementation_(request){
  if(input.basis!==row.basis)throw Error('SOURCE_CHANGED');
  const normalized=measureState(row,current),record={revision:input.revision+1,basis:row.basis,originalRiskLevel:row.originalRiskLevel,riskLevelAfter:normalized.riskLevelAfter,briefing:normalized.briefing,briefingChosen:normalized.briefingChosen,completedAt:normalized.completedAt,completedBy:normalized.completedAt?current.completedBy:null,attachments:[...(current?.attachments||[])],lastMutation:mutation};
  if(input.operation==='edit-text'){
+  if(normalized.implemented)throw Error('ASSESSMENT_COMPLETED');
   row=esmojoMeasureTextEdit_(document,row,input.text,actor);record.basis=row.basis;record.riskLevelAfter=null;record.completedAt=null;record.completedBy=null;
  }else if(['draft','complete'].includes(input.operation)){
   if(normalized.implemented&&input.operation==='draft'&&input.data.riskLevelAfter!==record.riskLevelAfter)throw Error('ASSESSMENT_COMPLETED');

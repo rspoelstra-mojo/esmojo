@@ -30,7 +30,8 @@ test('Webtypes vullen herhaalde meldingen aan tot vijf echte types en behouden d
  const incidents=[...Array.from({length:3},(_,i)=>({division:'Medisch',type:'Herhaald',position:i})),...['B','A','C','D','E'].map((type,i)=>({division:'Medisch',type,position:10+i})),{division:'Beveiliging',type:'Andere discipline',position:0}];
  assert.deepEqual(webReportTypes(incidents,'medisch'),[{name:'Herhaald',count:3},{name:'B',count:1},{name:'A',count:1},{name:'C',count:1},{name:'D',count:1}]);
  assert.deepEqual(webReportTypes(incidents.slice().reverse(),'medisch'),webReportTypes(incidents,'medisch'));
- const many=Array.from({length:6},(_,i)=>[{division:'Medisch',type:String(i),position:i*2},{division:'Medisch',type:String(i),position:i*2+1}]).flat();assert.equal(webReportTypes(many,'medisch').length,6);
+ const many=Array.from({length:6},(_,i)=>[{division:'Medisch',type:String(i),position:i*2},{division:'Medisch',type:String(i),position:i*2+1}]).flat();assert.equal(webReportTypes(many,'medisch').length,5);
+ assert.deepEqual(webReportTypes(many.map(row=>({...row,division:'Beveiliging'})),'beveiliging').map(row=>row.name),['0','1','2','3','4']);
  assert.equal(webReportTypes([{division:'Medisch',type:'Een'}],'medisch').length,1);assert.deepEqual(webReportTypes([],'beveiliging'),[]);
 });
 test('Beveiligings-drilldown en KPI’s delen exacte criteria; alleen afgeleide labels worden aan incidenten toegevoegd',async()=>{

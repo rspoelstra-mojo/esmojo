@@ -1,3 +1,4 @@
+import {backgroundSaves} from './lib/background-saves.js';
 import {accountModules,hasModule,isSuperAdministrator} from '../shared/account-modules.js';
 import { access } from './auth.js';
 import { cropPhoto } from './photo-crop.js';
@@ -17,7 +18,7 @@ function element(tag, text, className) {
 }
 
 export function createAccountsView(container, currentUser, submenuLink,{onSaved=()=>{}}={}) {
-  let disposed = false;
+  let disposed = false,accountsCache=null,mode='list',viewRevision=0;
   const loading = createSubmenuLoading(submenuLink, container);
   const controller = new AbortController();
   const view = element('section', '', 'accounts-view');
@@ -27,30 +28,36 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
     notice.setAttribute('role', 'status'); view.prepend(notice);
   };
   async function load() {
-    const finishLoading = loading.start();
-    view.replaceChildren();
+    mode='list';const opened=++viewRevision;const finishLoading = loading.start();
+    if(accountsCache)renderAccounts(accountsCache);else view.replaceChildren();
     try {
       const result = await access('accounts');
       if (disposed) return;
+      accountsCache=result.accounts;if(mode==='list'&&opened===viewRevision)renderAccounts(accountsCache);
+    } catch (error) { if (!disposed&&mode==='list'&&opened===viewRevision) { report(error.message,true); } }
+    finally { finishLoading(); }
+  }
+  function renderAccounts(accounts){
+    if(disposed)return;mode='list';
       view.replaceChildren();
       const toolbar = element('div', '', 'accounts-toolbar');
       const add = element('button', 'Account aanmaken', 'primary-button');
-      add.addEventListener('click', () => edit());
+      add.disabled=Boolean(backgroundSaves.form('account:new').busy);add.addEventListener('click', () => edit());
       toolbar.append(element('h1', 'Accounts'), add); view.append(toolbar);
-      if (!result.accounts.length) { view.append(element('p', 'Er zijn nog geen accounts.')); return; }
+      if (!accounts.length) { view.append(element('p', 'Er zijn nog geen accounts.')); return; }
       const table = element('table', '', 'accounts-table');
       const caption = element('caption', 'Alle ESMOJO-accounts'); caption.className = 'visually-hidden'; table.append(caption);
       const head = table.createTHead().insertRow();
       for (const label of ['Voornaam', 'Functie', 'E-mailadres', 'Acties']) { const th = element('th', label); th.scope = 'col'; head.append(th); }
       const body = table.createTBody();
-      for (const account of result.accounts) {
+      for (const account of accounts) {
         const row = body.insertRow();
         for (const [label, value] of [['Voornaam', account.firstName], ['Functie', account.jobTitle], ['E-mailadres', account.email]]) {
           const td = row.insertCell(); td.dataset.label = label; td.textContent = value;
         }
         const cell = row.insertCell(); cell.dataset.label = 'Acties';
         const actions = element('div', '', 'account-actions');
-        actions.append(action('edit', `Bewerk ${account.firstName}`, () => edit(account)));
+        const editButton=action('edit', `Bewerk ${account.firstName}`, () => edit(account));editButton.disabled=Boolean(backgroundSaves.form('account:'+account.id).busy);actions.append(editButton);
         const remove = action('remove', `Verwijder ${account.firstName}`, async () => {
           if (!confirm(`Account van ${account.firstName} ${account.lastName} verwijderen? Deze gebruiker kan daarna niet meer inloggen.`)) return;
           await access('accounts', { method: 'DELETE', body: { id: account.id } }); await load();
@@ -65,8 +72,7 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
         cell.append(actions);
       }
       view.append(table);
-    } catch (error) { if (!disposed) { view.replaceChildren(); report(error.message, true); } }
-    finally { finishLoading(); }
+    for(const account of [null,...accounts]){const draft=backgroundSaves.form('account:'+(account?.id||'new'));if(draft.error){report(draft.error+' Je invoer is behouden.',true);const recover=element('button','Invoer bekijken','secondary-button');recover.type='button';recover.onclick=()=>edit(account);view.prepend(recover);}}
   }
   function action(glyph, label, callback) {
     const button = element('button', '', 'icon-button'); button.type = 'button'; button.title = label; button.setAttribute('aria-label', label);
@@ -79,25 +85,26 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
     return button;
   }
   function edit(account) {
+    mode='edit';viewRevision++;const draft=backgroundSaves.form('account:'+(account?.id||'new'));const initial={...account,...draft.fields};
     view.replaceChildren();
     const toolbar = element('div', '', 'accounts-toolbar'); toolbar.append(element('h1', account ? 'Account bewerken' : 'Account aanmaken')); view.append(toolbar);
     const form = element('form', '', 'account-form');
     for (const [name, title, type] of [['firstName', 'Voornaam', 'text'], ['lastName', 'Achternaam', 'text'], ['jobTitle', 'Functie', 'text'], ['email', 'E-mailadres', 'email']]) {
       const label = element('label', title), input = element('input');
       input.name = name; input.type = type; input.required = true; input.maxLength = name === 'email' ? 254 : 120;
-      input.value = account?.[name] || '';
+      input.value = initial[name] || '';
       if (account && name === 'email') input.readOnly = true;
       label.append(input); form.append(label);
     }
     const roleLabel = element('label', 'Rol'), select = element('select'); select.name = 'role';
     for (const [value, title] of [['gebruiker', 'Gebruiker'], ['beheerder', 'Beheerder']]) { const option = element('option', title); option.value = value; select.append(option); }
-    select.value = isSuperAdministrator(account)?'beheerder':account?.role || 'gebruiker';
+    select.value = isSuperAdministrator(account)?'beheerder':initial.role || 'gebruiker';
     if (account?.id === currentUser.id) select.disabled = true;
     if(isSuperAdministrator(account)){const fixedRole=element('input');fixedRole.type='text';fixedRole.readOnly=true;fixedRole.value='Super beheerder';roleLabel.append(fixedRole);}else roleLabel.append(select);
     form.append(roleLabel);
     const modules=element('fieldset','','account-modules'),legend=element('legend','Modules');modules.append(legend);
     const moduleInputs=accountModules.map(module=>{
-      const label=element('label',module.label),input=element('input');input.type='checkbox';input.checked=account?hasModule(account,module.id):true;input.disabled=isSuperAdministrator(account);input.value=module.id;input.dataset.module=module.id;label.prepend(input);modules.append(label);return input;
+      const label=element('label',module.label),input=element('input');input.type='checkbox';input.checked=draft.fields?.modules?draft.fields.modules.includes(module.id):account?hasModule(account,module.id):true;input.disabled=isSuperAdministrator(account);input.value=module.id;input.dataset.module=module.id;label.prepend(input);modules.append(label);return input;
     });form.append(modules);
     if(isSuperAdministrator(account))form.append(element('p','Super beheerder heeft altijd toegang tot alle huidige en toekomstige modules.','account-notice'));
     const photoLabel = element('label', 'Profielfoto (optioneel)'), photo = element('input');
@@ -106,7 +113,7 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
     if (account) form.append(clearLabel);
     const message = element('p', '', 'form-message'); message.setAttribute('role', 'alert');
     const buttons = element('div', '', 'form-actions'), save = element('button', account ? 'Opslaan' : 'Account aanmaken', 'primary-button');
-    if(isSuperAdministrator(account)&&!isSuperAdministrator(currentUser))save.disabled=true;
+    save.disabled=Boolean(draft.busy)||isSuperAdministrator(account)&&!isSuperAdministrator(currentUser);
     const cancel = element('button', 'Annuleren', 'secondary-button'); cancel.type = 'button'; cancel.addEventListener('click', load);
     buttons.append(save, cancel); form.append(message, buttons); view.append(form);
     form.addEventListener('submit', async event => {
@@ -117,21 +124,23 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
         if (account) fields.id = account.id;
         if(isSuperAdministrator(account))delete fields.role;
         else if (select.disabled) fields.role = account.role;
+        if(draft.fields?.photo!==undefined)fields.photo=draft.fields.photo;
         if (clear.checked) fields.photo = '';
         if (photo.files[0]) {
           const cropped = await cropPhoto(photo.files[0], { signal: controller.signal });
           if (!cropped || disposed) return;
           fields.photo = cropped;
         }
-        const result = await access('accounts', { method: account ? 'PATCH' : 'POST', body: fields });
-        if (disposed) return;
-        await load();
-        if (result.warning) report(result.warning, true);
-        if(account?.id===currentUser.id)onSaved();
+        draft.fields=structuredClone(fields);draft.busy=true;draft.error='';
+        const task=access('accounts',{method:account?'PATCH':'POST',body:fields});
+        renderAccounts(accountsCache||[]);
+        void task.then(result=>{draft.fields=null;draft.error='';if(account?.id===currentUser.id&&!disposed)onSaved();draft.warning=result.warning;},error=>{draft.error=error.message||'Opslaan is niet bevestigd.';}).finally(()=>{draft.busy=false;backgroundSaves.changed();if(!disposed&&mode==='list'){renderAccounts(accountsCache||[]);if(!draft.error)void load().then(()=>{if(!disposed&&mode==='list'&&draft.warning)report(draft.warning,true);});}});
+
       } catch (error) { message.textContent = error.message; }
-      finally { save.disabled = isSuperAdministrator(account)&&!isSuperAdministrator(currentUser); }
+      finally { save.disabled = Boolean(draft.busy)||isSuperAdministrator(account)&&!isSuperAdministrator(currentUser); }
     });
   }
+  const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&mode==='list'&&accountsCache)renderAccounts(accountsCache);});
   load();
-  return () => { disposed = true; loading.dispose(); controller.abort(); view.replaceChildren(); };
+  return () => { disposed = true;offActivity(); loading.dispose(); controller.abort(); view.replaceChildren(); };
 }

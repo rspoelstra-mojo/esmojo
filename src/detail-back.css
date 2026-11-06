@@ -1,0 +1,4 @@
+.analysis-editor-header > .profile-back { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--canvas); color: var(--text); cursor: pointer; }
+.analysis-editor-header > .profile-back svg { width: 20px; height: 20px; }
+.analysis-editor-header > .profile-back:focus-visible { outline: 2px solid var(--profile-blue,#0046f2); outline-offset: 3px; }
+.analysis-editor-header > .assessment-page-title { margin: 0; }

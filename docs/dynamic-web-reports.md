@@ -125,3 +125,13 @@ wordt ook buiten de catalogus het bestaande Tijdschemas-archief gelezen: dezelfd
 artiest, canonieke zaal en datum, unieke match en ongewijzigde noonvalidatie.
 Geen archief herschrijven of ontbrekende tijden reconstrueren. Alleen de webflow;
 PDF-/mailregister, ontvangers en verzendmomenten blijven ongewijzigd.
+
+V1.54: beide incidenttypekaarten begrenzen de webselectie tot de top vijf echte
+types, met dezelfde caption en oorspronkelijke telling/tie-break. Showverloop
+heeft een tijd-only tooltip (21.00) in hoofdmenu-stijl en keyboardbediening.
+`shared/report-timeline.js` gebruikt alleen een geldig opgeslagen MOJO-tijdschema
+met unieke deuren-open- en eindgrens voor de as. Ontbrekende/ambigue/ongeldige
+grenzen behouden exact de bestaande tijdlijn. De nieuwe webas kan middernacht
+passeren en rekent kalenderhalfuurvakken binnen het geplande venster, inclusief
+eventuele gedeeltelijke randvakken. KPI's, bronincidenten, PDF-selectie/grafiek en
+mailflow veranderen niet. Geen nieuw scrape- of opslagmoment.

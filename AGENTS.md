@@ -1000,3 +1000,50 @@ keuze, zonder nieuwe briefingfunctie. Bewaar briefing null/boolean en technische
 briefingChosen-bevestiging binnen dezelfde reeds goedgekeurde vertrouwelijke route.
 Oude true behouden; oude false zonder briefingChosen was impliciet en wordt als
 onbeantwoord weergegeven. Geen historische bron of originele beoordeling wissen.
+
+## Achtergrondopslag en detailbediening (V1.54)
+
+De gebruiker heeft op 6 november 2026 achtergrondopslag als websitebrede standaard
+gevraagd. Opslaan/afronden valideert lokaal, start de serveractie en geeft de
+navigatie direct vrij. Alleen serverbevestiging maakt iets definitief/afgerond;
+geen optimistische planning of verlies van revisie-/bron-/module-/MFA-controles.
+Gebruik auth.access voor alle mutaties en src/lib/background-saves.js voor
+verwerking/afsluitwaarschuwing. Registreer ook nog wachtende/debounced taken via
+watch, zodat de melding vóór het eerste netwerkverzoek werkt. Houd dezelfde
+record tijdens opslag tegen dubbele writes beschermd, laat andere onderdelen vrij.
+
+Risico-/maatregelafronding keert direct terug naar het eigen overzicht. Lange
+analyseafronding sluit de overlay meteen; accounts keren meteen naar de lijst.
+Bezoekersvelden bewaren hun lease tot hun eigen write klaar is; andere velden
+blijven bruikbaar. Wachtrijen stoppen vervolgacties na een onzekere write en
+starten na afmelden/rol-/accountwissel geen nieuwe actie meer. Fouten blijven
+zichtbaar in een centrale melding met link naar het betreffende onderdeel.
+Formulier-/herstelgegevens alleen tijdelijk sessiegeheugen, nooit localStorage,
+IndexedDB, logs of een nieuwe service. Afmelden/rechtenwissel wist dit geheugen.
+Authenticatie en veiligheidscontroles blijven daadwerkelijk bevestigd vóór toegang.
+
+Afsluittekst: ESMOJO is nog gegevens aan het verwerken, weet je zeker dat je wilt
+afsluiten? Gebruik native beforeunload; browsers kiezen doorgaans hun eigen tekst.
+Bij bewust afmelden met open taken dezelfde tekst als bevestigingsvraag gebruiken.
+Geen sendBeacon met vertrouwelijke payload of automatische herpoging na een fout.
+
+Beheersmaatregel heet nu Beheersmaatregel en bevat direct een tekstvak, zonder
+Bewerken/Opslaan-knoppen. Bewaar na 600ms typpauze en flush bij blur/navigatie;
+serialiseer met beoordelingen/afronding en behoud verder getypte tekst tijdens een
+lopende write. Na afronden alleen-lezen; edit-text wordt ook serverzijdig geweigerd
+tot expliciet heropenen. Geen normale statustekst onder de afrondknop. Briefing:
+Nee links, Ja rechts. Beide keuzes blijven verplicht en zonder standaardselectie.
+
+Gebruik detailBackButton uit src/detail-back.js voor alle bestaande detailpagina's
+van Showprofiel, Risicoanalyse, Maatregelen en bezoekers-/productiedetails: alleen
+een linkerpijl, 40×40px, in de titelregel links van het bestaande icoon. Behoud
+aria-label/title Terug naar overzicht en de bestaande terugbestemming.
+
+Rapportagewebsite: incidenttypekaarten tonen maximaal vijf echte types, op aantal
+en oorspronkelijke CSV-positie bij gelijke aantallen. Caption blijft Meest gemelde
+incidenttypes. Showverloop toont alleen een kloktijd (21.00) in een tooltip zoals
+het hoofdmenu. Gebruik opgeslagen, gevalideerde MOJO-grenzen alleen wanneer zowel
+eenduidig deuren open als gepland einde beschikbaar zijn. Anders exact de oude
+periode. Ook over middernacht; geen tijden raden of achteraf ophalen. Webvenster
+rekent kalenderhalfuurvakken binnen die grenzen, met eventueel gedeeltelijke
+randvakken. PDF-/CSV-/KPI-/incidentlijst- en mailrekenregels blijven ongewijzigd.
