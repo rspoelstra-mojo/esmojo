@@ -97,6 +97,9 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
     }
     if(response.errorCode)throw Error(response.errorCode);return{...response.result,...(confirmed?{homePlanning:publicActivePlanning(response.snapshot,new Date(now()).toISOString())}:{}),...(stale?{storageStale:true}:{})};
    }
+   // Statusreads gebruiken de laatst gecommitteerde primaire stand. Ze mogen
+   // nooit achter een nog lopende Drive-write wachten of een opslaglease nemen.
+   if(['final-read','barrier-read','measure-read','risk-view'].includes(operation)&&Date.parse(archiveAfterShow(row.snapshot.dates))>now())return reduceActiveShow(row.snapshot,operation,{...payload,concertId:row.concert_id}).result;
    const command=hash({operation,payload});
    if(!external(operation)){const saved=await repository.receipt(row.concert_id,command);if(saved)return saved.result;}
    row=await acquire(row.concert_id);if(!row)return drive(operation,payload);let handedToDrive=false;

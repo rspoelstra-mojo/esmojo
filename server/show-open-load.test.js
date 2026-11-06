@@ -10,6 +10,9 @@ const calls=[],repo=memoryActiveRepository({now:()=>Date.parse('2026-11-06T12:00
 counts={blobs:0,lookups:0,targets:0};const first=await service.request('show-open',{concertId:h.concertId,actor}),firstCounts={...counts};assert.deepEqual(calls,['active-open']);
 const {homePlanning,...bundle}=first;assert.deepEqual(bundle,baseline);assert.equal(firstCounts.targets,1);assert.equal(JSON.stringify(repo.document()).includes('7654321'),false);assert.equal(JSON.stringify((await repo.get(h.concertId)).snapshot).includes('7654321'),false);assert.equal(first.tickets.workflow.visitors.fields.ticket_sales.content,'7654321');
 calls.length=0;counts={blobs:0,lookups:0,targets:0};const again=await service.request('show-open',{concertId:h.concertId,actor});assert.deepEqual(calls,['active-bridge']);assert.equal(counts.targets,1);assert.deepEqual(again.tickets,baseline.tickets);
+// Een statusread wacht niet achter een lopende opslaglease en verandert die niet.
+const held=await repo.claim(h.concertId),receipt=repo.receipt;repo.receipt=async()=>assert.fail('Statusread mag geen opslagbewijs/slot opvragen');
+calls.length=0;const status=await service.request('final-read',{concertId:h.concertId});assert.equal(status.finalization.basis.profileRevision,held.snapshot.profile.revision);assert.equal((await repo.get(h.concertId)).lease,held.lease);assert.deepEqual(calls,[]);repo.receipt=receipt;await repo.release(held);
 // Bestaande readcache bewaart ontbrekende files niet en vertrouwt geen write.
 const production=h.folder.files.find(f=>f.name==='productionele-risicos.json'),nativeWrite=production.setContent,original=production.content,readLookup=h.ctx.esmojoShowFile_;
 counts={blobs:0,lookups:0,targets:0};h.ctx.esmojoWithShowReadCache_(()=>{const file=h.ctx.esmojoShowFile_(h.folder,'productionele-risicos.json');file.getBlob();file.getBlob();});assert.equal(counts.blobs,1);assert.equal(h.ctx.esmojoShowFile_,readLookup);

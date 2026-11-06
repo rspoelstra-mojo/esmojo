@@ -14,3 +14,9 @@ geen toegang-/bron-/revisiecontrole overslaan. Geen ander uiterlijk of gedrag.
 
 Scope server-adapter, Apps Script readpad, gerichte request-/readcounttests en
 bestaande regressie-/browsertests. Geen SQL, mail of gegevensclassificatie wijzigen.
+
+Aanvullend gebruikerssignaal: Afrondstatus laden-melding na opslaan showprofiel.
+Statusreads uit gecommitteerde DB-snapshot nemen geen opslaglease. Alleen een
+geaccepteerde echte serverbevestiging met volledige status wist de oudere fout;
+lokale editor-sync of een achterhaalde respons doet dat niet. Browserfault-test
+met Man/vrouw verhouding controleert dit zonder de echte leesfout te verbergen.

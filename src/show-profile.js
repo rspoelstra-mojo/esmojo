@@ -27,6 +27,8 @@ const node = (tag, className, text) => { const el = document.createElement(tag);
 export function createShowProfile(panel, { show,requestAccess=access,readOnly=false } = {}) {
   const feedbacks=new Map();const feedback=info=>{if(!feedbacks.has(info.key))feedbacks.set(info.key,createPageFeedback(info));return feedbacks.get(info.key);};
   const readFeedback=feedback({key:'profile-read:'+show.key,label:'Showprofiel laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'});
+  const finalFeedback=feedback({key:'final-read:'+show.key,label:'Afrondstatus laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'});
+  const knownFinalization=(state,revision)=>Boolean(state&&typeof state.ticketsReady==='boolean'&&state.basis?.profileRevision===revision&&Number.isSafeInteger(state.basis?.finalRevision)&&state.basis.finalRevision>=0&&state.basis.ticketVersions&&Object.keys(state.basis.ticketVersions).sort().join(',')==='domestic_origins,ticket_sales,visitor_origins'&&Object.values(state.basis.ticketVersions).every(value=>Number.isSafeInteger(value)&&value>=0)&&['visitors','artist'].every(key=>typeof state.categories?.[key]?.ready==='boolean'&&(state.categories[key].completedAt===null||typeof state.categories[key].completedAt==='string'&&Number.isFinite(Date.parse(state.categories[key].completedAt)))));
   const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
   const request = body => requestAccess('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
@@ -43,24 +45,24 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
   function message(text) { const p = node('p', 'profile-message', text); p.setAttribute('role', 'status'); return p; }
   async function load(strict=false) {
     const sequence=++statusSequence; loaded = false; loadError = ''; finalizationError=''; renderOverview(); const finish = loading?.start(); panel.setAttribute('aria-busy', 'true');
-    try { const data = await request({ operation: 'read' }); if (disposed) return; researchByNumber = data.researchByNumber ?? null; researchErrors = data.researchErrors || {}; if(!loaded||sequence===statusSequence){saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;} loaded = true; }
+    try { const data = await request({ operation: 'read' }); if (disposed) return; researchByNumber = data.researchByNumber ?? null; researchErrors = data.researchErrors || {}; if(!loaded||sequence===statusSequence){saves.sync(data,true);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;} loaded = true; }
     catch(error) { if (!disposed) loadError = 'Showprofiel laden is niet gelukt. Probeer opnieuw.';if(strict===true)throw error; }
     finally { finish?.(); panel.removeAttribute('aria-busy'); if (!disposed && !ticketOpen) renderOverview(); }
   }
   async function refreshFinalization(force=false) {
     const sequence=++statusSequence;
-    try { const data=await requestAccess('analysis-finalization',{method:'POST',refresh:force===true,body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
+    try { const data=await requestAccess('analysis-finalization',{method:'POST',refresh:force===true,body:{operation:'read',concertId:show.key}});if(disposed||sequence!==statusSequence)return;if(!knownFinalization(data.finalization,data.revision))throw Error('UNKNOWN_FINALIZATION');saves.sync(data,true);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;finalizationError='';loaded=true;if(!ticketOpen&&editorNumber===null)renderOverview(); }
     catch { /* Geen afrondknop tonen met een onzekere status. */ if(!disposed&&sequence===statusSequence){finalization=null;finalizationError='Afrondstatus laden is niet gelukt.';if(!ticketOpen&&editorNumber===null)renderOverview();} }
   }
   function completeCategory(category) {
     if(finalDrafts[category].pending||saves.pending.size||saves.errors.size||!finalization?.categories[category]?.ready||finalization.categories[category].completedAt)return;
     const basis=structuredClone(finalization.basis);
-    disposeFinal=openAnalysisFinalization({category,draft:finalDrafts[category],submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;if(!ticketOpen&&editorNumber===null)renderOverview();},onClose:()=>{disposeFinal=()=>{};if(!disposed&&editorNumber===null&&!ticketOpen){renderOverview();if(!finalDrafts[category].pending)void refreshFinalization();}}});
+    disposeFinal=openAnalysisFinalization({category,draft:finalDrafts[category],submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data,true);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;if(!ticketOpen&&editorNumber===null)renderOverview();},onClose:()=>{disposeFinal=()=>{};if(!disposed&&editorNumber===null&&!ticketOpen){renderOverview();if(!finalDrafts[category].pending)void refreshFinalization();}}});
   }
   function renderOverview(focusNumber) {
     disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
     if(loadError)readFeedback.show(loadError,async()=>{await load();return loaded;},'Opnieuw laden');else readFeedback.clear();
-    if(finalizationError)feedback({key:'final-read:'+show.key,label:'Afrondstatus laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'}).show(finalizationError,async()=>{await refreshFinalization(true);return !finalizationError;},'Opnieuw laden');
+    if(finalizationError)finalFeedback.show(finalizationError,async()=>{await refreshFinalization(true);return !finalizationError;},'Opnieuw laden');
     for(const [number]of saves.errors)feedback(saveRequestInfo('show-profile',{concertId:show.key,questionNumber:number})).show('Opslaan is niet bevestigd. Je invoer is behouden.',()=>saves.retry(number));
     const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
     for (const category of analysisCategories) {
@@ -163,7 +165,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     } catch { if (!disposed && editorNumber === number) feedback({key:'profile-editor:'+show.key+':'+number,label:'Analyse laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'}).show('De analyse kon niet worden geladen.',()=>openEditor(number),'Opnieuw laden'); }
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
-  const unsubscribe=saves.subscribe(()=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
+  const unsubscribe=saves.subscribe(confirmed=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(confirmed&&knownFinalization(finalization,revision)){finalizationError='';finalFeedback.resolved();}if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
   // Alleen deze afrondformulieren beïnvloeden het overzicht. Een globale
   // opslagevent mag de PDF-widget niet vernietigen en opnieuw laten starten.
   let finalActivity=JSON.stringify([Boolean(finalDrafts.visitors.pending),Boolean(finalDrafts.artist.pending)]);
