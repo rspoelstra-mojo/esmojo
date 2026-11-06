@@ -1,3 +1,4 @@
+import {createPageFeedback} from './lib/page-feedback.js';
 import {saveRequestInfo} from './lib/background-saves.js';
 import {detailBackButton} from './detail-back.js';
 import './production-assessment.css';
@@ -11,6 +12,7 @@ const glyph=(operational)=>{const el=node('span','profile-category-icon');el.inn
 export function createMeasureImplementationPage(root,{show,data,row:initial,onBack,readOnly=false,request=body=>data.request('measure',{method:'POST',body})}){
  let row=initial,record=initial,disposed=false,reading=false,preparing=false,blocked=false;const urls=new Set(),drafts=data.measureDrafts||new Map();
  let draft=drafts.get(row.id);if(!draft||draft.basis!==row.basis){draft={basis:row.basis,riskLevelAfter:row.riskLevelAfter,briefing:row.briefing,text:row.text,editingText:false,error:''};drafts.set(row.id,draft);}
+ const feedback=createPageFeedback(saveRequestInfo('measure',{concertId:show.key,measureId:row.id}));
  root.replaceChildren();const back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=()=>onBack();
  const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro'),title=node('h2','',row.title),original=node('span','analysis-status measure-original-risk');title.tabIndex=-1;intro.append(title,node('p','',row.origin));header.append(glyph(row.sourceType==='operational'),intro,original);
  const layout=node('div','barrier-assessment-layout measure-implementation-layout'),content=node('div','measure-implementation-content'),aside=node('aside','measure-implementation-aside');
@@ -26,7 +28,7 @@ export function createMeasureImplementationPage(root,{show,data,row:initial,onBa
  const complete=node('button','analysis-complete measure-finish','Beheersmaatregel afronden');complete.type='button';const error=node('p','profile-message');error.setAttribute('role','alert');const reload=node('button','secondary-button','Actuele maatregel laden');reload.type='button';
  const snapshot=()=>({riskLevelAfter:draft.riskLevelAfter,briefing:draft.briefing});
  const review=createRiskReviewCard({name:'measure-after',title:'Risicobeoordeling na implementatie',withNote:false,showSave:false,onChange:value=>{draft.riskLevelAfter=value;queue.save();update();},onSave:()=>{},onEdit:()=>void queue.action('reopen'),editLabel:'Beoordeling wijzigen'});
- aside.append(review.element,briefing,complete);content.prepend(error,reload);layout.append(content,aside);header.prepend(back);root.append(header,layout);
+ aside.append(review.element,briefing,complete);layout.append(content,aside);header.prepend(back);root.append(header,layout);
  function update(){
   if(disposed)return;const locked=readOnly||reading||preparing||blocked||draft.finishing||[...(draft.work||[])].some(work=>work!==queue);
   original.textContent=operationalRiskLabels[row.originalRiskLevel];original.dataset.status=row.originalRiskLevel;original.setAttribute('aria-label','Oorspronkelijke risicobeoordeling: '+original.textContent);original.title='Oorspronkelijke risicobeoordeling';
@@ -37,13 +39,13 @@ export function createMeasureImplementationPage(root,{show,data,row:initial,onBa
   for(const input of briefingInputs){input.checked=draft.briefing===(input.value==='yes');input.disabled=locked||queue.failed;}
   complete.hidden=record.implemented;complete.disabled=locked||queue.failed||!draft.text.trim()||!measureLevels.includes(draft.riskLevelAfter)||typeof draft.briefing!=='boolean';
   choose.disabled=locked||queue.failed;upload.disabled=choose.disabled;choose.hidden=readOnly;
-  error.textContent=draft.error;error.hidden=!draft.error;reload.hidden=!draft.error;reload.disabled=queue.busy||reading;back.disabled=false;
+  if(draft.error)feedback.show(draft.error,()=>reload.onclick(),'Actuele maatregel laden');else feedback.clear();reload.disabled=queue.busy||reading;back.disabled=false;
   documents.replaceChildren();for(const attachment of record.attachments||[]){const file=node('div','measure-document');file.append(node('span','',attachment.fileName));const download=node('button','secondary-button','Downloaden');download.type='button';download.onclick=()=>void downloadFile(attachment);file.append(download);if(!readOnly){const remove=node('button','secondary-button','Verwijderen');remove.type='button';remove.disabled=locked||queue.busy||queue.failed;remove.onclick=()=>void queue.action('remove',{uploadId:attachment.uploadId});file.append(remove);}documents.append(file);}
  }
  function accept(result,replace,job){
   const latest=showMeasures(show,{risks:result?.overview}).rows.find(item=>item.id===row.id);
   if(!latest||!Number.isSafeInteger(result.record?.revision)||result.record.basis!==latest.basis||result.record.originalRiskLevel!==latest.originalRiskLevel)throw Error('UNVERIFIED');
-  row=latest;record=result.record;draft.confirmed=result;draft.basis=row.basis;draft.error='';
+  row=latest;record=result.record;draft.confirmed=result;draft.basis=row.basis;draft.error='';feedback.resolved();
   if(job?.operation==='edit-text'){if(draft.text.trim()===job.payload.text.trim())draft.text=row.text;}else if(replace){draft.riskLevelAfter=record.riskLevelAfter;draft.briefing=record.briefing;draft.text=row.text;}
   update();
  }
@@ -57,12 +59,12 @@ export function createMeasureImplementationPage(root,{show,data,row:initial,onBa
  text.onblur=()=>{if(draft.text.trim())queue.flush();};
  complete.onclick=()=>{if(complete.disabled)return;draft.finishing=true;const pending=queue.action('complete',{data:snapshot()});onBack();void pending.finally(()=>{draft.finishing=false;data.notify?.();});};
  reload.onclick=async()=>{
-  if(queue.busy||reading)return;reading=true;const wanted={...draft};update();
+  if(disposed||queue.busy||reading)return false;reading=true;const wanted={...draft};update();
   try{const result=await request({operation:'read',concertId:show.key,measureId:row.id});queue.dispose();accept(result,true);blocked=false;
    if(wanted.text!==row.text){draft.text=wanted.text;text.value=draft.text;}
    if(wanted.basis===row.basis&&!record.implemented){draft.riskLevelAfter=wanted.riskLevelAfter;draft.briefing=wanted.briefing;}
    queue=makeQueue();draft.error='';
-  }catch{draft.error='De actuele maatregel kon niet worden geladen. Je invoer is behouden.';}finally{reading=false;update();}
+  }catch{draft.error='De actuele maatregel kon niet worden geladen. Je invoer is behouden.';return false;}finally{reading=false;update();}
  };
  upload.onchange=async()=>{
   const file=upload.files?.[0];if(!file||choose.disabled)return;
@@ -72,5 +74,5 @@ export function createMeasureImplementationPage(root,{show,data,row:initial,onBa
  async function downloadFile(attachment){
   try{const result=await request({operation:'download',concertId:show.key,measureId:row.id,uploadId:attachment.uploadId});if(disposed)return;if(result.attachment?.uploadId!==attachment.uploadId||result.attachment.mime!==attachment.mime||typeof result.base64!=='string'||result.base64.length>Math.ceil(measureUploadLimit/3)*4)throw Error('INVALID');const bytes=Uint8Array.from(atob(result.base64),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:attachment.mime}));urls.add(url);const link=node('a','');link.href=url;link.download=attachment.fileName;document.body.append(link);link.click();link.remove();setTimeout(()=>{URL.revokeObjectURL(url);urls.delete(url);},5000);}catch{if(!disposed){draft.error='Het document kon niet veilig worden gedownload. Probeer opnieuw.';update();}}
  }
- update();return{sync(latest){if(disposed||queue.busy||reading)return;if(draft.confirmed?.record?.revision===latest.revision&&draft.confirmed.record.basis===latest.basis){blocked=false;if(record.revision!==latest.revision)accept(draft.confirmed,true);return;}if(latest.basis!==record.basis||latest.revision!==record.revision){blocked=true;draft.error='Het risico of de maatregel is elders gewijzigd. Je invoer is behouden; laad de actuele maatregel.';update();}},dispose(){disposed=true;const pending=queue.dispose();for(const url of urls)URL.revokeObjectURL(url);urls.clear();return pending;}};
+ update();return{sync(latest){if(disposed||queue.busy||reading)return;if(draft.confirmed?.record?.revision===latest.revision&&draft.confirmed.record.basis===latest.basis){blocked=false;if(record.revision!==latest.revision)accept(draft.confirmed,true);return;}if(latest.basis!==record.basis||latest.revision!==record.revision){blocked=true;draft.error='Het risico of de maatregel is elders gewijzigd. Je invoer is behouden; laad de actuele maatregel.';update();}},dispose(){disposed=true;feedback.dispose();const pending=queue.dispose();for(const url of urls)URL.revokeObjectURL(url);urls.clear();return pending;}};
 }

@@ -1,7 +1,7 @@
 import {backgroundSaves} from './background-saves.js';
 // Alleen tijdelijk geheugen. Geen opslag van samenvattingen/tokens in de browser.
 export function createProfileSaveQueue(request){
- let server=null,running=false,alive=true,reload=false;const jobs=[],pending=new Set(),errors=new Map(),drafts=new Map(),listeners=new Set();
+ let server=null,running=false,alive=true,reload=false;const jobs=[],pending=new Set(),errors=new Map(),failedJobs=new Map(),drafts=new Map(),listeners=new Set();
  const emit=()=>{backgroundSaves.changed();if(alive)for(const callback of listeners){try{callback();}catch{/* Een weergavefout mag een bevestigde opslag niet ongedaan maken. */}}};
  function sync(data){
   const oldFinal=server?.finalization?.basis?.finalRevision??-1,newFinal=data.finalization?.basis?.finalRevision??-1;
@@ -15,15 +15,16 @@ export function createProfileSaveQueue(request){
     if(reload){const data=await request({operation:'read'});if(!alive)break;sync(data);reload=false;}
     const data=await request({operation:'save',questionNumber:job.number,status:job.status,summary:job.summary,revision:server.revision});if(!alive)break;
     jobs.shift();pending.delete(job.number);if(drafts.get(job.number)===job.summary)drafts.delete(job.number);errors.delete(job.number);sync(data);
-   }catch(error){if(!alive)break;reload=true;for(const waiting of jobs){pending.delete(waiting.number);errors.set(waiting.number,waiting===job?(error.message||'Opslaan is niet gelukt.'):'Opslaan is niet uitgevoerd omdat een eerdere opslag niet bevestigd kon worden.');}jobs.length=0;emit();break;}
+   }catch(error){if(!alive)break;reload=true;for(const waiting of jobs){pending.delete(waiting.number);failedJobs.set(waiting.number,waiting);errors.set(waiting.number,waiting===job?(error.message||'Opslaan is niet gelukt.'):'Opslaan is niet uitgevoerd omdat een eerdere opslag niet bevestigd kon worden.');}jobs.length=0;emit();break;}
   }
   running=false;
  }
+ const queueSubscribe=callback=>{listeners.add(callback);return()=>listeners.delete(callback);};
  const unwatch=backgroundSaves.watch(()=>alive&&pending.size>0);
- return{drafts,errors,pending,setRequest(next){request=next;},get server(){return server;},sync,
-  enqueue(number,status,summary){if(!alive||!server||pending.has(number))return false;drafts.set(number,summary);errors.delete(number);jobs.push({number,status,summary});pending.add(number);emit();void pump();return true;},
+ return{drafts,errors,pending,retry(number){const job=failedJobs.get(number);if(!job||!alive||pending.has(number))return Promise.resolve(false);const done=new Promise(resolve=>{const off=queueSubscribe(()=>{if(!pending.has(number)){off();resolve(!errors.has(number));}});});this.enqueue(number,job.status,job.summary);return done;},setRequest(next){request=next;},get server(){return server;},sync,
+  enqueue(number,status,summary){if(!alive||!server||pending.has(number))return false;drafts.set(number,summary);errors.delete(number);failedJobs.delete(number);jobs.push({number,status,summary});pending.add(number);emit();void pump();return true;},
   subscribe(callback){listeners.add(callback);return()=>listeners.delete(callback);},
-  cancel(){alive=false;unwatch();jobs.length=0;pending.clear();errors.clear();drafts.clear();listeners.clear();},
+  cancel(){alive=false;unwatch();jobs.length=0;pending.clear();errors.clear();failedJobs.clear();drafts.clear();listeners.clear();},
  };
 }
 const queues=new Map();

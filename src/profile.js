@@ -1,3 +1,5 @@
+import {createPageFeedback} from './lib/page-feedback.js';
+import {saveRequestInfo} from './lib/background-saves.js';
 import {isSuperAdministrator,isAdministrator} from '../shared/account-modules.js';
 import { access, logout } from './auth.js';
 import { cropPhoto } from './photo-crop.js';
@@ -10,6 +12,7 @@ export function renderAvatar(container, profile) {
 }
 
 export function createProfileView(container, profile, onChange) {
+  const feedback=createPageFeedback(saveRequestInfo('photo'));
   let disposed = false;
   const controller = new AbortController();
   const view = document.createElement('section'); view.className = 'profile-view';
@@ -41,8 +44,8 @@ export function createProfileView(container, profile, onChange) {
       if (disposed) return;
       profile = result.profile; renderAvatar(preview, profile);
       label.textContent = 'Profielfoto wijzigen'; message.textContent = '';
-    } catch (error) { if (!disposed) message.textContent = error.message; }
+    } catch (error) { if(!disposed)feedback.show('De profielfoto kon niet worden opgeslagen. Kies de foto opnieuw.'); }
     finally { input.value = ''; input.disabled = false; }
   });
-  return () => { disposed = true; controller.abort(); view.replaceChildren(); };
+  return () => { disposed = true;feedback.dispose(); controller.abort(); view.replaceChildren(); };
 }

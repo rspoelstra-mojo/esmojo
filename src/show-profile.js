@@ -1,5 +1,6 @@
+import {createPageFeedback} from './lib/page-feedback.js';
 import {detailBackButton} from './detail-back.js';
-import {backgroundSaves} from './lib/background-saves.js';
+import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
 import './show-profile.css';
 import { profileSaves,createProfileSaveQueue } from './lib/profile-saves.js';
 import { createShowProfilePdfWidget } from './showprofile-pdf.js';
@@ -24,6 +25,8 @@ const paths = {
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
 const node = (tag, className, text) => { const el = document.createElement(tag); el.className = className; if (text !== undefined) el.textContent = text; return el; };
 export function createShowProfile(panel, { show,requestAccess=access,readOnly=false } = {}) {
+  const feedbacks=new Map();const feedback=info=>{if(!feedbacks.has(info.key))feedbacks.set(info.key,createPageFeedback(info));return feedbacks.get(info.key);};
+  const readFeedback=feedback({key:'profile-read:'+show.key,label:'Showprofiel laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'});
   const entries = analysisCategories.flatMap(category => category.questions.map(question => ({ category, question }))).map((entry, i) => ({ ...entry, number: i + 1 }));
   let records = {}, revision = 0, disposed = false, selected = 1, editorNumber = null, busy = false, loaded = false, loadError = '';
   const request = body => requestAccess('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
@@ -56,10 +59,9 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
   }
   function renderOverview(focusNumber) {
     disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
-    if (loadError) { const retry = node('button', 'secondary-button', 'Opnieuw laden'); retry.type = 'button'; retry.onclick = load; section.append(message(loadError), retry); }
-    for(const draft of Object.values(finalDrafts))if(draft.error)section.append(message(draft.error));
-    if(finalizationError){const retry=node('button','secondary-button','Afrondstatus opnieuw laden');retry.type='button';retry.onclick=refreshFinalization;section.append(message(finalizationError),retry);}
-    for(const [number,failure]of saves.errors){const notice=message(`${entries[number-1].question}: ${failure} Je invoer is behouden. Open het onderwerp om opnieuw op te slaan.`);notice.setAttribute('role','alert');section.append(notice);}
+    if(loadError)readFeedback.show(loadError,async()=>{await load();return loaded;},'Opnieuw laden');else readFeedback.clear();
+    if(finalizationError)feedback({key:'final-read:'+show.key,label:'Afrondstatus laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'}).show(finalizationError,async()=>{await refreshFinalization(true);return !finalizationError;},'Opnieuw laden');
+    for(const [number]of saves.errors)feedback(saveRequestInfo('show-profile',{concertId:show.key,questionNumber:number})).show('Opslaan is niet bevestigd. Je invoer is behouden.',()=>saves.retry(number));
     const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
     for (const category of analysisCategories) {
       const card = node('section', 'profile-category'), header = node('div', 'profile-category-header'), glyph = node('span', 'profile-category-icon'); glyph.innerHTML = icon(category.icon);
@@ -116,7 +118,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     adopt.onclick = () => {
       if (!availableText || busy || !ready) return;
       text.value = availableText; text.oninput(); text.focus();
-      if (text.value.length > 400) error.textContent = 'De overgenomen tekst is langer dan 400 tekens. Kort hem in voordat je opslaat.';
+      if(text.value.length>400){text.setCustomValidity('De overgenomen tekst is langer dan 400 tekens. Kort hem in voordat je opslaat.');text.reportValidity();}
     };
     const researchDate = node('p', 'analysis-researched');
     const full = node('details', 'analysis-research-details'), fullTitle = node('summary', '', 'Volledige analyse'), answer = node('div', 'analysis-research-answer'); full.append(fullTitle, answer);
@@ -158,12 +160,12 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
         }
         sourcesTitle.textContent = `Bronnen (${view.sources.length})`;
       } else answer.textContent = 'Nog geen AI-analyse beschikbaar.';
-    } catch { if (!disposed && editorNumber === number) error.textContent = 'Laden is niet gelukt. Ga terug en probeer opnieuw; opslaan is nog niet beschikbaar.'; }
+    } catch { if (!disposed && editorNumber === number) feedback({key:'profile-editor:'+show.key+':'+number,label:'Analyse laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'}).show('De analyse kon niet worden geladen.',()=>openEditor(number),'Opnieuw laden'); }
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
   const unsubscribe=saves.subscribe(()=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
   const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
   const ready=load(true);
-  const dispose=() => { disposed = true; offActivity();unsubscribe();if(readOnly)saves.cancel(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
+  const dispose=() => { disposed = true;for(const item of feedbacks.values())item.dispose(); offActivity();unsubscribe();if(readOnly)saves.cancel(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
   dispose.ready=ready;return dispose;
 }

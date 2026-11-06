@@ -66,6 +66,7 @@ jobs:
           node server/production-assessments.test.js
           node shared/report-timeline.test.js
           node src/lib/background-saves.test.js
+          node src/lib/save-retry.test.js
           node server/show-open.test.js
           node server/show-page.test.js
           node src/lib/show-memory.test.js

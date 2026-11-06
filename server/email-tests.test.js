@@ -37,7 +37,7 @@ test('Toekomstige showtemplates testen met werkelijk gekozen concert en alle sho
  await service.send(own,{...base,concertId:show.key});const rendered=renderEmailTemplate(sent);assert.equal(sent.to,own.email);assert.ok(rendered.text.includes('Fixture artiest · Gashouder · 6 november 2026 · 7 november 2026'));assert.equal(rendered.text.includes('Niet gebruiken'),false);
 });
 
-test('Showrapportage verschijnt automatisch en verzendt exact de gekoppelde showtekst met verplichte PDF-bijlage',async()=>{
+test('Showrapportage verschijnt automatisch en verzendt gekoppelde showtekst met onlineknop zonder PDF-bijlage',async()=>{
  const {showReportEmail}=await import('./email-templates/show-report.js'),{sendEmail}=await import('./email.js'),{PDFDocument}=await import('pdf-lib');
  const show={key:'rapport-fixture',name:'Fixture & artiest',venue:'Gashouder',dates:['2026-11-14']};
  let payload,calls=0;
@@ -45,13 +45,13 @@ test('Showrapportage verschijnt automatisch en verzendt exact de gekoppelde show
  assert.ok((await service.catalog({email:'zelf@example.invalid'},true)).templates.some(t=>t.id==='show-report'&&t.label==='Showrapportage'&&t.requiresShow));
  await service.send({email:'zelf@example.invalid',firstName:'Anne Marie'},{templateId:'show-report',concertId:show.key,requestId:'11111111-1111-4111-8111-111111111111'});
  assert.equal(calls,1);assert.equal(payload.to,'zelf@example.invalid');assert.equal(payload.from,'ESMOJO <showrapportage@esmojo.nl>');assert.equal(payload.subject,'[TEST] Showrapportage Fixture & artiest - 14 november 2026');assert.ok(payload.text.includes('Beste Anne Marie,'));assert.ok(payload.text.includes('Hierbij ontvang je de showrapportage van Fixture & artiest op 14 november 2026 in de Gashouder.'));assert.ok(payload.html.includes('Fixture &amp; artiest'));assert.ok(payload.text.includes('Met vriendelijke groet,\nEvent Safety Mobility Operations'));
- assert.equal(payload.attachments.length,1);assert.equal(payload.attachments[0].filename,'TEST-Showrapportage.pdf');const bytes=Buffer.from(payload.attachments[0].content,'base64');assert.equal((await PDFDocument.load(bytes)).getPageCount(),1);
- assert.throws(()=>showReportEmail({to:'zelf@example.invalid',show}),/PDF is verplicht/);assert.throws(()=>showReportEmail({show:{...show,dates:[]}}),/Showdatums ontbreken/);
+ assert.equal(payload.attachments,undefined);const doc=await PDFDocument.create();doc.addPage();const bytes=Buffer.from(await doc.save());assert.ok(!payload.text.includes('De PDF is ook bijgevoegd.'));
+ assert.throws(()=>showReportEmail({to:'zelf@example.invalid',show,includePdf:true}),/PDF is verplicht/);assert.throws(()=>showReportEmail({show:{...show,dates:[]}}),/Showdatums ontbreken/);
  await assert.rejects(sendEmail({to:'zelf@example.invalid',subject:'Showrapportage',preheader:'Fixture',title:'Showrapportage',context:{kind:'show',show},paragraphs:['Fixture'],requirePdfAttachment:true,attachments:[]},{fetchImpl:()=>{throw Error('Mag niet verzenden');}}),/PDF is verplicht/);assert.equal(calls,1);
  const invalid={filename:'../rapport.pdf',content:bytes,contentType:'application/pdf'};
  assert.throws(()=>renderEmailTemplate({to:'zelf@example.invalid',subject:'Fixture',preheader:'Fixture',title:'Fixture',context:{kind:'show',show},paragraphs:['Fixture'],attachments:[invalid]}),/Ongeldige PDF/);
- assert.throws(()=>showReportEmail({show,pdf:{filename:'Rapport.pdf',content:Buffer.from('geen pdf')}}),/Ongeldige PDF/);
- const production=showReportEmail({to:'zelf@example.invalid',firstName:'Anne Marie',show,pdf:{filename:'Showrapportage.pdf',content:bytes}});assert.equal(production.attachments[0].filename,'Showrapportage.pdf');assert.equal(production.title,'Showrapportage');assert.equal(production.subject,'Showrapportage Fixture & artiest - 14 november 2026');assert.ok(!renderEmailTemplate(production).text.includes('[artiestnaam]'));
+ assert.throws(()=>showReportEmail({show,includePdf:true,pdf:{filename:'Rapport.pdf',content:Buffer.from('geen pdf')}}),/Ongeldige PDF/);
+ const production=showReportEmail({to:'zelf@example.invalid',firstName:'Anne Marie',show,pdf:{filename:'Showrapportage.pdf',content:bytes}});assert.equal(production.attachments.length,0);assert.equal(production.requirePdfAttachment,undefined);assert.equal(production.title,'Showrapportage');assert.equal(production.subject,'Showrapportage Fixture & artiest - 14 november 2026');assert.ok(!renderEmailTemplate(production).text.includes('[artiestnaam]'));
 });
 
 test('Alle testtemplates hebben alleen voor Richards beheerdersaccount twee vaste ontvangers',async()=>{
@@ -91,5 +91,5 @@ test('Rapportagetest haalt uitsluitend naam uit servercontext; ontbrekende manag
  const service=createEmailTestService({reportContext:async(...args)=>{calls.push(args);return{managerName:'Jean Pierre Van de Test'};},mail:async message=>sent.push(message),shows:async()=>({shows:[show]})});
  await service.send({id:'synthetic-admin',role:'beheerder',modules:['reports'],email:'admin@example.invalid',firstName:'Eigen voornaam'},{templateId:'show-report',concertId:show.key,requestId:'11111111-1111-4111-8111-111111111111'});
  assert.deepEqual(calls,[['email-context','synthetic-admin',{concertId:show.key}]]);assert.equal(sent.length,1);assert.equal(sent[0].senderName,'Jean Pierre Van de Test');assert.equal(sent[0].recipient.firstName,'Eigen voornaam');assert.equal(sent[0].actions[0].url,'https://esmojo.nl/rapportages/'+show.key);
- const {showReportEmail}=await import('./email-templates/show-report.js');const fallback=showReportEmail({show,pdf:{filename:'test.pdf',content:sent[0].attachments[0].content}});assert.equal(fallback.senderName,'Event Safety Mobility Operations');
+ const {showReportEmail}=await import('./email-templates/show-report.js');const fallback=showReportEmail({show});assert.equal(fallback.senderName,'Event Safety Mobility Operations');
 });
