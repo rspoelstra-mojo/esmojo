@@ -74,6 +74,7 @@ jobs:
           node server/active-show-lifecycle.test.js
           node server/active-show-parity.test.js
           node server/active-show-recovery.test.js
+          node server/active-show-handoff.test.js
           node tools/storage/generate-validators.mjs --check
           node src/lib/show-storage-alerts.test.js
           node server/show-open.test.js

@@ -20,6 +20,7 @@ function esmojoShows_(input) {
     const request = JSON.parse(input.body);
     const finish=data=>esmojoReply_({ok:true,data:typeof esmojoHomeResult_==='function'?esmojoHomeResult_(request,data):data});
     if(request.operation.startsWith('active-')){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return esmojoReply_({ok:true,data:esmojoActiveStorage_(request)});}
+    if(typeof esmojoActiveLegacyWriteAllowed_==='function'&&/^(profile-save|final-complete|risk-(production|operational)-save|barrier-(draft|complete|reopen|upload|remove-upload)|floor-(draft|complete|reopen)|measure-(draft|complete|reopen|edit-text|upload|remove)|ticket-(review|reopen))$/.test(request.operation))esmojoActiveLegacyWriteAllowed_(request.concertId);
     if(['home-rebuild','home-photo-cache'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return finish(request.operation==='home-rebuild'?esmojoHomeRebuild_(request):esmojoHomePhotosSave_(request));}
     if(!['report-commit','barrier-upload','measure-upload'].includes(request.operation)&&input.body.length>110000)throw Error('VALIDATION');
     if(['home-dashboard','home-metadata'].includes(request.operation)){
@@ -175,7 +176,7 @@ function esmojoShows_(input) {
     let managerAssignment=null;
     if(typeof esmojoSyncHomeManagers_==='function'){try{managerAssignment=esmojoSyncHomeManagers_(esmojo,root,updated);}catch{managerAssignment={state:'unavailable'};}}
     return esmojoReply_({ ok: true, data: { ...(managerAssignment?{managerAssignment:managerAssignment.state}:{}), concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
-  } catch (error) { return esmojoReply_({ ok: false, code: ['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
+  } catch (error) { return esmojoReply_({ ok: false, code: ['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT','STORAGE_ACTIVE'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
   finally { if (lock) lock.releaseLock(); }
 }
 

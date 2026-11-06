@@ -33,6 +33,12 @@ Vercel gaan. Tabellen hebben RLS en geen rechten/policies voor anon/authenticate
 Alleen de bestaande server-servicekey kan de afgeschermde RPC's gebruiken; deze
 key gaat nooit naar browser, Drive of Apps Script. Er zijn geen nieuwe secrets.
 
+Vanaf V1.59 claimt de signed export het Drive-eigenaarschap atomair onder dezelfde
+lock vóór de eerste DB-seed. Onderweg zijnde legacy-writes worden daarna veilig
+geweigerd; een normale herpoging volgt de huidige primaire route. Na archivering
+geeft de marker de historische Drive-route weer vrij. Een capability-handshake
+houdt applicatie- en Apps Script-publicaties onderling compatibel.
+
 De browser coördineert writes per show en houdt navigatie vrij. Alleen eigen
 bevestigde revisies kunnen een wachtende productionele keuze bijwerken; externe
 revisies blijven conflicten. Elke database-mutatie valideert de actuele bron en

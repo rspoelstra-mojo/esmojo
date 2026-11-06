@@ -52,9 +52,12 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
  async function archive(row){
   const response=await bridge(row,'archive');if(response.deferred){await repository.commit(row,response.snapshot);return false;}if(!response.archived||!response.verified)throw Error('VERIFY');await repository.purge(row);return true;
  }
+ let handoffReady=false;
  async function find(id){
   let row=await repository.get(id);if(row)return row;
-  const source=await drive('active-export',{concertId:id});if(source.archived)return null;
+  let source=await drive('active-export',{concertId:id,...(handoffReady?{activate:true}:{})});
+  if(!source.archived&&source.supportsActivation&&!handoffReady){handoffReady=true;source=await drive('active-export',{concertId:id,activate:true});}
+  if(source.archived)return null;
   const snapshot=validateActiveSnapshot(source.snapshot);
   // Historische shows nooit alsnog naar Supabase importeren.
   if(Date.parse(archiveAfterShow(snapshot.dates))<=now())return null;
@@ -108,7 +111,7 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
    }
   },
   async planning(data){
-   if(!await enabled())return data;const rows=repository.planningRows?await repository.planningRows():await repository.all(),map=new Map(rows.map(row=>[row.concert_id,row.snapshot?publicActivePlanning(row.snapshot):{completion:row.completion,updatedAt:row.updated_at}]));
+   if(!await enabled())return data;const rows=repository.planningRows?await repository.planningRows():await repository.all(),map=new Map(rows.map(row=>[row.concert_id,row.snapshot?publicActivePlanning(row.snapshot):{completion:row.completion,updatedAt:new Date(row.updated_at).toISOString()}]));
    return{...data,shows:data.shows.map(show=>{const item=map.get(show.key);return item?{...show,snapshot:{completion:item.completion},planningUnavailable:false,planningUpdatedAt:item.updatedAt}:show;})};
   },
   async run({limit=3}={}){
