@@ -1,3 +1,4 @@
+import {createOnTrackReportStore} from './ontrack-report/service.js';
 import {isAdministrator,hasModule} from '../shared/account-modules.js';
 import {createMailingConcertsStore} from './ontrack-concerts.js';
 import {emailTemplates} from './email-template-registry.js';
@@ -9,7 +10,7 @@ export function validateEmailTestRequest(value){
   if(value.concertId!==undefined&&(typeof value.concertId!=='string'||!value.concertId.trim()||value.concertId.length>240||/[\x00-\x1f/\\]/.test(value.concertId)))throw Error('VALIDATION');
   return value;
 }
-export function createEmailTestService({mail,shows,mailingConcerts=createMailingConcertsStore(),registry=emailTemplates}){
+export function createEmailTestService({mail,shows,mailingConcerts=createMailingConcertsStore(),registry=emailTemplates,reportContext=createOnTrackReportStore()}){
   async function concertList(){
     const index=await shows('list');
     return(index.shows||upcomingShows(index.concerts)).map(({key,name,venue,dates})=>({key,name,venue,dates}));
@@ -47,7 +48,8 @@ export function createEmailTestService({mail,shows,mailingConcerts=createMailing
       const target=recipient(profile);let show=template.requiresShow?(await concertList()).find(row=>row.key===request.concertId):null;
       if(template.requiresShow&&!show&&template.concertCatalog==='ontrack')show=(await extraConcerts(profile)).find(row=>row.key===request.concertId);
       if(template.requiresShow&&!show)throw Error('EMAIL_SHOW_NOT_FOUND');
-      const sample=await template.buildTest({recipient:target,show});
+      const managerName=template.id==='show-report'?(await reportContext('email-context',profile.id,{concertId:show.key})).managerName:undefined;
+      const sample=await template.buildTest({recipient:target,show,managerName});
       if(typeof sample?.subject!=='string'||!sample.subject.trim())throw Error('INVALID_EMAIL_TEMPLATE');
       // Ontvanger en persoonlijke aanhef komen altijd uit het actuele eigen profiel.
       const message={...sample,to:target.email,recipient:{kind:'individual',firstName:target.firstName},subject:'[TEST] '+sample.subject};

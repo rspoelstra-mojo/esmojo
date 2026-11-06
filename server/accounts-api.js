@@ -236,7 +236,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }catch(error){const status=error.message==='VALIDATION'?400:error.message==='CONFLICT'?409:error.message==='FORBIDDEN'?403:503;return reply(status,{error:status===400?'Selecteer geldige ontvangeraccounts.':status===409?'De ontvangers zijn intussen gewijzigd. Je selectie is behouden; laad de actuele instellingen voordat je opnieuw opslaat.':'OnTrack kon niet worden geladen of opgeslagen. Je selectie is behouden. Probeer opnieuw.'});}
       }
       if(action==='email'){
-        const service=createEmailTestService({mail,shows,mailingConcerts});
+        const service=createEmailTestService({mail,shows,mailingConcerts,reportContext:ontrackReportStore});
         try{
           if(req.method==='GET')return reply(200,await service.catalog(own,Boolean(env.RESEND_API_KEY)));
           if(req.method==='POST'){
