@@ -6,9 +6,9 @@ function esmojoActiveSafeProduction_(document){
  clean.history=(document.history||[]).filter(row=>row.field!=='floor_pressure'&&!(row.field==='measure_text'&&row.measureId==='production:floor_pressure'));
  return JSON.parse(JSON.stringify(clean));
 }
-function esmojoActiveSnapshot_(target){
+function esmojoActiveSnapshot_(target,loaded){
  const id=target.primary.concertId,profile=esmojoReadShowProfile_(esmojoShowFile_(target.folder,'showprofiel.json'),id),final=esmojoReadAnalysisFinal_(esmojoShowFile_(target.folder,'analyseafronding.json'),id),production=esmojoReadProductionRisks_(target).document;
- const status=esmojoAnalysisFinalState_(target,profile),view=esmojoShowProfileRisks_({operation:'risk-view',concertId:id},target),dates=target.seriesDates;
+ const status=loaded?.profile?.finalization||esmojoAnalysisFinalState_(target,profile),view=loaded?.risks||esmojoShowProfileRisks_({operation:'risk-view',concertId:id},target),dates=target.seriesDates;
  const snapshot={version:1,concertId:id,aliases:dates.map(date=>esmojoConcertId_(target.primary.artist,date)),dates,venue:target.primary.venue,profile,final,production:esmojoActiveSafeProduction_(production),floor:esmojoFloorSummary_(production),ticketBasis:{ready:status.ticketsReady,versions:['ticket_sales','visitor_origins','domestic_origins'].map(key=>status.basis.ticketVersions[key])},risk:{state:view.state,risks:view.risks,...(view.operational?.source?{source:view.operational.source}:{})},riskBasis:null,completion:{profile:false,production:false,operational:false,measures:false}};
  snapshot.riskBasis=preparationBasis(snapshot);const basis={risks:view};snapshot.completion={profile:Boolean(status.categories.visitors.completedAt&&status.categories.artist.completedAt&&view.state!=='not-ready'),production:productionComplete({venue:target.primary.venue},basis),operational:operationalComplete(basis),measures:showMeasures({venue:target.primary.venue},basis).complete};validateActiveSnapshot(snapshot);return snapshot;
 }
@@ -44,12 +44,12 @@ function esmojoActiveVirtual_(target,snapshot,request){
  try{
   let result=null,errorCode=null;
   try{result=esmojoActiveExecute_(request,target);}catch(error){errorCode=error.message;}
-  return{verified:true,snapshot:esmojoActiveSnapshot_(target),result,errorCode};
+  return{verified:true,snapshot:esmojoActiveSnapshot_(target,request.operation==='show-open'&&!errorCode?result:null),result,errorCode};
  }finally{esmojoShowFile_=rawLookup;}
 }
 function esmojoActiveExecute_(request,target){
  const op=request.operation;
- if(op==='show-open')return esmojoOpenShow_(request);
+ if(op==='show-open')return esmojoOpenShow_(request,target);
  if(op==='profile-read'||op==='profile-save')return esmojoShowProfile_(request,target);
  if(op.startsWith('final-'))return esmojoAnalysisFinal_(request);
  if(op.startsWith('ticket-'))return esmojoTicketData_(request,target);
@@ -74,10 +74,19 @@ function esmojoActiveLegacyWriteAllowed_(concertId){
  const target=esmojoResearchTarget_(concertId),marker=esmojoActiveMarker_(target).document;
  if(marker&&!marker.archived)throw Error('STORAGE_ACTIVE');
 }
-function esmojoActiveStorage_(request){
+function esmojoActiveStorageUncached_(request){
  const {operation,concertId,...rest}=request;assessmentConcert(concertId);
  const target=esmojoResearchTarget_(concertId);if(target.primary.venue!=='Gashouder')throw Error('VALIDATION');
  const marker=esmojoActiveMarker_(target);
+ if(operation==='active-open'){
+  assessmentKeys(rest,['actor']);
+  const bundle=esmojoOpenShow_({operation:'show-open',concertId,actor:rest.actor},target);
+  const last=[...target.seriesDates].sort().pop(),threshold=new Date(Date.parse(last+'T00:00:00Z')+2*86400000).toISOString().slice(0,10);
+  if(marker.document?.archived||Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd')>=threshold)return{archived:true,bundle};
+  const snapshot=esmojoActiveSnapshot_(target,bundle);
+  if(!marker.document)esmojoActiveWriteJson_(target,'_esmojo_active_storage_v1.json',{managedBy:'ESMOJO/ActiveStorage-v1',classification:'vertrouwelijk',version:1,revision:-1,command:'0'.repeat(64),mode:'seed',archived:false,at:new Date().toISOString()});
+  return{archived:false,snapshot,bundle};
+ }
  if(operation==='active-recover'){
   assessmentKeys(rest,['command','leaseUntil','snapshot']);validateActiveSnapshot(rest.snapshot);
   if(!/^[a-f0-9]{64}$/.test(rest.command||'')||Date.parse(rest.leaseUntil)-Date.now()<7*60000)throw Error('STORAGE_BUSY');
@@ -141,4 +150,22 @@ function esmojoActiveStorage_(request){
   const attempt=esmojoActiveAttempt_(rest.request,target);result=attempt.result;errorCode=attempt.errorCode;
  }
  return esmojoActiveFinish_(target,rest,result,errorCode);
+}
+
+// Deze cache leeft uitsluitend binnen één signed leesaanvraag. Geen CacheService,
+// browseropslag of vertrouwen in oude bestandsinhoud na een write.
+function esmojoWithShowReadCache_(run){
+ const lookup=esmojoShowFile_,files=new Map();
+ esmojoShowFile_=function(folder,name){
+  const key=folder.getId()+'|'+name;if(files.has(key))return files.get(key);
+  const file=lookup(folder,name);if(!file)return null;let blob=null;
+  const cached={getBlob:()=>blob||(blob=file.getBlob()),setContent:value=>{blob=null;return file.setContent(value);}};
+  for(const method of ['getId','getName','getMimeType','getDescription','getParents','isTrashed','getLastUpdated','setDescription','setTrashed','moveTo'])cached[method]=(...args)=>file[method](...args);
+  files.set(key,cached);return cached;
+ };
+ try{return run();}finally{esmojoShowFile_=lookup;files.clear();}
+}
+function esmojoActiveStorage_(request){
+ const reading=['active-open','active-export'].includes(request.operation)||request.operation==='active-bridge'&&request.mode==='virtual'&&request.request?.operation==='show-open';
+ return reading?esmojoWithShowReadCache_(()=>esmojoActiveStorageUncached_(request)):esmojoActiveStorageUncached_(request);
 }

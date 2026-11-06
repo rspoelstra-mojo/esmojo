@@ -78,6 +78,7 @@ jobs:
           node tools/storage/generate-validators.mjs --check
           node src/lib/show-storage-alerts.test.js
           node src/lib/show-save-response.test.js
+          node server/show-open-load.test.js
           node server/show-open.test.js
           node server/show-page.test.js
           node src/lib/show-memory.test.js

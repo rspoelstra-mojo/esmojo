@@ -125,3 +125,47 @@ cascade-verwijdering), signed Apps Script-integratie, dertig gelijktijdige risic
 verloren antwoord, conflicten, niet-blokkerende mirror, archieffout/herstel, DST,
 Drive-only na archivering en bestaande volledige regressiesuite. Lokale browsertests
 gebruiken synthetische fixtures; livecontrole toont alleen technische aantallen.
+
+## Laadtijd en bevestiging (V1.60–V1.61)
+
+De homepage-projectie is transportmetadata, geen deel van de strikt gevalideerde
+productionele keuze. Auth verwerkt haar vóór het teruggeven van de domeinpayload;
+de showcontext doet dezelfde scheiding voor geïnjecteerde adapters. De HTTP-route
+onderhandelt de envelop met X-ESMOJO-Planning-Envelope: 1, zodat ook een nog geopende
+oudere client zijn wachtrij kan hervatten. Er zijn geen nieuwe rechten of velden
+in de beoordeling nodig.
+
+De eerste showopening doet niet meer export → eigenaarschaps-export → virtuele
+show-open. active-open claimt en bouwt dezelfde bundel in één signed Drive-read.
+De Supabase-seed krijgt alleen de gevalideerde snapshot; ticket-/herkomstinhoud uit
+de bundel blijft uitsluitend in de bestaande response/Drive-route. Een inmiddels
+gewijzigde DB-stand wint van een verouderde bootstrapbundel. Historie blijft één
+Drive-read zonder herimport; de oudere Apps Script-route blijft tijdens uitrol werken.
+
+Tijdens één leesaanvraag worden bestaande filelookups en blobs hergebruikt. Een
+setContent wist zijn blobcache vóór de verplichte echte readback. Ontbrekende
+bestanden worden niet gecachet, zodat een aanmaak/synchronisatie direct zichtbaar
+is. Bij verlaten/fouten verdwijnen caches en worden alle lookupfuncties hersteld.
+Geen private gegevens in CacheService of een nieuwe browsercache.
+
+De main/OIDC-check-only-worker kan de werkelijke virtuele showbundel lezen en
+daarvan uitsluitend openReady/driveOpenMs teruggeven. De inhoud en technische
+readactor worden niet opgeslagen; dit meet de Drive-ronde, niet de totale
+browserlaadtijd inclusief sessiecontrole en foto.
+
+Bevestigde statusreads (final-read, barrier-read, measure-read en gereed risk-view)
+lezen de huidige gecommitteerde snapshot zonder opslaglease/ontvangstbewijs. Een
+lopende write blokkeert dus geen statuscontrole; echte writes behouden alle bron-
+en revisiechecks. De afloopgrens blijft vooraf gecontroleerd. Een ontbrekende
+AI-bron houdt zijn bestaande beveiligde Drive-controle.
+
+De profielwachtrij onderscheidt een geaccepteerde serverbevestiging van lokale
+editor-sync. Een volledige bevestigde finalisatiestatus ruimt een eerdere
+Afrondstatus laden-fout op. Een lokale of achterhaalde respons doet dat niet;
+een werkelijke leesfout blijft zichtbaar totdat er weer geldige bevestiging is.
+
+Snelle categorieafrondingen gebruiken de bestaande seriële showwachtrij. Alleen
+bevestigde eigen finalRevision-overgangen mogen een tweede nog openstaand
+bezoekers-/artiestformulier volgen; profiel-, ticket- en externe afrondrevisies
+worden niet automatisch overgenomen. Een nog niet bevestigde eerste write
+levert geen overgang op. De server blijft de volledige basis controleren.

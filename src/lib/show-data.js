@@ -8,7 +8,10 @@ export function createShowData(bundle,request,concertId){
     ||!['ready','pending','not-ready'].includes(bundle.risks?.state)||!Array.isArray(bundle.risks.risks))throw Error('Onvolledige showgegevens.');
   const values=new Map([['show-profile',bundle.profile],['ticket-data',bundle.tickets],['barrier-layout',bundle.barrier],['floor-pressure',bundle.floor],['show-risks',bundle.risks],['analysis-finalization',bundle.profile]]);
   if(bundle.pdf)values.set('show-profile-pdf',bundle.pdf);
-  let disposed=false,riskVersion=0,writeTail=Promise.resolve(),localProductionRevision=bundle.risks.production?.revision;const previousValues=new Map(values),pendingWrites=new Set(),listeners=new Set(),operationalReviews=createOperationalReviewMemory(),measureDrafts=new Map();
+  let disposed=false,riskVersion=0,writeTail=Promise.resolve(),localProductionRevision=bundle.risks.production?.revision;
+  const finalTransitions=[];
+  const sameFinalBasis=(a,b)=>Boolean(a&&b&&a.profileRevision===b.profileRevision&&a.finalRevision===b.finalRevision&&['ticket_sales','visitor_origins','domestic_origins'].every(key=>a.ticketVersions?.[key]===b.ticketVersions?.[key]));
+  const previousValues=new Map(values),pendingWrites=new Set(),listeners=new Set(),operationalReviews=createOperationalReviewMemory(),measureDrafts=new Map();
   let notifyPending=false;const notify=()=>{if(notifyPending||disposed)return;notifyPending=true;queueMicrotask(()=>{notifyPending=false;if(!disposed)for(const listener of listeners){try{listener();}catch{/* Een weergavefout onderbreekt geen opslag. */}}});};
   const forget=key=>{if(values.has(key))previousValues.set(key,values.get(key));values.delete(key);};
   const settled=async()=>{while(pendingWrites.size)await Promise.allSettled([...pendingWrites]);};
@@ -17,7 +20,10 @@ export function createShowData(bundle,request,concertId){
     if(disposed)return;
     if(action==='show-profile-pdf'&&['pending','generating'].includes(data.state)){forget(action);return;}
     if(action==='show-profile'||action==='analysis-finalization'){
-      const previous=values.get('show-profile'),profile={...previous,...data};
+      const previous=values.get('show-profile')||values.get('analysis-finalization');
+      // Een al gestarte statusread mag een latere opslagbevestiging niet terugdraaien.
+      if(previous&&(data.revision<previous.revision||data.revision===previous.revision&&(data.finalization?.basis?.finalRevision??-1)<(previous.finalization?.basis?.finalRevision??-1)))return;
+      const profile={...previous,...data};
       if(previous?.researchByNumber||data.researchByNumber)values.set('show-profile',profile);
       values.set('analysis-finalization',profile);
     }else values.set(action,data);
@@ -84,7 +90,7 @@ export function createShowData(bundle,request,concertId){
     subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
     version:()=>riskVersion,
     operationalReviews,measureDrafts,
-    dispose(){disposed=true;measureDrafts.clear();operationalReviews.clear();productionChoices.cancel();values.clear();previousValues.clear();listeners.clear();},
+    dispose(){disposed=true;finalTransitions.length=0;measureDrafts.clear();operationalReviews.clear();productionChoices.cancel();values.clear();previousValues.clear();listeners.clear();},
   };
   const productionChoices=createProductionChoiceQueue({
     save:body=>context.request('production-risks',{method:'POST',body:{concertId,...body}}),
@@ -102,8 +108,19 @@ export function createShowData(bundle,request,concertId){
       // Alleen een revisie die door onze eigen eerdere write is opgeschoven
       // doorgeven. Een externe revisie wordt nooit stil opnieuw gebaseerd.
       if(action==='production-risks'&&queued.body.revision===basis&&productionChoices.server?.revision===localProductionRevision)queued.body.revision=localProductionRevision;
+      if(action==='analysis-finalization'&&queued.body.operation==='complete'){
+        // Alleen bevestigde eigen categorieafrondingen mogen de gedeelde
+        // afrondrevisie opschuiven. Andere profiel-/ticketwijzigingen blijven conflicten.
+        let next=queued.body.basis;
+        for(const transition of finalTransitions)if(sameFinalBasis(next,transition.from))next=transition.to;
+        if(sameFinalBasis(next,values.get('analysis-finalization')?.finalization?.basis))queued.body.basis=structuredClone(next);
+      }
       const result=await perform(action,queued),production=result.overview?.production||(action==='production-risks'?result:null);
       if(production)localProductionRevision=production.revision;
+      if(action==='analysis-finalization'&&queued.body.operation==='complete'){
+        const from=queued.body.basis,to=result.finalization?.basis;
+        if(to&&sameFinalBasis({...from,finalRevision:to.finalRevision},to)&&to.finalRevision===from.finalRevision+1){finalTransitions.push({from:structuredClone(from),to:structuredClone(to)});if(finalTransitions.length>16)finalTransitions.shift();}
+      }
       return result;
     });
     writeTail=task.catch(()=>{});pendingWrites.add(task);const finished=()=>{pendingWrites.delete(task);notify();};task.then(finished,finished);return task;
