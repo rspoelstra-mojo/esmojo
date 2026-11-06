@@ -1,3 +1,4 @@
+import {createPageFeedback} from './lib/page-feedback.js';
 import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
 import {detailBackButton} from './detail-back.js';
 import {createOperationalReviewMemory} from './lib/operational-review-memory.js';
@@ -30,6 +31,9 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
   const unsubscribeReviews=reviewMemory.subscribe(()=>{if(disposed)return;if(view==='overview')overview();else if(view==='operational')refreshOperational();});
   const entranceNotApplicable=show?.venue?.trim().toLocaleLowerCase('nl-NL')==='gashouder';
   let production={revision:0,choices:{}},productionReady=false,assessments={},disposeDetail=null;
+  const feedbacks=new Map();const feedback=info=>{if(!feedbacks.has(info.key))feedbacks.set(info.key,createPageFeedback(info));return feedbacks.get(info.key);};
+  const readFeedback=feedback({key:'risk-read:'+show.key,label:'Risicoanalyse laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=risicoanalyse'});
+  function choiceFailure(){for(const field of productionRiskGroups.flatMap(group=>group.items).filter(item=>item.conditional).map(item=>item.id))if(choices.pending(field))feedback(saveRequestInfo('production-risks',{concertId:show.key,field})).show(choiceError,async()=>{await load(false,true);return !choices.failed&&!error;});}
   const choiceError='De keuzes zijn nog niet bevestigd. Je invoer is behouden. Probeer de opslag opnieuw.';
   const choiceControls=new Map();
   choices ||= createProductionChoiceQueue({save:body=>saveSelection({concertId:show.key,...body}),read:async()=>{const data=await request({concertId:show.key});return data.production;}});
@@ -37,7 +41,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     if(disposed)return;
     if(choices.server)production=choices.server;
     if(view==='overview'){
-      if(choices.failed&&!error){error=choiceError;overview();}
+      if(choices.failed){error=choiceError;choiceFailure();updateChoiceControls();}
       else updateChoiceControls();
     }
   });
@@ -63,12 +67,8 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
   function overview(focusId,productionId) {
     if(disposed)return;
     view='overview';
-    if(choices.failed&&!error)error=choiceError;
+    if(choices.failed){error=choiceError;choiceFailure();}
     section.replaceChildren();choiceControls.clear();
-    if(error){
-      const message=node('p','profile-message',error);message.setAttribute('role','alert');
-      const retry=node('button','secondary-button',choices.failed?'Opnieuw proberen':'Opnieuw laden');retry.type='button';retry.onclick=()=>load(false,true);section.append(message,retry);
-    }
     const layout=node('div','profile-layout'),categories=node('div','profile-categories'),productionCards=[];
     for(const group of productionRiskGroups){
       const {card}=category(group.title,'production');
@@ -108,7 +108,6 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
       const row=node('div','visitor-analysis'),button=node('button','visitor-analysis-summary');button.type='button';button.dataset.riskId=risk.id;
       button.append(node('span','analysis-row-title',risk.title),badge(reviewDrafts.get(risk.id)?.busy?{riskLevel:reviewDrafts.get(risk.id).riskLevel}:operational?.assessments?.[risk.id]),glyph('chevron','analysis-chevron'));
       button.onclick=()=>detail(risk);row.append(button);
-      if(reviewDrafts.get(risk.id)?.error){const notice=node('p','operational-save-error','Opslaan is niet gelukt. Je beoordeling is bewaard. Open het risico om opnieuw te proberen.');notice.setAttribute('role','alert');row.append(notice);}
       operationalCard.card.append(row);
     }
     categories.append(productionCards[0],operationalCard.card,...productionCards.slice(1));layout.append(categories);section.append(layout);updateChoiceControls();
@@ -142,7 +141,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     let draft=reviewDrafts.get(risk.id);
     if(!draft){draft={riskLevel:stored?.riskLevel||null,riskNote:stored?.riskNote||'',editing:!stored,revision:stored?.revision||0,busy:false,error:'',payload:null};reviewDrafts.set(risk.id,draft);}
     const source=operational?.source,sourceKey=JSON.stringify(source);
-    const message=node('p','profile-message');message.setAttribute('role','alert');
+    const reviewFeedback=feedback(saveRequestInfo('operational-risk',{concertId:show.key,riskId:risk.id}));
     const retry=node('button','secondary-button','Opnieuw proberen');retry.type='button';retry.hidden=true;
     const reload=node('button','secondary-button','Actuele risico’s laden');reload.type='button';reload.hidden=true;
     const live=()=>!disposed&&view==='operational'&&activeRisk===risk.id;
@@ -151,25 +150,25 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     const update=()=>{
       if(!live())return;
       review.update({riskLevel:draft.riskLevel,riskNote:draft.riskNote,disabled:readOnly||!source||draft.busy||!draft.editing,busy:draft.busy,completed:!draft.editing,canSave:valid(),canEdit:!readOnly&&!draft.busy,failed:false});
-      message.textContent=draft.error;message.hidden=!draft.error;retry.hidden=!draft.error||draft.busy;reload.hidden=!draft.error||draft.busy;
+      if(draft.error)reviewFeedback.show(draft.error,save,'Opnieuw proberen',[{label:'Actuele risico’s laden',run:()=>reload.onclick()}]);else reviewFeedback.clear();
       const status=Array.from(header.querySelectorAll('span')).find(el=>el.className==='analysis-status');
       if(status){const row=operational?.assessments?.[risk.id];status.textContent=operationalRiskLabels[row?.riskLevel]||'Nog te beoordelen';status.dataset.status=row?.riskLevel||'unreviewed';}
     };
     const save=async()=>{
-      if(readOnly||draft.busy||!valid())return;draft.busy=true;draft.error='';draft.payload ||= validateOperationalReview(values());const payload=structuredClone(draft.payload);overview(risk.id);
+      if(disposed||readOnly||draft.busy||!valid())return false;draft.busy=true;draft.error='';draft.payload ||= validateOperationalReview(values());const payload=structuredClone(draft.payload);overview(risk.id);
       try{
         const data=await reviewMemory.run(()=>requestAccess('operational-risk',{method:'POST',body:payload}));
         if(!data?.record?.completedAt||data.record.riskLevel!==payload.riskLevel||data.record.riskNote!==payload.riskNote||!data.overview?.operational||JSON.stringify(data.overview.operational.source)!==sourceKey)throw Error('UNCONFIRMED');
         draft.payload=null;draft.editing=false;draft.revision=data.record.revision;draft.riskLevel=data.record.riskLevel;draft.riskNote=data.record.riskNote;
-        if(disposed)return;
+        reviewFeedback.resolved();if(disposed)return;
         operational=data.overview.operational;risks=data.overview.risks;state=data.overview.state;loadedVersion=version();if(view==='overview')overview(risk.id);
-      }catch{if(reviewMemory.active)backgroundSaves.fail(saveRequestInfo('operational-risk',payload));draft.error='Opslag niet bevestigd. Je invoer is behouden. Probeer opnieuw of laad de actuele risico’s.';}
+      }catch{if(reviewMemory.active)backgroundSaves.fail(saveRequestInfo('operational-risk',payload));draft.error='Opslag niet bevestigd. Je invoer is behouden. Probeer opnieuw of laad de actuele risico’s.';reviewFeedback.show(draft.error,save,'Opnieuw proberen',[{label:'Actuele risico’s laden',run:()=>reload.onclick()}]);return false;}
       finally{draft.busy=false;reviewMemory.notify();}
     };
     refreshOperational=update;
     const review=createRiskReviewCard({name:'operational-'+risk.id,onChange:(level,note)=>{draft.riskLevel=level;draft.riskNote=level==='low'?'':note;draft.error='';draft.payload=null;update();},onSave:save,onEdit:()=>{draft.editing=true;update();}});
-    retry.onclick=save;reload.onclick=()=>{if(!draft.busy){reviewDrafts.delete(risk.id);view='overview';overview();void load();}};
-    const aside=node('aside','operational-review-aside');aside.append(review.element,message,retry,reload);
+    retry.onclick=save;reload.onclick=async()=>{if(draft.busy)return false;reviewDrafts.delete(risk.id);view='overview';overview();await load();return !error;};
+    const aside=node('aside','operational-review-aside');aside.append(review.element);
     const layout=node('div','barrier-assessment-layout operational-assessment-layout');layout.append(content,aside);
     header.prepend(back);section.append(header,layout);update();title.focus({preventScroll:true});
     window.scrollTo({top:0,left:window.scrollX,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
@@ -189,10 +188,10 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
       if(!['ready','pending','not-ready'].includes(data.state)||!Array.isArray(data.risks)||data.risks.length>30)throw Error('Invalid response');
       const ids=new Set();
       for(const risk of data.risks){if(!risk||!/^R\d{2}$/.test(risk.id)||ids.has(risk.id)||['title','description','consequence'].some(key=>typeof risk[key]!=='string'||!risk[key].trim()))throw Error('Invalid risk');ids.add(risk.id);}
-      validateProductionRiskState(data.production);choices.sync(data.production);production=choices.server;assessments=data.assessments||{};productionReady=true;state=data.state;risks=data.risks;operational=data.operational||null;const sourceKey=JSON.stringify(data.operational?.source);if(reviewMemory.source!==sourceKey){reviewDrafts.clear();reviewMemory.source=sourceKey;}loaded=true;loadedVersion=version();error=choices.failed?choiceError:'';
-    }catch{if(!disposed){if(!choices.failed){loaded=false;risks=[];}error=choices.failed?choiceError:'Risicoanalyse laden is niet gelukt. Probeer opnieuw.';}if(strict===true)throw Error(error);}
+      validateProductionRiskState(data.production);choices.sync(data.production);production=choices.server;assessments=data.assessments||{};productionReady=true;state=data.state;risks=data.risks;operational=data.operational||null;const sourceKey=JSON.stringify(data.operational?.source);if(reviewMemory.source!==sourceKey){reviewDrafts.clear();reviewMemory.source=sourceKey;}loaded=true;loadedVersion=version();error=choices.failed?choiceError:'';readFeedback.resolved();
+    }catch{if(!disposed){if(!choices.failed){loaded=false;risks=[];}error=choices.failed?choiceError:'Risicoanalyse laden is niet gelukt. Probeer opnieuw.';}if(!disposed){if(choices.failed)choiceFailure();else readFeedback.show(error,async()=>{await load();return !error;},'Opnieuw laden');}if(strict===true)throw Error(error);}
     finally{loadingNow=false;finish?.();panel.removeAttribute('aria-busy');if(!disposed&&view==='overview')overview();else if(!disposed&&view==='operational'&&loaded&&!error){const risk=risks.find(risk=>risk.id===activeRisk);if(risk)detail(risk);else overview();}}
   }
   overview();
-  return { prepare(){return load(true);}, activate(){if((!loaded||loadedVersion!==version())&&!loadingNow)void load();}, dispose(){disposed=true;unsubscribeChoices();unsubscribeReviews();choiceControls.clear();closeDetail();if(ownsReviews&&!reviewMemory.busy)reviewMemory.clear();operational=null;risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
+  return { prepare(){return load(true);}, activate(){if((!loaded||loadedVersion!==version())&&!loadingNow)void load();}, dispose(){disposed=true;for(const item of feedbacks.values())item.dispose();unsubscribeChoices();unsubscribeReviews();choiceControls.clear();closeDetail();if(ownsReviews&&!reviewMemory.busy)reviewMemory.clear();operational=null;risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
 }

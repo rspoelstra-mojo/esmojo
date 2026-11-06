@@ -7,3 +7,9 @@
 
 .save-notice { pointer-events: none; }
 .save-notice a, .save-notice button { pointer-events: auto; }
+
+.save-notice .save-notice-action { color: var(--profile-blue,#0046f2); }
+.save-notice .save-notice-action:disabled { opacity: .5; cursor: default; }
+.save-notice a:focus-visible,.save-notice button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+:root[data-theme="dark"] .save-notice a, :root[data-theme="dark"] .save-notice .save-notice-action { color: var(--accent,#7296ff); }

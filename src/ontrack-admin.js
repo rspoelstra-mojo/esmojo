@@ -1,3 +1,4 @@
+import {createPageFeedback} from './lib/page-feedback.js';
 import {backgroundSaves} from './lib/background-saves.js';
 import './ontrack-admin.css';
 import {access} from './auth.js';
@@ -10,7 +11,8 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
   const title=node('h1','','OnTrack'),notice=node('p','ontrack-notice');notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');
   const refresh=node('button','secondary-button','Actuele gegevens laden');refresh.type='button';refresh.onclick=()=>void load();
   const toolbar=node('div','ontrack-toolbar');toolbar.append(title,refresh);
-  function status(text,error=false){notice.textContent=text;notice.className=error?'form-message':'ontrack-notice';notice.setAttribute('role',error?'alert':'status');}
+  const feedbacks=new Map(),info={key:'ontrack-feedback',label:'OnTrack',route:'/beheerder/ontrack'};const feedback=metadata=>{if(!feedbacks.has(metadata.key))feedbacks.set(metadata.key,createPageFeedback(metadata));return feedbacks.get(metadata.key);};
+  function status(text,error=false){notice.textContent='';const target=feedback(error?backgroundSaves.failures.findLast(item=>item.route==='/beheerder/ontrack')||info:info);if(text)target.show(text,error?async()=>{await load();return Boolean(data);}:null,error?'Opnieuw laden':'Opnieuw proberen');else target.clear();}
   async function reportAction(body,key){
     if(reportBusy.has(key)||disposed)return;reportBusy.add(key);const finish=loading.start();status('');render();
     try{
@@ -82,5 +84,5 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
     finally{busy=false;finish();if(!disposed){refresh.disabled=false;render();if(reloadAfterBusy){reloadAfterBusy=false;void load();}}}
   }
   const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&data&&!busy)render();});
-  void load();return()=>{disposed=true;offActivity();data=null;selection=null;loading.dispose();};
+  void load();return()=>{disposed=true;for(const item of feedbacks.values())item.dispose();offActivity();data=null;selection=null;loading.dispose();};
 }
