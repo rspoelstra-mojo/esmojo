@@ -64,3 +64,11 @@ test('Variabele footer en ondertekening blijven tekst, zonder HTML-injectie of h
  assert.equal(rendered.html.includes(attack),false);assert.ok(rendered.text.endsWith(attack));assert.ok(rendered.html.includes('&lt;img'));
  for(const footer of ['{{onvervuld}}','\r\nBcc: ander@example.invalid'])assert.throws(()=>renderEmailTemplate({...message(),footer}));
 });
+
+test('Centrale afzenderkeuze gebruikt uitsluitend vaste adressen en blokkeert vrije/headergeïnjecteerde afzenders vóór verzending',async()=>{
+ const calls=[],options={env:{RESEND_API_KEY:'synthetic'},fetchImpl:async(url,init)=>{calls.push(JSON.parse(init.body));return{ok:true,json:async()=>({id:'synthetic'})};}};
+ await sendEmail({...message(),senderId:'show-report'},options);assert.equal(calls[0].from,'ESMOJO <showrapportage@esmojo.nl>');assert.equal(calls[0].reply_to,undefined);
+ await sendEmail(message(),options);assert.equal(calls[1].from,'ESMOJO <no-reply@esmojo.nl>');
+ for(const senderId of ['extern@example.invalid','show-report\r\nBcc: x@example.invalid','__proto__',null,{},''])await assert.rejects(sendEmail({...message(),senderId},options),/Ongeldige e-mailafzender/);
+ assert.equal(calls.length,2);
+});
