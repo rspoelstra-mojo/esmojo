@@ -1,4 +1,5 @@
-import {backgroundSaves} from './lib/background-saves.js';
+import {createPageFeedback} from './lib/page-feedback.js';
+import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
 import {accountModules,hasModule,isSuperAdministrator} from '../shared/account-modules.js';
 import { access } from './auth.js';
 import { cropPhoto } from './photo-crop.js';
@@ -19,14 +20,13 @@ function element(tag, text, className) {
 
 export function createAccountsView(container, currentUser, submenuLink,{onSaved=()=>{}}={}) {
   let disposed = false,accountsCache=null,mode='list',viewRevision=0;
+  const feedbacks=new Map();const feedback=info=>{if(!feedbacks.has(info.key))feedbacks.set(info.key,createPageFeedback(info));return feedbacks.get(info.key);};
+  const general=feedback({key:'accounts-feedback',label:'Accountactie',route:'/beheerder/accounts'});
   const loading = createSubmenuLoading(submenuLink, container);
   const controller = new AbortController();
   const view = element('section', '', 'accounts-view');
   container.replaceChildren(view);
-  const report = (message, error = false) => {
-    const notice = element('p', message, error ? 'form-message' : 'account-notice');
-    notice.setAttribute('role', 'status'); view.prepend(notice);
-  };
+  const report=(message,error=false)=>{const failed=error?backgroundSaves.failures.findLast(item=>item.route==='/beheerder/accounts'):null;const target=failed?feedback(failed):general;target.show(error?'De accountactie kon niet worden bevestigd. Je invoer is behouden.':message,error?()=>load():null,'Actuele gegevens laden');};
   async function load() {
     mode='list';const opened=++viewRevision;const finishLoading = loading.start();
     if(accountsCache)renderAccounts(accountsCache);else view.replaceChildren();
@@ -72,7 +72,7 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
         cell.append(actions);
       }
       view.append(table);
-    for(const account of [null,...accounts]){const draft=backgroundSaves.form('account:'+(account?.id||'new'));if(draft.error){report(draft.error+' Je invoer is behouden.',true);const recover=element('button','Invoer bekijken','secondary-button');recover.type='button';recover.onclick=()=>edit(account);view.prepend(recover);}}
+    for(const account of [null,...accounts]){const draft=backgroundSaves.form('account:'+(account?.id||'new'));if(draft.error)feedback(saveRequestInfo('accounts',{id:account?.id})).show('Account opslaan is niet bevestigd. Je invoer is behouden.',()=>{if(disposed)return false;edit(account);return false;},'Invoer bekijken');}
   }
   function action(glyph, label, callback) {
     const button = element('button', '', 'icon-button'); button.type = 'button'; button.title = label; button.setAttribute('aria-label', label);
@@ -136,11 +136,11 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
         renderAccounts(accountsCache||[]);
         void task.then(result=>{draft.fields=null;draft.error='';if(account?.id===currentUser.id&&!disposed)onSaved();draft.warning=result.warning;},error=>{draft.error=error.message||'Opslaan is niet bevestigd.';}).finally(()=>{draft.busy=false;backgroundSaves.changed();if(!disposed&&mode==='list'){renderAccounts(accountsCache||[]);if(!draft.error)void load().then(()=>{if(!disposed&&mode==='list'&&draft.warning)report(draft.warning,true);});}});
 
-      } catch (error) { message.textContent = error.message; }
+      } catch { report('De accountactie is niet bevestigd.',true); }
       finally { save.disabled = Boolean(draft.busy)||isSuperAdministrator(account)&&!isSuperAdministrator(currentUser); }
     });
   }
   const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&mode==='list'&&accountsCache)renderAccounts(accountsCache);});
   load();
-  return () => { disposed = true;offActivity(); loading.dispose(); controller.abort(); view.replaceChildren(); };
+  return () => { disposed = true;for(const item of feedbacks.values())item.dispose();offActivity(); loading.dispose(); controller.abort(); view.replaceChildren(); };
 }

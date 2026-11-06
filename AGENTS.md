@@ -1058,3 +1058,35 @@ Showrapportagemail V1.55: zichtbare blauwe header uitsluitend Showrapportage;
 onderwerp blijft Showrapportage [artiest] - [showdatum]. Nieuwe afleveringen
 leggen mailversie online-report-v2 vast. Herpogingen van online-report-v1 behouden
 de lange header voor ongewijzigde inhoud op dezelfde idempotentiesleutel.
+
+## Centrale foutmeldingen en bewuste productieopslag (V1.56)
+
+Opslag-/actieproblemen in de show-, account- en beheerformulieren gaan via
+src/lib/page-feedback.js naar save-notice rechtsonder; geen dubbele rode
+paginamelding. Bekijken en herstelacties zijn gelijk vormgegeven tekstacties.
+Gebruik bestaande expliciete herstelroutes, behoud invoer en bron-/revisiechecks;
+geen generieke blinde retryknop. Bind callbacks aan de geopende pagina/sessie en
+ruim ze bij verlaten/afmelden op. Vaste gebruikerscopy, geen ruwe serverfoutinhoud.
+
+De gebruiker vraagt één stille tweede opslagpoging vóór een foutmelding.
+retrySave in auth.access probeert tijdelijke transport-/dienstfouten maximaal
+één keer opnieuw voor expliciet toegestane versiegebonden showmutaties.
+Verzoekinhoud/revisie/bron/upload-ID blijven identiek; waar mogelijk teruglezen
+om verloren bevestiging zonder nieuwe write te herkennen. Geen retry voor
+validatie/toegang/conflicten of na sessiewissel; geen blinde tweede uitnodiging,
+accountcreatie of mailactie. Nieuwe mutaties pas toelaten na idempotentiecontrole.
+
+Barrieropstelling en Vloerdruk slaan uitsluitend op na hun Opslaan-/afrondknop:
+selecteren, rekenen, typen, blur of detail verlaten verstuurt geen conceptwrite.
+Alle standaardbarriers selecteren synchroon Geen risico; Afwijkend ontwerp wist
+de voorselectie. Andere risicoklassen blijven handmatig beschikbaar. Lokale
+invoer en geselecteerde afwijkende bestanden blijven alleen in sessiegeheugen.
+Na Opslaan: zo nodig custom-concept/upload en vervolgens afronding serieel met
+actuele revisies; gebruiker mag direct door. Alleen bevestigd afronden telt in
+de planning. Dit vervangt de eerdere automatische standaardbarrierafronding.
+
+Showrapportagemail: nieuwe online-report-v3-afleveringen hebben uitsluitend de
+onlineknop, geen PDF-bijlage of bijlagevermelding. PDF-generatie/download blijft
+bestaan. Oude onzekere v1/v2-afleveringen houden oorspronkelijke header/bijlage
+op dezelfde idempotentiesleutel. Onderwerp, ondertekening, afzender, ontvangers,
+footer en triggers blijven behouden. Nooit echte testmails versturen voor preview.

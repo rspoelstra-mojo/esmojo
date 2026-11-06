@@ -1,3 +1,4 @@
+import {createPageFeedback} from './lib/page-feedback.js';
 import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
 import {detailBackButton} from './detail-back.js';
 import './ticket-data.css';
@@ -10,6 +11,8 @@ const node=(tag,cls,text)=>{const el=document.createElement(tag);el.className=cl
 export function createTicketDataPage(section,{show,state,onBack,categoryIcon,requestAccess=access,readOnly=false,onStored=()=>{}}) {
   let disposed=false,workflow={visitors:{fields:{}}},shows=[],busy=false,expanded=true,ready=false,loadSequence=0;
   state.saving ||= new Set();state.session ??= backgroundSaves.session;if(!state.unwatch)state.unwatch=backgroundSaves.watch(()=>state.saving.size>0);state.listeners ||= new Set();state.errors ||= {};const leases=new Map(),pending=new Map(),cards=new Map();
+  const feedbacks=new Map(fields.map(([field])=>[field,createPageFeedback(saveRequestInfo('ticket-data',{concertId:show.key,field}))]));const readFeedback=createPageFeedback({key:'tickets-read:'+show.key,label:'Aantallen en herkomst laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'});
+  const fieldError=field=>feedbacks.get(field).show('De gegevens zijn niet bevestigd. Je invoer is behouden.',async()=>{if(disposed)return false;if(!await reserve(field))return false;await save(field);return !state.errors[field]&&!cards.get(field)?.conflict;},'Opnieuw proberen',[{label:'Opgeslagen gegevens laden',run:async()=>{if(disposed)return false;delete state.drafts[field];delete state.base[field];await load();return ready;}}]);
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
   const request=body=>requestAccess('ticket-data',{method:'POST',body:{concertId:show.key,...body}});
   const stored=field=>workflow.visitors.fields[field];
@@ -26,7 +29,7 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
       const data=await request({operation:renew?'renew':'reserve',field,token,expectedVersion:version(field)});
       if(disposed){void request({operation:'release',field,token,expectedVersion:version(field)}).catch(()=>{});return false;}
       leases.set(field,{token,expiresAt:data.lease.expiresAt});cards.get(field).conflict=false;cards.get(field).error.textContent='';return true;
-    }catch(error){if(!disposed){cards.get(field).conflict=true;cards.get(field).error.textContent=error.message||'Reserveren is niet gelukt. Je invoer is behouden.';leases.delete(field);}return false;}
+    }catch(error){if(!disposed){cards.get(field).conflict=true;fieldError(field);leases.delete(field);}return false;}
     finally{pending.delete(field);if(!disposed)refresh();}})();pending.set(field,task);return task;
   }
   function refresh(){
@@ -44,8 +47,8 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
     state.saving.add(field);state.errors[field]='';refresh();card.error.textContent='';
     const payload={operation:final?'reopen':'review',field,token:lease.token,expectedVersion:version(field),...(final?{}:{content:field==='ticket_sales'?normalizedTicketSales(card.content(),shows):card.content()})};
     const task=(state.tail||Promise.resolve()).catch(()=>{}).then(()=>{if(state.session!==backgroundSaves.session)throw Error('Opslag geannuleerd bij afmelden.');return request(payload);});state.tail=task.catch(()=>{});
-    try{const data=await task;workflow=data.workflow;state.changed=true;delete state.drafts[field];delete state.base[field];leases.delete(field);onStored();if(!disposed)buildCards(field);}
-    catch(error){if(state.session===backgroundSaves.session)backgroundSaves.fail(saveRequestInfo('ticket-data',{concertId:show.key,field}));state.errors[field]=error.message||'Opslaan is niet bevestigd. Je invoer is behouden.';if(!disposed)card.error.textContent=state.errors[field];}
+    try{const data=await task;workflow=data.workflow;state.changed=true;delete state.drafts[field];delete state.base[field];leases.delete(field);onStored();if(!disposed){feedbacks.get(field).resolved();buildCards(field);}}
+    catch(error){if(state.session===backgroundSaves.session)backgroundSaves.fail(saveRequestInfo('ticket-data',{concertId:show.key,field}));state.errors[field]=error.message||'Opslaan is niet bevestigd. Je invoer is behouden.';if(!disposed)fieldError(field);}
     finally{state.saving.delete(field);for(const listener of state.listeners)listener(settled,field);backgroundSaves.changed();if(disposed)void request({operation:'release',field,token:lease.token,expectedVersion:version(field)}).catch(()=>{});else refresh();}
   }
   function draft(field,value){if(locked(field))return;base(field);state.drafts[field]=value;void reserve(field);cards.get(field).error.textContent='';refresh();}
@@ -53,7 +56,7 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
   const header=node('div','analysis-editor-header'),glyph=node('span','profile-category-icon');glyph.innerHTML=categoryIcon;
   const intro=node('div','analysis-editor-intro'),title=node('h2','','Aantallen en herkomst');title.tabIndex=-1;
   const headerBadge=node('span','analysis-status','Handmatig invoeren');intro.append(title,node('p','','Bezoekersanalyse'));header.append(glyph,intro,headerBadge);
-  const grid=node('div','ticket-grid'),error=node('p','profile-message');error.setAttribute('role','alert');header.prepend(back);section.replaceChildren(header,error,grid);
+  const grid=node('div','ticket-grid'),error=node('p','profile-message');error.setAttribute('role','alert');header.prepend(back);section.replaceChildren(header,grid);
   title.focus({preventScroll:true});window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   function buildCards(only=null){const previous=only?cards.get(only)?.element:null;if(!only){cards.clear();grid.replaceChildren();}
     for(const[field,label]of fields){if(only&&field!==only)continue;
@@ -61,7 +64,7 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
       head.append(node('span','ticket-heading-title',label),badge,chevron);const body=node('div','ticket-body');body.id='ticket-body-'+field;head.setAttribute('aria-controls',body.id);head.setAttribute('aria-expanded',String(expanded));body.hidden=!expanded;
       head.onclick=()=>{expanded=!expanded;for(const c of cards.values()){c.body.hidden=!expanded;c.head.setAttribute('aria-expanded',String(expanded));c.chevron.textContent=expanded?'⌃':'⌄';}};
       const area=node('div','ticket-fields'),footer=node('footer','ticket-footer'),button=node('button','analysis-complete'),message=node('p','ticket-error'),retry=node('button','secondary-button','Opnieuw reserveren'),reload=node('button','secondary-button','Opgeslagen gegevens laden');
-      message.setAttribute('role','alert');message.textContent=state.errors[field]||'';button.type=retry.type=reload.type='button';button.onclick=()=>save(field);retry.onclick=()=>reserve(field);reload.onclick=()=>{delete state.drafts[field];delete state.base[field];void load();};
+      message.setAttribute('role','alert');if(state.errors[field])fieldError(field);button.type=retry.type=reload.type='button';button.onclick=()=>save(field);retry.onclick=()=>reserve(field);reload.onclick=()=>{delete state.drafts[field];delete state.base[field];void load();};
       const inputs=[],combos=[];let getContent=()=>'';
       cards.set(field,{element:card,head,badge,chevron,body,button,error:message,retry,reload,inputs,combos,conflict:false,content:()=>getContent()});
       area.addEventListener('focusin',()=>{if(!locked(field))void reserve(field);});area.addEventListener('pointerdown',()=>{if(!locked(field))void reserve(field);},{passive:true});
@@ -83,13 +86,13 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
         if(foreign){const input=percent(value.netherlands,v=>{value.netherlands=v;draft(field,getContent());});row('Nederland',input,'Percentage Nederland',true);area.lastElementChild.classList.add('ticket-netherlands');}
         area.append(node('p','ticket-help',foreign?'Vul percentages van 0 tot en met 100 in. Nederland en de top 3 mogen samen maximaal 100% zijn.':'Kies drie verschillende provincies. Vul percentages van 0 tot en met 100 in; de top 3 mag samen maximaal 100% zijn.'));
       }
-      footer.append(button);body.append(area,message,retry,reload,footer);card.append(head,body);if(previous)grid.replaceChild(card,previous);else grid.append(card);
-      if(state.drafts[field]!==undefined&&state.base[field]!==undefined&&state.base[field]!==stored(field)?.version&&state.base[field]!== (stored(field)?.version||0)){cards.get(field).conflict=true;message.textContent='De opgeslagen gegevens zijn gewijzigd. Je lokale invoer is behouden.';}
+      footer.append(button);body.append(area,footer);card.append(head,body);if(previous)grid.replaceChild(card,previous);else grid.append(card);
+      if(state.drafts[field]!==undefined&&state.base[field]!==undefined&&state.base[field]!==stored(field)?.version&&state.base[field]!== (stored(field)?.version||0)){cards.get(field).conflict=true;fieldError(field);}
     }refresh();
   }
-  async function load(only=null){only=ready?only:null;const sequence=++loadSequence;ready=false;if(cards.size)refresh();error.textContent='';const finish=loading?.start();try{const data=await request({operation:'read'});if(disposed||sequence!==loadSequence)return;workflow=data.workflow;shows=data.shows;ready=true;buildCards(only);}catch{if(!disposed){error.textContent='Aantallen en herkomst laden is niet gelukt.';const retry=node('button','secondary-button','Opnieuw laden');retry.type='button';retry.onclick=()=>{retry.remove();void load();};error.after(retry);}}finally{finish?.();}}
+  async function load(only=null){only=ready?only:null;const sequence=++loadSequence;ready=false;if(cards.size)refresh();error.textContent='';const finish=loading?.start();try{const data=await request({operation:'read'});if(disposed||sequence!==loadSequence)return;workflow=data.workflow;shows=data.shows;ready=true;readFeedback.resolved();buildCards(only);}catch{if(!disposed){readFeedback.show('Aantallen en herkomst laden is niet gelukt.',async()=>{await load();return ready;},'Opnieuw laden');}}finally{finish?.();}}
   const timer=setInterval(()=>{for(const field of leases.keys())void reserve(field,true);if(!disposed)refresh();},40000);
   const settled=(source,field)=>{if(source!==settled&&!disposed)void load(field);};state.listeners.add(settled);
   void load();
-  return()=>{disposed=true;state.listeners.delete(settled);clearInterval(timer);loading?.dispose();for(const[field,lease]of leases)if(!state.saving.has(field))void request({operation:'release',field,token:lease.token,expectedVersion:version(field)}).catch(()=>{});for(const field of [...leases.keys()])if(!state.saving.has(field))leases.delete(field);};
+  return()=>{disposed=true;for(const item of feedbacks.values())item.dispose();readFeedback.dispose();state.listeners.delete(settled);clearInterval(timer);loading?.dispose();for(const[field,lease]of leases)if(!state.saving.has(field))void request({operation:'release',field,token:lease.token,expectedVersion:version(field)}).catch(()=>{});for(const field of [...leases.keys()])if(!state.saving.has(field))leases.delete(field);};
 }

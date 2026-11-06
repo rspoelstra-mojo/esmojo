@@ -112,3 +112,9 @@ fictieve Drive-fixtures controleert beide echte formuliermodules: desktopkolomme
 PDF-upload, verversen, dynamische vakken, afronding, dark mode en mobiel. Geen
 productiebestanden zijn voor deze controles geschreven. Authenticated live Drive-
 werking vereist een ingelogde ESMOJO-sessie en is niet als productie-roundtrip geclaimd.
+
+V1.56: standaardbarrier kiest direct Geen risico maar slaat niets automatisch op.
+Afwijkend ontwerp wist de selectie; invullen/typen/blur schrijft geen concept.
+Vloerdruk berekent direct maar schrijft pas via afronden. Lokale invoer wordt
+in tijdelijk sessiegeheugen bewaard. Nieuwe custombestanden worden pas na Opslaan
+serieël geüpload vóór afronden. Geen automatische planningafronding door selectie.

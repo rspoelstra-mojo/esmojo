@@ -39,3 +39,11 @@ test('Bevestigde herpoging wist uitsluitend de fout van dezelfde opslagactie',as
 test('Foutlinks voor rapport-/mailbeheer blijven in beheer, ook wanneer de actie een concert-ID bevat',()=>{
  assert.equal(saveRequestInfo('ontrack-report',{concertId:'Historical_AFAS-Live_01112026'}).route,'/beheerder/ontrack');assert.equal(saveRequestInfo('email',{concertId:'Historical_AFAS-Live_01112026'}).route,'/beheerder/email');
 });
+
+test('Centrale melding bundelt dezelfde fout en voert een bewuste herpoging maar één keer tegelijk uit',async()=>{
+ const saves=createSaveActivity(),wait=deferred();let calls=0;saves.fail({key:'row',label:'Bewaren',route:'/shows/fixture'});saves.notice({key:'row',message:'Je invoer is behouden.',route:'/shows/fixture'});assert.equal(saves.messages.length,1);
+ const off=saves.recovery('row',async()=>{calls++;await wait.promise;return true;});const first=saves.retry('row');void saves.retry('row');assert.equal(calls,1);assert.equal(saves.retryAction('row').disabled,true);assert.equal(saves.pending,true);wait.resolve();await first;assert.equal(saves.messages.length,0);off();assert.equal(saves.retryAction('row'),null);
+});
+test('Een mislukte herstelactie houdt de melding; afmelden wist callbacks en een late retry wist geen nieuwe fout',async()=>{
+ const saves=createSaveActivity(),wait=deferred();saves.notice({key:'row',message:'Controleer je gegevens.'});saves.recovery('row',async()=>false);await saves.retry('row');assert.equal(saves.messages.length,1);saves.recovery('row',()=>wait.promise);const task=saves.retry('row');saves.clear();saves.fail({key:'row'});wait.resolve(true);await task;assert.equal(saves.messages.length,1);assert.equal(saves.retryAction('row'),null);
+});

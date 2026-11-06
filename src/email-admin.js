@@ -1,3 +1,5 @@
+import {createPageFeedback} from './lib/page-feedback.js';
+import {saveRequestInfo} from './lib/background-saves.js';
 import './email-admin.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
@@ -15,7 +17,8 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
   const status=node('p','account-notice');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   form.append(field,showField,recipient,button,status);
   const selected=()=>catalog?.templates.find(template=>template.id===select.value);
-  function notice(text,error=false){status.textContent=text;status.className=error?'form-message':'account-notice';status.setAttribute('role',error?'alert':'status');}
+  const feedback=createPageFeedback(saveRequestInfo('email'));
+  function notice(text,error=false){status.textContent='';if(text)feedback.show(error?'De e-mailactie kon niet worden bevestigd. Controleer de actuele status.':text,error?async()=>{await load();return Boolean(catalog);}:null,error?'Actuele gegevens laden':'Opnieuw proberen');else feedback.clear();}
   function renderShows(){
     const ontrack=selected()?.concertCatalog==='ontrack',shows=ontrack?catalog.ontrackShows:catalog.shows;
     showSelect.replaceChildren(node('option','','Kies een concert'));showSelect.firstChild.value='';
@@ -39,7 +42,7 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
       renderShows();
       recipient.textContent='Testmail versturen naar: '+(data.recipients||[data.recipient]).join(' en ');
       notice(data.canSend?'':'E-mailverzending is nog niet geconfigureerd.');view.replaceChildren(title,form);update();
-    }catch{if(!disposed){const error=node('p','form-message','De e-mailtemplates konden niet worden geladen.'),retry=node('button','secondary-button','Opnieuw laden');error.setAttribute('role','alert');retry.type='button';retry.onclick=()=>{view.replaceChildren();void load();};view.replaceChildren(title,error,retry);}}
+    }catch{if(!disposed){feedback.show('De e-mailtemplates konden niet worden geladen.',async()=>{await load();return Boolean(catalog);},'Opnieuw laden');view.replaceChildren(title);}}
     finally{finish();}
   }
   select.onchange=()=>{requestId=null;notice('');renderShows();update();};showSelect.onchange=()=>{requestId=null;notice('');update();};
@@ -49,9 +52,9 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
     try{
       const template=selected(),body={templateId:template.id,requestId,...(template.requiresShow?{concertId:showSelect.value}:{})};
       const result=await request('email',{method:'POST',body});if(disposed)return;if(result.ok!==true)throw Error('Unconfirmed send');
-      requestId=null;notice('Testmail verstuurd naar '+(catalog.recipients||[catalog.recipient]).join(' en ')+'.');
+      requestId=null;notice('Testmail verstuurd.');
     }catch{if(!disposed)notice('Testmail versturen is niet gelukt. Probeer het opnieuw.',true);}
     finally{busy=false;finish();if(!disposed)update();}
   };
-  void load();return()=>{disposed=true;catalog=null;requestId=null;loading.dispose();};
+  void load();return()=>{disposed=true;feedback.dispose();catalog=null;requestId=null;loading.dispose();};
 }

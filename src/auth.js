@@ -1,3 +1,4 @@
+import {retrySave} from './lib/save-retry.js';
 import {backgroundSaves,isSaveRequest,saveRequestInfo,SAVE_EXIT_MESSAGE} from './lib/background-saves.js';
 import {homeDashboardCache} from './lib/home-cache.js';
 import { getSupabase } from './lib/supabase.js';
@@ -17,7 +18,7 @@ let restoring = null;
 const panel = () => document.querySelector('#auth-panel');
 
 export function access(action,options={}) {
-  return isSaveRequest(action,options)?backgroundSaves.track(()=>performAccess(action,options),saveRequestInfo(action,options.body)):performAccess(action,options);
+  const session=backgroundSaves.session;return isSaveRequest(action,options)?backgroundSaves.track(()=>retrySave(action,options,performAccess,{active:()=>session===backgroundSaves.session}),saveRequestInfo(action,options.body)):performAccess(action,options);
 }
 async function performAccess(action, { method = 'GET', body } = {}) {
   const saveSession=backgroundSaves.session;
@@ -26,7 +27,7 @@ async function performAccess(action, { method = 'GET', body } = {}) {
     // Gebruik de gedeelde cookie i.p.v. een mogelijk oud refresh-token uit een ander tabblad.
     const previousUser = activeSession.user.id;
     const restored = await restoreRemembered();
-    if (!restored || restored.profile.id !== previousUser) { await logout(); throw new Error('Log opnieuw in.'); }
+    if (!restored || restored.profile.id !== previousUser) { await logout('Je sessie is gewijzigd. Log opnieuw in.'); throw new Error('Log opnieuw in.'); }
     armExpiry(restored.expiresAt);
   }
   const { data } = await client.auth.getSession();
@@ -34,15 +35,15 @@ async function performAccess(action, { method = 'GET', body } = {}) {
   if (!data.session) throw new Error('Log opnieuw in.');
   activeSession = data.session;
   const homeContext=homeDashboardCache.context();
-  const response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store',
+  let response;try{response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store',
     headers: { Authorization: `Bearer ${data.session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-    ...(body ? { body: JSON.stringify(body) } : {}) });
+    ...(body ? { body: JSON.stringify(body) } : {}) });}catch{throw Object.assign(new Error('De dienst is tijdelijk niet bereikbaar.'),{retryable:true});}
   let result;
-  try { result = await response.json(); } catch { throw new Error('De accountdienst is niet beschikbaar.'); }
+  try { result = await response.json(); } catch { throw Object.assign(new Error('De accountdienst is niet beschikbaar.'),{retryable:response.status>=500||response.ok}); }
   if (!response.ok) {
     if(result.code==='MODULE_FORBIDDEN')window.dispatchEvent(new Event('esmojo-module-forbidden'));
-    if (response.status === 401 || ['ACCOUNT_DISABLED', 'MFA_REQUIRED'].includes(result.code)) await logout();
-    throw new Error(result.error || 'Het verzoek is mislukt.');
+    if (response.status === 401 || ['ACCOUNT_DISABLED', 'MFA_REQUIRED'].includes(result.code)) await logout('Je sessie is niet meer geldig. Log opnieuw in.');
+    throw Object.assign(new Error(result.error || 'Het verzoek is mislukt.'),{retryable:response.status>=500||response.status===429});
   }
   if(result.profile&&result.profile.id===data.session.user.id&&homeContext.ticket===homeDashboardCache.context().ticket&&['session','restore'].includes(action)){homeDashboardCache.bind(result.profile);if(result.homeDashboard)homeDashboardCache.accept(result.homeDashboard,{actor:result.profile.id});}
   if(action==='show-profile-pdf'&&body?.concertId&&result.state)homeDashboardCache.confirmProfile(body.concertId,result.state,{...homeContext,actor:data.session.user.id});
