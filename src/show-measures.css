@@ -41,6 +41,4 @@
 .measure-upload-card > p { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 0 0 14px; }
 .measure-briefing-option span { background: #f3f4f6; color: #4b5563; }
 .measure-briefing-option[data-choice="yes"] input:checked + span { background: #e7f5ed; color: #28734d; }
-[data-theme="dark"] .measure-briefing-option span { background: #263143; color: #d3dae6; }
-[data-theme="dark"] .measure-briefing-option[data-choice="yes"] input:checked + span { background: #163d2d; color: #a5d7b8; }
 @container fluid (max-width: 620px) { .measure-proposal-row { grid-template-columns: minmax(0,1fr); } }
