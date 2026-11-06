@@ -46,7 +46,7 @@ async function performAccess(action, { method = 'GET', body } = {}) {
     throw Object.assign(new Error(result.error || 'Het verzoek is mislukt.'),{retryable:response.status>=500||response.status===429});
   }
   if(result.profile&&result.profile.id===data.session.user.id&&homeContext.ticket===homeDashboardCache.context().ticket&&['session','restore'].includes(action)){homeDashboardCache.bind(result.profile);if(result.homeDashboard)homeDashboardCache.accept(result.homeDashboard,{actor:result.profile.id});}
-  if(action==='show-profile-pdf'&&body?.concertId&&result.state)homeDashboardCache.confirmProfile(body.concertId,result.state,{...homeContext,actor:data.session.user.id});
+  if(action==='show-profile-pdf'&&body?.concertId&&result.state&&!result.storageStale)homeDashboardCache.confirmProfile(body.concertId,result.state,{...homeContext,actor:data.session.user.id});
   if(result.homePlanning)homeDashboardCache.patch(result.homePlanning,{...homeContext,actor:data.session.user.id});
   return result;
 }

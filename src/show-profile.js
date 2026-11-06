@@ -164,7 +164,14 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
   const unsubscribe=saves.subscribe(()=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
-  const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
+  // Alleen deze afrondformulieren beïnvloeden het overzicht. Een globale
+  // opslagevent mag de PDF-widget niet vernietigen en opnieuw laten starten.
+  let finalActivity=JSON.stringify([Boolean(finalDrafts.visitors.pending),Boolean(finalDrafts.artist.pending)]);
+  const offActivity=backgroundSaves.subscribe(()=>{
+    const next=JSON.stringify([Boolean(finalDrafts.visitors.pending),Boolean(finalDrafts.artist.pending)]);
+    if(next===finalActivity)return;finalActivity=next;
+    if(!disposed&&loaded&&!ticketOpen&&editorNumber===null)renderOverview();
+  });
   const ready=load(true);
   const dispose=() => { disposed = true;for(const item of feedbacks.values())item.dispose(); offActivity();unsubscribe();if(readOnly)saves.cancel(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
   dispose.ready=ready;return dispose;
