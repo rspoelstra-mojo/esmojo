@@ -12,7 +12,7 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
   let disposed=false,workflow={visitors:{fields:{}}},shows=[],busy=false,expanded=true,ready=false,loadSequence=0;
   state.saving ||= new Set();state.session ??= backgroundSaves.session;if(!state.unwatch)state.unwatch=backgroundSaves.watch(()=>state.saving.size>0);state.listeners ||= new Set();state.errors ||= {};const leases=new Map(),pending=new Map(),cards=new Map();
   const feedbacks=new Map(fields.map(([field])=>[field,createPageFeedback(saveRequestInfo('ticket-data',{concertId:show.key,field}))]));const readFeedback=createPageFeedback({key:'tickets-read:'+show.key,label:'Aantallen en herkomst laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'});
-  const fieldError=field=>feedbacks.get(field).show('De gegevens zijn niet bevestigd. Je invoer is behouden.',async()=>{if(disposed)return false;if(!await reserve(field))return false;await save(field);return !state.errors[field]&&!cards.get(field)?.conflict;},'Opnieuw proberen',[{label:'Opgeslagen gegevens laden',run:async()=>{if(disposed)return false;delete state.drafts[field];delete state.base[field];await load();return ready;}}]);
+  const fieldError=field=>feedbacks.get(field).show('De gegevens zijn niet bevestigd. Je invoer is behouden.',async()=>{if(disposed)return false;if(!await reserve(field))return false;return await save(field);},'Opnieuw proberen',[{label:'Opgeslagen gegevens laden',run:async()=>{if(disposed)return false;delete state.drafts[field];delete state.base[field];await load();return ready;}}]);
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
   const request=body=>requestAccess('ticket-data',{method:'POST',body:{concertId:show.key,...body}});
   const stored=field=>workflow.visitors.fields[field];
@@ -41,14 +41,14 @@ export function createTicketDataPage(section,{show,state,onBack,categoryIcon,req
     back.disabled=false;
   }
   async function save(field){
-    const card=cards.get(field),final=Boolean(stored(field)?.completed_at);if(state.saving.has(field)||card.button.disabled)return;
-    if(final&&!await reserve(field))return;
-    const lease=leases.get(field);if(!lease||!held(field))return;
+    const card=cards.get(field),final=Boolean(stored(field)?.completed_at);if(disposed||state.saving.has(field)||card.button.disabled)return false;
+    if(final&&!await reserve(field))return false;
+    const lease=leases.get(field);if(!lease||!held(field))return false;
     state.saving.add(field);state.errors[field]='';refresh();card.error.textContent='';
     const payload={operation:final?'reopen':'review',field,token:lease.token,expectedVersion:version(field),...(final?{}:{content:field==='ticket_sales'?normalizedTicketSales(card.content(),shows):card.content()})};
     const task=(state.tail||Promise.resolve()).catch(()=>{}).then(()=>{if(state.session!==backgroundSaves.session)throw Error('Opslag geannuleerd bij afmelden.');return request(payload);});state.tail=task.catch(()=>{});
-    try{const data=await task;workflow=data.workflow;state.changed=true;delete state.drafts[field];delete state.base[field];leases.delete(field);onStored();if(!disposed){feedbacks.get(field).resolved();buildCards(field);}}
-    catch(error){if(state.session===backgroundSaves.session)backgroundSaves.fail(saveRequestInfo('ticket-data',{concertId:show.key,field}));state.errors[field]=error.message||'Opslaan is niet bevestigd. Je invoer is behouden.';if(!disposed)fieldError(field);}
+    try{const data=await task;workflow=data.workflow;state.changed=true;delete state.drafts[field];delete state.base[field];leases.delete(field);onStored();if(!disposed){feedbacks.get(field).resolved();buildCards(field);}return true;}
+    catch(error){if(state.session===backgroundSaves.session)backgroundSaves.fail(saveRequestInfo('ticket-data',{concertId:show.key,field}));state.errors[field]=error.message||'Opslaan is niet bevestigd. Je invoer is behouden.';if(!disposed)fieldError(field);return false;}
     finally{state.saving.delete(field);for(const listener of state.listeners)listener(settled,field);backgroundSaves.changed();if(disposed)void request({operation:'release',field,token:lease.token,expectedVersion:version(field)}).catch(()=>{});else refresh();}
   }
   function draft(field,value){if(locked(field))return;base(field);state.drafts[field]=value;void reserve(field);cards.get(field).error.textContent='';refresh();}
