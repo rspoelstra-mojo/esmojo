@@ -58,3 +58,20 @@ test('De uploadroute accepteert een echte grotere privébijlage; andere maatrege
  await assert.rejects(h.call('draft',{...values(result.record),data:{riskLevelAfter:null,briefing:false,extra:'x'.repeat(120000)}}),/VALIDATION/);
  const entry=h.document().measureUploads[uploadId],file=h.ctx.DriveApp.getFileById(entry.fileId),destination=new h.folder.constructor('Test_Gashouder_05112026',h.artist);h.ctx.esmojoMoveProductionRisks_(h.folder,destination,h.concertId,destination.name);assert.equal(file.getParents().next().getId(),destination.getId());assert.equal(destination.files.some(file=>file.name==='productionele-risicos.json'),true);
 });
+
+test('Briefing begint onbeantwoord; een losse risicoklasse is onvoldoende, expliciet Ja én Nee maken afronding mogelijk',async()=>{
+ for(const choice of [true,false]){
+  const h=await setup(),initial=await h.read();assert.equal(initial.record.briefing,null);assert.equal(initial.record.briefingChosen,false);
+  const rated=await h.call('draft',{...values(initial.record),data:{riskLevelAfter:'low',briefing:null}});assert.equal(rated.record.riskLevelAfter,'low');assert.equal(rated.record.briefing,null);assert.equal(rated.record.implemented,false);
+  await assert.rejects(h.call('complete',{...values(rated.record),data:{riskLevelAfter:'low',briefing:null}}),/VALIDATION/);
+  await assert.rejects(h.call('complete',{...values(rated.record),data:{riskLevelAfter:null,briefing:choice}}),/VALIDATION/);
+  const done=await h.call('complete',{...values(rated.record),data:{riskLevelAfter:'low',briefing:choice}});assert.equal(done.record.briefing,choice);assert.equal(done.record.briefingChosen,true);assert.equal(done.record.implemented,true);assert.equal(h.document().measureImplementations[h.measureId].briefingChosen,true);
+ }
+});
+test('Oude impliciete false wordt geen gekozen Nee; bewuste oude Ja en nieuwe Nee blijven bewaard zonder leesmigratie',async()=>{
+ const h=await setup(),initial=await h.read();await h.call('complete',{...values(initial.record),data:{riskLevelAfter:'low',briefing:false}});
+ const doc=h.document(),entry=doc.measureImplementations[h.measureId];delete entry.briefingChosen;const file=h.folder.files.find(file=>file.name==='productionele-risicos.json');file.content=JSON.stringify(doc);const before=file.content;
+ const legacy=await h.read();assert.equal(legacy.record.briefing,null);assert.equal(legacy.record.implemented,false);assert.equal(showMeasures({venue:'Gashouder'},{risks:legacy.overview}).rows[0].implemented,false);assert.equal(file.content,before,'Geen historische gegevens herschrijven bij lezen');
+ entry.briefing=true;file.content=JSON.stringify(doc);const oldYes=await h.read();assert.equal(oldYes.record.briefing,true);assert.equal(oldYes.record.implemented,true);
+ entry.briefing=false;entry.briefingChosen=true;file.content=JSON.stringify(doc);const newNo=await h.read();assert.equal(newNo.record.briefing,false);assert.equal(newNo.record.implemented,true);
+});

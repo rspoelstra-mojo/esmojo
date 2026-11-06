@@ -225,3 +225,10 @@ test('Maatregel-API vereist sessie/MFA/Shows, bindt actor serverzijdig en weiger
  for(const change of [{actor:other},{fileId:'free'},{measureId:'../secret'}])assert.equal((await run({action:'measure',method:'POST',body:{...body,...change}})).response.code,400);
  const bytes=Buffer.from('<html>not pdf</html>'),upload={operation:'upload',concertId:'Test',measureId:'production:barrier_layout',revision:0,basis:'basis',uploadId:'11111111-1111-4111-8111-111111111111',fileName:'fake.pdf',mime:'application/pdf',base64:bytes.toString('base64'),sha256:createHash('sha256').update(bytes).digest('hex')};const rejected=await run({action:'measure',method:'POST',body:upload});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(call=>call[0]==='shows'),false);
 });
+
+
+test('Maatregel afronden vereist ook via de API een expliciete briefingkeuze',async()=>{
+ const base={operation:'complete',concertId:'Test',measureId:'production:barrier_layout',revision:0,basis:'basis'};
+ for(const data of [{riskLevelAfter:'low',briefing:null},{riskLevelAfter:'low'},{riskLevelAfter:null,briefing:false}]){const result=await run({action:'measure',method:'POST',body:{...base,data}});assert.equal(result.response.code,400);assert.equal(result.calls.some(call=>call[0]==='shows'),false);}
+ for(const briefing of [true,false])assert.equal((await run({action:'measure',method:'POST',body:{...base,data:{riskLevelAfter:'low',briefing}}})).response.code,200);
+});
