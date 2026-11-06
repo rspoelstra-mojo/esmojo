@@ -1,7 +1,8 @@
 import {emailAttachments} from './email-attachments.js';
 // Alleen gebruiken vanuit servercode; importeer dit bestand nooit in src/.
 import {renderEmailTemplate} from './email-template.js';
-export const EMAIL_FROM = 'ESMOJO <no-reply@esmojo.nl>';
+import {emailSender} from './email-senders.js';
+export {EMAIL_FROM,SHOW_REPORT_EMAIL_FROM} from './email-senders.js';
 
 /** Iedere uitgaande mail gebruikt dezelfde renderer. Eén ontvanger per bericht. */
 export async function sendEmail(message,{env=process.env,fetchImpl=fetch,idempotencyKey}={}) {
@@ -13,7 +14,7 @@ export async function sendEmail(message,{env=process.env,fetchImpl=fetch,idempot
   if(!apiKey)throw new Error('RESEND_API_KEY ontbreekt op de server.');
   const response=await fetchImpl('https://api.resend.com/emails',{
     method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json',...(idempotencyKey?{'Idempotency-Key':idempotencyKey}:{})},
-    body:JSON.stringify({from:EMAIL_FROM,to:message.to,subject,text,html,...(attachments.length?{attachments}:{})}),
+    body:JSON.stringify({from:emailSender(message.senderId),to:message.to,subject,text,html,...(attachments.length?{attachments}:{})}),
   });
   if(!response.ok)throw new Error('Resend kon de e-mail niet verzenden (HTTP '+response.status+').');
   return response.json();

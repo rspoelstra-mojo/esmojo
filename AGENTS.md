@@ -977,3 +977,12 @@ mail, en in ESMOJO, is strikt vertrouwelijk en mag niet verspreid worden zonder
 nadrukkelijke toestemming van MOJO Concerts. De gedeelde renderer escape't deze
 footer ook in HTML en neemt dezelfde tekst op in plain text. Accountmails houden
 hun bestaande footer. Veilige previews/tests versturen geen echte e-mails.
+
+Vanaf V1.52 gebruikt show-report (ook de bewuste mailtest) de vaste afzender
+ESMOJO <showrapportage@esmojo.nl>. Gebruik senderId show-report en de centrale
+server/email-senders.js; accepteer geen vrij afzenderadres uit requests. De gewone
+accountmail behoudt no-reply@esmojo.nl. Nieuwe OnTrack-afleveringen bewaren deze
+senderId in hun private mail-snapshot; reeds gestarte oude afleveringen zonder
+senderId behouden de oorspronkelijke default-afzender bij herpoging, zodat dezelfde
+Resend-idempotentiesleutel nooit een gewijzigde afzender krijgt. Ondertekening in
+de inhoud, overige mailinhoud, ontvangers en verzendmomenten blijven hetzelfde.
