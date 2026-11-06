@@ -20,7 +20,10 @@ export function createShowData(bundle,request,concertId){
     if(disposed)return;
     if(action==='show-profile-pdf'&&['pending','generating'].includes(data.state)){forget(action);return;}
     if(action==='show-profile'||action==='analysis-finalization'){
-      const previous=values.get('show-profile'),profile={...previous,...data};
+      const previous=values.get('show-profile')||values.get('analysis-finalization');
+      // Een al gestarte statusread mag een latere opslagbevestiging niet terugdraaien.
+      if(previous&&(data.revision<previous.revision||data.revision===previous.revision&&(data.finalization?.basis?.finalRevision??-1)<(previous.finalization?.basis?.finalRevision??-1)))return;
+      const profile={...previous,...data};
       if(previous?.researchByNumber||data.researchByNumber)values.set('show-profile',profile);
       values.set('analysis-finalization',profile);
     }else values.set(action,data);
