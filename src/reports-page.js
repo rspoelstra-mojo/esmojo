@@ -14,7 +14,7 @@ export function createReportsPage(content,submenu,{selected=null,heading=documen
    const title=node('h3','submenu-group-heading',group.title);title.dataset.submenuGroupHeading=group.id;submenu.append(title);
    if(!group.reports.length){const empty=node('p','submenu-group-empty','Geen rapportages');empty.dataset.submenuGroupEmpty=group.id;submenu.append(empty);}
    for(const report of group.reports){
-    const link=links.get(report.concertId)||node('a','submenu-link',report.label);link.dataset.reportKey=report.concertId;link.removeAttribute('aria-current');link.href=reportHref(report);link.dataset.submenuTitle=report.label;link.dataset.submenuGroup=group.id;submenu.append(link);
+    const link=links.get(report.concertId)||node('a','submenu-link',report.label);if(link.dataset.submenuTitle&&link.dataset.submenuTitle!==report.label)link.textContent=report.label;link.dataset.reportKey=report.concertId;link.removeAttribute('aria-current');link.href=reportHref(report);link.dataset.submenuTitle=report.label;link.dataset.submenuGroup=group.id;submenu.append(link);
     if(report.shows.some(show=>show.concertId===selected)){
      link.setAttribute('aria-current','page');found=report;const revision=JSON.stringify(report);
      if(activeRevision!==revision){if(active&&cleanup.reload){cleanup.reload(selected,link);}else{cleanup();cleanup=createWebReportPage(content,link,{concertId:selected,request,onSelected:(date,concertId)=>{selected=concertId;replaceUrl(reportHref({concertId}));}});}active=report;activeRevision=revision;}
@@ -23,9 +23,9 @@ export function createReportsPage(content,submenu,{selected=null,heading=documen
   }
   if(!found){cleanup();cleanup=()=>{};active=activeRevision=null;content.textContent=reports.length?'Rapportage niet gevonden.':'Er zijn nog geen rapportages beschikbaar.';}
  }
- async function refresh(){if(disposed)return;const finish=cache.current()?()=>{}:loading.start();try{await cache.refresh(request);}catch{if(!disposed&&!cache.current()){const message=node('p','form-message','Het rapportagesmenu kon niet worden geladen.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>{cache.retry();void refresh();};content.replaceChildren(message,retry);}}finally{finish();}}
- render(cache.current());const unsubscribe=cache.subscribe(render);void refresh();
- window.addEventListener('focus',()=>void refresh(),{signal:controller.signal});document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();},{signal:controller.signal});
- let day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());const timer=setInterval(()=>{if(document.hidden)return;const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());if(today!==day){day=today;render(cache.current());}void refresh();},60000);
+ async function refresh(force=false){if(disposed)return;const finish=cache.current()?()=>{}:loading.start();try{await cache.refresh(request,{force});}catch{if(!disposed&&!cache.current()){const message=node('p','form-message','Het rapportagesmenu kon niet worden geladen.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>{cache.retry();void refresh();};content.replaceChildren(message,retry);}}finally{finish();}}
+ render(cache.current());const unsubscribe=cache.subscribe(render);void refresh(true);
+ window.addEventListener('focus',()=>void refresh(true),{signal:controller.signal});document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh(true);},{signal:controller.signal});
+ let day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());const timer=setInterval(()=>{if(document.hidden)return;const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());if(today!==day){day=today;render(cache.current());}void refresh();},30000);
  return()=>{disposed=true;unsubscribe();cleanup();loading.dispose();controller.abort();clearInterval(timer);submenu.replaceChildren();content.replaceChildren();};
 }

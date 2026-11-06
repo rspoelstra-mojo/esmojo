@@ -69,6 +69,7 @@ async function refreshModuleAccess(){
   try{const data=await access('session');if(!profile||profile.id!==id||data.profile.id!==id)return;
     if(updateModuleProfile(data.profile)){renderAvatar(document.querySelector('.avatar'),profile);renderPage();}
     if(hasModule(profile,'shows'))void refreshShowsMenu();
+    if(hasModule(profile,'reports'))void reportCatalogueCache.refresh(access).catch(()=>{});
   }catch{/* Serverweigeringen blijven leidend; geen oude rechten aan de server aanbieden. */}
   finally{refreshingModules=false;}
 }
