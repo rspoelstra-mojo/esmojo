@@ -1,0 +1,31 @@
+name: One-time authorized email delivery test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: email-deliverability-20261106
+  cancel-in-progress: false
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send fixed idempotent batch and inspect technical status
+        run: |
+          node --input-type=module <<'JS'
+          const endpoint='https://esmojo.nl/api/email-deliverability';
+          const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+          const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
+          const {value}=await identity.json();console.log(`::add-mask::${value}`);
+          async function call(body){const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(65000)});if(!response.ok)throw Error('Bezorgproef niet bevestigd.');const data=await response.json();if(data.ok!==true)throw Error('Bezorgproef niet bevestigd.');return data;}
+          const {items}=await call({operation:'send'});console.log(JSON.stringify({accepted:items.length}));
+          // IDs/bewijzen uitsluitend tijdelijk procesgeheugen; nooit logs/artifacts.
+          for(let check=0;check<3;check++){
+            await new Promise(done=>setTimeout(done,20000));
+            const {statuses}=await call({operation:'status',items});
+            console.log(JSON.stringify({check:check+1,statuses:statuses.map(({variant,status})=>({variant,status}))}));
+            if(statuses.every(row=>['delivered','bounced','failed','suppressed','read-unavailable'].includes(row.status)))break;
+          }
+          JS

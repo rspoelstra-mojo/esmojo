@@ -14,6 +14,10 @@
     },
     "api/show-storage-sync.js": {
       "maxDuration": 300
+    },
+    "api/email-deliverability.js": {
+      "includeFiles": "server/email/template.html",
+      "maxDuration": 60
     }
   },
   "headers": [

@@ -45,3 +45,8 @@ test('Homepageprojectie vereist eigen audience en de vaste middagworkflow op mai
 test('Webinventaris heeft eigen audience en aparte workflow; mailworkeridentiteit krijgt geen toegang',async()=>{
  const audience='https://esmojo.nl/api/web-reports-sync',workflow='web-reports.yml',signed=token({aud:audience,workflow_ref:'rspoelstra-mojo/esmojo/.github/workflows/web-reports.yml@refs/heads/main'});assert.deepEqual(await verifyImportIdentity(signed,{request,now,audience,workflow}),{runId:'123'});await assert.rejects(verifyImportIdentity(signed,{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref:'rspoelstra-mojo/esmojo/.github/workflows/ontrack-reports.yml@refs/heads/main'}),{request,now,audience,workflow}),/FORBIDDEN/);
 });
+
+test('Eenmalige bezorgproef accepteert uitsluitend de eigen workflow/audience op main',async()=>{
+ const audience='https://esmojo.nl/api/email-deliverability',workflow='email-deliverability.yml',signed=token({aud:audience,workflow_ref:`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`});
+ assert.deepEqual(await verifyImportIdentity(signed,{request,now,audience,workflow}),{runId:'123'});await assert.rejects(verifyImportIdentity(signed,{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience,workflow}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(signed,{request,now,workflow}),/FORBIDDEN/);
+});
