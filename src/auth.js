@@ -1,3 +1,4 @@
+import {backgroundSaves,isSaveRequest,saveRequestInfo,SAVE_EXIT_MESSAGE} from './lib/background-saves.js';
 import {homeDashboardCache} from './lib/home-cache.js';
 import { getSupabase } from './lib/supabase.js';
 import './accounts.css';
@@ -15,7 +16,11 @@ let activeSession = null;
 let restoring = null;
 const panel = () => document.querySelector('#auth-panel');
 
-export async function access(action, { method = 'GET', body } = {}) {
+export function access(action,options={}) {
+  return isSaveRequest(action,options)?backgroundSaves.track(()=>performAccess(action,options),saveRequestInfo(action,options.body)):performAccess(action,options);
+}
+async function performAccess(action, { method = 'GET', body } = {}) {
+  const saveSession=backgroundSaves.session;
   if (expiresAt && Date.now() >= expiresAt) { await logout('Je bent na 72 uur automatisch uitgelogd. Log opnieuw in.'); throw new Error('Je sessie is verlopen.'); }
   if (activeSession && expiresAt && activeSession.expires_at * 1000 <= Date.now() + 30000) {
     // Gebruik de gedeelde cookie i.p.v. een mogelijk oud refresh-token uit een ander tabblad.
@@ -25,6 +30,7 @@ export async function access(action, { method = 'GET', body } = {}) {
     armExpiry(restored.expiresAt);
   }
   const { data } = await client.auth.getSession();
+  if(saveSession!==backgroundSaves.session)throw new Error('De sessie is gewijzigd.');
   if (!data.session) throw new Error('Log opnieuw in.');
   activeSession = data.session;
   const homeContext=homeDashboardCache.context();
@@ -209,6 +215,7 @@ function addLogout(form) {
 
 export async function logout(message) {
   if (loggingOut) return;
+  if(message===undefined&&backgroundSaves.unconfirmed&&!window.confirm(SAVE_EXIT_MESSAGE))return;
   loggingOut = true; armExpiry(null); activeSession = null;
   onSignedOut();
   try {

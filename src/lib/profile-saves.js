@@ -1,7 +1,8 @@
+import {backgroundSaves} from './background-saves.js';
 // Alleen tijdelijk geheugen. Geen opslag van samenvattingen/tokens in de browser.
 export function createProfileSaveQueue(request){
  let server=null,running=false,alive=true,reload=false;const jobs=[],pending=new Set(),errors=new Map(),drafts=new Map(),listeners=new Set();
- const emit=()=>{if(alive)for(const callback of listeners){try{callback();}catch{/* Een weergavefout mag een bevestigde opslag niet ongedaan maken. */}}};
+ const emit=()=>{backgroundSaves.changed();if(alive)for(const callback of listeners){try{callback();}catch{/* Een weergavefout mag een bevestigde opslag niet ongedaan maken. */}}};
  function sync(data){
   const oldFinal=server?.finalization?.basis?.finalRevision??-1,newFinal=data.finalization?.basis?.finalRevision??-1;
   if(!server||data.revision>server.revision||(data.revision===server.revision&&newFinal>=oldFinal))server={analyses:data.analyses,revision:data.revision,finalization:data.finalization};
@@ -18,13 +19,13 @@ export function createProfileSaveQueue(request){
   }
   running=false;
  }
+ const unwatch=backgroundSaves.watch(()=>alive&&pending.size>0);
  return{drafts,errors,pending,setRequest(next){request=next;},get server(){return server;},sync,
   enqueue(number,status,summary){if(!alive||!server||pending.has(number))return false;drafts.set(number,summary);errors.delete(number);jobs.push({number,status,summary});pending.add(number);emit();void pump();return true;},
   subscribe(callback){listeners.add(callback);return()=>listeners.delete(callback);},
-  cancel(){alive=false;jobs.length=0;pending.clear();errors.clear();drafts.clear();listeners.clear();},
+  cancel(){alive=false;unwatch();jobs.length=0;pending.clear();errors.clear();drafts.clear();listeners.clear();},
  };
 }
 const queues=new Map();
 export function profileSaves(key,request){if(!queues.has(key))queues.set(key,createProfileSaveQueue(request));else queues.get(key).setRequest(request);return queues.get(key);}
 export function clearProfileSaves(){for(const queue of queues.values())queue.cancel();queues.clear();}
-if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{if([...queues.values()].some(queue=>queue.pending.size)){event.preventDefault();event.returnValue='';}});

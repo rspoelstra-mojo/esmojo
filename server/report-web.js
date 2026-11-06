@@ -1,3 +1,4 @@
+import {webReportTimeline} from '../shared/report-timeline.js';
 import {medicalReportTags} from '../shared/report-medical.js';
 import {securityReportTags} from '../shared/report-security.js';
 import {getMojoPhoto} from './mojo-photo.js';
@@ -19,8 +20,8 @@ export function webReportTypes(incidents,division){
   if(!groups.has(name))groups.set(name,{name,count:0,first:position});
   const group=groups.get(name);group.count++;group.first=Math.min(group.first,position);
  });
- const sorted=[...groups.values()].sort((a,b)=>b.count-a.count||a.first-b.first),repeated=sorted.filter(group=>group.count>1);
- return(repeated.length>=5?repeated:sorted.slice(0,5)).map(({name,count})=>({name,count}));
+ const sorted=[...groups.values()].sort((a,b)=>b.count-a.count||a.first-b.first);
+ return sorted.slice(0,5).map(({name,count})=>({name,count}));
 }
 export function createWebReportService({store,photo=getMojoPhoto}){
  return async(actor,input)=>{
@@ -29,7 +30,7 @@ export function createWebReportService({store,photo=getMojoPhoto}){
   const bytes=Buffer.from(source.csvBase64,'base64');if(createHash('sha256').update(bytes).digest('hex')!==source.sourceHash)throw Error('SOURCE_CHANGED');
   const report=validateReportDay(calculateReport(bytes,{generatedAt:source.modifiedAt}),show.date);
   let photoData=source.photo||null;try{if(!photoData)photoData=await photo(show.sourceUrl);}catch{/* Optionele foto mag het rapport niet blokkeren. */}
-  return{show:{key:show.key,name:show.name,venue:reportVenueName({name:show.venue}),dates:source.series.dates},selectedDate:show.date,availableShows:source.series.shows,photo:photoData,report:{timetable:source.timetable||null,kpis:report.kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:report.timeline,locations:report.locations,
+  return{show:{key:show.key,name:show.name,venue:reportVenueName({name:show.venue}),dates:source.series.dates},selectedDate:show.date,availableShows:source.series.shows,photo:photoData,report:{timetable:source.timetable||null,kpis:report.kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:webReportTimeline(report,source.timetable,show.date),locations:report.locations,
    incidents:report.incidents.map(incident=>{const {id,localDate,time,zone,type,priority,description,note,highlight}=incident;return{id,localDate,time,zone,type,priority,description,note,highlight,securityFilters:securityReportTags(incident),medicalFilters:medicalReportTags(incident)};}),
   }};
  };
