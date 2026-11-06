@@ -46,3 +46,8 @@ bij de eerste afleverreservering in delivery.mail opgeslagen. Bestaande snapshot
 zonder senderId blijven bij herpogingen default gebruiken om geen gewijzigde
 providerinhoud op dezelfde idempotentiesleutel te sturen. Geen echte testmail of
 nieuwe inbox aangemaakt voor deze wijziging.
+
+V1.55: de zichtbare blauwe mailheader is uitsluitend Showrapportage. Het onderwerp
+behoudt artiest en datum. Nieuwe automatische afleveringen bewaren online-report-v2;
+v1-herpogingen behouden hun oorspronkelijke lange header op dezelfde providersleutel.
+Geen oude verzonden mails opnieuw versturen of nieuwe ontvangers/trigger toevoegen.

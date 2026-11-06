@@ -1053,3 +1053,8 @@ wordt opgeslagen, Concept opgeslagen of Opgeslagen in detailkaarten. Behoud
 workflowstatussen zoals Concept/Afgerond op basis van bevestigde gegevens,
 foutmeldingen en de centrale afsluitwaarschuwing. Verberg lege statusregels zodat
 ze geen ruimte innemen. Ook tijdens een write de laatst bevestigde status tonen.
+
+Showrapportagemail V1.55: zichtbare blauwe header uitsluitend Showrapportage;
+onderwerp blijft Showrapportage [artiest] - [showdatum]. Nieuwe afleveringen
+leggen mailversie online-report-v2 vast. Herpogingen van online-report-v1 behouden
+de lange header voor ongewijzigde inhoud op dezelfde idempotentiesleutel.

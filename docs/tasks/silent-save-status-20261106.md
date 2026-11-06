@@ -11,3 +11,12 @@ workflowstatus en noemt een concept eenvoudig Concept. Tests: risicoanalyse,
 maatregelen, showpagina, startup en build geslaagd. Chromium controleert
 busy/completed/failed op desktop/mobiel, licht/donker: geen normale statusregel,
 fout blijft zichtbaar. Alleen synthetische browserinvoer; geen productiewrites.
+
+Aanvullend verzoek vóór publicatie: showrapportagemail krijgt uitsluitend
+Showrapportage als zichtbare header; onderwerp blijft artiest en showdatum houden.
+Raakt template/OnTrack-mailversie en tests. Bestaande onzekere herpogingen behouden
+de oude header voor identieke inhoud op dezelfde idempotentiesleutel. Nieuwe mails
+gebruiken een nieuwe vastgelegde templateversie; geen echte testmails versturen.
+
+Mailvalidatie: bestaande emailtests, OnTrack-service/signed Drive-tests en Apps
+Script-tests slagen; browserpreviews 320/390/640/1024px, zonder echte verzending.
