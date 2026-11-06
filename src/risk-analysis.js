@@ -42,7 +42,12 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     if(choices.server)production=choices.server;
     if(view==='overview'){
       if(choices.failed){error=choiceError;choiceFailure();updateChoiceControls();}
-      else updateChoiceControls();
+      else {
+        for(const field of productionRiskGroups.flatMap(group=>group.items).filter(item=>item.conditional).map(item=>item.id)){
+          if(!choices.pending(field)&&typeof production.choices[field]==='boolean')feedbacks.get(saveRequestInfo('production-risks',{concertId:show.key,field}).key)?.resolved();
+        }
+        updateChoiceControls();
+      }
     }
   });
   function updateChoiceControls(){
