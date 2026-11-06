@@ -46,7 +46,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
       const pending=choices.pending(field);
       control.button.disabled=!productionReady||pending||production.choices[field]!==true;
       control.group.setAttribute('aria-busy',String(pending));
-      control.group.title=pending?'Keuze wordt opgeslagen…':'';
+      control.group.title='';
       for(const [value,option]of control.options){option.disabled=!productionReady;option.setAttribute('aria-pressed',String(choices.value(field)===value));}
     }
   }

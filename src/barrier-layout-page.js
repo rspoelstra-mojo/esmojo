@@ -46,7 +46,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
     review.update({noRiskNoteRequired:!isStandardBarrierType(type),riskLevel,riskNote:riskLevel==='low'||(riskLevel==='none'&&isStandardBarrierType(type))?'':riskNote,disabled:locked,busy:Boolean(queue?.exclusive),failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
     upload.disabled=locked||queue?.busy;remove.hidden=!custom.attachment;remove.disabled=locked||queue?.busy;
     back.disabled=false;
-    status.textContent=record?.completed?'✓ Barrieropstelling afgerond':queue?.failed?'Opslag niet bevestigd':queue?.busy?'Concept wordt opgeslagen…':record?.revision?'Concept opgeslagen':'';status.classList.toggle('assessment-completed',Boolean(record?.completed));
+    status.textContent=record?.completed?'✓ Barrieropstelling afgerond':queue?.failed?'Opslag niet bevestigd':'';status.hidden=!status.textContent;status.classList.toggle('assessment-completed',Boolean(record?.completed));
     if(custom.attachment)uploadStatus.textContent=custom.attachment.fileName+' · Upload opgeslagen in Drive';else if(!preparing)uploadStatus.textContent='PNG of PDF, maximaal 2 MB.';
   }
   function resetPreview(){previewSequence++;if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}previewBox.replaceChildren();}
