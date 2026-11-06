@@ -1090,3 +1090,33 @@ onlineknop, geen PDF-bijlage of bijlagevermelding. PDF-generatie/download blijft
 bestaan. Oude onzekere v1/v2-afleveringen houden oorspronkelijke header/bijlage
 op dezelfde idempotentiesleutel. Onderwerp, ondertekening, afzender, ontvangers,
 footer en triggers blijven behouden. Nooit echte testmails versturen voor preview.
+
+## Online rapportagemail en PDF-meldingen (V1.57)
+
+Vanaf 6 november vraagt de gebruiker mail zodra een gevalideerde rapportage op
+ESMOJO zichtbaar is, onafhankelijk van PDF-generatie/bestanden/assets. Gebruik
+server/online-report-mail.js en OnlineReportMail.gs binnen dezelfde goedgekeurde
+vertrouwelijke Drive/Vercel/Resend-route. onlineReports in het bestaande register
+heeft eigen afleveringen, leases, stabiele providerkeys, bevroren ontvanger/manager
+bij eerste poging, actuele modulecontrole en bestaande 3-pogingen/23u-reviewgrens.
+Nieuwe mail heeft uitsluitend de onlineknop, geen PDF. Start vanuit webpublicatie
+(incl. backgroundhook bij gebruikerspublicatie) en vóór de PDF-worker. Een mailfout
+mag een gevalideerde webpublicatie niet ongeldig maken. PDF blijft een aparte taak.
+
+Geen dubbele mail bij migratie: neem bestaande afleveringen via legacyReportId
+over, met oude idempotentiesleutel/inhoud en eventueel oorspronkelijke v1/v2-PDF.
+Oude v3-afleveringen hebben geen PDF-bestand of assets meer nodig maar vereisen
+wel huidige online beschikbaarheid. Nieuwe PDF-commits maken na omschakeling geen
+mailleveringen meer. Een bewuste bestaande verzendactie hergebruikt de online
+registratie, geen tweede sleutel. Bij eerste omschakeling bestaande onbekende
+filename-archieven niet spontaan terugmailen; nieuwe publicaties daarna wel.
+Bestaande canonieke, nog niet gemailde publicaties worden ingehaald. De gebruiker
+heeft de inhaalmail voor Don Toliver expliciet geautoriseerd; controleer na livegang
+de echte providerbevestiging in Drive zonder incidenten/ontvangers in CI-logs.
+
+Na login vraagt de client report-alerts op de achtergrond op. De read vereist
+actieve sessie, MFA en Rapportages; Drive laat meldingen alleen aan beheerders of
+ingestelde ontvangers zien. Toon bekende PDF-fouten/assetblokkades voor zichtbare
+rapportages in de bestaande centrale melding met directe rapportagelink. Geen
+herhaalde poll of vertrouwelijke browseropslag; late antwoorden na afmelden of
+rechten-/accountwissel niet tonen. Deze read blokkeert de homepage nooit.

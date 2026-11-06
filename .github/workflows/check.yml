@@ -41,6 +41,8 @@ jobs:
           node server/ontrack.test.js
           node server/ontrack-concerts.test.js
           node --test server/ontrack-report/*.test.js
+          node server/online-report-mail.test.js
+          node src/lib/report-alerts.test.js
           node server/auth-submission.test.js
           node server/session-cookie.test.js
           node server/account-profiles.test.js
