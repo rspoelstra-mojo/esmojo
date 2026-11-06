@@ -32,6 +32,6 @@ jobs:
           const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:JSON.stringify({checkOnly:process.env.CHECK_ONLY==='true'}),signal:AbortSignal.timeout(310000)});
           const data=await response.json();
           // Alleen technische aantallen; geen showinhoud, namen, IDs of foutenlogs.
-          console.log(JSON.stringify({enabled:data.enabled,mirrored:data.mirrored,archived:data.archived,failed:data.failed,schemaReady:data.schemaReady,verifiedShows:data.verifiedShows,driveBridge:data.driveBridge}));
+          console.log(JSON.stringify({enabled:data.enabled,mirrored:data.mirrored,archived:data.archived,failed:data.failed,schemaReady:data.schemaReady,verifiedShows:data.verifiedShows,driveBridge:data.driveBridge,openReady:data.openReady,driveOpenMs:data.driveOpenMs}));
           if(!response.ok||!data.ok)throw Error('Archivering niet bevestigd; brongegevens blijven behouden.');
           JS

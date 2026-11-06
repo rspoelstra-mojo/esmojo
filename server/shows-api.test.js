@@ -44,3 +44,13 @@ test('Vertrouwelijke risicoweergave is uitsluitend lezen; geen vrije bron, beste
   assert.equal((await request({concertId:'Test'})).code,200);assert.deepEqual(calls,[['risk-view',{concertId:'Test'}]]);
   assert.equal((await request({concertId:'Test',operation:'save'})).code,400);assert.equal(calls.length,1);
 });
+
+test('Productiekeuzes houden oudere clients bruikbaar; alleen capabele clients krijgen de homepage-envelop',async()=>{
+ const claims={sub:'test',aal:'aal2',amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)},{method:'totp'}]},token='a.'+Buffer.from(JSON.stringify(claims)).toString('base64url')+'.b';
+ const planning={key:'Test_Gashouder_06112026',updatedAt:new Date().toISOString(),completion:{profile:false,production:false,operational:false,measures:false}};
+ const handler=makeAccountsHandler({env:{VITE_SUPABASE_URL:'url',VITE_SUPABASE_PUBLISHABLE_KEY:'key',SUPABASE_SECRET_KEY:'secret'},clientFactory:()=>({auth:{getUser:async()=>({data:{user:{id:'test',factors:[{factor_type:'totp',status:'verified'}]}}})}}),profiles:async()=>({role:'gebruiker',activated:true,modules:['shows']}),shows:async()=>({revision:1,choices:{fireworks:false},homePlanning:planning})});
+ for(const capable of [false,true]){
+  const res=response();await handler({method:'POST',query:{action:'production-risks'},headers:{authorization:'Bearer '+token,...(capable?{'x-esmojo-planning-envelope':'1'}:{})},body:{concertId:'Test_Gashouder_06112026',field:'fireworks',value:false,revision:0}},res);
+  assert.equal(res.code,200);assert.deepEqual(res.data.choices,{fireworks:false});assert.equal(res.data.revision,1);if(capable)assert.deepEqual(res.data.homePlanning,planning);else assert.deepEqual(Object.keys(res.data).sort(),['choices','revision']);
+ }
+});

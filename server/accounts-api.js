@@ -176,7 +176,13 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }); }
       }
       if (action === 'production-risks' && req.method === 'POST') {
-        try { return reply(200,await shows('risk-production-save',{...validateProductionRiskSelection(req.body),actor})); }
+        try {
+          const saved=await shows('risk-production-save',{...validateProductionRiskSelection(req.body),actor});
+          // Een reeds geopende oudere client verwacht uitsluitend de keuze.
+          // Nieuwe clients verwerken de homepage-envelop vóór domeinvalidatie.
+          const {homePlanning,...state}=saved;
+          return reply(200,req.headers['x-esmojo-planning-envelope']==='1'?saved:state);
+        }
         catch(error){return reply(error.message==='VALIDATION'?400:error.message==='CONFLICT'?409:503,{
           error:error.message==='CONFLICT'?'De keuzes zijn intussen gewijzigd. Laad de risicoanalyse opnieuw.':'De keuze kon niet worden opgeslagen. Laad de risicoanalyse opnieuw en probeer het nogmaals.',
         });}

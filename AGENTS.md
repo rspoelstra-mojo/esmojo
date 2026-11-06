@@ -1152,3 +1152,22 @@ Ook bij zomertijd geldt minimaal 24 werkelijk verstreken uren na het einde van d
 laatste showdag. Archiveer nooit vóór de tweede volgende Nederlandse kalenderdag;
 bij een korte zondag kan de grens één uur na middernacht liggen. Herbereken deze
 grens uit de brondata vóór verwijderen, ook bij oudere afgeleide DB-cutoffs.
+
+## API-envelop en show-open (V1.60–V1.61)
+
+Technische homePlanning/storageStale-velden worden in auth verwerkt en daarna via
+accessResultPayload van de domeinpayload gescheiden. Normaliseer ook raw/injected
+responses vóór de showcache. Versoepel strikte keuzevalidators niet om metadata te
+accepteren. Productionele HTTP-keuzes geven de homepage-envelop alleen aan clients
+met X-ESMOJO-Planning-Envelope: 1; oudere geopende clients krijgen de strikte staat,
+zodat hun bewaarde wachtrij ook na publicatie kan hervatten.
+
+Voor een nieuwe actieve show combineert active-open de atomische claim, snapshot en
+volledige bundel in één signed read. Bij een race de gecommitteerde DB-stand lezen,
+nooit een oude bootstrapbundel tonen. Staged deploy behoudt de oude laadroute zolang
+Apps Script de nieuwe operatie nog niet kent. Hergebruik binnen dezelfde read de
+canonieke target, filelookups/blobs en reeds geladen finalisatie/risicoprojectie.
+Geen persistente privé-cache; na writes cache wissen en echte Drive-readback houden.
+De beschermde workercontrole mag een virtuele show-open lezen met technische
+storage-worker-read-identiteit; nooit die identiteit of privérespons opslaan/loggen.
+Alleen gereedvlag en Drive-rondetijd mogen in de workflow-uitvoer verschijnen.
