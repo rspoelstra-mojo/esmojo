@@ -37,7 +37,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
   const ticketState = readOnly?{drafts:{},base:{}}:backgroundSaves.form('tickets:'+show.key,()=>({drafts:{},base:{}}));
   const finalDrafts=readOnly?{visitors:{},artist:{}}:backgroundSaves.form('finalization:'+show.key,()=>({visitors:{},artist:{}})); let disposeTickets = () => {}, ticketOpen = false;
   let disposePdf = () => {};
-  let researchByNumber = null, researchErrors = {}, finalization = null, disposeFinal = () => {}, statusSequence = 0, finalizationError = '';
+  let finalOpen=false;let researchByNumber = null, researchErrors = {}, finalization = null, disposeFinal = () => {}, statusSequence = 0, finalizationError = '';
   const section = node('section', 'show-profile'); panel.append(section);
   const menuLink = document.querySelector('#submenu-navigation [aria-current="page"]');
   const loading = menuLink ? createSubmenuLoading(menuLink, panel) : null;
@@ -57,7 +57,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
   function completeCategory(category) {
     if(finalDrafts[category].pending||saves.pending.size||saves.errors.size||!finalization?.categories[category]?.ready||finalization.categories[category].completedAt)return;
     const basis=structuredClone(finalization.basis);
-    disposeFinal=openAnalysisFinalization({category,draft:finalDrafts[category],submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data,true);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;if(!ticketOpen&&editorNumber===null)renderOverview();},onClose:()=>{disposeFinal=()=>{};if(!disposed&&editorNumber===null&&!ticketOpen){renderOverview();if(!finalDrafts[category].pending)void refreshFinalization();}}});
+    finalOpen=true;disposeFinal=openAnalysisFinalization({category,draft:finalDrafts[category],submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data,true);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;if(!ticketOpen&&editorNumber===null)renderOverview();},onClose:settled=>{if(!settled){finalOpen=false;disposeFinal=()=>{};}if(!disposed&&!finalOpen&&editorNumber===null&&!ticketOpen){renderOverview();if(!finalDrafts[category].pending)void refreshFinalization();}}});
   }
   function renderOverview(focusNumber) {
     disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
@@ -165,7 +165,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     } catch { if (!disposed && editorNumber === number) feedback({key:'profile-editor:'+show.key+':'+number,label:'Analyse laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'}).show('De analyse kon niet worden geladen.',()=>openEditor(number),'Opnieuw laden'); }
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
-  const unsubscribe=saves.subscribe(confirmed=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(confirmed&&knownFinalization(finalization,revision)){finalizationError='';finalFeedback.resolved();}if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
+  const unsubscribe=saves.subscribe(confirmed=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(confirmed&&knownFinalization(finalization,revision)){statusSequence++;finalizationError='';finalFeedback.resolved();}if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
   // Alleen deze afrondformulieren beïnvloeden het overzicht. Een globale
   // opslagevent mag de PDF-widget niet vernietigen en opnieuw laten starten.
   let finalActivity=JSON.stringify([Boolean(finalDrafts.visitors.pending),Boolean(finalDrafts.artist.pending)]);

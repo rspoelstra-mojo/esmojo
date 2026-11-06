@@ -20,3 +20,10 @@ Statusreads uit gecommitteerde DB-snapshot nemen geen opslaglease. Alleen een
 geaccepteerde echte serverbevestiging met volledige status wist de oudere fout;
 lokale editor-sync of een achterhaalde respons doet dat niet. Browserfault-test
 met Man/vrouw verhouding controleert dit zonder de echte leesfout te verbergen.
+
+Aanvullend: snelle bezoekers-/artiestafronding deelde een oude finalRevision.
+De bestaande showwachtrij volgt uitsluitend zelf bevestigde afrondovergangen;
+externe revisies, profiel-/ticketwijzigingen en onbevestigde writes blijven
+conflicten. Een eerdere afronding mag het volgende geopende formulier niet
+ontkoppelen. Regressies in beide volgordes, twee gelijktijdig ingediende
+afrondingen en een open tweede formulier tijdens de eerste bevestiging.
