@@ -33,6 +33,12 @@ Vercel gaan. Tabellen hebben RLS en geen rechten/policies voor anon/authenticate
 Alleen de bestaande server-servicekey kan de afgeschermde RPC's gebruiken; deze
 key gaat nooit naar browser, Drive of Apps Script. Er zijn geen nieuwe secrets.
 
+Vanaf V1.59 claimt de signed export het Drive-eigenaarschap atomair onder dezelfde
+lock vóór de eerste DB-seed. Onderweg zijnde legacy-writes worden daarna veilig
+geweigerd; een normale herpoging volgt de huidige primaire route. Na archivering
+geeft de marker de historische Drive-route weer vrij. Een capability-handshake
+houdt applicatie- en Apps Script-publicaties onderling compatibel.
+
 De browser coördineert writes per show en houdt navigatie vrij. Alleen eigen
 bevestigde revisies kunnen een wachtende productionele keuze bijwerken; externe
 revisies blijven conflicten. Elke database-mutatie valideert de actuele bron en
@@ -75,7 +81,9 @@ inhalen. Behouden invoer/centrale fout blijft beschikbaar bij een conflict.
 `archiveAfterShow` gebruikt de laatste echte showdatum van de canonieke reeks.
 Vanaf 00:00 Europe/Amsterdam op laatste datum + twee kalenderdagen wordt gearchiveerd:
 2 november → 4 november, 6/7/8 november → 10 november. Zomer-/wintertijd wordt bij
-het bepalen van die lokale middernacht meegenomen. De worker draait iedere vijf
+het bepalen van die lokale middernacht meegenomen. Er geldt bovendien altijd
+minimaal 24 werkelijk verstreken uren na het einde van de showdag: bij de korte
+zomertijdzondag kan de grens daardoor één uur later liggen. De worker draait iedere vijf
 minuten via een main/GitHub-OIDC-workflow; GitHub kan geplande runs vertragen.
 Een verzoek voor een inmiddels vervallen actieve show voert dezelfde controle uit.
 

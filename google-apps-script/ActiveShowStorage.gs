@@ -70,6 +70,10 @@ function esmojoActiveAttempt_(request,target){
  try{return{result:esmojoActiveExecute_(request,target),errorCode:null};}
  catch(error){return{result:null,errorCode:['VALIDATION','FORBIDDEN','CONFLICT','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','SOURCE_CHANGED','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','TICKET_CONFLICT','ATTACHMENT_INVALID'].includes(error.message)?error.message:'SHOWS_UNAVAILABLE'};}
 }
+function esmojoActiveLegacyWriteAllowed_(concertId){
+ const target=esmojoResearchTarget_(concertId),marker=esmojoActiveMarker_(target).document;
+ if(marker&&!marker.archived)throw Error('STORAGE_ACTIVE');
+}
 function esmojoActiveStorage_(request){
  const {operation,concertId,...rest}=request;assessmentConcert(concertId);
  const target=esmojoResearchTarget_(concertId);if(target.primary.venue!=='Gashouder')throw Error('VALIDATION');
@@ -99,9 +103,14 @@ function esmojoActiveStorage_(request){
   return{verified:true,snapshot:rest.snapshot};
  }
  if(operation==='active-export'){
-  if(Object.keys(rest).length)throw Error('VALIDATION');
+  if(Object.keys(rest).some(key=>key!=='activate')||rest.activate!==undefined&&typeof rest.activate!=='boolean')throw Error('VALIDATION');
   const last=[...target.seriesDates].sort().pop(),threshold=new Date(Date.parse(last+'T00:00:00Z')+2*86400000).toISOString().slice(0,10);
-  return marker.document?.archived||Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd')>=threshold?{archived:true}:{archived:false,snapshot:esmojoActiveSnapshot_(target)};
+  if(marker.document?.archived||Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd')>=threshold)return{archived:true,supportsActivation:true};
+  const snapshot=esmojoActiveSnapshot_(target);
+  // Dezelfde UserLock omvat export én eigenaarschap. Een oudere onderweg zijnde
+  // legacy-write kan daardoor na deze export niet alsnog Drive-only schrijven.
+  if(rest.activate&&!marker.document)esmojoActiveWriteJson_(target,'_esmojo_active_storage_v1.json',{managedBy:'ESMOJO/ActiveStorage-v1',classification:'vertrouwelijk',version:1,revision:-1,command:'0'.repeat(64),mode:'seed',archived:false,at:new Date().toISOString()});
+  return{archived:false,supportsActivation:true,snapshot};
  }
  assessmentKeys(rest,['snapshot','revision','leaseUntil','mode','command','request']);
  if(!['sync','run','archive','virtual'].includes(rest.mode)||!Number.isSafeInteger(rest.revision)||rest.revision<0||!/^[a-f0-9]{64}$/.test(rest.command||''))throw Error('VALIDATION');
