@@ -1,3 +1,5 @@
+import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
+import {detailBackButton} from './detail-back.js';
 import {createOperationalReviewMemory} from './lib/operational-review-memory.js';
 import {createProductionChoiceQueue} from './lib/production-choice-saves.js';
 import './show-profile.css';
@@ -49,7 +51,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     }
   }
   function closeDetail(){const cleanup=disposeDetail;disposeDetail=null;return cleanup?.();}
-  function backFromAssessment(id){productionReady=false;const pending=closeDetail();overview(null,id);Promise.resolve(pending).then(()=>{if(!disposed&&view==='overview')void load();});}
+  function backFromAssessment(id){const pending=closeDetail();overview(null,id);Promise.resolve(pending).then(()=>{if(!disposed&&view==='overview')void load();});}
   const section=node('section','show-profile risk-analysis');panel.append(section);
   const menuLink=document.querySelector('#submenu-navigation [aria-current="page"]');
   const loading=menuLink?createSubmenuLoading(menuLink,panel):null;
@@ -120,16 +122,16 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
       const options={show,request:body=>requestAccess(action,{method:'POST',body}),onStored:(_record,data)=>{if(data?.overview){production=data.overview.production;assessments=data.overview.assessments;}},onBack:()=>backFromAssessment(entry.id),onBarrier:()=>productionDetail(productionRiskGroups[0].items.find(item=>item.id==='barrier_layout'),productionRiskGroups[0])};
       disposeDetail=entry.id==='barrier_layout'?createBarrierLayoutPage(section,options):createFloorPressurePage(section,options);return;
     }
-    const back=node('button','profile-back','← Terug naar overzicht');back.type='button';back.onclick=()=>overview(null,entry.id);
+    const back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=()=>overview(null,entry.id);
     const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro'),title=node('h2','',entry.title);title.tabIndex=-1;
-    intro.append(title,node('p','',`Productionele risico's · ${group.title}`));header.append(glyph('production','profile-category-icon'),intro);section.append(back,header);title.focus({preventScroll:true});
+    intro.append(title,node('p','',`Productionele risico's · ${group.title}`));header.append(glyph('production','profile-category-icon'),intro);header.prepend(back);section.append(header);title.focus({preventScroll:true});
     window.scrollTo({top:0,left:window.scrollX,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   }
   function detail(risk) {
     if(disposed)return;
     closeDetail();view='operational';activeRisk=risk.id;
     section.replaceChildren();
-    const back=node('button','profile-back','← Terug naar overzicht');back.type='button';back.onclick=()=>overview(risk.id);
+    const back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=()=>overview(risk.id);
     const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro'),title=node('h2','',risk.title);title.tabIndex=-1;
     intro.append(title,node('p','',"Operationele risico's"));header.append(glyph('operational','profile-category-icon'),intro,badge(operational?.assessments?.[risk.id]));
     const content=node('div','analysis-editor-form');
@@ -161,7 +163,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
         draft.payload=null;draft.editing=false;draft.revision=data.record.revision;draft.riskLevel=data.record.riskLevel;draft.riskNote=data.record.riskNote;
         if(disposed)return;
         operational=data.overview.operational;risks=data.overview.risks;state=data.overview.state;loadedVersion=version();if(view==='overview')overview(risk.id);
-      }catch{draft.error='Opslag niet bevestigd. Je invoer is behouden. Probeer opnieuw of laad de actuele risico’s.';}
+      }catch{if(reviewMemory.active)backgroundSaves.fail(saveRequestInfo('operational-risk',payload));draft.error='Opslag niet bevestigd. Je invoer is behouden. Probeer opnieuw of laad de actuele risico’s.';}
       finally{draft.busy=false;reviewMemory.notify();}
     };
     refreshOperational=update;
@@ -169,7 +171,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     retry.onclick=save;reload.onclick=()=>{if(!draft.busy){reviewDrafts.delete(risk.id);view='overview';overview();void load();}};
     const aside=node('aside','operational-review-aside');aside.append(review.element,message,retry,reload);
     const layout=node('div','barrier-assessment-layout operational-assessment-layout');layout.append(content,aside);
-    section.append(back,header,layout);update();title.focus({preventScroll:true});
+    header.prepend(back);section.append(header,layout);update();title.focus({preventScroll:true});
     window.scrollTo({top:0,left:window.scrollX,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   }
   function saveChoice(field,value){

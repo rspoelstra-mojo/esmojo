@@ -54,3 +54,12 @@ was de impliciete uit-stand en geldt als onbeantwoord; leesacties herschrijven
 geen historie. Deze onzekere oude keuze telt ook niet mee voor implementatie/
 planning. Opslaan van een losse score blijft mogelijk; complete vereist beide
 velden op API- én Drive-niveau. De bestaande document- en broncontroles blijven.
+
+Vanaf V1.54 is de kaart Beheersmaatregel een direct bewerkbaar tekstvak, met opslag
+na 600ms typpauze en bij blur/navigatie. Verdere invoer blijft tijdens opslag bewaard.
+Bij tekstwijziging wordt de na-implementatieklasse opnieuw gevraagd. Afronden gaat
+op de achtergrond en opent direct het overzicht; alleen serverbevestiging telt
+als geïmplementeerd. Na afronden is het tekstvak read-only en weigert de server
+edit-text tot expliciet heropenen. De briefingvolgorde is Nee links, Ja rechts.
+Geen normale statustekst onder de afrondknop. Terug is de gedeelde 40px-pijl in de
+titelregel. Zie docs/background-saves.md voor navigatie, fouten en afsluitwaarschuwing.

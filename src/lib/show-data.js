@@ -54,8 +54,8 @@ export function createShowData(bundle,request,concertId){
       }
       notify();return data;
     },
-    get busy(){return pendingWrites.size>0||productionChoices.busy||operationalReviews.busy;},
-    async whenSettled(){await operationalReviews.whenSettled();await productionChoices.whenSettled();await settled();},
+    get busy(){return [...measureDrafts.values()].some(draft=>draft.finishing||draft.work?.size)||pendingWrites.size>0||productionChoices.busy||operationalReviews.busy;},
+    async whenSettled(){await Promise.all([...measureDrafts.values()].flatMap(draft=>[...(draft.work||[])].map(work=>work.whenSettled())));await operationalReviews.whenSettled();await productionChoices.whenSettled();await settled();},
     async prepare(){
       await context.whenSettled();if(disposed)throw Error('Show gesloten.');
       const read=action=>context.request(action,{method:'POST',body:{operation:'read',concertId}});
@@ -74,6 +74,7 @@ export function createShowData(bundle,request,concertId){
         assessments:risks?.assessments||{barrier:values.get('barrier-layout')?.record,floor:values.get('floor-pressure')?.record},
       }});
     },
+    notify,
     subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
     version:()=>riskVersion,
     operationalReviews,measureDrafts,
