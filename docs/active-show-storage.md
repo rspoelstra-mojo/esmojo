@@ -81,7 +81,9 @@ inhalen. Behouden invoer/centrale fout blijft beschikbaar bij een conflict.
 `archiveAfterShow` gebruikt de laatste echte showdatum van de canonieke reeks.
 Vanaf 00:00 Europe/Amsterdam op laatste datum + twee kalenderdagen wordt gearchiveerd:
 2 november → 4 november, 6/7/8 november → 10 november. Zomer-/wintertijd wordt bij
-het bepalen van die lokale middernacht meegenomen. De worker draait iedere vijf
+het bepalen van die lokale middernacht meegenomen. Er geldt bovendien altijd
+minimaal 24 werkelijk verstreken uren na het einde van de showdag: bij de korte
+zomertijdzondag kan de grens daardoor één uur later liggen. De worker draait iedere vijf
 minuten via een main/GitHub-OIDC-workflow; GitHub kan geplande runs vertragen.
 Een verzoek voor een inmiddels vervallen actieve show voert dezelfde controle uit.
 

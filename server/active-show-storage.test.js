@@ -5,7 +5,7 @@ import {measureHarness} from './test-support/measure-drive.js';
 import {archiveAfterShow,validateActiveSnapshot} from '../shared/active-show-storage.js';
 import {reduceActiveShow,activeRiskView} from './active-show-model.js';
 import {createActiveShowService} from './active-show-store.js';
-for(const [dates,expected]of [[['2026-11-02'],'2026-11-03T23:00:00.000Z'],[['2026-11-02','2026-11-08'],'2026-11-09T23:00:00.000Z'],[['2026-03-28'],'2026-03-29T22:00:00.000Z'],[['2026-10-24'],'2026-10-25T23:00:00.000Z']])assert.equal(archiveAfterShow(dates),expected);
+for(const [dates,expected]of [[['2026-11-02'],'2026-11-03T23:00:00.000Z'],[['2026-11-02','2026-11-08'],'2026-11-09T23:00:00.000Z'],[['2026-03-28'],'2026-03-29T23:00:00.000Z'],[['2026-10-24'],'2026-10-25T23:00:00.000Z']])assert.equal(archiveAfterShow(dates),expected);
 const h=await measureHarness();h.ctx.Utilities.formatDate=()=> '2026-11-06';for(const name of ['ActiveStorageValidators.gs','ActiveShowStorage.gs'])vm.runInContext(readFileSync('google-apps-script/'+name,'utf8'),h.ctx);
 // De bestaande fixture beschermt oorspronkelijke bestanden tegen overschrijven.
 // Geef uitsluitend de drie afgesproken archiefbestanden en marker vrij in deze test.

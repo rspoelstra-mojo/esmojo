@@ -4,10 +4,16 @@
 const activeSnapshotKeys=['version','concertId','aliases','dates','venue','profile','final','production','floor','ticketBasis','risk','riskBasis','completion'];
 function archiveAfterShow(dates){
  if(!Array.isArray(dates)||!dates.length||dates.some(day=>!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day))||new Date(day).toISOString().slice(0,10)!==day))throw Error('VALIDATION');
- const last=[...dates].sort().at(-1),day=new Date(Date.parse(last+'T00:00:00Z')+2*86400000).toISOString().slice(0,10),target=Date.parse(day+'T00:00:00Z');let instant=target;
+ const last=[...dates].sort().at(-1),dayAfter=offset=>new Date(Date.parse(last+'T00:00:00Z')+offset*86400000).toISOString().slice(0,10);
  const format=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
- for(let i=0;i<3;i++){const p=Object.fromEntries(format.formatToParts(new Date(instant)).map(part=>[part.type,part.value]));instant+=target-Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}Z`);}
- return new Date(instant).toISOString();
+ const midnight=day=>{
+  const target=Date.parse(day+'T00:00:00Z');let instant=target;
+  for(let i=0;i<3;i++){const p=Object.fromEntries(format.formatToParts(new Date(instant)).map(part=>[part.type,part.value]));instant+=target-Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}Z`);}
+  return instant;
+ };
+ // Nooit op de eerstvolgende kalenderdag, en ook bij een 23-uurs zondag
+ // minimaal 24 werkelijk verstreken uren na het einde van de showdag.
+ return new Date(Math.max(midnight(dayAfter(2)),midnight(dayAfter(1))+86400000)).toISOString();
 }
 function preparationBasis(state){return JSON.stringify([state.profile.revision,state.final.revision,state.ticketBasis]);}
 const forbidden=new Set(['base64','pdfBase64','workflow_json','ticket_sales','visitor_origins','domestic_origins','soldTickets','ticketReference','floorPressure','researchByNumber','accounts','csv','rows','density','count','area']);
