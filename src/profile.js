@@ -35,12 +35,12 @@ export function createProfileView(container, profile, onChange) {
     try {
       const photo = await cropPhoto(file, { signal: controller.signal });
       if (!photo || disposed) return;
-      message.textContent = 'Profielfoto opslaan…';
+      message.textContent = '';
       const result = await access('photo', { method: 'PATCH', body: { photo } });
       onChange(result.profile);
       if (disposed) return;
       profile = result.profile; renderAvatar(preview, profile);
-      label.textContent = 'Profielfoto wijzigen'; message.textContent = 'Je profielfoto is opgeslagen.';
+      label.textContent = 'Profielfoto wijzigen'; message.textContent = '';
     } catch (error) { if (!disposed) message.textContent = error.message; }
     finally { input.value = ''; input.disabled = false; }
   });

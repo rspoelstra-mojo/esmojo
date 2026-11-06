@@ -17,7 +17,7 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
       const result=await request('ontrack-report',{method:'POST',body});if(disposed)return;
       if(body.operation==='download'){
         const bytes=Uint8Array.from(atob(result.pdfBase64),character=>character.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})),link=document.createElement('a');link.href=url;link.download=result.fileName;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-      }else{sourceDrafts.delete(body.sourceId);await load();if(!disposed)status(body.operation==='link'?'Concertkoppeling opgeslagen.':body.operation==='send'?'Verzending aangevraagd.':'Verwerking opnieuw aangevraagd.');}
+      }else{sourceDrafts.delete(body.sourceId);await load();if(!disposed)status(body.operation==='link'?'':body.operation==='send'?'Verzending aangevraagd.':'Verwerking opnieuw aangevraagd.');}
     }catch{if(!disposed)status('De actie is niet bevestigd. Je invoer is behouden. Vernieuw de gegevens en probeer opnieuw.',true);}
     finally{reportBusy.delete(key);backgroundSaves.changed();finish();if(!disposed)render();}
   }
@@ -49,7 +49,7 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
     form.onsubmit=async event=>{
       event.preventDefault();if(busy||recipientDraft.busy||save.disabled)return;
       recipientDraft.ids=[...selection];recipientDraft.busy=true;recipientDraft.error='';busy=true;refresh.disabled=true;fieldset.disabled=true;update();const finish=loading.start();status('');
-      try{const result=await request('ontrack',{method:'PATCH',body:{revision:data.revision,recipientIds:recipientDraft.ids}});recipientDraft.ids=null;recipientDraft.error='';if(disposed)return;data=result;selection=new Set(result.recipientIds);dirty=false;status('Ontvangers opgeslagen.');}
+      try{const result=await request('ontrack',{method:'PATCH',body:{revision:data.revision,recipientIds:recipientDraft.ids}});recipientDraft.ids=null;recipientDraft.error='';if(disposed)return;data=result;selection=new Set(result.recipientIds);dirty=false;status('');}
       catch{recipientDraft.error='Opslaan is niet bevestigd.';if(!disposed)status('Opslaan is niet gelukt. Je selectie is behouden. Laad de actuele gegevens en probeer opnieuw.',true);}
       finally{recipientDraft.busy=false;busy=false;backgroundSaves.changed();finish();if(!disposed){refresh.disabled=false;render();if(reloadAfterBusy){reloadAfterBusy=false;void load();}}}
     };

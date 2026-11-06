@@ -10,7 +10,7 @@ import { researchView, renderResearch, safeResearchUrl } from './lib/research-vi
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 
 // Alleen bevestigde Drive-opslag wordt als opgeslagen/afgerond getoond.
-export const analysisStatuses = Object.freeze({ pending: 'Nog niet begonnen', draft: 'Concept opgeslagen', completed: 'Afgerond' });
+export const analysisStatuses = Object.freeze({ pending: 'Nog niet begonnen', draft: 'Concept', completed: 'Afgerond' });
 export const analysisCategories = [
   { title: 'Bezoekersanalyse', description: 'Analyse van het verwachte publiek.', icon: 'people', questions: ['Man/vrouw verhouding', 'Leeftijdsrange', 'Aankomstprofiel', 'Typische kenmerken'] },
   { title: 'Artiestanalyse', description: 'Analyse van de artiest en show.', icon: 'music', questions: ['Artiest', 'Routing', 'Show karakter', 'Curfew', 'Populariteit', 'Maatschappelijke gevoeligheid', 'Bijzonderheden'] },
@@ -36,7 +36,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
   const section = node('section', 'show-profile'); panel.append(section);
   const menuLink = document.querySelector('#submenu-navigation [aria-current="page"]');
   const loading = menuLink ? createSubmenuLoading(menuLink, panel) : null;
-  const badgeFor = number => { const state = saves.pending.has(number)?'saving':saves.errors.has(number)?'failed':records[number]?.status || 'pending'; const badge = node('span', 'analysis-status', state==='saving'?'Opslaan…':state==='failed'?'Niet opgeslagen':analysisStatuses[state]); badge.dataset.status = state; return badge; };
+  const badgeFor = number => { const state = !saves.pending.has(number)&&saves.errors.has(number)?'failed':records[number]?.status || 'pending'; const badge = node('span', 'analysis-status', state==='failed'?'Niet opgeslagen':analysisStatuses[state]); badge.dataset.status = state; return badge; };
   function message(text) { const p = node('p', 'profile-message', text); p.setAttribute('role', 'status'); return p; }
   async function load(strict=false) {
     const sequence=++statusSequence; loaded = false; loadError = ''; finalizationError=''; renderOverview(); const finish = loading?.start(); panel.setAttribute('aria-busy', 'true');

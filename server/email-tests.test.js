@@ -51,7 +51,7 @@ test('Showrapportage verschijnt automatisch en verzendt exact de gekoppelde show
  const invalid={filename:'../rapport.pdf',content:bytes,contentType:'application/pdf'};
  assert.throws(()=>renderEmailTemplate({to:'zelf@example.invalid',subject:'Fixture',preheader:'Fixture',title:'Fixture',context:{kind:'show',show},paragraphs:['Fixture'],attachments:[invalid]}),/Ongeldige PDF/);
  assert.throws(()=>showReportEmail({show,pdf:{filename:'Rapport.pdf',content:Buffer.from('geen pdf')}}),/Ongeldige PDF/);
- const production=showReportEmail({to:'zelf@example.invalid',firstName:'Anne Marie',show,pdf:{filename:'Showrapportage.pdf',content:bytes}});assert.equal(production.attachments[0].filename,'Showrapportage.pdf');assert.ok(!renderEmailTemplate(production).text.includes('[artiestnaam]'));
+ const production=showReportEmail({to:'zelf@example.invalid',firstName:'Anne Marie',show,pdf:{filename:'Showrapportage.pdf',content:bytes}});assert.equal(production.attachments[0].filename,'Showrapportage.pdf');assert.equal(production.title,'Showrapportage');assert.equal(production.subject,'Showrapportage Fixture & artiest - 14 november 2026');assert.ok(!renderEmailTemplate(production).text.includes('[artiestnaam]'));
 });
 
 test('Alle testtemplates hebben alleen voor Richards beheerdersaccount twee vaste ontvangers',async()=>{

@@ -1047,3 +1047,14 @@ eenduidig deuren open als gepland einde beschikbaar zijn. Anders exact de oude
 periode. Ook over middernacht; geen tijden raden of achteraf ophalen. Webvenster
 rekent kalenderhalfuurvakken binnen die grenzen, met eventueel gedeeltelijke
 randvakken. PDF-/CSV-/KPI-/incidentlijst- en mailrekenregels blijven ongewijzigd.
+
+Vanaf V1.55 zijn gewone opslagvoortgang en opslagsucces stil: toon geen Concept
+wordt opgeslagen, Concept opgeslagen of Opgeslagen in detailkaarten. Behoud
+workflowstatussen zoals Concept/Afgerond op basis van bevestigde gegevens,
+foutmeldingen en de centrale afsluitwaarschuwing. Verberg lege statusregels zodat
+ze geen ruimte innemen. Ook tijdens een write de laatst bevestigde status tonen.
+
+Showrapportagemail V1.55: zichtbare blauwe header uitsluitend Showrapportage;
+onderwerp blijft Showrapportage [artiest] - [showdatum]. Nieuwe afleveringen
+leggen mailversie online-report-v2 vast. Herpogingen van online-report-v1 behouden
+de lange header voor ongewijzigde inhoud op dezelfde idempotentiesleutel.

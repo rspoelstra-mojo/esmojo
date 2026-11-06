@@ -46,8 +46,8 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
     review.update({noRiskNoteRequired:!isStandardBarrierType(type),riskLevel,riskNote:riskLevel==='low'||(riskLevel==='none'&&isStandardBarrierType(type))?'':riskNote,disabled:locked,busy:Boolean(queue?.exclusive),failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
     upload.disabled=locked||queue?.busy;remove.hidden=!custom.attachment;remove.disabled=locked||queue?.busy;
     back.disabled=false;
-    status.textContent=record?.completed?'✓ Barrieropstelling afgerond':queue?.failed?'Opslag niet bevestigd':queue?.busy?'Concept wordt opgeslagen…':record?.revision?'Concept opgeslagen':'';status.classList.toggle('assessment-completed',Boolean(record?.completed));
-    if(custom.attachment)uploadStatus.textContent=custom.attachment.fileName+' · Upload opgeslagen in Drive';else if(!preparing)uploadStatus.textContent='PNG of PDF, maximaal 2 MB.';
+    status.textContent=record?.completed?'✓ Barrieropstelling afgerond':queue?.failed?'Opslag niet bevestigd':'';status.hidden=!status.textContent;status.classList.toggle('assessment-completed',Boolean(record?.completed));
+    if(custom.attachment)uploadStatus.textContent=custom.attachment.fileName;else if(!preparing)uploadStatus.textContent='PNG of PDF, maximaal 2 MB.';
   }
   function resetPreview(){previewSequence++;if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}previewBox.replaceChildren();}
   function placeholderPreview(text){previewBox.replaceChildren(node('p','',text));}
@@ -84,8 +84,8 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   upload.onchange=async()=>{
     const file=upload.files?.[0];if(!file||!ready||queue.busy||queue.failed)return;
     if(file.size>barrierUploadLimit||!['image/png','application/pdf'].includes(file.type)||!(file.type==='image/png'?/\.png$/i:/\.pdf$/i).test(file.name)){error.textContent='Kies een PNG of PDF van maximaal 2 MB.';upload.value='';return;}
-    preparing=true;const release=queue.hold();uploadStatus.textContent='Bestand voorbereiden…';error.textContent='';update();
-    try{const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(Error('Bestand lezen is niet gelukt.'));reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.readAsDataURL(file);});preparing=false;uploadStatus.textContent='Uploaden naar Drive…';await queue.action('upload',{uploadId:crypto.randomUUID(),fileName:file.name,mime:file.type,base64});}
+    preparing=true;const release=queue.hold();uploadStatus.textContent='';error.textContent='';update();
+    try{const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(Error('Bestand lezen is niet gelukt.'));reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.readAsDataURL(file);});preparing=false;uploadStatus.textContent='';await queue.action('upload',{uploadId:crypto.randomUUID(),fileName:file.name,mime:file.type,base64});}
     catch(failure){if(!disposed)error.textContent=failure.message;}
     finally{preparing=false;release();if(!disposed)upload.value='';update();}
   };
