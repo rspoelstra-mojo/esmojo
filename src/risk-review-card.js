@@ -30,7 +30,7 @@ export function createRiskReviewCard({name,onChange,onSave,onEdit,editLabel='Bew
       field.hidden=!withNote||!['none','medium','high'].includes(level)||(level==='none'&&!noRiskNoteRequired);label.textContent=level==='none'?'Toelichting':'Beheersmaatregel';note.required=!field.hidden;note.disabled=disabled;
       save.hidden=!showSave||!level||completed;save.disabled=disabled||busy||failed||!canSave;
       edit.hidden=!completed||!onEdit;edit.disabled=busy||!canEdit;
-      status.textContent=failed?'Opslag niet bevestigd':'';status.hidden=!failed;
+      status.textContent='';status.hidden=true;
       status.classList.toggle('assessment-completed',completed);
     },
   };

@@ -44,3 +44,21 @@ bestaande auth/risico-/contexttests en browsertests met vertraagde/falende synth
 verzoeken. De echte showpagina gebruikt daarbij de bestaande signed Drive-fixture;
 account-/bezoekers-/analyse-UI gebruikt synthetische serverantwoorden. Geen echte
 accounts, mails of vertrouwelijke productiewrites voor tests.
+
+V1.56: vaste paginafeedback gaat via createPageFeedback naar dezelfde centrale
+melding, met Bekijken en eventuele tekstacties voor bewust herstel. Geen dubbele
+inline opslagfout. Afmelden wist ook meldingen en callbackregistraties. Eén
+centrale melding per resource; een lopende retry is tegen dubbelklikken beschermd.
+
+De eerdere regel zonder automatische retry is op gebruikersverzoek vervangen:
+retrySave doet voor toegestane versiegebonden showwrites één stille herpoging
+bij tijdelijke netwerk-/dienstfouten, met identieke inhoud en revisie. Voor
+showprofiel, productiekeuzes en bezoekersvelden eerst readback als bevestiging.
+Geen nieuwe revisie afleiden om een bronconflict te omzeilen; geen automatische
+accountcreatie, uitnodiging of mailherhaling. Na twee mislukte writepogingen de
+centrale fout en veilige bewuste herstelactie.
+
+Barrier en vloerdruk hebben geen autosave meer. Alleen Opslaan/afronden schrijft;
+lokale berekeningen/selecties zijn synchroon. Bestanden voor afwijkende barrier
+worden lokaal voorbereid en pas bij Opslaan geüpload. Andere bestaande autosaves
+(o.a. beheersmaatregeltekst) blijven bestaan.

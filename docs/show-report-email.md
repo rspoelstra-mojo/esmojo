@@ -51,3 +51,8 @@ V1.55: de zichtbare blauwe mailheader is uitsluitend Showrapportage. Het onderwe
 behoudt artiest en datum. Nieuwe automatische afleveringen bewaren online-report-v2;
 v1-herpogingen behouden hun oorspronkelijke lange header op dezelfde providersleutel.
 Geen oude verzonden mails opnieuw versturen of nieuwe ontvangers/trigger toevoegen.
+
+V1.56: online-report-v3-mails hebben geen PDF-bijlage. De onlineknop blijft;
+ook de preheader vermeldt geen bijlage meer. De bestaande PDF blijft beschikbaar
+voor verwerking/download. v1/v2-herpogingen behouden hun oorspronkelijke PDF
+voor dezelfde idempotentiesleutel; verzonden mails worden niet opnieuw verstuurd.
