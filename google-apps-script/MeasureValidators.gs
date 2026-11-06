@@ -21,7 +21,9 @@ function measureDefinitions(show,risks={}){
 }
 function measureState(row,record){
  const matched=Number.isSafeInteger(record?.revision)&&record.revision>0&&record.basis===row.basis&&record.originalRiskLevel===row.originalRiskLevel;
- return{revision:record?.revision||0,basis:row.basis,originalRiskLevel:row.originalRiskLevel,riskLevelAfter:matched?record.riskLevelAfter:null,briefing:record?.briefing===true,completedAt:matched?record.completedAt||null:null,implemented:Boolean(matched&&measureLevels.includes(record.riskLevelAfter)&&typeof record.completedAt==='string'&&Number.isFinite(Date.parse(record.completedAt))),attachments:record?.attachments||[]};
+ // Oude false was de impliciete uit-stand; alleen een expliciet nieuwe Nee telt als keuze.
+ const briefing=record?.briefing===true?true:record?.briefing===false&&record.briefingChosen===true?false:null,briefingChosen=typeof briefing==='boolean';
+ return{revision:record?.revision||0,basis:row.basis,originalRiskLevel:row.originalRiskLevel,riskLevelAfter:matched?record.riskLevelAfter:null,briefing,briefingChosen,completedAt:matched&&briefingChosen?record.completedAt||null:null,implemented:Boolean(matched&&briefingChosen&&measureLevels.includes(record.riskLevelAfter)&&typeof record.completedAt==='string'&&Number.isFinite(Date.parse(record.completedAt))),attachments:record?.attachments||[]};
 }
 function measureKeys(value,keys){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!==[...keys].sort().join(','))throw Error('VALIDATION');}
 function validMeasureId(value){return typeof value==='string'&&(/^(?:production:(?:entrance_process|barrier_layout|floor_pressure|escape_routes|fireworks|open_fire|lasers|drones)|operational:[a-f0-9]{64}:R[0-9]{2})$/.test(value));}
@@ -34,7 +36,7 @@ function validateMeasureRequest(input){
  if(typeof input.concertId!=='string'||!input.concertId.trim()||input.concertId.length>240||/[\x00-\x1f/\\]/.test(input.concertId)||!validMeasureId(input.measureId))throw Error('VALIDATION');
  if(fields.includes('revision')&&(!Number.isSafeInteger(input.revision)||input.revision<0))throw Error('VALIDATION');
  if(fields.includes('basis')&&(typeof input.basis!=='string'||input.basis.length>25000||!input.basis))throw Error('VALIDATION');
- if(fields.includes('data')){measureKeys(input.data,['riskLevelAfter','briefing']);if(input.data.riskLevelAfter!==null&&!measureLevels.includes(input.data.riskLevelAfter)||typeof input.data.briefing!=='boolean'||op==='complete'&&input.data.riskLevelAfter===null)throw Error('VALIDATION');}
+ if(fields.includes('data')){measureKeys(input.data,['riskLevelAfter','briefing']);if(input.data.riskLevelAfter!==null&&!measureLevels.includes(input.data.riskLevelAfter)||input.data.briefing!==null&&typeof input.data.briefing!=='boolean'||op==='complete'&&(input.data.riskLevelAfter===null||typeof input.data.briefing!=='boolean'))throw Error('VALIDATION');}
  if(fields.includes('text'))measureText(input.text);
  if(fields.includes('uploadId')&&!validMeasureUploadId(input.uploadId))throw Error('VALIDATION');
  if(op==='upload'){

@@ -986,3 +986,17 @@ senderId in hun private mail-snapshot; reeds gestarte oude afleveringen zonder
 senderId behouden de oorspronkelijke default-afzender bij herpoging, zodat dezelfde
 Resend-idempotentiesleutel nooit een gewijzigde afzender krijgt. Ondertekening in
 de inhoud, overige mailinhoud, ontvangers en verzendmomenten blijven hetzelfde.
+
+## Documentkaart en verplichte briefingkeuze (V1.53)
+
+Op 6 november 2026: Document uploaden staat buiten Suggesties, naast Voorgestelde
+beheersmaatregel. Beide kaarten altijd gelijk hoog, ook wanneer ze op smalle
+schermen onder elkaar komen. Suggesties bevat alleen informatieve suggesties.
+Meenemen in briefing krijgt een eigen kaart zoals risicobeoordeling, met Ja/Nee-
+radio's zonder standaardkeuze. Beide neutraal grijs, uitsluitend gekozen Ja groen.
+Afronden vereist een geldige na-implementatieklasse én expliciete briefingkeuze,
+ook in API, Drive-validatie en gedeelde planning. Briefing blijft uitsluitend een
+keuze, zonder nieuwe briefingfunctie. Bewaar briefing null/boolean en technische
+briefingChosen-bevestiging binnen dezelfde reeds goedgekeurde vertrouwelijke route.
+Oude true behouden; oude false zonder briefingChosen was impliciet en wordt als
+onbeantwoord weergegeven. Geen historische bron of originele beoordeling wissen.

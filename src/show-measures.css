@@ -26,9 +26,6 @@
 .measure-suggestion-card button { font: inherit; font-size: 13px; max-width: 100%; }
 .measure-document { display: grid; gap: 8px; margin-top: 14px; min-width: 0; }
 .measure-document > span { overflow-wrap: anywhere; font-size: 13px; }
-.measure-briefing { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px; }
-.measure-briefing[aria-pressed="true"] { border-color: var(--profile-blue,#0046f2); color: var(--profile-blue,#0046f2); }
-.measure-briefing-check { margin-left: auto; font-weight: 700; }
 .measure-finish { width: 100%; padding: 12px; font-size: 13px; }
 .measure-original-risk[data-status="medium"] { background: #ffead5; color: #99500d; }
 .measure-original-risk[data-status="high"] { background: #fde8e8; color: #a22929; }
@@ -38,4 +35,12 @@
 .show-measures .secondary-button { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); color: var(--text); font: inherit; font-size: 13px; line-height: 1.5; cursor: pointer; }
 .show-measures .secondary-button:disabled { opacity: .55; cursor: default; }
 .show-measures .secondary-button:focus-visible { outline: 2px solid var(--profile-blue,#0046f2); outline-offset: 3px; }
-.show-measures .measure-briefing[aria-pressed="true"] { background: color-mix(in srgb, var(--profile-blue,#0046f2) 8%, var(--canvas)); color: var(--profile-blue,#0046f2); border-color: var(--profile-blue,#0046f2); }
+
+.measure-proposal-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-auto-rows: 1fr; gap: 20px; align-items: stretch; min-width: 0; }
+.measure-proposal-row > .analysis-editor-card { height: 100%; box-sizing: border-box; margin: 0; min-width: 0; }
+.measure-upload-card > p { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 0 0 14px; }
+.measure-briefing-option span { background: #f3f4f6; color: #4b5563; }
+.measure-briefing-option[data-choice="yes"] input:checked + span { background: #e7f5ed; color: #28734d; }
+[data-theme="dark"] .measure-briefing-option span { background: #263143; color: #d3dae6; }
+[data-theme="dark"] .measure-briefing-option[data-choice="yes"] input:checked + span { background: #163d2d; color: #a5d7b8; }
+@container fluid (max-width: 620px) { .measure-proposal-row { grid-template-columns: minmax(0,1fr); } }

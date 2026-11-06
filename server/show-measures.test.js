@@ -15,3 +15,9 @@ test('Lege kaart en planning vereisen alle beoordelingen; bronwijziging ververst
  const h=fixture();h.rows()[2].onclick();const complete=snapshot();complete.risks.assessments.barrier.riskLevel='none';complete.risks.assessments.floor.riskLevel='low';complete.risks.operational.assessments.R01.riskLevel='low';complete.risks.operational.assessments.R01.riskNote='';h.change(complete);assert.equal(h.rows().length,0);assert.match(h.text(),/Geen beheersmaatregelen voor deze show/);
  complete.risks.state='pending';h.change(complete);assert.doesNotMatch(h.text(),/Geen beheersmaatregelen voor deze show/);assert.match(h.text(),/nog niet volledig afgerond/);h.dispose();
 });
+
+test('Documentkaart staat naast de maatregel buiten Suggesties; briefing heeft Ja/Nee en begint zonder keuze',()=>{
+ const h=fixture();h.rows()[2].onclick();const all=h.panel.all(),row=all.find(el=>el.className==='measure-proposal-row');assert.equal(row.children.length,2);assert.match(row.children[0].textContent,/Voorgestelde beheersmaatregel/);assert.match(row.children[1].textContent,/Document uploaden/);
+ const grid=all.find(el=>el.className==='measure-suggestion-grid');assert.equal(grid.children.length,3);assert.doesNotMatch(grid.textContent,/Document uploaden/);
+ const card=all.find(el=>el.className.includes('measure-briefing-card')),inputs=card.all().filter(el=>el.tag==='input');assert.deepEqual(inputs.map(el=>el.value),['yes','no']);assert.equal(inputs.every(input=>input.checked===false),true);assert.equal(all.find(el=>el.tag==='button'&&el.textContent==='Beheersmaatregel afronden').disabled,true);h.dispose();
+});
