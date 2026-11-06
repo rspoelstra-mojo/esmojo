@@ -7,10 +7,10 @@ export function createShowData(bundle,request,concertId){
     ||!['ready','pending','not-ready'].includes(bundle.risks?.state)||!Array.isArray(bundle.risks.risks))throw Error('Onvolledige showgegevens.');
   const values=new Map([['show-profile',bundle.profile],['ticket-data',bundle.tickets],['barrier-layout',bundle.barrier],['floor-pressure',bundle.floor],['show-risks',bundle.risks],['analysis-finalization',bundle.profile]]);
   if(bundle.pdf)values.set('show-profile-pdf',bundle.pdf);
-  let disposed=false,riskVersion=0;const pendingWrites=new Set(),listeners=new Set(),operationalReviews=createOperationalReviewMemory();
+  let disposed=false,riskVersion=0;const pendingWrites=new Set(),listeners=new Set(),operationalReviews=createOperationalReviewMemory(),measureDrafts=new Map();
   const notify=()=>{for(const listener of listeners)listener();};
   const settled=async()=>{while(pendingWrites.size)await Promise.allSettled([...pendingWrites]);};
-  const isRead=(action,body)=>action==='show-risks'||body.operation==='read'||(action==='show-profile-pdf'&&body.operation==='status');
+  const isRead=(action,body)=>action==='measure'&&body.operation==='download'||action==='show-risks'||body.operation==='read'||(action==='show-profile-pdf'&&body.operation==='status');
   function remember(action,data){
     if(disposed)return;
     if(action==='show-profile-pdf'&&['pending','generating'].includes(data.state)){values.delete(action);return;}
@@ -25,20 +25,20 @@ export function createShowData(bundle,request,concertId){
     async request(action,options){
       const body=options.body||{},read=isRead(action,body);
       if(read&&disposed)throw Error('Show gesloten.');
-      if(read&&!options.refresh&&values.has(action)){
+      if(read&&action!=='measure'&&!options.refresh&&values.has(action)){
         const data=values.get(action);
         if(action==='show-profile-pdf'&&['pending','generating'].includes(data.state))values.delete(action);
         return structuredClone(data);
       }
       const before=values.get(action);let data;
       try{data=await request(action,options);}catch(error){
-        if(!disposed){values.delete(action);if(!read)for(const key of ['show-profile','analysis-finalization','show-risks','floor-pressure','show-profile-pdf'])values.delete(key);riskVersion++;}
+        if(!disposed){values.delete(action);if(!read&&action==='measure'){const risks=values.get('show-risks');if(risks?.measureImplementations?.[body.measureId]){const copy=structuredClone(risks);copy.measureImplementations[body.measureId].completedAt=null;copy.measureImplementations[body.measureId].implemented=false;values.set('show-risks',copy);}}else if(!read)for(const key of ['show-profile','analysis-finalization','show-risks','floor-pressure','show-profile-pdf'])values.delete(key);riskVersion++;}
         notify();throw error;
       }
       if(!disposed){
-        if(read){remember(action,data);overview(data);}
+        if(read){if(action!=='measure')remember(action,data);overview(data);}
         else if(action==='show-profile-pdf'&&body.operation!=='download')remember(action,data);
-        else if(action==='operational-risk')overview(data);
+        else if(['operational-risk','measure'].includes(action)){if(action==='measure'&&body.operation==='download')return data;overview(data);if(action==='measure'&&body.operation==='edit-text'){if(body.measureId?.startsWith('operational:')){operationalReviews.drafts.delete(body.measureId.split(':').at(-1));}if(body.measureId==='production:barrier_layout')values.delete('barrier-layout');if(body.measureId==='production:floor_pressure')values.delete('floor-pressure');}}
         else if(action==='production-risks')overview({overview:{production:data}});
         else if(['show-profile','analysis-finalization','ticket-data','barrier-layout','floor-pressure'].includes(action)){
           if(body.operation==='download')return data;
@@ -69,15 +69,15 @@ export function createShowData(bundle,request,concertId){
     planningSnapshot(){
       const risks=values.get('show-risks');
       return structuredClone({profile:{finalization:values.get('show-profile')?.finalization},pdf:values.get('show-profile-pdf'),risks:{
-        state:risks?.state,risks:risks?.risks,operational:risks?.operational,
+        state:risks?.state,risks:risks?.risks,operational:risks?.operational,measureImplementations:risks?.measureImplementations,
         production:risks?.production||productionChoices.server,
         assessments:risks?.assessments||{barrier:values.get('barrier-layout')?.record,floor:values.get('floor-pressure')?.record},
       }});
     },
     subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
     version:()=>riskVersion,
-    operationalReviews,
-    dispose(){disposed=true;operationalReviews.clear();productionChoices.cancel();values.clear();listeners.clear();},
+    operationalReviews,measureDrafts,
+    dispose(){disposed=true;measureDrafts.clear();operationalReviews.clear();productionChoices.cancel();values.clear();listeners.clear();},
   };
   const productionChoices=createProductionChoiceQueue({
     save:body=>context.request('production-risks',{method:'POST',body:{concertId,...body}}),

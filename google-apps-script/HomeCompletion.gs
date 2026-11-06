@@ -18,20 +18,7 @@ function operationalComplete(snapshot){
  });
 }
 function showMeasures(show,snapshot={}){
- const risks=snapshot.risks,rows=[];let known=true;
- for(const group of productionRiskGroups)for(const item of group.items){
-  if(item.id==='entrance_process'&&show.venue?.trim().toLocaleLowerCase('nl-NL')==='gashouder'||item.conditional&&risks?.production?.choices[item.id]===false)continue;
-  const key={barrier_layout:'barrier',floor_pressure:'floor'}[item.id]||item.id,record=risks?.assessments?.[key];
-  if(!record||!['none','low','medium','high'].includes(record.riskLevel)){known=false;continue;}
-  if(!['medium','high'].includes(record.riskLevel))continue;
-  const text=key==='floor'?record.note:record.riskNote;
-  if(typeof text!=='string'||!text.trim()){known=false;continue;}
-  rows.push({id:'production:'+item.id,title:item.title,text:text.trim(),origin:group.title+' · '+item.title,implemented:false});
- }
- if(risks?.state==='ready'&&risks.operational?.source)for(const risk of risks.risks||[]){
-  const record=risks.operational.assessments?.[risk.id];
-  if(['medium','high'].includes(record?.riskLevel)&&typeof record.riskNote==='string'&&record.riskNote.trim())rows.push({id:'operational:'+risks.operational.source.revision+':'+risk.id,title:risk.title,text:record.riskNote.trim(),origin:'Operationele risico’s · '+risk.title,implemented:false});
- }
+ const risks=snapshot.risks||{},definition=measureDefinitions(show,risks),rows=definition.rows.map(row=>({...row,...measureState(row,risks.measureImplementations?.[row.id])}));
  const allRisksCompleted=productionComplete(show,snapshot)&&operationalComplete(snapshot);
- return{rows,allRisksCompleted,complete:allRisksCompleted&&known&&rows.length===0};
+ return{rows,allRisksCompleted,complete:allRisksCompleted&&definition.known&&rows.every(row=>row.implemented)};
 }
