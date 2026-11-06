@@ -1,6 +1,7 @@
 import {retrySave} from './lib/save-retry.js';
 import {backgroundSaves,isSaveRequest,saveRequestInfo,SAVE_EXIT_MESSAGE} from './lib/background-saves.js';
 import {homeDashboardCache} from './lib/home-cache.js';
+import {accessResultPayload} from './lib/access-result.js';
 import { getSupabase } from './lib/supabase.js';
 import './accounts.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
@@ -48,7 +49,7 @@ async function performAccess(action, { method = 'GET', body } = {}) {
   if(result.profile&&result.profile.id===data.session.user.id&&homeContext.ticket===homeDashboardCache.context().ticket&&['session','restore'].includes(action)){homeDashboardCache.bind(result.profile);if(result.homeDashboard)homeDashboardCache.accept(result.homeDashboard,{actor:result.profile.id});}
   if(action==='show-profile-pdf'&&body?.concertId&&result.state&&!result.storageStale)homeDashboardCache.confirmProfile(body.concertId,result.state,{...homeContext,actor:data.session.user.id});
   if(result.homePlanning)homeDashboardCache.patch(result.homePlanning,{...homeContext,actor:data.session.user.id});
-  return result;
+  return accessResultPayload(result);
 }
 
 async function restoreRemembered() {
