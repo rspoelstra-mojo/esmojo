@@ -3,8 +3,8 @@ function esmojoMeasureRecord_(document,row){
  const records=document.measureImplementations;
  if(records!==undefined&&(!records||typeof records!=='object'||Array.isArray(records)||Object.keys(records).some(id=>!validMeasureId(id))))throw Error('CONFLICT');
  const value=records?.[row.id];if(!value)return null;
- measureKeys(value,['revision','basis','originalRiskLevel','riskLevelAfter','briefing','completedAt','completedBy','attachments','lastMutation']);
- if(!Number.isSafeInteger(value.revision)||value.revision<1||typeof value.basis!=='string'||value.basis.length>25000||!['medium','high'].includes(value.originalRiskLevel)||value.riskLevelAfter!==null&&!measureLevels.includes(value.riskLevelAfter)||typeof value.briefing!=='boolean'||!Array.isArray(value.attachments)||value.attachments.length>20||new Set(value.attachments).size!==value.attachments.length||value.attachments.some(id=>!validMeasureUploadId(id))||!/^[a-f0-9]{64}$/.test(value.lastMutation||'')||value.completedAt!==null&&(typeof value.completedAt!=='string'||!Number.isFinite(Date.parse(value.completedAt))||typeof value.completedBy!=='string'||!value.completedBy||!measureLevels.includes(value.riskLevelAfter))||value.completedAt===null&&value.completedBy!==null)throw Error('CONFLICT');
+ measureKeys(value,['revision','basis','originalRiskLevel','riskLevelAfter','briefing','completedAt','completedBy','attachments','lastMutation',...(Object.hasOwn(value,'briefingChosen')?['briefingChosen']:[])]);
+ if(!Number.isSafeInteger(value.revision)||value.revision<1||typeof value.basis!=='string'||value.basis.length>25000||!['medium','high'].includes(value.originalRiskLevel)||value.riskLevelAfter!==null&&!measureLevels.includes(value.riskLevelAfter)||value.briefing!==null&&typeof value.briefing!=='boolean'||Object.hasOwn(value,'briefingChosen')&&(typeof value.briefingChosen!=='boolean'||value.briefingChosen!==(typeof value.briefing==='boolean'))||!Array.isArray(value.attachments)||value.attachments.length>20||new Set(value.attachments).size!==value.attachments.length||value.attachments.some(id=>!validMeasureUploadId(id))||!/^[a-f0-9]{64}$/.test(value.lastMutation||'')||value.completedAt!==null&&(typeof value.completedAt!=='string'||!Number.isFinite(Date.parse(value.completedAt))||typeof value.completedBy!=='string'||!value.completedBy||!measureLevels.includes(value.riskLevelAfter))||value.completedAt===null&&value.completedBy!==null)throw Error('CONFLICT');
  return value;
 }
 function esmojoMeasureAttachmentMeta_(document,measureId,uploadId){
@@ -57,12 +57,12 @@ function esmojoMeasureImplementation_(request){
  if(current?.revision===input.revision+1&&current.lastMutation===mutation&&current.basis===row.basis)return view();
  if(input.revision!==(current?.revision||0))throw Error('ASSESSMENT_CONFLICT');
  if(input.basis!==row.basis)throw Error('SOURCE_CHANGED');
- const normalized=measureState(row,current),record={revision:input.revision+1,basis:row.basis,originalRiskLevel:row.originalRiskLevel,riskLevelAfter:normalized.riskLevelAfter,briefing:normalized.briefing,completedAt:normalized.completedAt,completedBy:normalized.completedAt?current.completedBy:null,attachments:[...(current?.attachments||[])],lastMutation:mutation};
+ const normalized=measureState(row,current),record={revision:input.revision+1,basis:row.basis,originalRiskLevel:row.originalRiskLevel,riskLevelAfter:normalized.riskLevelAfter,briefing:normalized.briefing,briefingChosen:normalized.briefingChosen,completedAt:normalized.completedAt,completedBy:normalized.completedAt?current.completedBy:null,attachments:[...(current?.attachments||[])],lastMutation:mutation};
  if(input.operation==='edit-text'){
   row=esmojoMeasureTextEdit_(document,row,input.text,actor);record.basis=row.basis;record.riskLevelAfter=null;record.completedAt=null;record.completedBy=null;
  }else if(['draft','complete'].includes(input.operation)){
   if(normalized.implemented&&input.operation==='draft'&&input.data.riskLevelAfter!==record.riskLevelAfter)throw Error('ASSESSMENT_COMPLETED');
-  record.riskLevelAfter=input.data.riskLevelAfter;record.briefing=input.data.briefing;
+  record.riskLevelAfter=input.data.riskLevelAfter;record.briefing=input.data.briefing;record.briefingChosen=typeof input.data.briefing==='boolean';if(!record.briefingChosen){record.completedAt=null;record.completedBy=null;}
   if(input.operation==='complete'){record.completedAt=new Date().toISOString();record.completedBy=actor;}
  }else if(input.operation==='reopen'){
   if(!normalized.implemented)throw Error('VALIDATION');record.completedAt=null;record.completedBy=null;
