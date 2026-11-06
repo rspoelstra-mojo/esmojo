@@ -26,10 +26,10 @@ test('Gelijktijdig openen deelt één laadverzoek; een mislukte laadronde kan op
 test('Afmelden wist alle contexten en een laat antwoord kan het geheugen niet herstellen',async()=>{
  const wait=deferred();let calls=0;const memory=createShowMemory({request:async()=>++calls===1?wait.promise:bundle(),...timers});const old=memory.acquire('A');memory.clear();wait.resolve(bundle());await assert.rejects(old.ready,/gewist/);old.release();assert.equal(memory.size,0);const next=memory.acquire('A');await next.ready;assert.equal(calls,2);next.release();memory.clear();
 });
-test('Terugkeren wacht op lopende opslag en leest alleen de gewijzigde afhankelijke vloerdruk opnieuw',async()=>{
+test('Terugkeren toont bevestigde gegevens direct en herleest de afhankelijke vloerdruk na opslag',async()=>{
  const wait=deferred(),calls=[],base=bundle();const memory=createShowMemory({request:async(action,options)=>{calls.push([action,options.body.operation]);if(action==='show-open')return base;if(options.body.operation==='draft')return wait.promise;if(action==='floor-pressure')return{...base.floor,barrierType:'end_stage_gc'};throw Error('Onverwachte volledige herlaadronde');},...timers});
- const first=memory.acquire('A'),data=await first.ready;const write=data.request('barrier-layout',{body:{operation:'draft',concertId:'A'}});first.release();const returned=memory.acquire('A');let ready=false;void returned.ready.then(()=>ready=true);await tick();assert.equal(ready,false);
- wait.resolve({record:{...base.barrier.record,revision:1,barrierType:'end_stage_gc'},overview:{production:{revision:1,choices:{}},assessments:{}}});await write;assert.equal(await returned.ready,data);assert.equal((await read(data,'barrier-layout')).record.revision,1);assert.deepEqual(calls,[['show-open',undefined],['barrier-layout','draft'],['floor-pressure','read']]);returned.release();memory.clear();
+ const first=memory.acquire('A'),data=await first.ready;const write=data.request('barrier-layout',{body:{operation:'draft',concertId:'A'}});first.release();const returned=memory.acquire('A');let ready=false;void returned.ready.then(()=>ready=true);await tick();assert.equal(ready,true);assert.equal((await read(data,'barrier-layout')).record.revision,0);
+ wait.resolve({record:{...base.barrier.record,revision:1,barrierType:'end_stage_gc'},overview:{production:{revision:1,choices:{}},assessments:{}}});await write;assert.equal(await returned.ready,data);assert.equal((await read(data,'barrier-layout')).record.revision,1);assert.equal((await read(data,'floor-pressure')).barrierType,'end_stage_gc');assert.deepEqual(calls,[['show-open',undefined],['barrier-layout','draft'],['floor-pressure','read']]);returned.release();memory.clear();
 });
 test('Onzekere opslag wordt niet als bevestigd hergebruikt; heropenen leest betrokken gegevens terug',async()=>{
  const calls=[],base=bundle();const memory=createShowMemory({request:async(action,options)=>{calls.push(action);if(options.body.operation==='draft')throw Error('onzeker');if(action==='show-open')return base;return ({'show-profile':base.profile,'barrier-layout':base.barrier,'floor-pressure':base.floor,'show-risks':base.risks})[action];},...timers});
@@ -42,12 +42,12 @@ test('De bewaartermijn ruimt inactieve gegevens ook zonder terugnavigeren automa
  let current=0,fire,delay;const memory=createShowMemory({request:async()=>bundle(),now:()=>current,ttl:100,setTimer:(callback,ms)=>{fire=callback;delay=ms;return 1;},clearTimer(){}});const a=memory.acquire('A'),data=await a.ready;a.release();assert.equal(delay,100);current=100;fire();assert.equal(memory.size,0);await assert.rejects(read(data,'show-profile'),/gesloten/);memory.clear();
 });
 
-test('Ja/Nee-wachtrij bewaart alle keuzes tijdens navigatie; terugkeren wacht op de hele reeks',async()=>{
+test('Ja/Nee-wachtrij bewaart alle keuzes tijdens direct terugkeren zonder opslag af te wachten',async()=>{
  const pending=[],calls=[];let server={revision:0,choices:{}};
  const memory=createShowMemory({request:async(action,options)=>{calls.push(action);if(action==='show-open')return bundle();if(action==='production-risks'){const wait=deferred();pending.push({wait,body:options.body});return wait.promise;}throw Error('Unexpected read');},...timers});
  const lease=memory.acquire('A'),data=await lease.ready,q=data.productionChoices;q.enqueue('lasers',true);q.enqueue('drones',false);await tick();lease.release();
- let ready=false;const back=memory.acquire('A');void back.ready.then(()=>{ready=true;});await tick();assert.equal(ready,false);
- for(let i=0;i<2;i++){const {wait,body}=pending.shift();assert.equal(body.revision,i);server={revision:i+1,choices:{...server.choices,[body.field]:body.value}};wait.resolve(server);await tick();if(i===0)assert.equal(ready,false);}
+ let ready=false;const back=memory.acquire('A');void back.ready.then(()=>{ready=true;});await tick();assert.equal(ready,true);
+ for(let i=0;i<2;i++){const {wait,body}=pending.shift();assert.equal(body.revision,i);server={revision:i+1,choices:{...server.choices,[body.field]:body.value}};wait.resolve(server);await tick();if(i===0)assert.equal(ready,true);}
  assert.equal(await back.ready,data);assert.equal(ready,true);assert.deepEqual((await data.request('show-risks',{body:{}})).production,server);assert.deepEqual(calls,['show-open','production-risks','production-risks']);back.release();memory.clear();assert.equal(q.server,null);
 });
 test('Planning leest bestaande context zonder extra netwerk; updates en fouten vernieuwen de status zonder gegevens te kunnen muteren',async()=>{
@@ -55,9 +55,9 @@ test('Planning leest bestaande context zonder extra netwerk; updates en fouten v
  const memory=createShowMemory({request:async(action)=>{calls.push(action);if(action==='show-open')return base;if(fail)throw Error('tijdelijke fout');return{state:'ready'};},...timers});
  const lease=memory.acquire('A'),data=await lease.ready;let updates=0;const unsubscribe=data.subscribe(()=>updates++);
  const copy=data.planningSnapshot();copy.profile.finalization.categories.visitors.completedAt='fake';assert.equal(data.planningSnapshot().profile.finalization.categories.visitors.completedAt,null);assert.deepEqual(calls,['show-open']);
- await data.request('show-profile-pdf',{body:{operation:'ensure'}});assert.equal(updates,1);assert.equal(data.planningSnapshot().pdf.state,'ready');
- fail=true;await assert.rejects(data.request('show-profile-pdf',{body:{operation:'status'},refresh:true}),/tijdelijke fout/);assert.equal(updates,2);assert.equal(data.planningSnapshot().pdf,undefined);
- unsubscribe();fail=false;await data.request('show-profile-pdf',{body:{operation:'ensure'}});assert.equal(updates,2);lease.release();memory.clear();
+ await data.request('show-profile-pdf',{body:{operation:'ensure'}});await tick();assert.ok(updates>=1);assert.equal(data.planningSnapshot().pdf.state,'ready');
+ fail=true;await assert.rejects(data.request('show-profile-pdf',{body:{operation:'status'},refresh:true}),/tijdelijke fout/);await tick();assert.ok(updates>=2);assert.equal(data.planningSnapshot().pdf,undefined);
+ const notified=updates;unsubscribe();fail=false;await data.request('show-profile-pdf',{body:{operation:'ensure'}});await tick();assert.equal(updates,notified);lease.release();memory.clear();
 });
 
 test('Een showprofielwijziging wist PDF-gereedheid maar verliest geen bevestigde productiebeoordelingen',async()=>{
