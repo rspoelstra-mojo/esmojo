@@ -152,3 +152,14 @@ De main/OIDC-check-only-worker kan de werkelijke virtuele showbundel lezen en
 daarvan uitsluitend openReady/driveOpenMs teruggeven. De inhoud en technische
 readactor worden niet opgeslagen; dit meet de Drive-ronde, niet de totale
 browserlaadtijd inclusief sessiecontrole en foto.
+
+Bevestigde statusreads (final-read, barrier-read, measure-read en gereed risk-view)
+lezen de huidige gecommitteerde snapshot zonder opslaglease/ontvangstbewijs. Een
+lopende write blokkeert dus geen statuscontrole; echte writes behouden alle bron-
+en revisiechecks. De afloopgrens blijft vooraf gecontroleerd. Een ontbrekende
+AI-bron houdt zijn bestaande beveiligde Drive-controle.
+
+De profielwachtrij onderscheidt een geaccepteerde serverbevestiging van lokale
+editor-sync. Een volledige bevestigde finalisatiestatus ruimt een eerdere
+Afrondstatus laden-fout op. Een lokale of achterhaalde respons doet dat niet;
+een werkelijke leesfout blijft zichtbaar totdat er weer geldige bevestiging is.
