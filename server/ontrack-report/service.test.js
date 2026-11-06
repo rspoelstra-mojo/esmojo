@@ -110,7 +110,7 @@ test('Online mail gebruikt exacte concertlink, gekoppelde manager en aparte ontv
  const f=harness({manager:true}),sent=[];let uncertain=true;
  const service=createOnTrackReportService({store:f.store,assets:f.assets,render,mail:async(message,options)=>{sent.push({message,options});if(uncertain)throw Error('Lost provider confirmation');return{id:'frozen-mail'};}});
  await service.run();assert.equal(sent.length,1);const first=sent[0].message;
- assert.equal(first.senderName,'Jean Pierre Van de Test');assert.equal(first.recipient.firstName,'Anne Marie');assert.equal(first.actions[0].label,'Showprofiel openen');assert.equal(first.actions[0].url,'https://esmojo.nl/rapportages/'+show.key);
+ assert.equal(first.senderName,'Jean Pierre Van de Test');assert.equal(first.senderId,'show-report');assert.equal(first.recipient.firstName,'Anne Marie');assert.equal(first.actions[0].label,'Showprofiel openen');assert.equal(first.actions[0].url,'https://esmojo.nl/rapportages/'+show.key);
  assert.equal(first.subject,'Showrapportage Fictieve artiest - 3 november 2026');assert.equal(first.title,first.subject);
  const {renderEmailTemplate,EMAIL_CONFIDENTIAL_FOOTER}=await import('../email-template.js');const rendered=renderEmailTemplate(first);
  assert.ok(rendered.text.includes('Met vriendelijke groet,\nJean Pierre Van de Test'));assert.ok(rendered.text.endsWith(EMAIL_CONFIDENTIAL_FOOTER));assert.match(rendered.html,/<a class="action-link"[^>]* target="_blank" rel="noopener noreferrer"/);assert.ok(rendered.html.includes(EMAIL_CONFIDENTIAL_FOOTER));
@@ -132,4 +132,10 @@ test('Oude onzekere verzending krijgt review in plaats van gewijzigde inhoud op 
  const f=harness(),sent=[],service=createOnTrackReportService({store:f.store,assets:f.assets,render,mail:async message=>{sent.push(message);return{id:'already-sent'};}});await service.run();
  const state=f.state();state.reports[0].deliveries[0]={recipientId:receiver,status:'pending',attempts:1,lastAttemptAt:new Date(Date.now()-600000).toISOString(),firstAttemptAt:new Date().toISOString()};state.reports[0].emailStatus='pending';f.setState(state);
  assert.equal((await service.run()).sent,0);assert.equal(sent.length,1);assert.equal(f.state().reports[0].deliveries[0].status,'review');assert.equal(f.state().reports[0].deliveries[0].errorCode,'MAIL_TEMPLATE_CHANGED');
+});
+
+test('Een bestaande onzekere aflevering behoudt de oorspronkelijke afzender; nieuwe afleveringen kiezen showrapportage',async()=>{
+ const f=harness(),sent=[],service=createOnTrackReportService({store:f.store,assets:f.assets,render,mail:async message=>{sent.push(message);throw Error('Uncertain provider confirmation');}});
+ await service.run();assert.equal(sent[0].senderId,'show-report');const state=f.state();delete state.reports[0].deliveries[0].mail.senderId;f.setState(state);
+ f.advance(360001);await service.run();assert.equal(sent[1].senderId,'default');assert.equal(f.state().reports[0].deliveries[0].mail.senderId,undefined);
 });

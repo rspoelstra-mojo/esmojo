@@ -138,9 +138,9 @@ function esmojoOnTrackReports_(input){
      // Een oude onzekere verzending nooit met gewijzigde inhoud op dezelfde Resend-sleutel herhalen.
      if((delivery.attempts>0||delivery.firstAttemptAt)&&delivery.mail?.version!=='online-report-v1'){delivery.status='review';delivery.errorCode='MAIL_TEMPLATE_CHANGED';report.emailStatus='failed';changed=true;continue;}
      const pdf=esmojoOnTrackSourceFile_(report.pdfId),bytes=pdf.getBlob().getBytes();if(pdf.getMimeType()!=='application/pdf'||bytes.length>3*1024*1024||esmojoOnTrackHash_(bytes)!==report.sha256)throw Error('REPORT_UNAVAILABLE');
-     if(!delivery.mail)delivery.mail={version:'online-report-v1',managerName:esmojoOnTrackManager_(report.show,profiles)};
+     if(!delivery.mail)delivery.mail={version:'online-report-v1',senderId:'show-report',managerName:esmojoOnTrackManager_(report.show,profiles)};
      if(!delivery.target)delivery.target={email:profile.email,firstName:profile.firstName};const now=new Date().toISOString();delivery.firstAttemptAt=delivery.firstAttemptAt||now;delivery.lastAttemptAt=now;delivery.attempts=(delivery.attempts||0)+1;delivery.status='processing';delivery.job={id:request.jobId,expiresAt:new Date(Date.now()+300000).toISOString()};save();
-     return reply(true,{state:'reserved',reportId:report.id,recipientId:delivery.recipientId,jobId:request.jobId,recipient:delivery.target,mailVersion:delivery.mail.version,managerName:delivery.mail.managerName,show:report.show,fileName:report.fileName,pdfBase64:Utilities.base64Encode(bytes),sha256:report.sha256,idempotencyKey:'esmojo-showreport-'+report.id+'-'+esmojoOnTrackHash_(delivery.recipientId).slice(0,16)});
+     return reply(true,{state:'reserved',reportId:report.id,recipientId:delivery.recipientId,jobId:request.jobId,recipient:delivery.target,mailVersion:delivery.mail.version,senderId:delivery.mail.senderId||'default',managerName:delivery.mail.managerName,show:report.show,fileName:report.fileName,pdfBase64:Utilities.base64Encode(bytes),sha256:report.sha256,idempotencyKey:'esmojo-showreport-'+report.id+'-'+esmojoOnTrackHash_(delivery.recipientId).slice(0,16)});
     }
    }
    if(changed)save();return reply(true,{state:'idle'});

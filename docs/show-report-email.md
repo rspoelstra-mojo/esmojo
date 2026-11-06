@@ -37,3 +37,12 @@ Tests: server/email-template.test.js, server/email-tests.test.js, de signed
 server/ontrack-report/service.test.js, server/startup-view.test.js en de bestaande
 API/routerchecks. tools/email/check-preview.mjs controleert account- én rapportage-
 mails op 320/390/640/1024px zonder verzending. Alle fixtures zijn synthetisch.
+
+Vanaf V1.52 is het envelope-adres voor show-report ESMOJO
+<showrapportage@esmojo.nl>, inclusief de bewuste testvariant. De centrale
+server/email-senders.js kent uitsluitend vaste senderIds default en show-report.
+Default blijft no-reply@esmojo.nl voor accountmails. De gekozen senderId wordt
+bij de eerste afleverreservering in delivery.mail opgeslagen. Bestaande snapshots
+zonder senderId blijven bij herpogingen default gebruiken om geen gewijzigde
+providerinhoud op dezelfde idempotentiesleutel te sturen. Geen echte testmail of
+nieuwe inbox aangemaakt voor deze wijziging.
