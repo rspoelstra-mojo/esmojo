@@ -29,7 +29,7 @@ function esmojoHomeRefresh_(concertId){
  try{row.completion=esmojoHomeCompletion_(show,esmojoHomeTarget_(state,folder,show.key));}catch{row.planningUnavailable=true;}
  storage.document.entries[show.key]=row;esmojoHomeProjectionSave_(folder,storage);return row;
 }
-function esmojoHomeChanged_(operation){return /^(profile-save|ticket-(review|reopen)|final-complete|risk-(save|(production|operational)-save)|barrier-(draft|complete|reopen|upload|remove-upload)|floor-(draft|complete|reopen)|report-(commit|fail))$/.test(operation);}
+function esmojoHomeChanged_(operation){return /^(profile-save|ticket-(review|reopen)|final-complete|risk-(save|(production|operational)-save)|measure-(draft|complete|reopen|edit-text|upload|remove)|barrier-(draft|complete|reopen|upload|remove-upload)|floor-(draft|complete|reopen)|report-(commit|fail))$/.test(operation);}
 function esmojoHomeResult_(request,result){
  if(!esmojoHomeChanged_(request.operation))return result;
  try{const row=esmojoHomeRefresh_(request.concertId);return row?Object.assign({},result,{homePlanning:row}):result;}

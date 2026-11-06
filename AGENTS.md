@@ -928,3 +928,26 @@ showgeheugen. Zonder geldige tab-query blijft bestaande tabherinnering werken.
 Geen tussenpagina, programmatische tweede klik of extra nieuwe API/leesronde.
 Bestaande module-/MFA-controle, canonieke reeksroute en SPA-router blijven gelden;
 gewone links ondersteunen toetsenbord, nieuw tabblad en terug-/vooruitnavigatie.
+
+
+## Beheersmaatregel implementeren (V1.50)
+
+Op 6 november 2026 heeft de gebruiker de afzonderlijke beoordeling na implementatie,
+de briefingkeuze en RI&E-/plandocumenten expliciet Vertrouwelijk verklaard met
+opslag in de bestaande Drive-showmap en verwerking via de beveiligde ESMOJO/Vercel-route.
+De eerdere leesweergave V1.46 is hiermee uitgebreid. Bewaar implementatierecords,
+revisies en historie in productionele-risicos.json; oorspronkelijke riskLevel blijft
+ongewijzigd. Een maatregel heeft status Nog te implementeren totdat expliciet
+Beheersmaatregel afronden is bevestigd met een gekozen na-implementatieklasse.
+Briefing is alleen een opgeslagen keuze. Bronwijzigingen maken eerdere implementatie
+ongeldig; kopieer nooit scores tussen PDF-revisies. Alle actuele maatregelen moeten
+geïmplementeerd zijn voordat de planning afrondt; de bestaande maatregelenvrije
+afrondregel blijft behouden. Alleen de afrondvlag gaat naar de openbare homeprojectie.
+
+Gebruik gedeelde shared/measure-workflow.js voor definities/validatie/projectie en
+houd de Apps Script-spiegel MeasureValidators.gs exact gelijk. Bestanden alleen
+PDF/PNG/JPG tot 2 MiB, private canonieke parent en geregistreerde UUID/hash; download
+via dezelfde actuele account-/MFA-/Shows-controle. Geen openbare Drive-links of
+persistente browseropslag. Suggesties zijn algemene procesaandachtspunten, zonder
+nieuwe AI-dienst of verzonnen showspecifieke veiligheidsinstructies. Zie
+docs/measure-implementation.md.

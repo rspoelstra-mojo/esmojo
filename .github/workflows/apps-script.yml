@@ -47,6 +47,7 @@ jobs:
           node server/showprofile-risks.test.js
           node server/operational-risks.test.js
           node server/show-measures.test.js
+          node server/measure-implementation.test.js
           node server/production-assessments.test.js
           node server/show-open.test.js
           node server/shows-store.test.js
