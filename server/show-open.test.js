@@ -107,3 +107,12 @@ test('Openstaand afrondformulier volgt een eigen bevestiging, maar geen externe 
   await submit('artist');assert.equal(sent[1].finalRevision,change==='none'?1:0,'Externe of onbevestigde wijzigingen nooit automatisch overnemen');data.dispose();
  }
 });
+
+test('Late statusread draait een inmiddels bevestigde categorieafronding niet terug',async()=>{
+ const bundle=await openFixture(),basis={profileRevision:11,finalRevision:0,ticketVersions:{ticket_sales:1,visitor_origins:1,domestic_origins:1}};
+ bundle.profile.revision=11;bundle.profile.finalization={basis,categories:{visitors:{completedAt:null},artist:{completedAt:null}}};let release;
+ const confirmed=structuredClone(bundle.profile);confirmed.finalization.basis.finalRevision=1;confirmed.finalization.categories.visitors.completedAt='2026-11-06T12:00:00Z';
+ const data=createShowData(bundle,async(action,options)=>options.body.operation==='read'?new Promise(done=>release=()=>done(bundle.profile)):confirmed);
+ const old=data.request('analysis-finalization',{refresh:true,body:{operation:'read'}});await data.request('analysis-finalization',{body:{operation:'complete',category:'visitors',basis}});release();await old;
+ assert.equal((await data.request('analysis-finalization',{body:{operation:'read'}})).finalization.basis.finalRevision,1);assert.ok(data.planningSnapshot().profile.finalization.categories.visitors.completedAt);data.dispose();
+});
