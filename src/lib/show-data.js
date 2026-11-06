@@ -1,5 +1,6 @@
 import {createOperationalReviewMemory} from './operational-review-memory.js';
 import {createProductionChoiceQueue} from './production-choice-saves.js';
+import {accessResultPayload} from './access-result.js';
 // Eén showcontext. Vertrouwelijke waarden uitsluitend in tijdelijk sessiegeheugen.
 export function createShowData(bundle,request,concertId){
   if(!bundle?.profile||!bundle.profile.analyses||!Number.isSafeInteger(bundle.profile.revision)||!bundle.profile.researchByNumber
@@ -33,7 +34,7 @@ export function createShowData(bundle,request,concertId){
         return structuredClone(data);
       }
       const before=values.get(action);let data;
-      try{data=await request(action,options);}catch(error){
+      try{data=accessResultPayload(await request(action,options));}catch(error){
         if(!disposed){forget(action);if(!read&&action==='measure'){const risks=values.get('show-risks');if(risks?.measureImplementations?.[body.measureId]){const copy=structuredClone(risks);copy.measureImplementations[body.measureId].completedAt=null;copy.measureImplementations[body.measureId].implemented=false;values.set('show-risks',copy);}}else if(!read)for(const key of ['show-profile','analysis-finalization','show-risks','floor-pressure','show-profile-pdf'])forget(key);riskVersion++;}
         notify();throw error;
       }
