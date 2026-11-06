@@ -38,6 +38,7 @@ jobs:
           node src/lib/report-menu.test.js
           node server/email-template.test.js
           node server/email-tests.test.js
+          node server/email-deliverability.test.js
           node server/ontrack.test.js
           node server/ontrack-concerts.test.js
           node --test server/ontrack-report/*.test.js
