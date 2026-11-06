@@ -11,7 +11,7 @@ export async function createEmailPreviews(directory){
  const base=accountActivationEmail({to:'preview@example.invalid',firstName:'Anne Marie',activationUrl:'https://esmojo.nl/#/activeren?token=preview-only-not-valid'});
  const fixtures={
   account:base,
-  'show-report':await showReport.buildTest({recipient:{email:'preview@example.invalid',firstName:'Anne Marie'},show:{key:'fictieve-preview',name:'Fictieve artiest',venue:'Fictieve concertlocatie',dates:['2026-11-14']}}),
+  'show-report':await showReport.buildTest({managerName:'Voorbeeld ESM',recipient:{email:'preview@example.invalid',firstName:'Anne Marie'},show:{key:'fictieve-preview',name:'Fictieve artiest',venue:'Fictieve concertlocatie',dates:['2026-11-14']}}),
   'account-long':{...base,title:'Stel je ESMOJO-account in – '+('UitgebreideTitelZonderWoordafbreking'.repeat(7)),recipient:{kind:'individual',firstName:'Anne Marie '+('LangeSamengesteldeVoornaam'.repeat(3))}},
   'account-general':{...base,recipient:{kind:'shared'}},
  };
