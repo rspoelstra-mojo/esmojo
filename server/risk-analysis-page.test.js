@@ -8,6 +8,7 @@ function harness(request,saveSelection,extra={}){
   class Element{
     constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.attributes={};this.className='';this.value='';this._text='';this.classList={toggle(){}};}
     append(...items){for(const item of items){item.parent=this;this.children.push(item);}}
+    prepend(...items){for(const item of items)item.parent=this;this.children.unshift(...items);}
     replaceChildren(...items){this.children=[];this._text='';this.append(...items);}
     set textContent(text){this._text=text;this.children=[];}get textContent(){return this._text+this.children.map(c=>c.textContent).join(' ');}
     setAttribute(k,v){this.attributes[k]=v;}removeAttribute(k){delete this.attributes[k];}
@@ -17,7 +18,7 @@ function harness(request,saveSelection,extra={}){
   const panel=new Element('section'),menu=new Element('a');
   const openAssessment=(section,{onBack})=>{section.replaceChildren();const back=new Element('button');back.textContent='Terug';back.onclick=onBack;const title=new Element('h2');title.textContent='Barrieropstelling';section.append(back,title);return()=>{};};
   const context=vm.createContext({access:async()=>{throw Error("Unexpected API request");},Promise,structuredClone,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{addEventListener(){},scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
-  for(const file of ['shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','src/lib/operational-review-memory.js','shared/barrier-layout.js','shared/operational-risk.js','src/production-assessment-ui.js','src/risk-review-card.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
+  for(const file of ['src/lib/background-saves.js','src/detail-back.js','shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','src/lib/operational-review-memory.js','shared/barrier-layout.js','shared/operational-risk.js','src/production-assessment-ui.js','src/risk-review-card.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
   const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection,...extra});
   return{page,panel,menu,focused:()=>focused,buttons:()=>panel.querySelectorAll('[data-risk-id]'),text:()=>panel.textContent};
 }
@@ -58,7 +59,7 @@ test('Productionele pagina’s openen direct of uitsluitend na bevestigd Ja; Nee
 test('Bewaarde Ja-keuze wordt hersteld; late laadreactie overschrijft een al geopende productionele pagina niet',async()=>{
   let resolve;const h=harness(()=>new Promise(done=>resolve=done));h.page.activate();h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='barrier_layout').onclick();
   resolve({state:'pending',risks:[],production:{revision:3,choices:{lasers:true}}});await tick();assert.ok(h.text().includes('Barrieropstelling'));assert.ok(!h.text().includes("Operationele risico's"));
-  h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,true);await tick();resolve({state:'pending',risks:[],production:{revision:3,choices:{lasers:true}}});await tick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,false);h.page.dispose();
+  h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,false);await tick();resolve({state:'pending',risks:[],production:{revision:3,choices:{lasers:true}}});await tick();assert.equal(h.panel.querySelectorAll('[data-production-id]').find(b=>b.dataset.productionId==='lasers').disabled,false);h.page.dispose();
 });
 test('Mislukte opslag activeert een productionele pagina niet en vereist opnieuw laden',async()=>{
   const h=harness(async()=>({state:'pending',risks:[],production:{revision:0,choices:{}}}),async()=>{throw Error('CONFLICT private body');});h.page.activate();await tick();

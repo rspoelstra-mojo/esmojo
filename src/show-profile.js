@@ -1,3 +1,5 @@
+import {detailBackButton} from './detail-back.js';
+import {backgroundSaves} from './lib/background-saves.js';
 import './show-profile.css';
 import { profileSaves,createProfileSaveQueue } from './lib/profile-saves.js';
 import { createShowProfilePdfWidget } from './showprofile-pdf.js';
@@ -27,7 +29,8 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
   const request = body => requestAccess('show-profile', { method: 'POST', body: { ...body, concertId: show.key } });
   const saves=readOnly?createProfileSaveQueue(request):profileSaves(show.key,request),drafts=saves.drafts;
   let firstPdfGeneration=false;
-  const ticketState = { drafts: {}, base: {} }; let disposeTickets = () => {}, ticketOpen = false;
+  const ticketState = readOnly?{drafts:{},base:{}}:backgroundSaves.form('tickets:'+show.key,()=>({drafts:{},base:{}}));
+  const finalDrafts=readOnly?{visitors:{},artist:{}}:backgroundSaves.form('finalization:'+show.key,()=>({visitors:{},artist:{}})); let disposeTickets = () => {}, ticketOpen = false;
   let disposePdf = () => {};
   let researchByNumber = null, researchErrors = {}, finalization = null, disposeFinal = () => {}, statusSequence = 0, finalizationError = '';
   const section = node('section', 'show-profile'); panel.append(section);
@@ -47,13 +50,14 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     catch { /* Geen afrondknop tonen met een onzekere status. */ if(!disposed&&sequence===statusSequence){finalization=null;finalizationError='Afrondstatus laden is niet gelukt.';if(!ticketOpen&&editorNumber===null)renderOverview();} }
   }
   function completeCategory(category) {
-    if(saves.pending.size||saves.errors.size||!finalization?.categories[category]?.ready||finalization.categories[category].completedAt)return;
+    if(finalDrafts[category].pending||saves.pending.size||saves.errors.size||!finalization?.categories[category]?.ready||finalization.categories[category].completedAt)return;
     const basis=structuredClone(finalization.basis);
-    disposeFinal=openAnalysisFinalization({category,submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;},onClose:()=>{disposeFinal=()=>{};if(!disposed){renderOverview();void refreshFinalization();}}});
+    disposeFinal=openAnalysisFinalization({category,draft:finalDrafts[category],submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;if(!ticketOpen&&editorNumber===null)renderOverview();},onClose:()=>{disposeFinal=()=>{};if(!disposed&&editorNumber===null&&!ticketOpen){renderOverview();if(!finalDrafts[category].pending)void refreshFinalization();}}});
   }
   function renderOverview(focusNumber) {
     disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
     if (loadError) { const retry = node('button', 'secondary-button', 'Opnieuw laden'); retry.type = 'button'; retry.onclick = load; section.append(message(loadError), retry); }
+    for(const draft of Object.values(finalDrafts))if(draft.error)section.append(message(draft.error));
     if(finalizationError){const retry=node('button','secondary-button','Afrondstatus opnieuw laden');retry.type='button';retry.onclick=refreshFinalization;section.append(message(finalizationError),retry);}
     for(const [number,failure]of saves.errors){const notice=message(`${entries[number-1].question}: ${failure} Je invoer is behouden. Open het onderwerp om opnieuw op te slaan.`);notice.setAttribute('role','alert');section.append(notice);}
     const layout = node('div', 'profile-layout'), categories = node('div', 'profile-categories'), aside = node('aside', 'profile-insights'); aside.setAttribute('aria-label', 'Analyseoverzicht');
@@ -73,13 +77,13 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
         const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
         const ticketBadge=node('span','analysis-status',finalization?.ticketsReady?'Afgerond':'Handmatig invoeren');ticketBadge.dataset.status=finalization?.ticketsReady?'completed':'pending';
         button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'),ticketBadge,arrow);
-        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,requestAccess,readOnly,state:ticketState,categoryIcon:icon('people'),onBack:()=>{renderOverview();if(ticketState.changed){ticketState.changed=false;void refreshFinalization();}}}); };
+        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,requestAccess,readOnly,state:ticketState,onStored:()=>{if(!disposed&&!ticketOpen)void refreshFinalization();},categoryIcon:icon('people'),onBack:()=>{renderOverview();if(ticketState.changed){ticketState.changed=false;void refreshFinalization();}}}); };
         row.append(button);card.append(row);
       }
       categories.append(card);
     }
     for(const [key,label]of [['visitors','Bezoekersanalyse afronden'],['artist','Artiestanalyse afronden']]) {
-      if(loaded&&!saves.pending.size&&!saves.errors.size&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.onclick=()=>completeCategory(key);aside.append(button);}
+      if(loaded&&!saves.pending.size&&!saves.errors.size&&finalization?.categories[key]?.ready&&!finalization.categories[key].completedAt){const button=node('button','analysis-complete profile-finalize-button',label);button.type='button';button.disabled=Boolean(finalDrafts[key].pending);button.onclick=()=>completeCategory(key);aside.append(button);}
     }
     if(!saves.pending.size&&!saves.errors.size&&finalization?.categories.visitors.completedAt&&finalization?.categories.artist.completedAt)disposePdf=createShowProfilePdfWidget(aside,{show,requestAccess,readOnly,onStale:()=>refreshFinalization(true),firstGeneration:firstPdfGeneration,onReady:()=>{firstPdfGeneration=false;}});
     const entry = entries[selected - 1], highlight = node('section', 'profile-highlight'), glyph = node('span', 'profile-highlight-icon'); glyph.innerHTML = icon('info');
@@ -92,7 +96,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     if (!loaded || disposed||saves.pending.has(number)) return;
     disposePdf(); disposePdf=()=>{}; selected = number; editorNumber = number; const entry = entries[number - 1];
     section.replaceChildren();
-    const back = node('button', 'profile-back', '← Terug naar overzicht'); back.type = 'button';
+    const back = node('button', 'profile-back', '← Terug naar overzicht'); detailBackButton(back);
     const header = node('div', 'analysis-editor-header'), glyph = node('span', 'profile-category-icon'); glyph.innerHTML = icon(entry.category.icon);
     const intro = node('div', 'analysis-editor-intro'), title = node('h2', '', entry.question); title.tabIndex = -1; intro.append(title, node('p', '', entry.category.title));
     header.append(glyph, intro, badgeFor(number));
@@ -119,7 +123,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     const sources = node('details', 'analysis-research-details'), sourcesTitle = node('summary', '', 'Bronnen (0)'), sourceList = node('div', 'analysis-research-sources'); sources.append(sourcesTitle, sourceList);
     aiCard.append(researchDate, aiSummary, full, sources);
     const error = message(''), actions = node('div', 'analysis-editor-actions'), draft = node('button', 'secondary-button', 'Opslaan als concept'), complete = node('button', 'analysis-complete', 'Afronden');
-    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(aiCard, summaryCard, error, actions); section.append(back, header, form); title.focus({ preventScroll: true });
+    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(aiCard, summaryCard, error, actions); header.prepend(back);section.append(header, form); title.focus({ preventScroll: true });
     window.scrollTo({ top: 0, left: window.scrollX, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     back.onclick = () => { if (!busy) { drafts.set(number, text.value); renderOverview(number); } };
     let ready = false; text.disabled = true;
@@ -158,7 +162,8 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }
   }
   const unsubscribe=saves.subscribe(()=>{if(disposed||!saves.server)return;records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization||null;if(loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
+  const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&loaded&&!ticketOpen&&editorNumber===null)renderOverview();});
   const ready=load(true);
-  const dispose=() => { disposed = true; unsubscribe(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
+  const dispose=() => { disposed = true; offActivity();unsubscribe();if(readOnly)saves.cancel(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
   dispose.ready=ready;return dispose;
 }

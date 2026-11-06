@@ -1,0 +1,9 @@
+.save-notice { position: fixed; right: 20px; bottom: 20px; z-index: 1200; width: min(400px,calc(100vw - 40px)); max-height: 40vh; overflow: auto; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); color: var(--text); box-shadow: 0 6px 24px #0002; font-size: 13px; line-height: 1.5; }
+.save-notice p { margin: 0; }
+.save-notice > div { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.save-notice span { flex-basis: 100%; }
+.save-notice a { color: var(--profile-blue,#0046f2); }
+.save-notice button { border: 0; background: transparent; color: var(--muted); font: inherit; cursor: pointer; padding: 0; }
+
+.save-notice { pointer-events: none; }
+.save-notice a, .save-notice button { pointer-events: auto; }

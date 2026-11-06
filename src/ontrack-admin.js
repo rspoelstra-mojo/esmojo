@@ -1,10 +1,11 @@
+import {backgroundSaves} from './lib/background-saves.js';
 import './ontrack-admin.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 const node=(tag,className,text)=>{const el=document.createElement(tag);el.className=className;if(text!==undefined)el.textContent=text;return el;};
 
 export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
-  let disposed=false,busy=false,data=null,selection=null,dirty=false,reloadAfterBusy=false;const reportBusy=new Set(),sourceDrafts=new Map();
+  let disposed=false,busy=false,data=null,selection=null,dirty=false,reloadAfterBusy=false;const recipientDraft=backgroundSaves.form('ontrack-recipients'),reportBusy=backgroundSaves.form('ontrack-actions',()=>new Set()),sourceDrafts=backgroundSaves.form('ontrack-sources',()=>new Map());
   const loading=createSubmenuLoading(submenuLink,content),view=node('section','ontrack-view');content.replaceChildren(view);
   const title=node('h1','','OnTrack'),notice=node('p','ontrack-notice');notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');
   const refresh=node('button','secondary-button','Actuele gegevens laden');refresh.type='button';refresh.onclick=()=>void load();
@@ -18,7 +19,7 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
         const bytes=Uint8Array.from(atob(result.pdfBase64),character=>character.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})),link=document.createElement('a');link.href=url;link.download=result.fileName;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
       }else{sourceDrafts.delete(body.sourceId);await load();if(!disposed)status(body.operation==='link'?'Concertkoppeling opgeslagen.':body.operation==='send'?'Verzending aangevraagd.':'Verwerking opnieuw aangevraagd.');}
     }catch{if(!disposed)status('De actie is niet bevestigd. Je invoer is behouden. Vernieuw de gegevens en probeer opnieuw.',true);}
-    finally{reportBusy.delete(key);finish();if(!disposed)render();}
+    finally{reportBusy.delete(key);backgroundSaves.changed();finish();if(!disposed)render();}
   }
   const errorText={CSV_HEADERS:'De 17 CSV-kolommen of hun volgorde kloppen niet.',CSV_ENCODING:'Het bestand is geen geldige UTF-8-CSV.',CSV_QUOTES:'Ongeldige CSV-aanhalingstekens.',CSV_COLUMNS:'Een CSV-rij heeft niet precies 17 kolommen.',CSV_EMPTY:'De CSV bevat geen incidenten.',CSV_TIME:'Datum/tijd kon niet worden gelezen.',CSV_TIME_NONEXISTENT:'Deze kloktijd bestaat niet door de zomertijdwisseling.',CSV_AFFECTED_PERSON:'Aantal personen is ongeldig.',CSV_ID:'Een incident-ID ontbreekt of komt dubbel voor.',CSV_SHOW_MISMATCH:'De showdatum sluit niet aan op de incidentdatums.',SOURCE_MISSING:'De bron-CSV staat niet meer in de OnTrack-map.',REPORT_GLYPH:'Een teken ontbreekt in het vaste PDF-lettertype.',REPORT_TYPE_LEGEND_LAYOUT:'De typelegenda past niet in de afgesproken kaart.',REPORT_LOCATION_LAYOUT:'Locatieteksten passen niet in de afgesproken kaart.',PDF_TOO_LARGE:'De PDF is groter dan de technische downloadlimiet.'};
   function render(){
@@ -35,7 +36,7 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
     }
     latest.append(node('p','ontrack-muted',data.reportAssetsReady===false?'De definitieve PDF-verwerking wacht op het originele ON-icoon. Er worden geen rapportmails verstuurd.':data.processingStatus==='running'?'Rapportages worden op de achtergrond verwerkt.':'Nieuwe CSV’s worden automatisch gecontroleerd. Het vinkje verschijnt pas na bevestigde verzending.'));grid.append(latest);
     const recipients=node('section','ontrack-card ontrack-recipients');recipients.append(node('h2','','Ontvangers'),node('p','ontrack-muted','Selecteer de accounts die de OnTrack-rapportages per e-mail moeten ontvangen. Een nieuwe selectie geldt voor nieuwe rapportages.'));
-    const form=node('form','ontrack-form'),fieldset=node('fieldset',''),legend=node('legend','visually-hidden','Ontvangeraccounts');fieldset.append(legend);fieldset.disabled=busy;
+    const form=node('form','ontrack-form'),fieldset=node('fieldset',''),legend=node('legend','visually-hidden','Ontvangeraccounts');fieldset.append(legend);fieldset.disabled=busy||recipientDraft.busy;
     const available=new Set(data.accounts.map(account=>account.id));
     for(const account of [...data.accounts,...[...selection].filter(id=>!available.has(id)).map(id=>({id,unavailable:true}))]){
       const label=node('label','ontrack-recipient'),check=node('input','');check.type='checkbox';check.value=account.id;check.checked=selection.has(account.id);
@@ -44,13 +45,13 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
     }
     if(!data.accounts.length)fieldset.append(node('p','ontrack-muted','Geen actieve accounts beschikbaar.'));
     const save=node('button','primary-button','Ontvangers opslaan');save.type='submit';
-    function update(){save.disabled=busy||!dirty||[...selection].some(id=>!available.has(id));}
+    function update(){save.disabled=busy||recipientDraft.busy||!dirty||[...selection].some(id=>!available.has(id));}
     form.onsubmit=async event=>{
-      event.preventDefault();if(busy||save.disabled)return;
-      busy=true;refresh.disabled=true;fieldset.disabled=true;update();const finish=loading.start();status('');
-      try{const result=await request('ontrack',{method:'PATCH',body:{revision:data.revision,recipientIds:[...selection]}});if(disposed)return;data=result;selection=new Set(result.recipientIds);dirty=false;status('Ontvangers opgeslagen.');}
-      catch{if(!disposed)status('Opslaan is niet gelukt. Je selectie is behouden. Laad de actuele gegevens en probeer opnieuw.',true);}
-      finally{busy=false;finish();if(!disposed){refresh.disabled=false;render();if(reloadAfterBusy){reloadAfterBusy=false;void load();}}}
+      event.preventDefault();if(busy||recipientDraft.busy||save.disabled)return;
+      recipientDraft.ids=[...selection];recipientDraft.busy=true;recipientDraft.error='';busy=true;refresh.disabled=true;fieldset.disabled=true;update();const finish=loading.start();status('');
+      try{const result=await request('ontrack',{method:'PATCH',body:{revision:data.revision,recipientIds:recipientDraft.ids}});recipientDraft.ids=null;recipientDraft.error='';if(disposed)return;data=result;selection=new Set(result.recipientIds);dirty=false;status('Ontvangers opgeslagen.');}
+      catch{recipientDraft.error='Opslaan is niet bevestigd.';if(!disposed)status('Opslaan is niet gelukt. Je selectie is behouden. Laad de actuele gegevens en probeer opnieuw.',true);}
+      finally{recipientDraft.busy=false;busy=false;backgroundSaves.changed();finish();if(!disposed){refresh.disabled=false;render();if(reloadAfterBusy){reloadAfterBusy=false;void load();}}}
     };
     form.append(fieldset,save);recipients.append(form);grid.append(recipients);
     if(data.sources?.length){
@@ -76,9 +77,10 @@ export function createOnTrackAdminView(content,submenuLink,{request=access}={}){
     try{
       const result=await request('ontrack');if(disposed)return;
       if(!Number.isSafeInteger(result.received)||!Number.isSafeInteger(result.converted)||!Number.isSafeInteger(result.revision)||!Array.isArray(result.latest)||!Array.isArray(result.accounts)||!Array.isArray(result.recipientIds))throw Error('Invalid status');
-      data=result;if(!dirty)selection=new Set(data.recipientIds);status(dirty?'Actuele gegevens geladen. Je nog niet opgeslagen selectie is behouden.':'');
+      data=result;if(!dirty)selection=new Set(recipientDraft.ids||data.recipientIds);if(recipientDraft.ids)dirty=true;status(dirty?'Actuele gegevens geladen. Je nog niet opgeslagen selectie is behouden.':'');
     }catch{if(!disposed){status('OnTrack kon niet worden geladen. Probeer opnieuw.',true);if(!data)view.replaceChildren(toolbar,notice);}}
     finally{busy=false;finish();if(!disposed){refresh.disabled=false;render();if(reloadAfterBusy){reloadAfterBusy=false;void load();}}}
   }
-  void load();return()=>{disposed=true;data=null;selection=null;sourceDrafts.clear();reportBusy.clear();loading.dispose();};
+  const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&data&&!busy)render();});
+  void load();return()=>{disposed=true;offActivity();data=null;selection=null;loading.dispose();};
 }

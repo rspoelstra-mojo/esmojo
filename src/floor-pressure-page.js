@@ -1,3 +1,5 @@
+import {saveRequestInfo} from './lib/background-saves.js';
+import {detailBackButton} from './detail-back.js';
 import './production-assessment.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
@@ -17,7 +19,7 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
   let disposed=false,ready=false,reading=false,record=null,basis=null,tickets=null,type=null,rows=[],riskLevel=null,note='',queue=null;
   const noteDrafts={};let rowControls=[];
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
-  section.replaceChildren();const root=node('section','production-assessment'),back=node('button','profile-back','← Terug naar overzicht');back.type='button';back.onclick=onBack;
+  section.replaceChildren();const root=node('section','production-assessment'),back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=onBack;
   const title=node('h2','assessment-page-title','Vloerdruk');title.tabIndex=-1;
   const block=node('form','assessment-block'),source=node('p','assessment-note'),ticketLine=node('p','floor-ticket-line','Verkochte tickets: '),ticketValue=node('strong',''),ticketDetail=node('p','floor-ticket-detail');ticketLine.append(ticketValue);
   const tableWrap=node('div','floor-table-wrap'),table=node('table','floor-table'),head=node('thead',''),headRow=node('tr','');
@@ -28,7 +30,7 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
   const status=node('p','assessment-status'),error=node('p','profile-message');error.setAttribute('role','alert');const reload=node('button','secondary-button','Actuele beoordeling laden');reload.type='button';reload.hidden=true;
   const missing=node('div','assessment-fields'),missingText=node('p','assessment-note','Selecteer eerst een barrieropstelling.'),openBarrier=node('button','secondary-button','Barrieropstelling openen');openBarrier.type='button';openBarrier.onclick=onBarrier;missing.append(missingText,openBarrier);
   const actions=node('div','assessment-actions'),edit=node('button','secondary-button','Vloerdruk bewerken'),complete=node('button','analysis-complete','Vloerdruk afronden');edit.type='button';complete.type='submit';actions.append(edit,complete);
-  block.append(source,ticketLine,ticketDetail,missing,tableWrap,add,total,review,status,error,reload,actions);root.append(back,title,block);section.append(root);
+  block.append(source,ticketLine,ticketDetail,missing,tableWrap,add,total,review,status,error,reload,actions);const heading=node('div','analysis-editor-header');heading.append(back,title);root.append(heading,block);section.append(root);
   const snapshot=()=>({rows:rows.map(({id,name,visitors,area})=>({id,name,visitors,area})),riskLevel,note:riskLevel==='low'?'':note});
   const call=(operation,payload={})=>request({operation,concertId:show.key,...payload});
   function valid(){try{validateFloorData(snapshot(),type,true);return true;}catch{return false;}}
@@ -66,7 +68,7 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
     for(const el of [tableWrap,total,review,ticketLine,ticketDetail])el.hidden=!available;add.hidden=!available||type!=='custom'||Boolean(record?.completed);add.disabled=locked;
     for(const control of rowControls)if(!control.output)control.disabled=locked;risk.update(riskLevel,locked);
     noteField.hidden=!['none','medium','high'].includes(riskLevel);noteLabel.textContent=riskLevel==='none'?'Toelichting':'Beheersmaatregelen';notes.required=!noteField.hidden;notes.disabled=locked;
-    complete.hidden=!available||Boolean(record?.completed);complete.disabled=locked||queue?.busy||queue?.failed||!valid();edit.hidden=!available||!record?.completed;edit.disabled=reading||queue?.busy;back.disabled=Boolean(queue?.exclusive);
+    complete.hidden=!available||Boolean(record?.completed);complete.disabled=locked||queue?.failed||!valid();edit.hidden=!available||!record?.completed;edit.disabled=reading||queue?.busy;back.disabled=false;
     status.textContent=seated?'✓ Vloerdruk niet van toepassing bij Seated — Geen risico':record?.completed?'✓ Vloerdruk afgerond':queue?.failed?'Opslag niet bevestigd':queue?.busy?'Concept wordt opgeslagen…':record?.revision?'Concept opgeslagen':'';status.classList.toggle('assessment-completed',Boolean(record?.completed));
   }
   function accept(data,replace){
@@ -78,13 +80,13 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();
-    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);queue=createAssessmentQueue({snapshot,send:(operation,payload)=>call(operation,{...payload,revision:record?.revision||0,basis}),stored:accept,changed:update,error:message=>{error.textContent=message+' Je invoer blijft hier staan. Laad de actuele beoordeling om opnieuw te beginnen.';reload.hidden=false;}});ready=true;}
+    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);queue=createAssessmentQueue({info:saveRequestInfo('floor-pressure',{concertId:show.key}),snapshot,send:(operation,payload)=>call(operation,{...payload,revision:record?.revision||0,basis}),stored:accept,changed:update,error:message=>{error.textContent=message+' Je invoer blijft hier staan. Laad de actuele beoordeling om opnieuw te beginnen.';reload.hidden=false;}});ready=true;}
     catch(failure){if(!disposed){error.textContent=failure.message;reload.hidden=false;}}
     finally{reading=false;finish?.();update();}
   }
   add.onclick=()=>{rows.push({id:'custom_'+crypto.randomUUID().replaceAll('-',''),name:'',visitors:null,area:null});renderRows();queue.save();update();};
   notes.oninput=()=>{note=notes.value;queue.later();update();};notes.onblur=()=>{if(ready&&record&&!record.completed&&!queue.failed)queue.save();};
-  block.onsubmit=event=>{event.preventDefault();if(complete.disabled||!block.reportValidity())return;void queue.action('complete',{data:snapshot()});};edit.onclick=()=>queue.action('reopen');reload.onclick=load;
+  block.onsubmit=event=>{event.preventDefault();if(complete.disabled||!block.reportValidity())return;void queue.action('complete',{data:snapshot()});onBack();};edit.onclick=()=>queue.action('reopen');reload.onclick=load;
   update();void load();title.focus({preventScroll:true});
   return()=>{disposed=true;const pending=queue?.dispose();loading?.dispose();return pending;};
 }

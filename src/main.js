@@ -1,3 +1,5 @@
+import {backgroundSaves,installSaveExitWarning} from './lib/background-saves.js';
+import {createSaveNotice} from './save-notice.js';
 import {homeDashboardCache} from './lib/home-cache.js';
 import {createHomeDashboard} from './home-dashboard.js';
 import {createReportsPage} from './reports-page.js';
@@ -20,6 +22,7 @@ import { createProfileView, renderAvatar } from './profile.js';
 import { createSubmenuSearch } from './submenu-search.js';
 import { createShowsSubmenu, refreshShowsMenu } from './shows.js';
 
+installSaveExitWarning();createSaveNotice();
 let profile = null, menuRefreshTimer=null;
 let disposePage = () => {}, disposeLayout = () => {};
 const submenuSearch = createSubmenuSearch({
@@ -51,7 +54,7 @@ document.querySelector('#navigation').innerHTML = [
 
 function updateModuleProfile(current){
   const changed=profile?.id!==current.id||profile?.role!==current.role||moduleFingerprint(profile)!==moduleFingerprint(current);
-  if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();}
+  if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();}
   homeDashboardCache.bind(current);reportCatalogueCache.bind(current);
   profile=current;
   document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=Boolean(module&&!hasModule(profile,module));});
@@ -154,7 +157,7 @@ startAuth({
     renderPage();
   },
   onSignedOut() {
-    clearProfileSaves();clearAssessmentSaves();showMemory.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
+    clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
     homeDashboardCache.clear();reportCatalogueCache.clear();
     profile = null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
