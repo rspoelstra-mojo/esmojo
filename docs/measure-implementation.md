@@ -4,7 +4,9 @@ Een detailpagina hergebruikt het risicotitel-/beoordelingsontwerp. Operationele
 definities komen uit de actuele opgeslagen risicoanalyse. Voor productieonderdelen
 zonder opgeslagen definitie vermeldt de pagina dat die ontbreekt. De voorgestelde
 maatregel is bewerkbaar; de oorspronkelijke risicoklasse blijft behouden. Suggesties
-zijn algemene procesaandachtspunten. Document uploaden staat als eerste kaart.
+zijn algemene procesaandachtspunten. Document uploaden staat als afzonderlijke kaart naast de voorgestelde maatregel.
+Beide kaarten hebben gelijke hoogte, ook bij bewerken of toegevoegde documenten.
+Suggesties bevatten uitsluitend de drie informatieve kaarten.
 
 `shared/measure-workflow.js` bepaalt actuele maatregelen, bronbinding, strikte
 requestcontracten en geldige implementatie. `MeasureValidators.gs` is dezelfde bron
@@ -20,7 +22,8 @@ oorspronkelijke klasse en maatregeltekst. Een gewijzigde bron, maatregeltekst of
 bijlage vereist een nieuwe beoordeling/afronding. De historie blijft bewaard.
 Een gewijzigde briefingkeuze heropent de implementatie niet.
 
-Alleen expliciet afronden met een geldige klasse zet Geïmplementeerd. Tot dat
+Alleen expliciet afronden met een geldige klasse én gekozen Ja/Nee voor briefing
+zet Geïmplementeerd. Beide keuzes beginnen onbeantwoord. Tot dat
 moment: Nog te implementeren. Heropenen is mogelijk. Planning rondt pas af als
 alle huidige maatregelen zijn geïmplementeerd en alle oorspronkelijke risico's
 geldig beoordeeld zijn. De maatregelenvrije afrondregel blijft intact.
@@ -40,3 +43,14 @@ bevat uitsluitend de afrondvlag. Geen nieuwe AI-dienst, briefingflow of mailacti
 Tests: `server/measure-implementation.test.js`, aanvullende accounts-API-, show-
 context-, maatregelen- en planningtests. Browsercontrole gebruikt synthetische
 gegevens via de echte handler en getekende Drive-fixture, zonder productiewrites.
+
+
+Vanaf V1.53 heeft Meenemen in briefing een eigen kaart met Ja/Nee-radioknoppen.
+Beide zijn neutraal grijs; alleen gekozen Ja is groen. Geen automatische Nee.
+`briefing` is null zolang onbeantwoord, daarna boolean. `briefingChosen` bewaart
+of de nieuwe keuze expliciet is bevestigd; het is geen nieuwe briefingflow.
+Oude true is een eerdere bewuste selectie. Oude false zonder bevestigingsveld
+was de impliciete uit-stand en geldt als onbeantwoord; leesacties herschrijven
+geen historie. Deze onzekere oude keuze telt ook niet mee voor implementatie/
+planning. Opslaan van een losse score blijft mogelijk; complete vereist beide
+velden op API- én Drive-niveau. De bestaande document- en broncontroles blijven.
