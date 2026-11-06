@@ -51,8 +51,8 @@ export function createOnTrackReportService({store=createOnTrackReportStore(),ren
    for(let i=0;i<10;i++){
     const delivery=await store('delivery-reserve',null,{jobId:randomUUID()});if(delivery.state!=='reserved')break;
     const reference={reportId:delivery.reportId,recipientId:delivery.recipientId,jobId:delivery.jobId};
-    try{const bytes=Buffer.from(delivery.pdfBase64,'base64');if(hash(bytes)!==delivery.sha256)throw Error('REPORT_UNAVAILABLE');
-     const message=showReportEmail({to:delivery.recipient.email,firstName:delivery.recipient.firstName,show:delivery.show,pdf:{filename:delivery.fileName,content:bytes}}),confirmation=await mail(message,{idempotencyKey:delivery.idempotencyKey});
+    try{if(delivery.mailVersion!=='online-report-v1')throw Error('REPORT_UNAVAILABLE');const bytes=Buffer.from(delivery.pdfBase64,'base64');if(hash(bytes)!==delivery.sha256)throw Error('REPORT_UNAVAILABLE');
+     const message=showReportEmail({to:delivery.recipient.email,firstName:delivery.recipient.firstName,show:delivery.show,managerName:delivery.managerName,pdf:{filename:delivery.fileName,content:bytes}}),confirmation=await mail(message,{idempotencyKey:delivery.idempotencyKey});
      if(typeof confirmation?.id!=='string'||!confirmation.id)throw Error('DELIVERY_UNCONFIRMED');
      // Nooit opnieuw mailen om alleen een verloren opslagbevestiging te herstellen.
      try{await store('delivery-commit',null,{...reference,providerId:confirmation.id});}catch{await store('delivery-commit',null,{...reference,providerId:confirmation.id});}sent++;
