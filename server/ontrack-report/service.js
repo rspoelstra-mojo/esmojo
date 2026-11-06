@@ -32,9 +32,8 @@ export function createOnTrackReportService({store=createOnTrackReportStore(),ren
   },
   async run(){
    await store('scan',null);let loaded;try{loaded=await assets();}catch{loaded=null;}
-   if(!loaded?.icon){await store('pipeline',null,{status:'assets-missing'});return{ok:true,processed:0,sent:0,blocked:'ONTRACK_ICON_MISSING'};}
-   await store('pipeline',null,{status:'running'});let processed=0,sent=0;
-   for(let i=0;i<2;i++){
+   const blocked=!loaded?.icon;await store('pipeline',null,{status:blocked?'assets-missing':'running'});let processed=0,sent=0;
+   for(let i=0;i<(blocked?0:2);i++){
     const job=await store('reserve',null,{jobId:randomUUID(),layoutVersion:SHOW_REPORT_LAYOUT});if(job.state!=='reserved')break;
     try{
      const source=Buffer.from(job.csvBase64,'base64');if(hash(source)!==job.sourceHash)throw Error('SOURCE_CHANGED');
@@ -51,14 +50,14 @@ export function createOnTrackReportService({store=createOnTrackReportStore(),ren
    for(let i=0;i<10;i++){
     const delivery=await store('delivery-reserve',null,{jobId:randomUUID()});if(delivery.state!=='reserved')break;
     const reference={reportId:delivery.reportId,recipientId:delivery.recipientId,jobId:delivery.jobId};
-    try{if(!['online-report-v1','online-report-v2','online-report-v3'].includes(delivery.mailVersion))throw Error('REPORT_UNAVAILABLE');const bytes=Buffer.from(delivery.pdfBase64,'base64');if(hash(bytes)!==delivery.sha256)throw Error('REPORT_UNAVAILABLE');
-     const message=showReportEmail({to:delivery.recipient.email,firstName:delivery.recipient.firstName,show:delivery.show,managerName:delivery.managerName,senderId:delivery.senderId||'default',legacyHeader:delivery.mailVersion==='online-report-v1',includePdf:delivery.mailVersion!=='online-report-v3',pdf:{filename:delivery.fileName,content:bytes}}),confirmation=await mail(message,{idempotencyKey:delivery.idempotencyKey});
+    try{if(!['online-report-v1','online-report-v2','online-report-v3'].includes(delivery.mailVersion))throw Error('REPORT_UNAVAILABLE');const includePdf=delivery.mailVersion!=='online-report-v3',bytes=includePdf?Buffer.from(delivery.pdfBase64||'','base64'):null;if(includePdf&&hash(bytes)!==delivery.sha256)throw Error('REPORT_UNAVAILABLE');
+     const message=showReportEmail({to:delivery.recipient.email,firstName:delivery.recipient.firstName,show:delivery.show,managerName:delivery.managerName,senderId:delivery.senderId||'default',legacyHeader:delivery.mailVersion==='online-report-v1',includePdf,...(includePdf?{pdf:{filename:delivery.fileName,content:bytes}}:{})}),confirmation=await mail(message,{idempotencyKey:delivery.idempotencyKey});
      if(typeof confirmation?.id!=='string'||!confirmation.id)throw Error('DELIVERY_UNCONFIRMED');
      // Nooit opnieuw mailen om alleen een verloren opslagbevestiging te herstellen.
      try{await store('delivery-commit',null,{...reference,providerId:confirmation.id});}catch{await store('delivery-commit',null,{...reference,providerId:confirmation.id});}sent++;
     }catch{await store('delivery-fail',null,reference).catch(()=>{});}
    }
-   await store('pipeline',null,{status:'idle'});return{ok:true,processed,sent};
+   if(!blocked)await store('pipeline',null,{status:'idle'});return{ok:true,processed,sent,...(blocked?{blocked:'ONTRACK_ICON_MISSING'}:{})};
   },
  };
 }

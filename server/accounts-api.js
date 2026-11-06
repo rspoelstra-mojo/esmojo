@@ -1,3 +1,4 @@
+import {createOnlineReportMailService} from './online-report-mail.js';
 import {createWebCatalogueService} from './web-report-catalogue.js';
 import {createWebReportService} from './report-web.js';
 import {createOnTrackReportStore,createOnTrackReportService} from './ontrack-report/service.js';
@@ -131,9 +132,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }catch(error){const code=error.message,status=code==='FORBIDDEN'?403:code==='VALIDATION'?400:code==='NOT_FOUND'?404:503;
           return reply(status,{error:status===403?'Je hebt geen toegang tot Shows.':status===400?'Ongeldig verzoek.':status===404?'Deze show is niet beschikbaar.':'Het planningdashboard kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'shows'}:{})});}
       }
+      if(action==='report-alerts'){if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}try{return reply(200,await ontrackReportStore('pdf-alerts',actor));}catch(error){return reply(error.message==='FORBIDDEN'?403:503,{error:'Rapportagemeldingen zijn niet beschikbaar.'});}}
       if(action==='report-menu'){
         if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}
-        try{return reply(200,await createWebCatalogueService({store:ontrackReportStore}).menu(actor));}catch(error){return reply(error.message==='FORBIDDEN'?403:503,{error:'Het rapportagesmenu kon niet worden geladen.',...(error.message==='FORBIDDEN'?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
+        try{return reply(200,await createWebCatalogueService({store:ontrackReportStore,onPublished:()=>background(createOnlineReportMailService({store:ontrackReportStore,mail}).run().catch(()=>{}))}).menu(actor));}catch(error){return reply(error.message==='FORBIDDEN'?403:503,{error:'Het rapportagesmenu kon niet worden geladen.',...(error.message==='FORBIDDEN'?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
       }
       if(action==='report-web'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
@@ -225,7 +227,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
       if(action==='ontrack-report'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-        try{const service=createOnTrackReportService({store:ontrackReportStore,mail}),result=await service.action(actor,req.body);if(['link','retry','send'].includes(req.body.operation))background(service.run().catch(()=>{}));return reply(200,result);}
+        try{const service=createOnTrackReportService({store:ontrackReportStore,mail}),result=await service.action(actor,req.body);if(['link','retry','send'].includes(req.body.operation))background((async()=>{await createOnlineReportMailService({store:ontrackReportStore,mail}).run();await service.run();})().catch(()=>{}));return reply(200,result);}
         catch(error){const status=error.message==='VALIDATION'?400:error.message==='REPORT_CONFLICT'?409:error.message==='FORBIDDEN'?403:503;return reply(status,{error:status===400?'Controleer de CSV- en concertkeuze.':status===409?'De CSV of koppeling is intussen gewijzigd. Vernieuw de gegevens.':'De rapportage kon niet worden geladen of verwerkt. De bron en eerdere rapporten blijven behouden.'});}
       }
       if(action==='ontrack'){

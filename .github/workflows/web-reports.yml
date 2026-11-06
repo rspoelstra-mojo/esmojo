@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
-      - name: Validate private CSVs without PDF generation or email delivery
+      - name: Publish web reports and deliver online mail independently of PDF generation
         run: |
           node --input-type=module <<'JS'
           const endpoint='https://esmojo.nl/api/web-reports-sync',url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
