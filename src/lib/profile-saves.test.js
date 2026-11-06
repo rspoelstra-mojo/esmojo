@@ -19,3 +19,11 @@ test('Navigatie kan luisteraar verwijderen zonder write te stoppen; afmelden sto
  let resolve,calls=0,notifications=0;const queue=createProfileSaveQueue(()=>{calls++;return new Promise(done=>resolve=done);});queue.sync(state());const off=queue.subscribe(()=>notifications++);queue.enqueue(1,'draft','Invoer');off();const count=notifications;resolve(state(1));await tick();assert.equal(notifications,count);assert.equal(queue.server.revision,1);
  queue.enqueue(2,'draft','Nog bezig');queue.enqueue(3,'draft','Niet starten');queue.cancel();resolve(state(2));await tick();assert.equal(calls,2);assert.equal(queue.drafts.size,0);assert.equal(queue.pending.size,0);
 });
+
+test('Alleen geaccepteerde serverbevestigingen worden als bevestigd gemeld; lokale editor-sync of oude respons niet',async()=>{
+ const finalization={categories:{visitors:{ready:false,completedAt:null},artist:{ready:false,completedAt:null}},ticketsReady:false,basis:{profileRevision:1,finalRevision:0,ticketVersions:{ticket_sales:0,visitor_origins:0,domestic_origins:0}}};
+ const events=[],queue=createProfileSaveQueue(async()=>({revision:2,analyses:{1:{status:'draft',summary:'bevestigd'}},finalization:{...finalization,basis:{...finalization.basis,profileRevision:2}}}));
+ queue.sync({revision:1,analyses:{},finalization});queue.subscribe(confirmed=>events.push(confirmed));queue.sync({revision:1,analyses:{},finalization});assert.equal(events.at(-1),false);
+ queue.enqueue(1,'draft','bevestigd');await new Promise(resolve=>setImmediate(resolve));assert.ok(events.includes(true));assert.equal(queue.server.revision,2);
+ queue.sync({revision:1,analyses:{},finalization},true);assert.equal(events.at(-1),false);assert.equal(queue.server.revision,2);queue.cancel();
+});
