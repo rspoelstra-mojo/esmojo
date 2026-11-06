@@ -58,3 +58,9 @@ test('Resend krijgt een gevalideerde idempotentiesleutel voor dezelfde bewuste t
  await sendEmail(message(),options);assert.equal(calls[0].headers['Idempotency-Key'],options.idempotencyKey);
  await assert.rejects(sendEmail(message(),{...options,idempotencyKey:'bad\r\nheader'}));assert.equal(calls.length,1);
 });
+
+test('Variabele footer en ondertekening blijven tekst, zonder HTML-injectie of headerregels',()=>{
+ const attack='<img src=x onerror=alert(1)>',rendered=renderEmailTemplate({...message(),senderName:attack,footer:attack});
+ assert.equal(rendered.html.includes(attack),false);assert.ok(rendered.text.endsWith(attack));assert.ok(rendered.html.includes('&lt;img'));
+ for(const footer of ['{{onvervuld}}','\r\nBcc: ander@example.invalid'])assert.throws(()=>renderEmailTemplate({...message(),footer}));
+});

@@ -2,10 +2,11 @@ import {emailAttachments} from './email-attachments.js';
 // Alleen servercode. Geen vrije HTML of templates van gebruikers uitvoeren.
 import {readFileSync} from 'node:fs';
 export const EMAIL_BRAND='Event Safety Mobility Operations';
+export const EMAIL_CONFIDENTIAL_FOOTER='Alle informatie in deze mail, en in ESMOJO, is strikt vertrouwelijk en mag niet verspreid worden zonder nadrukkelijke toestemming van MOJO Concerts.';
 export const EMAIL_LOGO_URL='https://esmojo.nl/brand/ESMOJO-logo-wit-email.png';
 export const ACCOUNT_EMAIL_CONTEXT='Account activeren'; // Expliciet door de gebruiker bevestigd.
 const template=readFileSync(new URL('./email/template.html',import.meta.url),'utf8');
-const fields=new Set(['to','subject','preheader','title','context','recipient','paragraphs','information','actions','closing','senderName','attachments','requirePdfAttachment']);
+const fields=new Set(['to','subject','preheader','title','context','recipient','paragraphs','information','actions','closing','senderName','attachments','requirePdfAttachment','footer']);
 export const escapeEmailHtml=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function text(value,name,{max=15000,blank=false,line=false}={}){
   if(typeof value!=='string'||value.length>max||(!blank&&!value.trim())||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value)||(line&&/[\r\n]/.test(value))||/{{[^{}]*}}/.test(value))throw Error('Ongeldige e-mailinhoud: '+name);
@@ -52,14 +53,15 @@ export function renderEmailTemplate(message){
   if(!paragraphs.length)throw Error('E-mailinhoud ontbreekt.');
   const information=list(message.information||[],'informatieblokken').map(block=>({title:text(block?.title,'bloktitel',{max:500,line:true}),text:text(block?.text,'bloktekst')}));
   const actions=list(message.actions||[],'acties').map(action=>({label:text(action?.label,'actie',{max:200,line:true}),url:emailUrl(action?.url)}));
-  const closing=message.closing===undefined?'':text(message.closing,'afsluiting',{blank:true}),sender=text(message.senderName||'ESMOJO','afzendernaam',{max:200,line:true});
+  const closing=message.closing===undefined?'':text(message.closing,'afsluiting',{blank:true}),sender=text(message.senderName||'ESMOJO','afzendernaam',{max:300,line:true});
+  const footer=text(message.footer===undefined?EMAIL_BRAND:message.footer,'footer',{max:1000,line:true});
   const p=value=>'<p style="margin:0 0 16px;font-size:16px;line-height:26px;color:#334155;overflow-wrap:break-word;word-break:break-word;">'+bodyText(value)+'</p>';
   const info=information.map(block=>'<tr><td class="pad" style="padding:8px 40px 24px;"><table role="presentation" width="100%" bgcolor="#f5f7fa" style="background-color:#f5f7fa;border-radius:6px;"><tr><td style="padding:22px 24px;overflow-wrap:break-word;word-break:break-word;"><h2 style="margin:0 0 8px;color:#081830;font-size:17px;line-height:24px;font-weight:700;">'+escapeEmailHtml(block.title)+'</h2><p style="margin:0;color:#475569;font-size:15px;line-height:25px;">'+bodyText(block.text)+'</p></td></tr></table></td></tr>').join('\n');
   // Alleen de link kleurt blauw; de omringende tabelcel blijft transparant.
   const buttons=actions.map(action=>'<tr><td class="pad" style="padding:0 40px 28px;"><table role="presentation" style="max-width:100%;"><tr><td class="action-cell" align="center" style="padding:0;"><a class="action-link" href="'+escapeEmailHtml(action.url)+'" target="_blank" rel="noopener noreferrer" style="display:inline-block;max-width:100%;box-sizing:border-box;border:15px solid #0046f2;border-left-width:24px;border-right-width:24px;border-radius:8px;background-color:#0046f2;color:#ffffff;font-size:16px;font-weight:700;line-height:20px;text-align:center;text-decoration:none;overflow-wrap:break-word;word-break:break-word;">'+escapeEmailHtml(action.label)+'</a></td></tr></table></td></tr>').join('\n');
-  const replacements={onderwerp:escapeEmailHtml(subject),preheader:escapeEmailHtml(preheader),titel:escapeEmailHtml(title),subtitel:escapeEmailHtml(subtitle),logo_url:EMAIL_LOGO_URL,aanhef:escapeEmailHtml(greeting),introductie:paragraphs.map(p).join('\n'),informatieblokken:info,acties:buttons,afsluiting:closing?p(closing):'',afzender_naam:escapeEmailHtml(sender)};
+  const replacements={onderwerp:escapeEmailHtml(subject),preheader:escapeEmailHtml(preheader),titel:escapeEmailHtml(title),subtitel:escapeEmailHtml(subtitle),logo_url:EMAIL_LOGO_URL,aanhef:escapeEmailHtml(greeting),introductie:paragraphs.map(p).join('\n'),informatieblokken:info,acties:buttons,afsluiting:closing?p(closing):'',afzender_naam:escapeEmailHtml(sender),footer:escapeEmailHtml(footer)};
   const html=template.replace(/{{([a-z_]+)}}/g,(_,key)=>{if(!Object.hasOwn(replacements,key))throw Error('Onbekende emailtemplatevariabele.');return replacements[key];});
   if(/{{[^{}]*}}/.test(html))throw Error('Onvervulde emailtemplatevariabele.');
-  const plain=[EMAIL_BRAND,title,subtitle,preheader,greeting,...paragraphs,...information.map(b=>b.title+'\n'+b.text),...actions.map(a=>a.label+': '+a.url),...(closing?[closing]:[]),'Met vriendelijke groet,\n'+sender,EMAIL_BRAND].join('\n\n');
+  const plain=[EMAIL_BRAND,title,subtitle,preheader,greeting,...paragraphs,...information.map(b=>b.title+'\n'+b.text),...actions.map(a=>a.label+': '+a.url),...(closing?[closing]:[]),'Met vriendelijke groet,\n'+sender,footer].join('\n\n');
   return {subject,html,text:plain};
 }

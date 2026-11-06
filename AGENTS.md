@@ -951,3 +951,29 @@ via dezelfde actuele account-/MFA-/Shows-controle. Geen openbare Drive-links of
 persistente browseropslag. Suggesties zijn algemene procesaandachtspunten, zonder
 nieuwe AI-dienst of verzonnen showspecifieke veiligheidsinstructies. Zie
 docs/measure-implementation.md.
+
+## Showrapportagemail met online rapportagelink (V1.51)
+
+Op 6 november 2026 heeft de gebruiker de bestaande showrapportagemail aangepast:
+onderwerp én titel Showrapportage [artiestnaam] - [Nederlandse showdatum], blauwe
+knop met exact Showprofiel openen naar https://esmojo.nl/rapportages/<canoniek-ID>,
+in nieuw tabblad. Behoud persoonlijke ontvangersaanhef, PDF-bijlage, bestaande
+verzendtrigger, ontvangers, afzender/reply-to en module-/MFA-beveiliging. De URL
+blijft bij sessieherstel en na wachtwoord/TOTP-aanmelding behouden.
+
+De gebruiker vraagt expliciet de naam van de werkelijk gekoppelde event safety
+manager als ondertekening te verwerken via dezelfde vertrouwelijke Drive/Vercel/
+Resend-route. Gebruik uitsluitend de exacte bestaande event-safety-manager-relatie
+uit _esmojo_show_assignments_v1.json en het bestaande actieve accountprofiel,
+geen nieuwe relatie/account of afleiding uit ontvanger/beheerder. Zonder unieke
+bruikbare manager heeft de gebruiker Event Safety Mobility Operations als fallback
+bevestigd. Snapshot de gekozen naam en templateversie in de bestaande private
+levering vóór de eerste mailpoging, zodat herpogingen dezelfde inhoud behouden.
+Reeds verzonden mails niet opnieuw versturen; onzekere oude templatepogingen gaan
+naar review, nooit met gewijzigde inhoud op dezelfde provider-sleutel herhalen.
+
+Alleen de showrapportagemail gebruikt als footer exact: Alle informatie in deze
+mail, en in ESMOJO, is strikt vertrouwelijk en mag niet verspreid worden zonder
+nadrukkelijke toestemming van MOJO Concerts. De gedeelde renderer escape't deze
+footer ook in HTML en neemt dezelfde tekst op in plain text. Accountmails houden
+hun bestaande footer. Veilige previews/tests versturen geen echte e-mails.
