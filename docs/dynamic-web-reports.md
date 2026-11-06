@@ -102,11 +102,21 @@ Historische ontbrekende foto's/tijden worden niet gereconstrueerd of verzonnen.
 
 ## Geheugen en controleren
 
-Alleen minimale rapportbeschikbaarheid wordt na aanmelding vooraf in sessiegeheugen
-gehaald, met één gedeeld verzoek. Een geopend submenu controleert iedere minuut en
-bij focus/zichtbaarheid; gewijzigde beschikbaarheid voegt artiesten/datumtabs toe.
-Geen persistente browsercache. Account-, rol- of modulewissel wist de collectie en
-negeert late reacties. Incidentdata blijft uitsluitend in de actieve rapportpagina.
+Vanaf V1.62 heeft de gebruiker lokaal bewaren van uitsluitend artiest, concert-ID,
+zaal en beschikbare rapportdatums expliciet toegestaan. report-catalogue-cache.js
+whitelist deze velden; geen revisie-/bronhashes, accountgegevens, rechten, foto's,
+aantallen, CSV of incidentinhoud in deze cache. De lijst blijft na afmelden bewaard,
+maar wordt uitsluitend na actuele sessie-/modulecontrole getoond. Geblokkeerde of
+corrupte opslag blokkeert de normale beveiligde laadroute niet.
+
+De bekende lijst verschijnt synchroon. Eén gedeeld achtergrondverzoek controleert
+bij openen/focus/zichtbaarheid altijd opnieuw, zonder wachttijdvenster. Zolang het
+submenu zichtbaar is controleert het iedere 30 seconden. De oude lijst blijft bij
+vertraging/fouten staan; een bevestigde lege lijst vervangt de oude cache. Nieuwe
+rapportages verschijnen zonder de gekozen rapportage te wisselen. Account-, rol-
+of modulewissel wist sessiedata en negeert late reacties, ook bij lokaal bewaren.
+Incidentdata blijft uitsluitend in de actieve rapportpagina. Op een apparaat
+zonder eerder opgeslagen lijst is de eerste beveiligde laadbeurt nog nodig.
 
 Tests gebruiken synthetische CSV's voor meerdere artiesten/dagen/zalen, hashes,
 wijziging/verplaatsing, foutieve CSV/MIME/datum, duplicaten, ambigue ID's, actuele

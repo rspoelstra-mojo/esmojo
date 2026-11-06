@@ -14,7 +14,7 @@ export function createReportsPage(content,submenu,{selected=null,heading=documen
    const title=node('h3','submenu-group-heading',group.title);title.dataset.submenuGroupHeading=group.id;submenu.append(title);
    if(!group.reports.length){const empty=node('p','submenu-group-empty','Geen rapportages');empty.dataset.submenuGroupEmpty=group.id;submenu.append(empty);}
    for(const report of group.reports){
-    const link=links.get(report.concertId)||node('a','submenu-link',report.label);link.dataset.reportKey=report.concertId;link.removeAttribute('aria-current');link.href=reportHref(report);link.dataset.submenuTitle=report.label;link.dataset.submenuGroup=group.id;submenu.append(link);
+    const link=links.get(report.concertId)||node('a','submenu-link',report.label);if(link.dataset.submenuTitle&&link.dataset.submenuTitle!==report.label)link.textContent=report.label;link.dataset.reportKey=report.concertId;link.removeAttribute('aria-current');link.href=reportHref(report);link.dataset.submenuTitle=report.label;link.dataset.submenuGroup=group.id;submenu.append(link);
     if(report.shows.some(show=>show.concertId===selected)){
      link.setAttribute('aria-current','page');found=report;const revision=JSON.stringify(report);
      if(activeRevision!==revision){if(active&&cleanup.reload){cleanup.reload(selected,link);}else{cleanup();cleanup=createWebReportPage(content,link,{concertId:selected,request,onSelected:(date,concertId)=>{selected=concertId;replaceUrl(reportHref({concertId}));}});}active=report;activeRevision=revision;}
