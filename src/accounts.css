@@ -101,3 +101,5 @@ button.submenu-link:hover { background: var(--hover); }
 .account-modules legend { padding:0 5px; font-size:14px; font-weight:600; }
 .account-modules label { display:flex; flex-direction:row; align-items:center; gap:10px; }
 .account-modules input[type="checkbox"] { width:16px; height:16px; margin:0; padding:0; accent-color:#083ade; }
+
+.account-notice:empty { display: none; }

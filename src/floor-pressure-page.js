@@ -69,7 +69,7 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
     for(const control of rowControls)if(!control.output)control.disabled=locked;risk.update(riskLevel,locked);
     noteField.hidden=!['none','medium','high'].includes(riskLevel);noteLabel.textContent=riskLevel==='none'?'Toelichting':'Beheersmaatregelen';notes.required=!noteField.hidden;notes.disabled=locked;
     complete.hidden=!available||Boolean(record?.completed);complete.disabled=locked||queue?.failed||!valid();edit.hidden=!available||!record?.completed;edit.disabled=reading||queue?.busy;back.disabled=false;
-    status.textContent=seated?'✓ Vloerdruk niet van toepassing bij Seated — Geen risico':record?.completed?'✓ Vloerdruk afgerond':queue?.failed?'Opslag niet bevestigd':queue?.busy?'Concept wordt opgeslagen…':record?.revision?'Concept opgeslagen':'';status.classList.toggle('assessment-completed',Boolean(record?.completed));
+    status.textContent=seated?'✓ Vloerdruk niet van toepassing bij Seated — Geen risico':record?.completed?'✓ Vloerdruk afgerond':queue?.failed?'Opslag niet bevestigd':'';status.hidden=!status.textContent;status.classList.toggle('assessment-completed',Boolean(record?.completed));
   }
   function accept(data,replace){
     if(!data||!data.basis||!data.tickets)throw Error('Onvolledige opslagbevestiging.');record=data.record;basis=data.basis;tickets=data.tickets;type=data.barrierType;
