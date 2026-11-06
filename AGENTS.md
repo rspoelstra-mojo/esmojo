@@ -1171,3 +1171,23 @@ Geen persistente privé-cache; na writes cache wissen en echte Drive-readback ho
 De beschermde workercontrole mag een virtuele show-open lezen met technische
 storage-worker-read-identiteit; nooit die identiteit of privérespons opslaan/loggen.
 Alleen gereedvlag en Drive-rondetijd mogen in de workflow-uitvoer verschijnen.
+
+## Direct rapportagesmenu (V1.62)
+
+Op 6 november heeft de gebruiker expliciet toestemming gegeven uitsluitend
+rapportagemenugegevens (artiest, concert-ID, zaal en beschikbare datums) lokaal
+in de browser te bewaren. Dit is een gerichte uitzondering op de eerdere
+uitsluitend-sessiegeheugenregel voor rapportbeschikbaarheid. Gebruik
+report-catalogue-cache.js met een strikte whitelist; geen revisie-/bronhashes,
+incidenten, aantallen, foto's, CSV-/rapportinhoud, profielen, tokens of rechten
+in deze cache. De menuvelden blijven na afmelden beschikbaar voor volgende
+sessies, maar worden pas getoond na actuele sessie-/modulecontrole. Geen
+gebundelde openbare catalogus of wijziging van serverautorisatie.
+
+Toon de bekende lijst direct en behoud haar tijdens controles/fouten. Controleer
+bij openen/focus/zichtbaar worden altijd opnieuw, zonder minuutwachttijd, en
+elke 30 seconden zolang Rapportages zichtbaar is. Deel gelijktijdige aanvragen;
+late antwoorden na sessiewissel niet tonen/bewaren. Actuele lege lijsten moeten
+de eerdere lijst vervangen. Sortering en week-/periodegroepen blijven lokaal
+uit echte beschikbare datums berekend; geselecteerde rapportage niet wisselen
+als nieuwe rapportages binnenkomen.
