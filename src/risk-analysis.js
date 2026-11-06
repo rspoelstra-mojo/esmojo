@@ -181,7 +181,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     if(disposed||loadingNow)return;
     loadingNow=true;productionReady=false;error='';if(view==='overview')overview();const finish=loading?.start();panel.setAttribute('aria-busy','true');
     try{
-      if(choices.busy)await choices.whenSettled();
+      // Bevestigde snapshots blijven bruikbaar terwijl keuzes opslaan.
       if(choices.failed&&retryChoices){await choices.retry();if(choices.failed)throw Error('UNCONFIRMED');}
       if(disposed)return;
       const data=await request({concertId:show.key});if(disposed)return;

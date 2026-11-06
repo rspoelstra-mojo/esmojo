@@ -12,7 +12,7 @@ export function harness(){
     constructor(folder,name,content,type='application/json'){this.folder=folder;this.name=name;this.content=content;this.type=type;this.id='file'+(++next);all.set(this.id,this);}
     getId(){return this.id;}getName(){return this.name;}getMimeType(){return this.type;}isTrashed(){return this.trashed===true;}setTrashed(value){this.trashed=value;}getDescription(){return this.description;}setDescription(v){this.description=v;}getParents(){return iterator([this.folder]);}
     getBlob(){return{getBytes:()=>[...Buffer.from(this.content)],getDataAsString:()=>this.content.toString()};}
-    setContent(content){if(!['productionele-risicos.json','_esmojo_home_planning_v1.json','_esmojo_home_photos_v1.json'].includes(this.name))throw Error('Geen overschrijven toegestaan');this.content=content;writes++;}
+    setContent(content){if(!['showprofiel.json','analyseafronding.json','_esmojo_active_storage_v1.json','productionele-risicos.json','_esmojo_home_planning_v1.json','_esmojo_home_photos_v1.json'].includes(this.name))throw Error('Geen overschrijven toegestaan');this.content=content;writes++;}
     moveTo(folder){this.folder.files=this.folder.files.filter(f=>f!==this);folder.files.push(this);this.folder=folder;}
   }
   class Folder{

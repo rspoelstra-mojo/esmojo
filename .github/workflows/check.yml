@@ -69,6 +69,13 @@ jobs:
           node shared/report-timeline.test.js
           node src/lib/background-saves.test.js
           node src/lib/save-retry.test.js
+          node server/show-storage-sync.test.js
+          node server/active-show-storage.test.js
+          node server/active-show-lifecycle.test.js
+          node server/active-show-parity.test.js
+          node server/active-show-recovery.test.js
+          node tools/storage/generate-validators.mjs --check
+          node src/lib/show-storage-alerts.test.js
           node server/show-open.test.js
           node server/show-page.test.js
           node src/lib/show-memory.test.js

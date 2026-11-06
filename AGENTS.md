@@ -1120,3 +1120,30 @@ ingestelde ontvangers zien. Toon bekende PDF-fouten/assetblokkades voor zichtbar
 rapportages in de bestaande centrale melding met directe rapportagelink. Geen
 herhaalde poll of vertrouwelijke browseropslag; late antwoorden na afmelden of
 rechten-/accountwissel niet tonen. Deze read blokkeert de homepage nooit.
+
+## Actieve showopslag en archivering (V1.58)
+
+De gebruiker heeft op 6 november 2026 Supabase als primaire opslag voor de actieve
+showvoorbereiding expliciet goedgekeurd. Dit is een gerichte uitzondering op de
+oudere uitsluitend-Drive-regels voor samenvattingen/eindcijfers, beoordelingen,
+maatregeltekst, implementatie, briefing en bijbehorende technische/public-statusvelden.
+Accountprofielen, uploads, CSV/incidentrapportages, kaartverkoop en bezoekersherkomst
+blijven ALTIJD uitsluitend in Drive. De volledige vloerdrukbron bevat aantallen en
+blijft daarom ook daar; alleen haar beoordelingssamenvatting mag in de actieve DB.
+Alleen bestaande bestandsreferenties/metadata, nooit uploadbytes in Supabase.
+Persoonlijke showkoppelingen blijven Drive. Geen nieuwe persistente privébrowsercache.
+
+Zie docs/active-show-storage.md. Serverroutes houden MFA, actuele Drive-moduletoegang,
+validaties en revisies. Nieuwe DB-tabellen hebben RLS en uitsluitend serverrechten.
+Geen servicekey naar browser of Apps Script. Een databasebevestiging is duurzaam;
+Drive-kopie gebeurt onafhankelijk zonder de gebruiker te blokkeren. Geen globale
+opslagevents gebruiken om verborgen showprofiel/PDF-widgets opnieuw te creëren.
+Terugkeer naar een show gebruikt bevestigde snapshots tijdens lopende writes.
+
+Archiveer vanaf lokale Nederlandse middernacht op laatste showdatum + twee dagen:
+2 november → 4 november, een reeks 6/7/8 november → 10 november. Eerst volledig naar
+de canonieke Drive-map schrijven en controleren, dan pas DB-show en ontvangstbewijzen
+verwijderen. Bij een fout bron behouden, centraal melden en automatisch herstellen.
+Na archivering alleen Drive, geen herimport van historische shows. Laat vormgeving,
+handmatige barrier/vloeropslag en alle bestaande beoordelings-/afrondregels intact.
+Een storing mag nooit stil terugvallen op verouderde Drive-voorbereidingsgegevens.

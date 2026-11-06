@@ -1,3 +1,4 @@
+import {loadShowStorageAlerts} from './lib/show-storage-alerts.js';
 import {loadReportAlerts} from './lib/report-alerts.js';
 import {backgroundSaves,installSaveExitWarning} from './lib/background-saves.js';
 import {createSaveNotice} from './save-notice.js';
@@ -157,6 +158,7 @@ startAuth({
     renderAvatar(document.querySelector('.avatar'), profile);
     renderPage();
     if(hasModule(profile,'reports'))void loadReportAlerts({request:access});
+    if(hasModule(profile,'shows'))void loadShowStorageAlerts({request:access});
   },
   onSignedOut() {
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
