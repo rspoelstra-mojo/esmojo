@@ -19,3 +19,10 @@ assert.equal((await service.run()).mirrored,1);assert.equal(h.document().operati
 const marker=h.folder.files.find(f=>f.name==='_esmojo_active_storage_v1.json'),document=JSON.parse(marker.content);document.archived=true;marker.content=JSON.stringify(document);
 assert.equal((await h.shows('risk-operational-save',{...input,revision:2,riskNote:'Historische Drive-wijziging'})).record.revision,3);
 console.log('Atomische overname: capability-handshake, export/claim onder één lock, oude write geweigerd, DB-mirror toegestaan en historische Drive-route vrij.');
+// Een oudere, afgeleide cutoff mag de volle 24 uur bij zomertijd niet verkorten.
+const march=structuredClone((await repo.get(h.concertId)).snapshot);march.dates=['2026-03-28'];march.aliases=[h.concertId];
+const springClock=()=>Date.parse('2026-03-29T22:30:00Z'),springRepo=memoryActiveRepository({now:springClock});await springRepo.seed(march);
+springRepo.rows.get(h.concertId).archive_after='2026-03-29T22:00:00Z';let earlyArchive=false;
+const spring=createActiveShowService({repository:springRepo,now:springClock,drive:async(op,payload)=>{if(payload.mode==='archive')earlyArchive=true;return{verified:true};}});
+await spring.request('risk-view',{concertId:h.concertId});await spring.run();assert.equal(earlyArchive,false);assert.ok(await springRepo.get(h.concertId));
+console.log('Zomertijd: ook een oudere opgeslagen cutoff kan niet vóór 24 verstreken uren verwijderen.');
