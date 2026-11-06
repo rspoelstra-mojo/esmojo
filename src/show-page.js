@@ -58,7 +58,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           layout.append(planning);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
         }
         if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
-        if(label==='Maatregelen')disposeMeasures=createShowMeasures(panel,{show,data});
+        if(label==='Maatregelen')disposeMeasures=createShowMeasures(panel,{show,data,readOnly});
         if(label==='Risicoanalyse')risks=createRiskAnalysis(panel,{show,readOnly,requestAccess,version:data.version,choices:data.productionChoices,reviewMemory:data.operationalReviews});
         button.addEventListener('click',()=>select(index));button.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();select(next,true);}});
         buttons.push(button);views.push(panel);bar.append(button);panels.append(panel);

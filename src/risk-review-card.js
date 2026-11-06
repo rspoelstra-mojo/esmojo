@@ -3,9 +3,9 @@ import {productionRiskLevels} from '../shared/barrier-layout.js';
 import {assessmentNode as node} from './production-assessment-ui.js';
 
 // Herbruikbare presentatie; de aanroepende pagina verzorgt opslag en autorisatie.
-export function createRiskReviewCard({name,onChange,onSave,onEdit,editLabel='Bewerken'}){
+export function createRiskReviewCard({name,onChange,onSave,onEdit,editLabel='Bewerken',title:heading='Risico beoordeling',withNote=true,showSave=true}){
   let level=null;const drafts={};
-  const card=node('form','profile-pdf-card risk-review-card'),title=node('h3','','Risico beoordeling');title.id=name+'-title';
+  const card=node('form','profile-pdf-card risk-review-card'),title=node('h3','',heading);title.id=name+'-title';
   card.setAttribute('aria-labelledby',title.id);
   const choices=node('fieldset','risk-review-choices'),legend=node('legend','visually-hidden','Risicoklasse'),inputs=[];
   choices.append(legend);
@@ -27,8 +27,8 @@ export function createRiskReviewCard({name,onChange,onSave,onEdit,editLabel='Bew
       level=riskLevel;if(!level)for(const key of Object.keys(drafts))delete drafts[key];
       for(const input of inputs){input.checked=input.value===level;input.disabled=disabled;}
       if(note.value!==riskNote)note.value=riskNote;
-      field.hidden=!['none','medium','high'].includes(level)||(level==='none'&&!noRiskNoteRequired);label.textContent=level==='none'?'Toelichting':'Beheersmaatregel';note.required=!field.hidden;note.disabled=disabled;
-      save.hidden=!level||completed;save.disabled=disabled||busy||failed||!canSave;
+      field.hidden=!withNote||!['none','medium','high'].includes(level)||(level==='none'&&!noRiskNoteRequired);label.textContent=level==='none'?'Toelichting':'Beheersmaatregel';note.required=!field.hidden;note.disabled=disabled;
+      save.hidden=!showSave||!level||completed;save.disabled=disabled||busy||failed||!canSave;
       edit.hidden=!completed||!onEdit;edit.disabled=busy||!canEdit;
       status.textContent=completed?'✓ Opgeslagen':failed?'Opslag niet bevestigd':busy?'Concept wordt opgeslagen…':'';
       status.classList.toggle('assessment-completed',completed);
