@@ -13,7 +13,7 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
     const response = await request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shows', timestamp, nonce, signature, body }), signal: AbortSignal.timeout((operation === 'sync'||operation==='home-rebuild') ? 240000 : (operation === 'home-dashboard' || operation === 'show-open' || operation.startsWith('active-') || operation.startsWith('report-') || operation.startsWith('risk-') || operation.startsWith('measure-') || /^(barrier-|floor-)/.test(operation)) ? 90000 : 25000) });
     if (!response.ok) throw new Error('SHOWS_UNAVAILABLE');
     const result = await response.json();
-    if (!result.ok) throw new Error(['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT'].includes(result.code) ? result.code : 'SHOWS_UNAVAILABLE');
+    if (!result.ok) throw new Error(['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT','STORAGE_ACTIVE'].includes(result.code) ? result.code : 'SHOWS_UNAVAILABLE');
     return result.data;
   };
   if(!active||!env.VITE_SUPABASE_URL||!env.SUPABASE_SECRET_KEY)return drive;

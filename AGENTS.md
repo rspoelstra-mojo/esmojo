@@ -1147,3 +1147,8 @@ verwijderen. Bij een fout bron behouden, centraal melden en automatisch herstell
 Na archivering alleen Drive, geen herimport van historische shows. Laat vormgeving,
 handmatige barrier/vloeropslag en alle bestaande beoordelings-/afrondregels intact.
 Een storing mag nooit stil terugvallen op verouderde Drive-voorbereidingsgegevens.
+
+Ook bij zomertijd geldt minimaal 24 werkelijk verstreken uren na het einde van de
+laatste showdag. Archiveer nooit vóór de tweede volgende Nederlandse kalenderdag;
+bij een korte zondag kan de grens één uur na middernacht liggen. Herbereken deze
+grens uit de brondata vóór verwijderen, ook bij oudere afgeleide DB-cutoffs.
