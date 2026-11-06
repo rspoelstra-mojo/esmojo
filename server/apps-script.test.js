@@ -74,3 +74,9 @@ test('Alleen ondertekende OnTrack-reporthandler krijgt de 3 MB PDF-grens; oude r
  const {context,reads}=script(),calls=[];context.esmojoOnTrackReports_=envelope=>{calls.push(envelope.action);return{ok:true};};
  const request=length=>context.doPost({postData:{contents:JSON.stringify({action:'ontrack-reports',body:'x'.repeat(length)})}});assert.equal(request(4300000).ok,true);assert.equal(calls.length,1);assert.equal(request(5000000).ok,false);assert.equal(calls.length,1);assert.equal(reads(),0);
 });
+
+test('Alleen de actieve show-overlay kan snapshot plus upload bevatten; dezelfde legacyroutes blijven begrensd',()=>{
+ const {context}=script();let calls=0;context.esmojoShows_=()=>{calls++;return{ok:true};};
+ const invoke=operation=>context.doPost({postData:{contents:JSON.stringify({action:'shows',body:JSON.stringify({operation,fixture:'x'.repeat(3100000)})})}});
+ assert.equal(invoke('active-bridge').ok,true);assert.equal(calls,1);assert.equal(invoke('profile-save').ok,false);assert.equal(calls,1);
+});

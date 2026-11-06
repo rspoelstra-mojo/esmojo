@@ -121,7 +121,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=['show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='home-dashboard'||action==='home-metadata'){
         const metadata=action==='home-metadata',method=metadata?'POST':'GET';
@@ -132,6 +132,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }catch(error){const code=error.message,status=code==='FORBIDDEN'?403:code==='VALIDATION'?400:code==='NOT_FOUND'?404:503;
           return reply(status,{error:status===403?'Je hebt geen toegang tot Shows.':status===400?'Ongeldig verzoek.':status===404?'Deze show is niet beschikbaar.':'Het planningdashboard kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'shows'}:{})});}
       }
+      if(action==='show-storage-alerts'){if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}try{return reply(200,{alerts:shows.activeStorage?await shows.activeStorage.alerts():[]});}catch{return reply(503,{error:'Opslagmeldingen zijn niet beschikbaar.'});}}
       if(action==='report-alerts'){if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}try{return reply(200,await ontrackReportStore('pdf-alerts',actor));}catch(error){return reply(error.message==='FORBIDDEN'?403:503,{error:'Rapportagemeldingen zijn niet beschikbaar.'});}}
       if(action==='report-menu'){
         if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}

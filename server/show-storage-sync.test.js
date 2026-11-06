@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {makeShowStorageSync} from '../api/show-storage-sync.js';
+let calls=0,identified=0;
+const store=Object.assign(()=>assert.fail('Geen vrije bronroute'),{activeStorage:{run:async()=>{calls++;return{enabled:true,mirrored:1,archived:0,failed:0};},verify:async()=>({schemaReady:true,enabled:false,verifiedShows:1,driveBridge:true})}});
+const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(status){this.code=status;return this;},json(body){this.body=body;return this;}});
+let res=response();await makeShowStorageSync({store,identify:async()=>{throw Error('forbidden');}})({method:'POST',headers:{authorization:'Bearer fake'}},res);assert.equal(res.code,403);assert.equal(calls,0);
+const handler=makeShowStorageSync({store,identify:async()=>{identified++;}});
+res=response();await handler({method:'GET',headers:{}},res);assert.equal(res.code,405);assert.equal(identified,0);
+res=response();await handler({method:'POST',headers:{authorization:'Bearer synthetic'},body:{checkOnly:true}},res);assert.equal(res.code,200);assert.equal(res.body.verifiedShows,1);assert.equal(calls,0);
+res=response();await handler({method:'POST',headers:{authorization:'Bearer synthetic'},body:{}},res);assert.equal(res.code,200);assert.equal(calls,1);assert.equal(res.body.ok,true);
+console.log('Opslagworker: alleen geverifieerde main-workflow, POST, aparte controlemodus en technische tellingen.');

@@ -11,6 +11,9 @@
     "api/ontrack-reports-sync.js": {
       "includeFiles": "{server/report-original/assets/**,server/email/template.html,server/ontrack-report/assets/**}",
       "maxDuration": 300
+    },
+    "api/show-storage-sync.js": {
+      "maxDuration": 300
     }
   },
   "headers": [
