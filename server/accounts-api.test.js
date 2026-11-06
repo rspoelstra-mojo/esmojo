@@ -232,3 +232,8 @@ test('Maatregel afronden vereist ook via de API een expliciete briefingkeuze',as
  for(const data of [{riskLevelAfter:'low',briefing:null},{riskLevelAfter:'low'},{riskLevelAfter:null,briefing:false}]){const result=await run({action:'measure',method:'POST',body:{...base,data}});assert.equal(result.response.code,400);assert.equal(result.calls.some(call=>call[0]==='shows'),false);}
  for(const briefing of [true,false])assert.equal((await run({action:'measure',method:'POST',body:{...base,data:{riskLevelAfter:'low',briefing}}})).response.code,200);
 });
+
+test('PDF-meldingen na login vereisen sessie, MFA en Rapportages; de actor komt uitsluitend uit het gecontroleerde account',async()=>{
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker',modules:['shows']}},{own:{...profile,activated:false}}]){const result=await run({action:'report-alerts',...input});assert.ok([401,403].includes(result.response.code));assert.equal(result.calls.some(call=>call[0]==='ontrack-report'),false);}
+ const result=await run({action:'report-alerts',own:{...profile,modules:['reports']}});assert.equal(result.response.code,200);assert.deepEqual(result.calls.find(call=>call[0]==='ontrack-report').slice(0,3),['ontrack-report','pdf-alerts',id]);assert.equal(result.calls.some(call=>call[0]==='mail'),false);assert.equal((await run({action:'report-alerts',method:'POST'})).response.code,405);
+});

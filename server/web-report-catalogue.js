@@ -6,7 +6,7 @@ export function validateReportDay(report,date){
  if(!report.incidents.some(row=>row.localDate===date)&&!(first?.localDate===overnight&&first.minuteOfDay<360))throw Error('CSV_SHOW_MISMATCH');
  return report;
 }
-export function createWebCatalogueService({store,sourceLookup=async show=>({checked:true,sourceUrl:show.sourceUrl||null,photo:null})}={}){
+export function createWebCatalogueService({store,sourceLookup=async show=>({checked:true,sourceUrl:show.sourceUrl||null,photo:null}),onPublished=()=>{}}={}){
  async function synchronize(actor=null){
   const scan=await store('web-scan',actor);let validated=0,invalid=0;
   if(!Array.isArray(scan.jobs)||scan.jobs.length>5)throw Error('REPORT_UNAVAILABLE');
@@ -20,7 +20,7 @@ export function createWebCatalogueService({store,sourceLookup=async show=>({chec
     catch(error){if(!/^CSV_/.test(error.code||error.message))throw error;state='invalid';errorCode=error.code||error.message;}
    }
    const mojo=state==='valid'?(actor===null?await sourceLookup(source.show):{checked:false,sourceUrl:null,photo:null}):{checked:true,sourceUrl:null,photo:null};
-   try{await store('web-commit',actor,{...job,sourceHash,state,errorCode,mojo});if(state==='valid')validated++;else invalid++;}catch(error){if(error.message!=='SOURCE_CHANGED'&&error.message!=='NOT_FOUND')throw error;}
+   try{await store('web-commit',actor,{...job,sourceHash,state,errorCode,mojo});if(state==='valid'){validated++;try{void Promise.resolve(onPublished()).catch(()=>{});}catch{/* De publicatie blijft geldig; de mailworker herneemt apart. */}}else invalid++;}catch(error){if(error.message!=='SOURCE_CHANGED'&&error.message!=='NOT_FOUND')throw error;}
   }
   return{ok:true,validated,invalid};
  }

@@ -1,3 +1,4 @@
+import {loadReportAlerts} from './lib/report-alerts.js';
 import {backgroundSaves,installSaveExitWarning} from './lib/background-saves.js';
 import {createSaveNotice} from './save-notice.js';
 import {homeDashboardCache} from './lib/home-cache.js';
@@ -155,6 +156,7 @@ startAuth({
     document.querySelector('[data-page="beheerder"]').hidden = !isAdministrator(profile);
     renderAvatar(document.querySelector('.avatar'), profile);
     renderPage();
+    if(hasModule(profile,'reports'))void loadReportAlerts({request:access});
   },
   onSignedOut() {
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
