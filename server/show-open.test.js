@@ -70,3 +70,40 @@ test('Maatregelreads zijn niet uitwisselbaar gecachet; implementatie wijzigt pla
  let calls=0;const data=createShowData(bundle,async(action,options)=>{calls++;assert.equal(action,'measure');return{record:{revision:1},overview:{...bundle.risks,measureImplementations:{[id]:{revision:1,basis:JSON.stringify([id,'medium','Voorstel.']),originalRiskLevel:'medium',riskLevelAfter:'low',briefing:true,completedAt:'2026-11-05T13:00:00Z',attachments:[]}}}};});
  data.operationalReviews.drafts.set('R01',{riskNote:'Oud voorstel'});await data.request('measure',{body:{operation:'read',measureId:id}});await data.request('measure',{body:{operation:'read',measureId:'production:barrier_layout'}});assert.equal(calls,2,'Iedere specifieke read gebruikt zijn eigen gecontroleerde bron');assert.equal(data.planningSnapshot().risks.measureImplementations[id].riskLevelAfter,'low');assert.equal(data.planningSnapshot().risks.operational.assessments.R01.riskLevel,'medium');await data.request('measure',{body:{operation:'edit-text',measureId:id}});assert.equal(data.operationalReviews.drafts.has('R01'),false);data.dispose();
 });
+
+test('Snelle categorieafrondingen schuiven uitsluitend hun eigen gedeelde afrondrevisie door',async()=>{
+ for(const order of [['visitors','artist'],['artist','visitors']]){
+  const bundle=await openFixture(),base={profileRevision:11,finalRevision:0,ticketVersions:{ticket_sales:1,visitor_origins:2,domestic_origins:3}};
+  bundle.profile.finalization={basis:base,categories:{visitors:{ready:true,completedAt:null},artist:{ready:true,completedAt:null}}};let current=structuredClone(bundle.profile),release;const calls=[];
+  const data=createShowData(bundle,async(action,options)=>{
+   calls.push(structuredClone(options.body));if(calls.length===1)await new Promise(done=>release=done);
+   assert.deepEqual(options.body.basis,current.finalization.basis,'Server bewaakt nog altijd de exacte bronrevisies');
+   current=structuredClone(current);current.finalization.basis.finalRevision++;current.finalization.categories[options.body.category].completedAt='2026-11-06T12:00:00Z';return current;
+  });
+  const request=category=>data.request('analysis-finalization',{body:{operation:'complete',category,basis:structuredClone(base),score:6,note:'Synthetisch oordeel'}});
+  const first=request(order[0]);await new Promise(done=>setImmediate(done));const second=request(order[1]);assert.equal(data.busy,true);assert.equal(calls.length,1);release();await Promise.all([first,second]);
+  assert.deepEqual(calls.map(call=>call.basis.finalRevision),[0,1]);assert.equal(current.finalization.basis.finalRevision,2);assert.ok(current.finalization.categories.visitors.completedAt);assert.ok(current.finalization.categories.artist.completedAt);assert.equal(data.busy,false);data.dispose();
+ }
+});
+
+test('Openstaand afrondformulier volgt een eigen bevestiging, maar geen externe revisie of gewijzigde profiel-/ticketbron',async()=>{
+ for(const change of ['none','external-final','profile','tickets','failed']){
+  const bundle=await openFixture(),base={profileRevision:11,finalRevision:0,ticketVersions:{ticket_sales:1,visitor_origins:2,domestic_origins:3}};
+  bundle.profile.finalization={basis:structuredClone(base)};let calls=0;const sent=[];
+  const data=createShowData(bundle,async(action,options)=>{
+   if(options.body.operation==='read')return bundle.profile;
+   sent.push(structuredClone(options.body.basis));calls++;
+   if(calls===1&&change==='failed')throw Error('UNCONFIRMED');
+   return {...bundle.profile,finalization:{basis:{...base,finalRevision:calls},categories:{}}};
+  });
+  const submit=category=>data.request('analysis-finalization',{body:{operation:'complete',category,basis:structuredClone(base)}});
+  if(change==='failed')await assert.rejects(submit('visitors'),/UNCONFIRMED/);else await submit('visitors');
+  if(['external-final','profile','tickets'].includes(change)){
+   bundle.profile.finalization.basis.finalRevision=change==='external-final'?2:1;
+   if(change==='profile')bundle.profile.finalization.basis.profileRevision++;
+   if(change==='tickets')bundle.profile.finalization.basis.ticketVersions.ticket_sales++;
+   await data.request('analysis-finalization',{body:{operation:'read'},refresh:true});
+  }
+  await submit('artist');assert.equal(sent[1].finalRevision,change==='none'?1:0,'Externe of onbevestigde wijzigingen nooit automatisch overnemen');data.dispose();
+ }
+});

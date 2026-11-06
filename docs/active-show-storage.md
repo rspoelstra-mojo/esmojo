@@ -163,3 +163,9 @@ De profielwachtrij onderscheidt een geaccepteerde serverbevestiging van lokale
 editor-sync. Een volledige bevestigde finalisatiestatus ruimt een eerdere
 Afrondstatus laden-fout op. Een lokale of achterhaalde respons doet dat niet;
 een werkelijke leesfout blijft zichtbaar totdat er weer geldige bevestiging is.
+
+Snelle categorieafrondingen gebruiken de bestaande seriële showwachtrij. Alleen
+bevestigde eigen finalRevision-overgangen mogen een tweede nog openstaand
+bezoekers-/artiestformulier volgen; profiel-, ticket- en externe afrondrevisies
+worden niet automatisch overgenomen. Een nog niet bevestigde eerste write
+levert geen overgang op. De server blijft de volledige basis controleren.
