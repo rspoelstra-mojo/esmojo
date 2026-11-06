@@ -47,3 +47,5 @@ test('Centrale melding bundelt dezelfde fout en voert een bewuste herpoging maar
 test('Een mislukte herstelactie houdt de melding; afmelden wist callbacks en een late retry wist geen nieuwe fout',async()=>{
  const saves=createSaveActivity(),wait=deferred();saves.notice({key:'row',message:'Controleer je gegevens.'});saves.recovery('row',async()=>false);await saves.retry('row');assert.equal(saves.messages.length,1);saves.recovery('row',()=>wait.promise);const task=saves.retry('row');saves.clear();saves.fail({key:'row'});wait.resolve(true);await task;assert.equal(saves.messages.length,1);assert.equal(saves.retryAction('row'),null);
 });
+
+test('Een herstelcallback zonder expliciete bevestiging wist een opslagfout niet',async()=>{const saves=createSaveActivity();saves.fail({key:'row'});saves.recovery('row',async()=>undefined);await saves.retry('row');assert.equal(saves.messages.length,1);});
