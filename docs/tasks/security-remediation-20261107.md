@@ -34,3 +34,13 @@ verifieert de private identiteitsconfiguratie en importeert de vijf onveranderde
 referentiebeelden in een private Drive-map. Alleen technische booleans/aantallen
 komen terug. Na bevestigde import verwijdert fase C de bronbeelden en adresliterals
 uit de actuele broncode en schakelt de frontend over naar geautoriseerde reads.
+
+Fase C: voorbereiding op productie bevestigd (modules expliciet, vaste identiteit
+vastgelegd, bestaande testkopie geconfigureerd, vijf referenties geverifieerd).
+Daarna: verwijder eenmalige importactie en bron-PNG's uit de actuele code,
+beveiligde sessiegebonden beeldcache, ontbrekende modulerechten weigeren,
+private identiteitsconfiguratie gebruiken en persoonsadressen vervangen door
+fictieve test-/documentatiewaarden. Afgesloten bezorgproef kan niet heropenen.
+Volledige regressie, 648 autorisatiecombinaties, echte lokale Redis-concurrency,
+productieheaders/-afwijzingen en browser-CSP worden apart gecontroleerd.
+Historie verwijderen blijft een afzonderlijk te beoordelen stap.
