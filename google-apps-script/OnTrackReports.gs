@@ -52,7 +52,7 @@ function esmojoOnTrackReports_(input){
  const web=typeof parsedRequest.operation==='string'&&parsedRequest.operation.startsWith('web-'),lock=web?(parsedRequest.operation==='web-commit'?LockService.getUserLock():null):LockService.getScriptLock();if(lock&&!lock.tryLock(20000))return reply(false,null,'BUSY');
  try{
   const request=parsedRequest,operation=request.operation,adminOps=['link','retry','download','send','email-context'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail','timetable-candidates','timetable-save','web-scan','web-source','web-commit','online-sync','online-reserve','online-commit','online-fail'];
-  if(!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview'&&operation!=='web-menu'&&operation!=='web-read'&&operation!=='timetable-read'&&operation!=='pdf-alerts')throw Error('VALIDATION');
+  if(!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview'&&operation!=='web-menu'&&operation!=='web-read'&&operation!=='timetable-read'&&operation!=='pdf-alerts'&&operation!=='email-history'&&operation!=='email-open')throw Error('VALIDATION');
   const profiles=esmojoOnTrackProfiles_();if(adminOps.includes(operation)&&!profiles.some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
   const cache=CacheService.getScriptCache(),nonceKey='ontrack-reports:'+input.nonce;if(cache.get(nonceKey))throw Error('FORBIDDEN');cache.put(nonceKey,'1',180);
   if(operation.startsWith('timetable-')){
@@ -71,9 +71,10 @@ function esmojoOnTrackReports_(input){
   const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,revision:0,recipientIds:[],sources:[],reports:[],nonces:{}};
   if(state.version!==1||!Array.isArray(state.sources)||!Array.isArray(state.reports)||!Array.isArray(state.recipientIds))throw Error('REGISTER_INVALID');
   const save=()=>{const text=JSON.stringify(state);if(file)file.setContent(text);else folder.createFile(Utilities.newBlob(text,'application/json','_esmojo_ontrack_v1.json'));};
+  if(['email-history','email-open'].includes(operation))return reply(true,esmojoMailEngagement_(request,state,profiles,save));
   if(operation.startsWith('online-')||operation==='pdf-alerts')return reply(true,esmojoOnlineReportMail_(request,folder,state,profiles,save));
   if(operation==='scan'){if(esmojoOnTrackScan_(folder,state))save();return reply(true,{sources:esmojoOnTrackQueue_(state)});}
-  if(operation==='pipeline'){if(!['idle','running','assets-missing'].includes(request.status))throw Error('VALIDATION');state.pipeline={status:request.status,updatedAt:new Date().toISOString()};save();return reply(true,{ok:true});}
+  if(operation==='pipeline'){if(!['idle','running','assets-missing'].includes(request.status))throw Error('VALIDATION');state.pipeline={status:request.status,updatedAt:new Date().toISOString()};save();return reply(true,{ok:true,...(typeof esmojoMailReceiptToken_==='function'?{tracking:'mail-open-v1'}:{})});}
   const source=state.sources.find(source=>source.id===request.sourceId);
   if(['link','retry'].includes(operation)){
    if(!source)throw Error('SOURCE_MISSING');if(source.job&&Date.parse(source.job.expiresAt)>Date.now())throw Error('REPORT_CONFLICT');
@@ -134,17 +135,19 @@ function esmojoOnTrackReports_(input){
   if(operation==='delivery-reserve'){
    if(typeof request.jobId!=='string'||!/^[0-9a-f-]{36}$/i.test(request.jobId))throw Error('VALIDATION');let changed=false;
    for(const report of state.reports){if(report.mailChannel==='online'||!report.id||!Array.isArray(report.deliveries)||!report.show)continue;const linked=state.sources.find(source=>source.id===report.sourceId);if(!linked)continue;
-    for(const delivery of report.deliveries){const online=Boolean(state.onlineMailStartedAt)&&(!delivery.mail||delivery.mail.version==='online-report-v3');
+    for(const delivery of report.deliveries){const online=Boolean(state.onlineMailStartedAt)&&(!delivery.mail||['online-report-v3','online-report-v4'].includes(delivery.mail.version));
      if(online){if(!esmojoOnlineVisible_(folder).some(source=>source.show.key===report.show.key&&source.entry.sourceHash===report.sourceHash))continue;}else if(linked.status!=='ready'||linked.processedModifiedAt!==linked.modifiedAt||linked.showKey!==report.show.key||linked.latestReportId!==report.id)continue;
      if(delivery.status==='sent'||delivery.status==='review'||delivery.status==='skipped'||delivery.attempts>=3||delivery.job&&Date.parse(delivery.job.expiresAt)>Date.now()||delivery.lastAttemptAt&&Date.now()-Date.parse(delivery.lastAttemptAt)<300000)continue;
      const profile=profiles.find(p=>p.id===delivery.recipientId&&p.activated&&!p.disabled&&hasModule(p,'reports'));if(!profile){delivery.status='skipped';report.emailStatus='failed';changed=true;continue;}
      if(delivery.firstAttemptAt&&Date.now()-Date.parse(delivery.firstAttemptAt)>23*3600000){delivery.status='review';report.emailStatus='failed';changed=true;continue;}
      // Een oude onzekere verzending nooit met gewijzigde inhoud op dezelfde Resend-sleutel herhalen.
-     if((delivery.attempts>0||delivery.firstAttemptAt)&&!['online-report-v1','online-report-v2','online-report-v3'].includes(delivery.mail?.version)){delivery.status='review';delivery.errorCode='MAIL_TEMPLATE_CHANGED';report.emailStatus='failed';changed=true;continue;}
+     if((delivery.attempts>0||delivery.firstAttemptAt)&&!['online-report-v1','online-report-v2','online-report-v3','online-report-v4'].includes(delivery.mail?.version)){delivery.status='review';delivery.errorCode='MAIL_TEMPLATE_CHANGED';report.emailStatus='failed';changed=true;continue;}
      let bytes=null;if(!online){const pdf=esmojoOnTrackSourceFile_(report.pdfId);bytes=pdf.getBlob().getBytes();if(pdf.getMimeType()!=='application/pdf'||bytes.length>3*1024*1024||esmojoOnTrackHash_(bytes)!==report.sha256)throw Error('REPORT_UNAVAILABLE');}
-     if(!delivery.mail)delivery.mail={version:'online-report-v3',senderId:'show-report',managerName:esmojoOnTrackManager_(report.show,profiles)};
+     if(delivery.mail?.version==='online-report-v4'&&request.trackingVersion!=='mail-open-v1')continue;
+     if(!delivery.mail)delivery.mail={version:request.trackingVersion==='mail-open-v1'&&!delivery.attempts&&!delivery.firstAttemptAt?'online-report-v4':'online-report-v3',senderId:'show-report',managerName:esmojoOnTrackManager_(report.show,profiles)};
+     if(delivery.mail.version==='online-report-v4'&&!delivery.receiptToken)delivery.receiptToken=esmojoMailReceiptToken_(report.id,delivery.recipientId);
      if(!delivery.target)delivery.target={email:profile.email,firstName:profile.firstName};const now=new Date().toISOString();delivery.firstAttemptAt=delivery.firstAttemptAt||now;delivery.lastAttemptAt=now;delivery.attempts=(delivery.attempts||0)+1;delivery.status='processing';delivery.job={id:request.jobId,expiresAt:new Date(Date.now()+300000).toISOString()};save();
-     return reply(true,{state:'reserved',reportId:report.id,recipientId:delivery.recipientId,jobId:request.jobId,recipient:delivery.target,mailVersion:delivery.mail.version,senderId:delivery.mail.senderId||'default',managerName:delivery.mail.managerName,show:report.show,...(bytes?{fileName:report.fileName,pdfBase64:Utilities.base64Encode(bytes),sha256:report.sha256}:{}),idempotencyKey:'esmojo-showreport-'+report.id+'-'+esmojoOnTrackHash_(delivery.recipientId).slice(0,16)});
+     return reply(true,{state:'reserved',reportId:report.id,recipientId:delivery.recipientId,jobId:request.jobId,recipient:delivery.target,mailVersion:delivery.mail.version,...(delivery.mail.version==='online-report-v4'?{receiptToken:delivery.receiptToken}:{}),senderId:delivery.mail.senderId||'default',managerName:delivery.mail.managerName,show:report.show,...(bytes?{fileName:report.fileName,pdfBase64:Utilities.base64Encode(bytes),sha256:report.sha256}:{}),idempotencyKey:'esmojo-showreport-'+report.id+'-'+esmojoOnTrackHash_(delivery.recipientId).slice(0,16)});
     }
    }
    if(changed)save();return reply(true,{state:'idle'});

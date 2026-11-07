@@ -1,3 +1,4 @@
+import {createEmailEngagement} from './email-engagement.js';
 import {createPageFeedback} from './lib/page-feedback.js';
 import {saveRequestInfo} from './lib/background-saves.js';
 import './email-admin.css';
@@ -16,6 +17,7 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
   const recipient=node('p','email-admin-recipient'),button=node('button','primary-button','Testmail versturen');button.type='submit';
   const status=node('p','account-notice');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   form.append(field,showField,recipient,button,status);
+  let engagement=null;
   const selected=()=>catalog?.templates.find(template=>template.id===select.value);
   const feedback=createPageFeedback(saveRequestInfo('email'));
   function notice(text,error=false){status.textContent='';if(text)feedback.show(error?'De e-mailactie kon niet worden bevestigd. Controleer de actuele status.':text,error?async()=>{await load();return Boolean(catalog);}:null,error?'Actuele gegevens laden':'Opnieuw proberen');else feedback.clear();}
@@ -41,8 +43,8 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
       for(const template of data.templates){const option=node('option','',template.label);option.value=template.id;select.append(option);}
       renderShows();
       recipient.textContent='Testmail versturen naar: '+(data.recipients||[data.recipient]).join(' en ');
-      notice(data.canSend?'':'E-mailverzending is nog niet geconfigureerd.');view.replaceChildren(title,form);update();
-    }catch{if(!disposed){feedback.show('De e-mailtemplates konden niet worden geladen.',async()=>{await load();return Boolean(catalog);},'Opnieuw laden');view.replaceChildren(title);}}
+      notice(data.canSend?'':'E-mailverzending is nog niet geconfigureerd.');view.replaceChildren(title,form);if(catalog.templates.some(template=>template.id==='show-report')){if(engagement)engagement.dispose();engagement=createEmailEngagement(view,{request,loading});void engagement.load();}update();
+    }catch{if(!disposed){feedback.show('De e-mailtemplates konden niet worden geladen.',async()=>{await load();return Boolean(catalog);},'Opnieuw laden');engagement?.dispose();engagement=null;view.replaceChildren(title);}}
     finally{finish();}
   }
   select.onchange=()=>{requestId=null;notice('');renderShows();update();};showSelect.onchange=()=>{requestId=null;notice('');update();};
@@ -56,5 +58,5 @@ export function createEmailAdminView(content,submenuLink,{request=access}={}){
     }catch{if(!disposed)notice('Testmail versturen is niet gelukt. Probeer het opnieuw.',true);}
     finally{busy=false;finish();if(!disposed)update();}
   };
-  void load();return()=>{disposed=true;feedback.dispose();catalog=null;requestId=null;loading.dispose();};
+  void load();return()=>{disposed=true;engagement?.dispose();feedback.dispose();catalog=null;requestId=null;loading.dispose();};
 }

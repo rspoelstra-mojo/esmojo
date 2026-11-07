@@ -57,12 +57,14 @@ document.querySelector('#navigation').innerHTML = [
   ['rapportages', 'report', 'Rapportages'],
 ].map(([route, glyph, label]) => `<a class="rail-item" href="/${route}" data-page="${route}" aria-label="${label}">${icon(glyph)}<span class="tooltip" role="tooltip">${label}</span></a>`).join('');
 
+const reportsOnly=current=>hasModule(current,'reports')&&!hasModule(current,'shows')&&!hasModule(current,'artists');
+
 function updateModuleProfile(current){
   const changed=profile?.id!==current.id||profile?.role!==current.role||moduleFingerprint(profile)!==moduleFingerprint(current);
   if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();}
   homeDashboardCache.bind(current);reportCatalogueCache.bind(current);
   profile=current;
-  document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=Boolean(module&&!hasModule(profile,module));});
+  document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=link.dataset.page===''?reportsOnly(profile):Boolean(module&&!hasModule(profile,module));});
   document.querySelector('[data-page="beheerder"]').hidden=!isAdministrator(profile);
   return changed;
 }
@@ -84,7 +86,8 @@ function renderPage() {
   const content = document.querySelector('.content-box');
   content.replaceChildren();
   if (!profile) return;
-  const route = pageRoute(location);
+  let route = pageRoute(location);
+  if(route===''&&reportsOnly(profile)){history.replaceState(null,'','/rapportages'+location.search+location.hash);route='rapportages';}
   const fluidPreview=__ESMOJO_FLUID_PREVIEW__&&route==='test/fluid-layout';
   const root = fluidPreview?'shows':route.split('/')[0];
   if (!fluidPreview) disposeLayout = enableFluidLayout(content, {variant: root === 'shows' ? 'show' : 'page'});
