@@ -50,7 +50,7 @@ export function createShowsSubmenu(navigation, selected = '', content = null) {
     navigation.replaceChildren(...links);
     if (selected && content) {
       const show = direct||shows.find(show => show.key === selected);
-      if (show&&pageKey!==show.key){disposeShow();direct=show;pageKey=show.key;disposeShow=createShowPage(content,show);}
+      if (show&&pageKey!==show.key){disposeShow();metadataLoading?.dispose();direct=show;pageKey=show.key;disposeShow=createShowPage(content,show);}
       else if(!show&&pageKey===null&&!resolving){
         resolving=true;content.setAttribute('aria-busy','true');
         metadataLoading=createSubmenuLoading(document.querySelector('#submenu-title'),content);
