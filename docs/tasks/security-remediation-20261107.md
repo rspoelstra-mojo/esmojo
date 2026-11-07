@@ -20,3 +20,8 @@ bestaande legacy-toegang één keer expliciet uit, zonder beperkte profielen te
 verruimen. Pas na geslaagde Apps Script-publicatie volgt de strikte weigering bij
 een ontbrekend moduleveld en de overige beveiliging (fase B). Dit voorkomt dat
 bestaande gebruikers tijdens een gelijktijdige Vercel/Drive-uitrol buitenvallen.
+
+De compatibele eerste fase legt ook de bestaande vaste beheerder-ID en reeds
+bestaande testmailuitzondering vast in hetzelfde private accountregister. De
+vervolgfase kan zo persoonsadressen uit de code verwijderen zonder de ingestelde
+superrol of extra testmailontvanger te veranderen.
