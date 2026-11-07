@@ -1226,3 +1226,17 @@ inline scroll-lock van bestaande formulierdialogen. Houd bestaande concepten
 en achtergrondopslag intact. Geen schaaltransforms, zoombeperking of andere
 lettergroottes voor bestaande inhoud. Horizontale datum-/showtabs mogen binnen
 hun eigen rij scrollen; de pagina zelf blijft op telefoonbreedte.
+
+## Mobiele menukop en rapportagevolgorde (V1.65)
+
+Op aanvullend verzoek is het mobiele menu volledig viewportbreed, zonder
+rechterstrook of afgeronde zijkant. De oorspronkelijke brand-link zit op mobiel
+rechtstreeks in de vaste dialoogkop, buiten de scrollbare lijst; op desktop gaat
+hij terug naar de oorspronkelijke railpositie. Alleen de lijst mag scrollen:
+geen scrollIntoView op submenu/afstammelingen, omdat dit de buitenste native
+modal mee kan scrollen en de sluitknop laat verdwijnen. Verouderde uitgestelde
+sectie-/focusacties moeten na sluiten/heropenen of resizen vervallen.
+
+Rapportages op mobiel met foto: titel/zaal, foto, datumtabs. Zonder foto blijven
+de datumtabs direct onder de titel staan. Desktopvolgorde en fotoverhoudingen
+blijven gelijk. Native dialoog mag zelf geen scrollcontainer worden.
