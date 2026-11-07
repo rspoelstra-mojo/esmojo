@@ -38,7 +38,7 @@ test('Beveiligings-drilldown en KPI’s delen exacte criteria; alleen afgeleide 
  const entries=[{ID:'a',Type:'Zelfzorg contact',Description:'PCM','Resolved Status':'Eviction, Arrest','Affected Person':'3'},{ID:'b',Type:'Verbale agressie'},{ID:'c',Type:'Fysieke agressie'}];
  const input=ONTRACK_HEADERS.join(',')+'\n'+entries.map(row=>ONTRACK_HEADERS.map(key=>'"'+String(({...row,'Date and Time':'2026-11-03 - 06:00 PM',Division:'Anders'})[key]||'').replaceAll('"','""')+'"').join(',')).join('\n');
  const service=createWebReportService({photo:async()=>null,store:async()=>sourceFor(input)});
- const result=await service('actor',{slug:'jungle'});assert.deepEqual(result.report.kpis.security,{total:0,verbal:1,physical:1,evictions:3,arrests:3});
+ const result=await service('actor',{slug:'jungle'});assert.deepEqual(result.report.kpis.security,{total:0,verbal:1,physical:1,evictions:3,arrests:3,mischief:0});
  assert.deepEqual(result.report.incidents[0].securityFilters,['evictions','arrests']);assert.deepEqual(result.report.incidents[1].securityFilters,['verbal']);assert.deepEqual(result.report.incidents[2].securityFilters,['physical']);
  assert.equal('resolvedStatus' in result.report.incidents[0],false);
 });
@@ -46,7 +46,7 @@ test('Medische selectie correspondeert met KPI’s en projecteert alleen afgelei
  const entries=[{ID:'a',Division:'Medisch',Type:'Zelfzorg contact',Description:'PCM'},{ID:'b',Division:'Medisch',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'2'},{ID:'c',Division:'Medisch',Type:'Controle'},{ID:'d',Division:'Beveiliging',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'3'}];
  const input=ONTRACK_HEADERS.join(',')+'\n'+entries.map(row=>ONTRACK_HEADERS.map(key=>'"'+String(({...row,'Date and Time':'2026-11-03 - 06:00 PM'})[key]||'').replaceAll('"','""')+'"').join(',')).join('\n');
  const service=createWebReportService({photo:async()=>null,store:async()=>sourceFor(input)});
- const {report}=await service('actor',{slug:'jungle'});assert.deepEqual(report.kpis.medical,{total:3,selfcare:1,treatments:2,unwell:1,ambulance:5});
+ const {report}=await service('actor',{slug:'jungle'});assert.deepEqual(report.kpis.medical,{total:3,selfcare:1,treatments:2,unwell:1,ambulance:5,contusion:0});
  assert.deepEqual(report.incidents.map(row=>row.medicalFilters),[['selfcare'],['treatments','unwell','ambulance'],['treatments'],['ambulance']]);
  for(const key of ['selfcare','treatments','unwell'])assert.equal(report.incidents.filter(row=>row.medicalFilters.includes(key)).length,report.kpis.medical[key]);
  assert.equal(report.incidents.filter(row=>row.medicalFilters.includes('ambulance')).length,2);assert.ok(report.incidents.every(row=>!('resolvedStatus' in row)&&!('affectedPerson' in row)&&!('division' in row)));
@@ -56,4 +56,28 @@ test('Tijdschema hoort bij dezelfde geverifieerde rapportidentiteit; ingetrokken
  const timetable={status:'available',entries:[]},service=createWebReportService({photo:async()=>null,store:async(operation,actor,payload)=>{assert.equal(actor,'actor');assert.equal(operation,'web-read');assert.equal(payload.concertId,key);return sourceFor(csv,{timetable});}});
  assert.deepEqual((await service('actor',{slug:'jungle'})).report.timetable,timetable);
  const revoked=createWebReportService({photo:async()=>null,store:async()=>{throw Error('FORBIDDEN');}});await assert.rejects(revoked('actor',{slug:'jungle'}),/FORBIDDEN/);
+});
+
+test('Nieuwe webfilters, KPI’s en incidentenlijst volgen dezelfde CSV-types; PDF-berekening blijft behouden',async()=>{
+ const {calculateReport}=await import('./ontrack-report/data.js');
+ const {selectedReportIncidents}=await import('../src/lib/report-view.js');
+ const {medicalReportFilters}=await import('../shared/report-medical.js'),{securityReportFilters}=await import('../shared/report-security.js');
+ const entries=[
+  {ID:'flauwte',Division:'Medisch',Type:'Benauwd/ Flauwte','Affected Person':'4'},
+  {ID:'blessure-zelfzorg',Division:'Medisch',Type:'Contusie / Distorsie',Description:'PCM gegeven'},
+  {ID:'blessure',Division:'Medisch',Type:'CONTUSIE/DISTORSIE'},
+  {ID:'baldadigheid',Division:'Beveiliging',Type:'Baldadigheid','Affected Person':'2'},
+  {ID:'omschrijving',Division:'Beveiliging',Type:'Controle',Description:'Baldadigheid'},
+  {ID:'verkeerde-afdeling',Division:'Beveiliging',Type:'Contusie / Distorsie'},
+  {ID:'omschrijving-medisch',Division:'Medisch',Type:'Controle',Description:'Flauwte'},
+  {ID:'onwel',Division:'Medisch',Type:'Onwelwording'},
+  {ID:'flauwval',Division:'Medisch',Type:'Flauwval'},
+ ];
+ const input=ONTRACK_HEADERS.join(',')+'\n'+entries.map(row=>ONTRACK_HEADERS.map(key=>'"'+String(({'Date and Time':'2026-11-03 - 06:00 PM',...row})[key]||'').replaceAll('"','""')+'"').join(',')).join('\n');
+ const base=calculateReport(input),{report}=await createWebReportService({photo:async()=>null,store:async()=>sourceFor(input)})('actor',{slug:'jungle'});
+ assert.equal(base.kpis.medical.unwell,2);assert.equal(report.kpis.medical.unwell,3);assert.equal(report.kpis.medical.contusion,2);assert.equal(report.kpis.security.mischief,1);
+ for(const [filter,ids,amount]of [['unwell',['flauwte','onwel','flauwval'],report.kpis.medical.unwell],['contusion',['blessure-zelfzorg','blessure'],report.kpis.medical.contusion],['mischief',['baldadigheid'],report.kpis.security.mischief]]){const selected=selectedReportIncidents(report.incidents,filter);assert.deepEqual(selected.map(row=>row.id),ids);assert.equal(selected.length,amount);}
+ assert.equal(selectedReportIncidents(report.incidents).some(row=>row.id==='blessure-zelfzorg'),false);
+ assert.deepEqual(medicalReportFilters.map(row=>row.id),['treatments','selfcare','unwell','contusion','ambulance']);assert.deepEqual(securityReportFilters.map(row=>row.id),['verbal','physical','mischief','evictions','arrests']);
+ assert.equal('contusion' in base.kpis.medical,false);assert.equal('mischief' in base.kpis.security,false);
 });

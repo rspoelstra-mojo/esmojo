@@ -8,3 +8,10 @@ test('Selecties gebruiken bron-Type en Resolved Status, niet vrije omschrijving 
  assert.equal(matchesSecurityReportFilter(both,'onbekend'),false);
  assert.deepEqual(securityReportTags({type:'Zelfzorg',resolvedStatus:'Eviction',affectedPerson:0}),['evictions']);
 });
+
+test('Baldadigheid gebruikt de gelijknamige Type-waarde, niet vrije beschrijving of afhandeling',()=>{
+ for(const type of ['Baldadigheid',' BALDADIGHEID '])assert.equal(matchesSecurityReportFilter({type},'mischief'),true);
+ assert.equal(matchesSecurityReportFilter({type:'Controle',description:'Baldadigheid',resolvedStatus:'Baldadigheid'},'mischief'),false);
+ assert.equal(matchesSecurityReportFilter({type:'Geen baldadigheid'},'mischief'),false);
+ assert.deepEqual(securityReportTags({type:'Baldadigheid',resolvedStatus:'Eviction'}),['mischief','evictions']);
+});

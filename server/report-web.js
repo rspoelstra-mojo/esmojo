@@ -1,6 +1,6 @@
 import {webReportTimeline} from '../shared/report-timeline.js';
-import {medicalReportTags} from '../shared/report-medical.js';
-import {securityReportTags} from '../shared/report-security.js';
+import {medicalReportTags,matchesMedicalReportFilter} from '../shared/report-medical.js';
+import {securityReportTags,matchesSecurityReportFilter} from '../shared/report-security.js';
 import {getMojoPhoto} from './mojo-photo.js';
 import {reportVenueName} from '../shared/report-filename.js';
 import {legacyReportId} from '../shared/report-routes.js';
@@ -29,8 +29,10 @@ export function createWebReportService({store,photo=getMojoPhoto}){
   if(show?.key!==concertId||typeof show.name!=='string'||!show.name||typeof show.venue!=='string'||typeof source?.csvBase64!=='string'||source.csvBase64.length>2800000||!Number.isFinite(Date.parse(source.modifiedAt))||!Array.isArray(source.series?.shows)||!source.series.shows.some(row=>row.concertId===concertId&&row.date===show.date))throw Error('REPORT_UNAVAILABLE');
   const bytes=Buffer.from(source.csvBase64,'base64');if(createHash('sha256').update(bytes).digest('hex')!==source.sourceHash)throw Error('SOURCE_CHANGED');
   const report=validateReportDay(calculateReport(bytes,{generatedAt:source.modifiedAt}),show.date);
+  const count=(matches,id)=>report.incidents.filter(incident=>matches(incident,id)).length;
+  const kpis={medical:{...report.kpis.medical,unwell:count(matchesMedicalReportFilter,'unwell'),contusion:count(matchesMedicalReportFilter,'contusion')},security:{...report.kpis.security,mischief:count(matchesSecurityReportFilter,'mischief')}};
   let photoData=source.photo||null;try{if(!photoData)photoData=await photo(show.sourceUrl);}catch{/* Optionele foto mag het rapport niet blokkeren. */}
-  return{show:{key:show.key,name:show.name,venue:reportVenueName({name:show.venue}),dates:source.series.dates},selectedDate:show.date,availableShows:source.series.shows,photo:photoData,report:{timetable:source.timetable||null,kpis:report.kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:webReportTimeline(report,source.timetable,show.date),locations:report.locations,
+  return{show:{key:show.key,name:show.name,venue:reportVenueName({name:show.venue}),dates:source.series.dates},selectedDate:show.date,availableShows:source.series.shows,photo:photoData,report:{timetable:source.timetable||null,kpis,types:{medical:webReportTypes(report.incidents,'medisch'),security:webReportTypes(report.incidents,'beveiliging')},timeline:webReportTimeline(report,source.timetable,show.date),locations:report.locations,
    incidents:report.incidents.map(incident=>{const {id,localDate,time,zone,type,priority,description,note,highlight}=incident;return{id,localDate,time,zone,type,priority,description,note,highlight,securityFilters:securityReportTags(incident),medicalFilters:medicalReportTags(incident)};}),
   }};
  };
