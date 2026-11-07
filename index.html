@@ -63,6 +63,14 @@
 </svg></div></div></section>
     <section id="auth-panel" class="auth-panel" aria-label="Inloggen" hidden></section>
     <a class="skip-link" href="#content">Naar de inhoud</a>
+    <header class="mobile-menu-bar" hidden>
+      <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-label="Menu openen" aria-expanded="false" aria-controls="mobile-menu-dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+      <span class="mobile-page-title">ESMOJO</span><span class="mobile-page-loading submenu-spinner" aria-hidden="true" hidden></span>
+    </header>
+    <dialog id="mobile-menu-dialog" class="mobile-menu-dialog" aria-labelledby="mobile-menu-title">
+      <div class="mobile-menu-head"><h2 id="mobile-menu-title">Menu</h2><button class="mobile-menu-close" type="button" aria-label="Menu sluiten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+      <div class="mobile-menu-scroll"></div>
+    </dialog>
     <aside class="rail" aria-label="Hoofdmenu" hidden>
       <a class="brand" href="/" aria-label="ESMOJO homepage"></a>
       <nav aria-label="Hoofdnavigatie" id="navigation"></nav>
@@ -74,7 +82,7 @@
           <span class="avatar"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="12" r="5" fill="currentColor"/><path d="M6 29v-3a10 10 0 0 1 20 0v3" fill="currentColor"/></svg></span>
           <span class="tooltip" role="tooltip">Accountinstellingen</span>
         </a>
-        <span class="app-version" aria-label="Websiteversie 1.63">V1.63</span>
+        <span class="app-version" aria-label="Websiteversie 1.64">V1.64</span>
       </div>
     </aside>
     <div class="workspace" hidden>

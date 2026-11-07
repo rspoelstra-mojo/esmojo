@@ -1,3 +1,4 @@
+import {createMobileNavigation} from './mobile-navigation.js';
 import {loadShowStorageAlerts} from './lib/show-storage-alerts.js';
 import {loadReportAlerts} from './lib/report-alerts.js';
 import {backgroundSaves,installSaveExitWarning} from './lib/background-saves.js';
@@ -32,6 +33,8 @@ const submenuSearch = createSubmenuSearch({
   toggle: document.querySelector('#submenu-search-toggle'), navigation: document.querySelector('#submenu-navigation'),
   empty: document.querySelector('#submenu-search-empty'), status: document.querySelector('#submenu-search-status'),
 });
+
+const mobileNavigation=createMobileNavigation();
 
 // Exact aangeleverde SVG; de donkere modus verandert via CSS alleen ESMO.
 document.querySelector('.brand').innerHTML = logo;
@@ -86,6 +89,7 @@ function renderPage() {
   const root = fluidPreview?'shows':route.split('/')[0];
   if (!fluidPreview) disposeLayout = enableFluidLayout(content, {variant: root === 'shows' ? 'show' : 'page'});
   const title = pages[root] || 'Pagina niet gevonden';
+  mobileNavigation.setTitle(title);
   const hasSubmenu = route !== '';
   document.querySelector('.workspace').classList.toggle('has-submenu', hasSubmenu);
   document.querySelector('.submenu').hidden = !hasSubmenu;
@@ -149,6 +153,7 @@ renderPage();
 startAuth({
   onReady(current) {
     updateModuleProfile(current);
+    mobileNavigation.setEnabled(true);
     clearInterval(menuRefreshTimer);
     if(hasModule(profile,'shows'))void refreshShowsMenu();
     if(hasModule(profile,'reports'))void reportCatalogueCache.refresh(access).catch(()=>{});
@@ -162,6 +167,7 @@ startAuth({
     if(hasModule(profile,'shows'))void loadShowStorageAlerts({request:access});
   },
   onSignedOut() {
+    mobileNavigation.setEnabled(false);
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
     homeDashboardCache.clear();reportCatalogueCache.clear();
