@@ -1,5 +1,4 @@
-import {barrierTypes} from '../shared/barrier-layout.js';
-// Ontbrekende PNG's veroorzaken geen HTTP- of API-verzoeken. Nieuwe bestanden
-// in deze map worden bij de normale build automatisch aan de configuratie gekoppeld.
-const files=import.meta.glob('./assets/barrier-layouts/*.png',{eager:true,query:'?url',import:'default'});
-export const barrierImages=Object.fromEntries(barrierTypes.map(type=>[type.value,type.imageFile?files[`./assets/barrier-layouts/${type.imageFile}`]||null:null]));
+import {access} from './auth.js';
+import {createBarrierReferenceCache} from './lib/barrier-reference-cache.js';
+export const barrierReferenceCache=createBarrierReferenceCache({request:type=>access('barrier-reference',{method:'POST',body:{type}})});
+export const loadBarrierImage=type=>barrierReferenceCache.load(type);

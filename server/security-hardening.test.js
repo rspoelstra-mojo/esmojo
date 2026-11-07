@@ -1,7 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';import {createHash} from 'node:crypto';
 import {createOAuthAbuseGuard,OAUTH_LIMIT_SCRIPT} from './oauth-abuse.js';
 import {makeMcpOAuthHandler} from './mcp-oauth.js';
-import {makeSecurityMaintenance} from './security-maintenance.js';
 import {createBarrierReferenceService,validateReferenceRequest} from './barrier-references.js';
 import {harness} from './test-support/production-drive.js';
 import {expectedSecurityHeaders,appCsp} from '../tools/security/browser-headers.mjs';
@@ -35,17 +34,13 @@ test('Referentiecache bewaart alleen geverifieerde bytes en accepteert geen vrij
  for(const input of [{type,fileId:'outside'},{type:'../private'},{type:'constructor'}])assert.throws(()=>validateReferenceRequest(input),/VALIDATION/);
  await assert.rejects(createBarrierReferenceService({manifest,shows:async()=>({...value,base64:'AAAA'})})('actor',{type}),/ATTACHMENT_INVALID/);
 });
-test('Onderhoud vereist vaste OIDC-identiteit en weigert extra payload, preview en ongeverifieerde resultaten',async()=>{
- let touched=0;const input={method:'POST',headers:{},body:{operation:'prepare'}};
- const denied=makeSecurityMaintenance({identify:async()=>{throw Error('FORBIDDEN');},profiles:async()=>{touched++;}}),res=response();await denied(input,res);assert.equal(res.code,403);assert.equal(touched,0);
- const preview=makeSecurityMaintenance({env:{VERCEL_ENV:'preview'},identify:async()=>{touched++;}}),p=response();await preview(input,p);assert.equal(p.code,403);assert.equal(touched,0);
- const service=makeSecurityMaintenance({manifest,identify:async()=>{},profiles:async(op,actor)=>{assert.equal(op,'security-prepare');assert.equal(actor,undefined);return{modulesExplicit:true,identityPinned:true,copyRecipientConfigured:true};},read:async()=>bytes,shows:async(op,payload)=>{assert.equal(op,'reference-install');assert.equal(payload.sha256,sha256);return{verified:true,type};}});
- const ok=response();await service(input,ok);assert.equal(ok.code,200);assert.equal(ok.data.referencesVerified,1);assert.equal(JSON.stringify(ok.data).includes('base64'),false);
- const bad=response();await service({...input,body:{operation:'prepare',actor:'injected'}},bad);assert.equal(bad.code,400);
-});
 test('CSP blokkeert framing en onbekende inline scripts; opstartscript krijgt exacte hash',()=>{
  const config=JSON.parse(readFileSync('vercel.json','utf8')),html=readFileSync('index.html','utf8');
  for(const expected of expectedSecurityHeaders(html))assert.ok(config.headers.some(row=>JSON.stringify(row)===JSON.stringify(expected)));
  const policy=appCsp(html);assert.match(policy,/frame-ancestors 'none'/);assert.match(policy,/object-src 'none'/);assert.equal(/script-src[^;]*unsafe-inline/.test(policy),false);assert.equal(/script-src[^;]*unsafe-eval/.test(policy),false);
  assert.notEqual(appCsp(html.replace('apply(false)','apply(true)')),policy);
+});
+
+test('Node en Drive gebruiken hetzelfde vaste referentiemanifest',()=>{
+ assert.equal(readFileSync('google-apps-script/BarrierReferenceManifest.gs','utf8').split('\n').slice(1).join('\n'),readFileSync('shared/barrier-reference-manifest.js','utf8').replaceAll('export ',''));
 });

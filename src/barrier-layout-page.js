@@ -5,7 +5,7 @@ import './production-assessment.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 import {barrierTypes,isStandardBarrierType,validateBarrierData,barrierUploadLimit} from '../shared/barrier-layout.js';
-import {barrierImages} from './barrier-images.js';
+import {loadBarrierImage} from './barrier-images.js';
 import {createRiskReviewCard} from './risk-review-card.js';
 import {assessmentNode as node,createAssessmentQueue} from './production-assessment-ui.js';
 
@@ -62,8 +62,10 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
     resetPreview();awaitingPreview=false;const sequence=previewSequence;
     preview.dataset.layout=type==='custom'?'custom':'schematic';
     if(type!=='custom'){
-      const url=barrierImages[type];if(!url){placeholderPreview('Schematische afbeelding nog niet beschikbaar');return;}
-      const image=node('img','');image.alt=barrierTypes.find(row=>row.value===type)?.label||'Barrieropstelling';image.src=url;image.onerror=()=>{if(!disposed&&sequence===previewSequence)placeholderPreview('Schematische afbeelding nog niet beschikbaar');};previewBox.append(image);return;
+      if(!type){placeholderPreview('Schematische afbeelding nog niet beschikbaar');return;}
+      try{const url=await loadBarrierImage(type);if(disposed||sequence!==previewSequence)return;
+       const image=node('img','');image.alt=barrierTypes.find(row=>row.value===type)?.label||'Barrieropstelling';image.src=url;image.onerror=()=>{if(!disposed&&sequence===previewSequence)placeholderPreview('Schematische afbeelding nog niet beschikbaar');};previewBox.append(image);
+      }catch{if(!disposed&&sequence===previewSequence)placeholderPreview('Schematische afbeelding nog niet beschikbaar');}return;
     }
     const attachment=custom.attachment;if(!attachment){placeholderPreview('Nog geen afwijkende barrieropstelling geüpload');return;}
     placeholderPreview(attachment.fileName);

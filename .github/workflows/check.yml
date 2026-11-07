@@ -61,6 +61,8 @@ jobs:
           node server/showprofile-download.test.js
           node server/mfa-security.test.js
           node server/security-hardening.test.js
+          node server/authorization-matrix.test.js
+          node src/lib/barrier-reference-cache.test.js
           node tools/security/browser-headers.mjs
           node src/lib/mfa-verification.test.js
           node --test src/lib/show-menu-cache.test.js server/startup-view.test.js src/lib/router.test.js src/lib/profile-saves.test.js
