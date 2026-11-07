@@ -1307,3 +1307,32 @@ Webtellingen en incidentselectie gebruiken dezelfde gedeelde criteria. Nieuwe
 subtypes tellen incidenten; bestaande ambulance/uitzetting/aanhouding blijven
 personentellingen. PDF-selectie en berekening blijven behouden; nieuwe waarden
 worden alleen in de beveiligde webprojectie toegevoegd.
+
+
+## Bedrijf/functie en fluid accounteditor (V1.70)
+
+De gebruiker classificeert Bedrijf expliciet als Vertrouwelijk: voeg company toe
+aan het bestaande Drive-profiel via de beveiligde Vercel-route. Bedrijf en functie gaan niet naar Supabase Auth-metadata, mails of persistente
+browseropslag. jobTitle
+blijft het bestaande vertrouwelijke functieveld.
+
+Aanmaken/bewerken gebruikt verplichte voornaam, achternaam, e-mail, bedrijf en
+functie. Vaste catalogus shared/account-employment.js en identieke gegenereerde
+Drive-validator AccountEmployment.gs: MOJO Concerts → Event Safety Manager /
+Productiemanager / CMT Leider; TSC Crowd Management → Projectleider / Management;
+Ziggo Dome, AFAS Live en Insomniac → Management. Nieuwe accounts standaard
+Gebruiker; alleen MOJO mag handmatig Beheerder worden. Browser, Node en Drive
+controleren dit onafhankelijk, inclusief de effectieve bootstrap-/superrol.
+Bestaande zelf-/laatste-beheerder-, superbeheerder- en modulebescherming behouden.
+
+Alle bestaande accounts mogen op expliciet verzoek MOJO Concerts krijgen. De
+herhaalbare migratie vult ontbrekende company-velden bij beveiligd lezen of
+schrijven van het bestaande accountregister en markeert dit één keer. Functie,
+rollen, modules, IDs en relaties blijven behouden. Nieuwe externe accounts worden
+nooit teruggezet naar MOJO. Een oude functietekst blijft leesbaar, maar bij een
+profielwijziging kiest de beheerder een geldige functie uit de nieuwe catalogus.
+
+Fluid kaarten Accountgegevens, Organisatie, Toegang en Profielfoto herschikken
+naar één kolom op smal beeld. Bestaande rond uitsnijden, uitnodiging, MFA en
+achtergrondopslag blijven werken. Nieuwe bedrijfskeuze maakt de functie leeg;
+nooit een oude functie of beheerderrol bij een extern bedrijf laten staan.

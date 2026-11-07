@@ -8,7 +8,7 @@ import {renderEmailTemplate} from './email-template.js';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
-const profile = { id, firstName: 'Test', lastName: 'Account', jobTitle: 'Tester', role: 'beheerder', activated: true, email: 'test@example.invalid' };
+const profile = { id, firstName: 'Test', lastName: 'Account', company:'MOJO Concerts',jobTitle: 'Event Safety Manager', role: 'beheerder', activated: true, email: 'test@example.invalid' };
 const env = { VITE_SUPABASE_URL: 'https://project.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SECRET_KEY: 'server-test', RESEND_API_KEY: 'mail-test' };
 const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
 
@@ -123,7 +123,7 @@ test('Nieuwe productionele routes vereisen account/MFA en gebruiken uitsluitend 
 });
 
 test('accountmail gebruikt de afzonderlijke voornaam van de ontvanger, nooit de beheerder of overige profielvelden',async()=>{
- const body={...profile,firstName:'Anne Marie',lastName:'NietInDeMail',jobTitle:'AlleenInDrive',email:'ontvanger@example.invalid'};
+ const body={...profile,firstName:'Anne Marie',lastName:'NietInDeMail',jobTitle:'CMT Leider',email:'ontvanger@example.invalid'};
  const {response,calls}=await run({method:'POST',own:{...profile,firstName:'Beheerder'},body});
  assert.equal(response.code,201);const mail=calls.find(c=>c[0]==='mail')[1];
  assert.equal(mail.to,body.email);assert.match(mail.html,/Beste Anne Marie,/);assert.match(mail.text,/Beste Anne Marie,/);
@@ -255,4 +255,9 @@ test('Mailhistorie vereist beheerder en Rapportages; ontvangst schrijft uitsluit
  const body={concertId:'Synthetic_show',token:'a'.repeat(64)},opened=await run({action:'report-email-open',method:'POST',body,own:{...profile,role:'gebruiker',modules:['reports']}});assert.equal(opened.response.code,200);assert.deepEqual(opened.calls.find(call=>call[0]==='ontrack-report').slice(1),['email-open',id,body]);
  const forged=await run({action:'report-email-open',method:'POST',body:{...body,actor:other}});assert.equal(forged.response.code,400);assert.equal(forged.calls.some(call=>call[0]==='ontrack-report'),false);
  const revoked=await run({action:'report-email-history',own:{...profile,role:'gebruiker',modules:['shows']}});assert.equal(revoked.response.code,403);assert.equal(revoked.calls.some(call=>call[0]==='ontrack-report'),false);
+});
+
+test('Onvolledige organisatie en externe beheerder worden vóór Auth-creatie/mail geweigerd',async()=>{
+ for(const extra of [{company:undefined},{company:'TSC Crowd Management',jobTitle:'CMT Leider',role:'gebruiker'},{company:'Ziggo Dome',jobTitle:'Management',role:'beheerder'}]){const {response,calls}=await run({method:'POST',body:{...profile,...extra}});assert.equal(response.code,400);assert.equal(calls.some(call=>['createAuth','invite','create','mail'].includes(call[0])),false);}
+ const {response,calls}=await run({method:'POST',body:{...profile,company:'AFAS Live',jobTitle:'Management',role:undefined}});assert.equal(response.code,201);assert.equal(calls.find(call=>call[0]==='create')[2].profile.company,'AFAS Live');assert.equal(calls.find(call=>call[0]==='create')[2].profile.role,'gebruiker');assert.deepEqual(Object.keys(calls.find(call=>call[0]==='createAuth')[1]).sort(),['email','email_confirm']);
 });

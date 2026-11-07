@@ -49,6 +49,7 @@ jobs:
           node server/auth-submission.test.js
           node server/session-cookie.test.js
           node server/account-profiles.test.js
+          node shared/account-employment.test.js
           node server/drive-write-diagnostic.test.js
           node server/apps-script.test.js
           node server/mojo-timetable.test.js

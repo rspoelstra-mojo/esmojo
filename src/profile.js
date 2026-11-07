@@ -24,7 +24,7 @@ export function createProfileView(container, profile, onChange) {
   const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp'; input.className = 'visually-hidden';
   choose.append(label, input); photoRow.append(preview, choose);
   const details = document.createElement('dl'); details.className = 'profile-details';
-  for (const [caption, text] of [['Voornaam', profile.firstName], ['Achternaam', profile.lastName], ['E-mailadres', profile.email], ['Functie', profile.jobTitle], ['Rol', isSuperAdministrator(profile)?'Super beheerder':isAdministrator(profile)?'Beheerder':'Gebruiker']]) {
+  for (const [caption, text] of [['Voornaam', profile.firstName], ['Achternaam', profile.lastName], ['E-mailadres', profile.email], ['Bedrijf', profile.company||'Nog niet ingevuld'], ['Functie', profile.jobTitle], ['Rol', isSuperAdministrator(profile)?'Super beheerder':isAdministrator(profile)?'Beheerder':'Gebruiker']]) {
     const item = document.createElement('div'), term = document.createElement('dt'), value = document.createElement('dd');
     term.textContent = caption; value.textContent = text; item.append(term, value); details.append(item);
   }
