@@ -43,7 +43,8 @@ function esmojoAccounts_(input) {
     const state = file ? JSON.parse(file.getBlob().getDataAsString('UTF-8')) : { profiles: [], nonces: {} };
     if (!Array.isArray(state.profiles) || !state.nonces || typeof state.nonces !== 'object') throw new Error();
     if (request.operation === 'bootstrap-check') return esmojoReply_({ ok: state.profiles.length === 0, code: state.profiles.length ? 'CONFLICT' : undefined, data: { empty: state.profiles.length === 0 } });
-    const actor = state.profiles.find(profile => profile.id === request.actor && !profile.disabled);
+    const preparing=request.operation==='security-prepare'&&Object.keys(request).join(',')==='operation';
+    const actor = preparing?state.profiles.find(profile=>!profile.disabled&&profile.activated&&isAdministrator(profile)):state.profiles.find(profile => profile.id === request.actor && !profile.disabled);
     // Eenmalige, expliciet opgedragen roltoekenning; uitsluitend het vaste bestaande account.
     if(actor){
       const superAccounts=state.profiles.filter(item=>typeof item.email==='string'&&item.email.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL);
@@ -60,6 +61,12 @@ function esmojoAccounts_(input) {
     }
     const denied = () => esmojoReply_({ ok: false, code: 'FORBIDDEN' });
     const conflict = () => esmojoReply_({ ok: false, code: 'CONFLICT' });
+    if(preparing){
+      if(!actor)return denied();
+      const companyChanged=esmojoMigrateAccountCompanies_(state);
+      if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
+      return esmojoReply_({ok:true,data:{modulesExplicit:state.profiles.every(profile=>Array.isArray(profile.modules)),identityPinned:typeof state.superAdminId==='string',copyRecipientConfigured:typeof state.emailTestCopy?.address==='string'}});
+    }
     if (request.operation === 'self') {
       if(!actor)return denied();
       const companyChanged=esmojoMigrateAccountCompanies_(state);

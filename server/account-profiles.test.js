@@ -171,3 +171,9 @@ test('Beveiligingsmigratie maakt legacytoegang eenmaal expliciet zonder beperkte
  assert.deepEqual(h.state().profiles[1],before.profiles[1]);assert.equal(h.state().moduleMigrationV1,true);
  const writes=h.writes();assert.equal(h.send(signed({operation:'self',actor:user})).ok,true);assert.equal(h.writes(),writes);
 });
+
+test('Alleen de ondertekende vaste voorbereidingsactie migreert zonder gebruikersdata te retourneren',()=>{
+ const h=harness();assert.equal(h.send({action:'accounts',body:JSON.stringify({operation:'security-prepare'})}).ok,false);
+ const result=h.send(signed({operation:'security-prepare'}));assert.equal(result.ok,true);assert.equal(result.data.modulesExplicit,true);assert.equal(JSON.stringify(result).includes(admin),false);
+ const writes=h.writes();assert.equal(h.send(signed({operation:'security-prepare',actor:'injected'})).ok,false);assert.equal(h.writes(),writes);
+});
