@@ -8,7 +8,7 @@ import { createProfiles } from './account-profiles.js';
 const secret = 'test-only-secret-'.repeat(4);
 const admin = '11111111-1111-4111-8111-111111111111';
 const user = '22222222-2222-4222-8222-222222222222';
-const profile = (id, role = 'beheerder') => ({ id, email: `${id}@example.invalid`, firstName: 'Test', lastName: 'User', jobTitle: 'Tester', role, activated: true, disabled: false });
+const profile = (id, role = 'beheerder') => ({ id, email: `${id}@example.invalid`, firstName: 'Test', lastName: 'User', company:'MOJO Concerts',jobTitle: 'Event Safety Manager', role, activated: true, disabled: false });
 function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exists = true, failWrite = false } = {}) {
   let state = JSON.stringify({ profiles, nonces: {} });
   let writes = 0, locked = false;
@@ -25,6 +25,7 @@ function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exis
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: text => ({ setMimeType: () => JSON.parse(text) }) },
   });
   vm.runInContext(readFileSync(new URL('../google-apps-script/AccountModules.gs',import.meta.url),'utf8'),context);vm.runInContext(readFileSync(new URL('../google-apps-script/Code.gs', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../google-apps-script/AccountEmployment.gs',import.meta.url),'utf8'),context);
   vm.runInContext(readFileSync(new URL('../google-apps-script/Accounts.gs', import.meta.url), 'utf8'), context);
   return { send: input => context.doPost({ postData: { contents: JSON.stringify(input) } }), state: () => JSON.parse(state), writes: () => writes };
 }
@@ -125,7 +126,7 @@ test('editorinstelling ondertekent het profiel, verwijdert tijdelijke invoer en 
 });
 test('Drive bewaart modulekeuzes alleen via beheer en behoudt bestaande keuzes bij een update zonder moduleveld',()=>{
  const h=harness();let result=h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules:['reports']}}));assert.equal(result.ok,true);assert.deepEqual(h.state().profiles[1].modules,['reports']);
- result=h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),jobTitle:'Nieuwe functie'}}));assert.equal(result.ok,true);assert.deepEqual(h.state().profiles[1].modules,['reports']);
+ result=h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),jobTitle:'Productiemanager'}}));assert.equal(result.ok,true);assert.deepEqual(h.state().profiles[1].modules,['reports']);
  assert.equal(h.send(signed({operation:'update',actor:user,id:user,profile:{...profile(user,'gebruiker'),modules:['shows','artists','reports']}})).ok,false);
  assert.equal(h.send(signed({operation:'photo',actor:user,photo:'data:image/png;base64,AAAA',modules:['reports']})).ok,false);
  for(const modules of [null,['reports','reports'],['onbekend']])assert.equal(h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules}})).ok,false);
@@ -140,5 +141,24 @@ test('Alleen vaste codetoekenning promoveert Richard; geen website-/Drive-toeken
  assert.equal(h.send(signed({operation:'update',actor:admin,id:user,profile:{...richard,role:'beheerder'}})).ok,false);
  assert.equal(h.send(signed({operation:'update',actor:admin,id:admin,profile:{...profile(admin),role:'superbeheerder'}})).ok,false);
  const copy={...profile('33333333-3333-4333-8333-333333333333'),role:'superbeheerder'};assert.equal(h.send(signed({operation:'create',actor:user,profile:copy})).ok,false);
- assert.equal(h.send(signed({operation:'update',actor:user,id:user,profile:{...richard,role:'superbeheerder',jobTitle:'Aangepaste functie'}})).ok,true);assert.equal(h.state().profiles[1].role,'superbeheerder');
+ assert.equal(h.send(signed({operation:'update',actor:user,id:user,profile:{...richard,role:'superbeheerder',jobTitle:'CMT Leider'}})).ok,true);assert.equal(h.state().profiles[1].role,'superbeheerder');
+});
+
+test('Bedrijf en functie worden in Drive onafhankelijk gecontroleerd, externe rollen zijn gebruiker',()=>{
+ const third='33333333-3333-4333-8333-333333333333';
+ for(const extra of [{company:undefined},{company:'TSC Crowd Management',jobTitle:'Event Safety Manager',role:'gebruiker'},{company:'AFAS Live',jobTitle:'Management',role:'beheerder'}]){const h=harness();assert.equal(h.send(signed({operation:'create',actor:admin,profile:{...profile(third),...extra}})).code,'PROFILE_INVALID');assert.equal(h.writes(),0);}
+ const h=harness();assert.equal(h.send(signed({operation:'create',actor:admin,profile:{...profile(third,'gebruiker'),company:'TSC Crowd Management',jobTitle:'Projectleider',modules:['reports']}})).ok,true);const record=h.state().profiles.find(row=>row.id===third);assert.equal(record.company,'TSC Crowd Management');assert.equal(record.role,'gebruiker');assert.deepEqual(record.modules,['reports']);
+ assert.equal(h.send(signed({operation:'update',actor:admin,id:third,profile:{...record,role:'beheerder'}})).code,'PROFILE_INVALID');assert.equal(h.state().profiles.find(row=>row.id===third).role,'gebruiker');
+});
+test('Bestaande accounts krijgen één keer MOJO zonder functies/rechten te wijzigen; nieuwe externe accounts blijven extern',()=>{
+ const old=[profile(admin),{...profile(user,'gebruiker'),jobTitle:'Bestaande functie',modules:['reports']}].map(row=>{const copy={...row};delete copy.company;return copy;}),h=harness(old);
+ assert.equal(h.send(signed({operation:'self',actor:user})).data.company,'MOJO Concerts');assert.equal(h.writes(),1);
+ assert.deepEqual(h.state().profiles,old.map(row=>({...row,company:'MOJO Concerts'})));assert.equal(h.state().companyMigrationV1,true);
+ assert.equal(h.send(signed({operation:'list',actor:admin})).ok,true);assert.equal(h.writes(),1);
+ const third='33333333-3333-4333-8333-333333333333';assert.equal(h.send(signed({operation:'create',actor:admin,profile:{...profile(third,'gebruiker'),company:'Insomniac',jobTitle:'Management'}})).ok,true);
+ h.send(signed({operation:'self',actor:user}));assert.equal(h.state().profiles.find(row=>row.id===third).company,'Insomniac');assert.equal(h.writes(),2);
+});
+test('Onbevoegde requests voeren geen bedrijfsmigratie uit; bootstrap kan de externe rolregel niet omzeilen',()=>{
+ const old=profile(admin);delete old.company;const h=harness([old,profile(user,'gebruiker')]);assert.equal(h.send(signed({operation:'list',actor:user})).ok,false);assert.equal(h.writes(),0);
+ for(const email of ['bootstrap@example.invalid','redacted@example.invalid']){const fresh=harness([],{exists:false});assert.equal(fresh.send(signed({operation:'bootstrap',actor:'operator',profile:{...profile(admin,'gebruiker'),email,company:'Ziggo Dome',jobTitle:'Management'}})).code,'PROFILE_INVALID');assert.equal(fresh.writes(),0);}
 });

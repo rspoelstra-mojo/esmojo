@@ -35,7 +35,7 @@ function setupFirstAdministrator() {
   try { profile = JSON.parse(raw); } catch (_) { throw new Error('De profielinstelling bevat geen geldige JSON.'); }
   const body = JSON.stringify({ operation: 'bootstrap', actor: 'script-operator', profile: {
     id: profile.id, email: profile.email, firstName: profile.firstName,
-    lastName: profile.lastName, jobTitle: profile.jobTitle, role: 'beheerder',
+    lastName: profile.lastName, company:profile.company, jobTitle: profile.jobTitle, role: 'beheerder',
   } });
   const timestamp = Date.now();
   const nonce = Utilities.getUuid().replace(/-/g, '');
@@ -46,7 +46,7 @@ function setupFirstAdministrator() {
   if (!response.ok) {
     const messages = {
       CONFLICT: 'Er bestaat al een accountregister. Er is niets overschreven.',
-      PROFILE_INVALID: 'Controleer id, email, firstName, lastName en jobTitle in ESMOJO_FIRST_ADMIN_PROFILE.',
+      PROFILE_INVALID: 'Controleer id, email, firstName, lastName, company en jobTitle in ESMOJO_FIRST_ADMIN_PROFILE.',
       DRIVE_FOLDER: 'De ingestelde Drive-map kan niet worden geopend. Controleer account en maprechten.',
       DRIVE_READ: 'Het accountregister kan niet uit Drive worden gelezen. Controleer Drive-rechten.',
       DRIVE_WRITE: 'Het accountregister kan niet in Drive worden opgeslagen. Controleer schrijfrechten en Drive-autorisatie van het script.',

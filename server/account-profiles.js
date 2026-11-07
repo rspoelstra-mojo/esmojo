@@ -1,3 +1,4 @@
+import {validateAccountEmployment} from '../shared/account-employment.js';
 import {validateAccountModules} from '../shared/account-modules.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 
@@ -18,20 +19,22 @@ export function createProfiles({ env = process.env, request = fetch } = {}) {
       body: JSON.stringify({ action: 'accounts', timestamp, nonce, signature, body }), signal: AbortSignal.timeout(25000) });
     if (!response.ok) throw new Error('DRIVE_UNAVAILABLE');
     const result = await response.json();
-    if (!result.ok) throw new Error(result.code === 'FORBIDDEN' ? 'FORBIDDEN' : result.code === 'CONFLICT' ? 'CONFLICT' : 'DRIVE_UNAVAILABLE');
+    if (!result.ok) throw new Error(result.code === 'FORBIDDEN' ? 'FORBIDDEN' : result.code === 'CONFLICT' ? 'CONFLICT' : result.code === 'PROFILE_INVALID' ? 'VALIDATION' : 'DRIVE_UNAVAILABLE');
     return result.data;
   };
 }
 
-export function validateProfile(input) {
+export function validateProfile(input,{defaultRole}={}) {
   const output = {};
   for (const name of ['firstName', 'lastName', 'jobTitle']) {
     const value = input[name];
     if (typeof value !== 'string' || !value.trim() || value.trim().length > 120) throw new Error('VALIDATION');
     output[name] = value.trim();
   }
-  if (!['beheerder', 'gebruiker'].includes(input.role)) throw new Error('VALIDATION');
-  output.role = input.role;
+  const role=input.role===undefined?defaultRole:input.role;
+  if (!['beheerder', 'gebruiker'].includes(role)) throw new Error('VALIDATION');
+  output.role = role;
+  Object.assign(output,validateAccountEmployment({...input,...output}));
   if(Object.hasOwn(input,'modules'))output.modules=validateAccountModules(input.modules);
   if (input.photo !== undefined) {
     validatePhoto(input.photo);

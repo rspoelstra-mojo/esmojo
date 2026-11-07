@@ -103,3 +103,19 @@ button.submenu-link:hover { background: var(--hover); }
 .account-modules input[type="checkbox"] { width:16px; height:16px; margin:0; padding:0; accent-color:#083ade; }
 
 .account-notice:empty { display: none; }
+
+/* Fluid accounteditor: vaste typografie, meeschalende kaarten en één kolom op mobiel. */
+.accounts-toolbar.account-editor-heading { justify-content:flex-start; gap:16px; }
+.account-form.account-editor { grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr); align-items:start; }
+.account-editor-main,.account-editor-aside { display:grid; gap:20px; min-width:0; }
+.account-editor-card { display:grid; gap:16px; min-width:0; padding:24px; background:var(--fluid-card,var(--canvas)); border:1px solid var(--line); border-radius:12px; }
+.account-editor-card h2 { margin:0; font-size:16px; font-weight:650; }
+.account-editor-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.account-editor-field-email { grid-column:1 / -1; }
+.account-editor .account-modules { padding:0; border:0; border-radius:0; display:grid; gap:12px; }
+.account-editor .account-modules legend { padding:0; margin-bottom:12px; }
+.account-editor .account-editor-check { flex-direction:row; align-items:center; }
+.account-editor .account-notice { margin:0; color:var(--muted); }
+.account-editor > .form-actions { justify-content:flex-end; padding-top:4px; }
+@container fluid (max-width:800px) { .account-form.account-editor { grid-template-columns:minmax(0,1fr); } }
+@container fluid (max-width:420px) { .account-editor-card { padding:20px; } .account-editor-fields { grid-template-columns:minmax(0,1fr); } .account-editor > .form-actions > button { flex:1; } }
