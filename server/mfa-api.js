@@ -1,9 +1,8 @@
-import {verifyImportIdentity} from '../server/github-identity.js';
-import {createMfaReplay} from '../server/mfa-replay.js';
-import {createMfaVerification} from '../server/mfa-verification.js';
-import {mfaGuardEnabled,issueMfaCookie} from '../server/mfa-cookie.js';
-import {isFluidPreview,fluidPreviewOrigin} from '../server/fluid-preview.js';
-export const config={maxDuration:35};
+import {verifyImportIdentity} from './github-identity.js';
+import {createMfaReplay} from './mfa-replay.js';
+import {createMfaVerification} from './mfa-verification.js';
+import {mfaGuardEnabled,issueMfaCookie} from './mfa-cookie.js';
+import {isFluidPreview,fluidPreviewOrigin} from './fluid-preview.js';
 export function makeMfaHandler({env=process.env,request=fetch,verify=createMfaVerification({env}),replay=createMfaReplay({env}),identify=token=>verifyImportIdentity(token,{audience:'https://esmojo.nl/api/mfa',workflow:'mfa-security-check.yml'})}={}){
  return async(req,res)=>{
   res.setHeader('Cache-Control','no-store, private');res.setHeader('X-Content-Type-Options','nosniff');

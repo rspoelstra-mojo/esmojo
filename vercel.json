@@ -58,6 +58,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/mfa",
+      "destination": "/api/access?action=mfa"
+    },
+    {
       "source": "/shows/:path*",
       "destination": "/index.html"
     },
