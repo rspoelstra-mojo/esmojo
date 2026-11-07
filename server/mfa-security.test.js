@@ -23,11 +23,10 @@ test('MFA proof is encrypted, bound to user/session, expires and retains remembe
 test('Public config is minimal; health requires workflow identity; API never exposes provider errors',async()=>{let calls=0;const handler=makeMfaHandler({env,verify:async()=>{calls++;throw Error('secret-provider-text');},identify:async()=>{throw Error();},replay:{health:async()=>{throw Error('must-not-call');}}});const config=response();await handler({method:'GET',headers:{}},config);assert.deepEqual(config.data,{mode:'redis'});const health=response();await handler({...req(),body:{operation:'health'}},health);assert.equal(health.code,403);const failed=response();await handler(req(),failed);assert.equal(failed.code,503);assert.equal(JSON.stringify(failed.data).includes('secret-provider'),false);const cross=response();await handler({...req(),headers:{origin:'https://evil.example'}},cross);assert.equal(cross.code,403);assert.equal(calls,1);});
 
 
-test('Build weigert geheime of onbekende publieke Vite-variabelen',async()=>{
+test('Build exporteert uitsluitend openbare Supabase-configuratie en weigert geheime sleutels',async()=>{
  const {checkPublicEnv}=await import('../vite.config.js');
  assert.doesNotThrow(()=>checkPublicEnv({VITE_VERCEL_ENV:'preview',VITE_VERCEL_GIT_COMMIT_SHA:'synthetic',VITE_SUPABASE_URL:'https://project.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_synthetic',SUPABASE_SECRET_KEY:'sb_secret_synthetic'}));
- assert.throws(()=>checkPublicEnv({VITE_SUPABASE_SECRET_KEY:'synthetic'}),/Onbekende publieke/);
- assert.throws(()=>checkPublicEnv({VITE_VERCEL_SECRET_KEY:'synthetic'}),/Onbekende publieke/);
+ assert.deepEqual(Object.keys(checkPublicEnv({VITE_SUPABASE_SECRET_KEY:'synthetic',VITE_VERCEL_SECRET_KEY:'synthetic'})),['import.meta.env.VITE_SUPABASE_URL','import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY']);
  assert.throws(()=>checkPublicEnv({VITE_SUPABASE_URL:'https://project.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'sb_secret_synthetic'}),/uitsluitend/);
 });
 
