@@ -18,3 +18,15 @@ test('Ambulance volgt Resolved Status ongeacht afdeling/aantal personen; geen zo
  assert.deepEqual(medicalReportTags({division:'Anders',resolvedStatus:'AMBULANCE transport',affectedPerson:0}),['ambulance']);
  assert.equal(matches({description:'Ambulance',note:'Ambulance'},'ambulance'),false);assert.equal(matches({division:'Medisch'},'onbekend'),false);
 });
+
+test('Contusie / Distorsie gebruikt de medische Type-kolom en behoudt slash-/hoofdlettervarianten',()=>{
+ for(const type of ['Contusie / Distorsie','CONTUSIE/DISTORSIE',' contusie  /  distorsie '])assert.equal(matches({division:'Medisch',type},'contusion'),true);
+ assert.equal(matches({division:'Beveiliging',type:'Contusie / Distorsie'},'contusion'),false);
+ assert.equal(matches({division:'Medisch',description:'Contusie / Distorsie'},'contusion'),false);
+});
+test('Flauwte in Type telt mee bij Onwelwordingen, ook gecombineerd; omschrijving telt niet',()=>{
+ for(const type of ['Flauwte','Benauwd/ Flauwte','Dreigende FLAUWTE'])assert.equal(matches({division:'Medisch',type},'unwell'),true);
+ assert.equal(matches({division:'Medisch',description:'flauwte'},'unwell'),false);
+ assert.equal(matches({division:'Beveiliging',type:'Flauwte'},'unwell'),false);
+ assert.equal(matches({division:'Medisch',type:'Benauwd/ Flauwte'},'unwell',{includeFlauwte:false}),false);
+});

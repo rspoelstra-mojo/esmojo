@@ -1295,3 +1295,15 @@ icoon. Een rootbezoek wordt vóór inhoudsrendering vervangen door /rapportages,
 met de bestaande gecentreerde keuzehint. Directe rapportagelinks blijven behouden.
 Homepage-API's blijven serverzijdig Shows-toegang vereisen; andere accounts en
 beheerdersrechten veranderen niet. Pas dit ook toe bij gewijzigde modulerechten.
+
+
+## Extra filters webrapportage (V1.69)
+
+Op verzoek: Beveiliging bevat Baldadigheid (CSV-Type, hoofdletterongevoelig) onder
+Fysieke agressie en boven Uitzettingen. Medisch bevat Contusie / Distorsie onder
+Onwelwordingen en boven Ambulancetransporten. Medische Type-waarden met ‘flauwte’
+(vb. Benauwd/ Flauwte) tellen ook als Onwelwordingen; geen zoekactie in vrije tekst.
+Webtellingen en incidentselectie gebruiken dezelfde gedeelde criteria. Nieuwe
+subtypes tellen incidenten; bestaande ambulance/uitzetting/aanhouding blijven
+personentellingen. PDF-selectie en berekening blijven behouden; nieuwe waarden
+worden alleen in de beveiligde webprojectie toegevoegd.
