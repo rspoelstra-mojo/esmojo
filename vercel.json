@@ -5,7 +5,7 @@
       "maxDuration": 300
     },
     "api/access.js": {
-      "includeFiles": "{server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**}",
+      "includeFiles": "{src/assets/barrier-layouts/*.png,server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**}",
       "maxDuration": 300
     },
     "api/ontrack-reports-sync.js": {
@@ -21,6 +21,117 @@
     }
   },
   "headers": [
+    {
+      "source": "/:path*",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/shows/:path*",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/artiest/:path*",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/rapportages/:path*",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/statistieken/:path*",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/beheerder/:path*",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/account/:path*",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/activeren/:path*",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/test/fluid-layout",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-oCISg78mvxBJuo5CcuIu+8DV4/NLP6ORAfWB2RHkcsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.mojo.nl; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
     {
       "source": "/.well-known/:path*",
       "headers": [

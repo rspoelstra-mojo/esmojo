@@ -1,3 +1,4 @@
+import {createOAuthAbuseGuard} from './oauth-abuse.js';
 import { createHash, createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createMcpAuthStore, digest, opaque } from './mcp-auth-store.js';
 import { createMcpOwnerCheck } from './mcp-owner.js';
@@ -74,7 +75,7 @@ document.getElementById('revoke').onclick=()=>{if(confirm('Alle onderzoeksverbin
 </script></html>`;
 }
 
-export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthStore({ env }), owner = createMcpOwnerCheck({ env }), now = Date.now } = {}) {
+export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthStore({ env }), owner = createMcpOwnerCheck({ env }), now = Date.now, guard=createOAuthAbuseGuard({env}) } = {}) {
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, private'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
     const json = (status, body) => res.status(status).json(body);
@@ -96,6 +97,7 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
             || !/^[\w-]{43}$/.test(q.code_challenge || '') || q.resource !== RESOURCE || (q.state !== undefined && (typeof q.state !== 'string' || q.state.length > 1500))
             || (q.scope && (typeof q.scope !== 'string' || q.scope.split(' ').some(x => ![SCOPE, RISK_SCOPE, 'offline_access'].includes(x))))) return error('invalid_request');
           scope = requestedScopes(q.scope);
+          await guard(req,'authorize');
           const c = await store({ operation: 'client', clientId: q.client_id });
           if (!c.redirectUris.includes(q.redirect_uri) || !redirectUris.includes(q.redirect_uri)) return error('invalid_request');
           csrf = opaque('csrf'); client = c.name;
@@ -113,6 +115,7 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
         p = (req.headers['content-type'] || '').startsWith('application/x-www-form-urlencoded') ? Object.fromEntries(new URLSearchParams(p)) : JSON.parse(p);
       }
       if (!p || typeof p !== 'object' || Array.isArray(p) || Buffer.byteLength(JSON.stringify(p)) > 8000) return error('invalid_request');
+      if(['register','token'].includes(action))await guard(req,action);
       if (action === 'register') {
         if (!Array.isArray(p.redirect_uris) || !p.redirect_uris.length || p.redirect_uris.length > 2 || p.redirect_uris.some(u => !redirectUris.includes(u))
             || !['none', 'client_secret_post', 'client_secret_basic', undefined].includes(p.token_endpoint_auth_method) || (p.grant_types && (!Array.isArray(p.grant_types) || p.grant_types.some(x => !['authorization_code', 'refresh_token'].includes(x))))
@@ -166,6 +169,7 @@ export function makeMcpOAuthHandler({ env = process.env, store = createMcpAuthSt
       return json(200, { access_token: access, token_type: 'Bearer', expires_in: output.expiresIn, refresh_token: refresh, scope: output.scope });
     } catch (failure) {
       const code = failure.message;
+      if(code==='OAUTH_RATE_LIMIT'){res.setHeader('Retry-After',String(failure.retryAfter));return error('slow_down',429);}
       return error({ INVALID_CLIENT: 'invalid_client', INVALID_GRANT: 'invalid_grant', FORBIDDEN: 'access_denied' }[code] || 'temporarily_unavailable', code === 'FORBIDDEN' ? 403 : ['INVALID_CLIENT', 'INVALID_GRANT'].includes(code) ? 400 : 503);
     }
   };
