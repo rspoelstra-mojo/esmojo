@@ -84,7 +84,7 @@ test('Drive laat een gebruiker alleen de eigen foto wijzigen en behoudt de ander
   const h = harness(); const before = h.state().profiles[1];
   const result = h.send(signed({ operation: 'photo', actor: user, photo: 'data:image/jpeg;base64,AAAA' }));
   assert.equal(result.ok, true); assert.equal(result.data.id, user);
-  assert.deepEqual(h.state().profiles[1], { ...before, photo: 'data:image/jpeg;base64,AAAA' });
+  assert.deepEqual(h.state().profiles[1], { ...before, modules:['shows','artists','reports'], photo: 'data:image/jpeg;base64,AAAA' });
   assert.equal(h.state().profiles[0].photo, undefined);
 });
 test('Drive weigert gerichte foto-aanpassingen van een ander en rolwijzigingen', () => {
@@ -135,8 +135,8 @@ test('Drive bewaart modulekeuzes alleen via beheer en behoudt bestaande keuzes b
 });
 test('Alleen vaste codetoekenning promoveert Richard; geen website-/Drive-toekenning aan andere accounts of degradatie door gewone beheerders',()=>{
  const richard={...profile(user,'gebruiker'),email:'r.spoelstra@mojo.nl',modules:[]},h=harness([profile(admin),richard]);
- const initial=h.send(signed({operation:'self',actor:user}));assert.equal(initial.ok,true);assert.equal(initial.data.role,'superbeheerder');assert.equal(h.state().profiles[1].role,'superbeheerder');assert.equal(h.writes(),1);
- assert.equal(h.send(signed({operation:'self',actor:user})).data.role,'superbeheerder');assert.equal(h.writes(),1);
+ const initial=h.send(signed({operation:'self',actor:user}));assert.equal(initial.ok,true);assert.equal(initial.data.role,'superbeheerder');assert.equal(h.state().profiles[1].role,'superbeheerder');assert.equal(h.writes(),2);
+ assert.equal(h.send(signed({operation:'self',actor:user})).data.role,'superbeheerder');assert.equal(h.writes(),2);
  for(const operation of ['disable','delete'])assert.equal(h.send(signed({operation,actor:admin,id:user})).ok,false);
  assert.equal(h.send(signed({operation:'update',actor:admin,id:user,profile:{...richard,role:'beheerder'}})).ok,false);
  assert.equal(h.send(signed({operation:'update',actor:admin,id:admin,profile:{...profile(admin),role:'superbeheerder'}})).ok,false);
@@ -153,7 +153,7 @@ test('Bedrijf en functie worden in Drive onafhankelijk gecontroleerd, externe ro
 test('Bestaande accounts krijgen één keer MOJO zonder functies/rechten te wijzigen; nieuwe externe accounts blijven extern',()=>{
  const old=[profile(admin),{...profile(user,'gebruiker'),jobTitle:'Bestaande functie',modules:['reports']}].map(row=>{const copy={...row};delete copy.company;return copy;}),h=harness(old);
  assert.equal(h.send(signed({operation:'self',actor:user})).data.company,'MOJO Concerts');assert.equal(h.writes(),1);
- assert.deepEqual(h.state().profiles,old.map(row=>({...row,company:'MOJO Concerts'})));assert.equal(h.state().companyMigrationV1,true);
+ assert.deepEqual(h.state().profiles,old.map(row=>({...row,company:'MOJO Concerts',modules:row.modules??['shows','artists','reports']})));assert.equal(h.state().companyMigrationV1,true);
  assert.equal(h.send(signed({operation:'list',actor:admin})).ok,true);assert.equal(h.writes(),1);
  const third='33333333-3333-4333-8333-333333333333';assert.equal(h.send(signed({operation:'create',actor:admin,profile:{...profile(third,'gebruiker'),company:'Insomniac',jobTitle:'Management'}})).ok,true);
  h.send(signed({operation:'self',actor:user}));assert.equal(h.state().profiles.find(row=>row.id===third).company,'Insomniac');assert.equal(h.writes(),2);
