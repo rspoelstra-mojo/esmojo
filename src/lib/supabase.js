@@ -32,3 +32,9 @@ export function getSupabase() {
   }
   return clientPromise;
 }
+
+// Alleen de openbare projectconfiguratie. Geen serverkey in de browser.
+export async function createMfaClient(accessToken){
+ const {url,key}=validateSupabaseConfig(import.meta.env),{createClient}=await import('@supabase/supabase-js');
+ return createClient(url,key,{global:{headers:{Authorization:'Bearer '+accessToken},fetch:(url,init)=>fetch(url,{...init,signal:AbortSignal.timeout(10000)})},auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+}
