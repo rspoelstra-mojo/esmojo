@@ -162,3 +162,12 @@ test('Onbevoegde requests voeren geen bedrijfsmigratie uit; bootstrap kan de ext
  const old=profile(admin);delete old.company;const h=harness([old,profile(user,'gebruiker')]);assert.equal(h.send(signed({operation:'list',actor:user})).ok,false);assert.equal(h.writes(),0);
  for(const email of ['bootstrap@example.invalid','r.spoelstra@mojo.nl']){const fresh=harness([],{exists:false});assert.equal(fresh.send(signed({operation:'bootstrap',actor:'operator',profile:{...profile(admin,'gebruiker'),email,company:'Ziggo Dome',jobTitle:'Management'}})).code,'PROFILE_INVALID');assert.equal(fresh.writes(),0);}
 });
+
+test('Beveiligingsmigratie maakt legacytoegang eenmaal expliciet zonder beperkte accounts uit te breiden',()=>{
+ const profiles=[profile(admin),{...profile(user,'gebruiker'),modules:['reports']}];
+ const h=harness(profiles);const before=h.state();
+ const result=h.send(signed({operation:'self',actor:user}));assert.equal(result.ok,true);
+ assert.deepEqual(h.state().profiles[0],{...before.profiles[0],modules:['shows','artists','reports']});
+ assert.deepEqual(h.state().profiles[1],before.profiles[1]);assert.equal(h.state().moduleMigrationV1,true);
+ const writes=h.writes();assert.equal(h.send(signed({operation:'self',actor:user})).ok,true);assert.equal(h.writes(),writes);
+});

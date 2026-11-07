@@ -14,3 +14,9 @@ accounts niet als testmateriaal wijzigen. Externe beperkingen afzonderlijk melde
 
 Vooraf en na integratie: rollenmatrix, toepasselijke bestaande tests, build,
 CI en controle van de publicatie. Geen sleutels of persoonsgegevens in deze notitie.
+
+Fase A: eerst alleen de compatibele Drive-migratie publiceren. Deze schrijft de
+bestaande legacy-toegang één keer expliciet uit, zonder beperkte profielen te
+verruimen. Pas na geslaagde Apps Script-publicatie volgt de strikte weigering bij
+een ontbrekend moduleveld en de overige beveiliging (fase B). Dit voorkomt dat
+bestaande gebruikers tijdens een gelijktijdige Vercel/Drive-uitrol buitenvallen.
