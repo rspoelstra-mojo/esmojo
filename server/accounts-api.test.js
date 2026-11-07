@@ -247,3 +247,12 @@ test('Actieve replaypoort weigert direct Auth-token zonder applicatiebewijs vÃ³Ã
  const {response,calls}=await run({action:'session',configuration:{...env,MFA_REPLAY_ENABLED:'true'}});
  assert.equal(response.code,403);assert.equal(response.data.code,'MFA_REQUIRED');assert.equal(calls.length,0);
 });
+
+
+test('Mailhistorie vereist beheerder en Rapportages; ontvangst schrijft uitsluitend gevalideerde actor',async()=>{
+ const denied=await run({action:'report-email-history',own:{...profile,role:'gebruiker',modules:['reports']}});assert.equal(denied.response.code,403);assert.equal(denied.calls.some(call=>call[0]==='ontrack-report'),false);
+ const history=await run({action:'report-email-history'});assert.equal(history.response.code,200);assert.deepEqual(history.calls.find(call=>call[0]==='ontrack-report').slice(1),['email-history',id,{}]);
+ const body={concertId:'Synthetic_show',token:'a'.repeat(64)},opened=await run({action:'report-email-open',method:'POST',body,own:{...profile,role:'gebruiker',modules:['reports']}});assert.equal(opened.response.code,200);assert.deepEqual(opened.calls.find(call=>call[0]==='ontrack-report').slice(1),['email-open',id,body]);
+ const forged=await run({action:'report-email-open',method:'POST',body:{...body,actor:other}});assert.equal(forged.response.code,400);assert.equal(forged.calls.some(call=>call[0]==='ontrack-report'),false);
+ const revoked=await run({action:'report-email-history',own:{...profile,role:'gebruiker',modules:['shows']}});assert.equal(revoked.response.code,403);assert.equal(revoked.calls.some(call=>call[0]==='ontrack-report'),false);
+});

@@ -140,6 +140,15 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
           return reply(status,{error:status===403?'Je hebt geen toegang tot Shows.':status===400?'Ongeldig verzoek.':status===404?'Deze show is niet beschikbaar.':'Het planningdashboard kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'shows'}:{})});}
       }
       if(action==='show-storage-alerts'){if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}try{return reply(200,{alerts:shows.activeStorage?await shows.activeStorage.alerts():[]});}catch{return reply(503,{error:'Opslagmeldingen zijn niet beschikbaar.'});}}
+      if(action==='report-email-history'||action==='report-email-open'){
+        const history=action==='report-email-history',method=history?'GET':'POST';
+        if(req.method!==method){res.setHeader('Allow',method);return reply(405,{error:'Niet toegestaan.'});}
+        if(history&&!isAdministrator(own))return reply(403,{error:'Geen toegang.'});
+        try{
+          if(!history&&(!req.body||Object.keys(req.body).sort().join(',')!=='concertId,token'||typeof req.body.concertId!=='string'||!req.body.concertId||req.body.concertId.length>240||/[\x00-\x1f/\\]/.test(req.body.concertId)||typeof req.body.token!=='string'||!/^[a-f0-9]{64}$/.test(req.body.token)))throw Error('VALIDATION');
+          return reply(200,await ontrackReportStore(history?'email-history':'email-open',actor,history?{}:req.body));
+        }catch(error){return reply(error.message==='FORBIDDEN'?403:error.message==='VALIDATION'?400:503,{error:'De e-mailregistratie kon niet worden verwerkt.'});}
+      }
       if(action==='report-alerts'){if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}try{return reply(200,await ontrackReportStore('pdf-alerts',actor));}catch(error){return reply(error.message==='FORBIDDEN'?403:503,{error:'Rapportagemeldingen zijn niet beschikbaar.'});}}
       if(action==='report-menu'){
         if(req.method!=='GET'){res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});}

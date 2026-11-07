@@ -1266,3 +1266,32 @@ Vanuit het hoofdmenu opent /rapportages geen rapportage automatisch. Toon direct
 fluid-inhoudsvlak, donkergrijs in licht thema en leesbaar grijs in donker thema.
 Menucache/verversing mag geen selectie maken. Expliciete submenu-keuzes en directe
 /rapportages/<concert-ID>-links blijven de betreffende rapportage openen.
+
+
+## Openingsstatus showmails (V1.68)
+
+De gebruiker heeft klikregistratie per ontvanger/mail en het eerste openingsmoment
+expliciet Vertrouwelijk verklaard: bestaande Drive-registers, beveiligde Vercel-
+verwerking, uitsluitend beheerdersoverzicht. Geen Supabase-/Redis-/browseropslag
+van deze gegevens, geen IP-/apparaatregistratie of trackingpixels.
+
+Beheerder / Email toont de laatste 10 werkelijk verzonden rapportagemailgroepen
+met alle verzonden ontvangers in een overlay. Het showprofielmailblok is op
+uitdrukkelijk verzoek voorbereid voor een toekomstige, nog niet bestaande flow.
+Oude mails zonder registratie krijgen een onbekende status, geen verzonnen vinkje.
+Nieuwe ontvangergebonden mail-links bevatten alleen een opaque token in het URL-
+fragment. Registratie pas na zichtbaar renderen van de rapportage en login/MFA;
+server én Drive controleren actor, module, verzending, concert en token.
+Menu-/directe bezoeken zonder mailfragment en automatische scans tellen niet mee.
+
+Nieuwe mailinhoud is gesnapshot als online-report-v4, knop ‘Showrapportage openen’.
+Capability-negotiatie laat oude/nieuwe server- en Apps Script-versies veilig naast
+elkaar werken. Oude v1/v2/v3-verzendingen en onzekere retries behouden hun inhoud,
+ontvanger en idempotentiesleutel. Verzendmoment en ontvangerselectie blijven gelijk.
+
+
+Accounts met uitsluitend effectieve Rapportages-toegang krijgen geen homepage-
+icoon. Een rootbezoek wordt vóór inhoudsrendering vervangen door /rapportages,
+met de bestaande gecentreerde keuzehint. Directe rapportagelinks blijven behouden.
+Homepage-API's blijven serverzijdig Shows-toegang vereisen; andere accounts en
+beheerdersrechten veranderen niet. Pas dit ook toe bij gewijzigde modulerechten.
