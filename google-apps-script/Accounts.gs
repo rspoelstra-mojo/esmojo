@@ -1,4 +1,3 @@
-const ESMOJO_SUPER_ADMIN_EMAIL='redacted@example.invalid';
 // De gebruiker heeft alle huidige accounts expliciet bij MOJO ondergebracht.
 function esmojoMigrateAccountCompanies_(state){
  if(state.companyMigrationV1)return false;
@@ -43,29 +42,14 @@ function esmojoAccounts_(input) {
     const state = file ? JSON.parse(file.getBlob().getDataAsString('UTF-8')) : { profiles: [], nonces: {} };
     if (!Array.isArray(state.profiles) || !state.nonces || typeof state.nonces !== 'object') throw new Error();
     if (request.operation === 'bootstrap-check') return esmojoReply_({ ok: state.profiles.length === 0, code: state.profiles.length ? 'CONFLICT' : undefined, data: { empty: state.profiles.length === 0 } });
-    const preparing=request.operation==='security-prepare'&&Object.keys(request).join(',')==='operation';
-    const actor = preparing?state.profiles.find(profile=>!profile.disabled&&profile.activated&&isAdministrator(profile)):state.profiles.find(profile => profile.id === request.actor && !profile.disabled);
-    // Eenmalige, expliciet opgedragen roltoekenning; uitsluitend het vaste bestaande account.
-    if(actor){
-      const superAccounts=state.profiles.filter(item=>typeof item.email==='string'&&item.email.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL);
-      if(superAccounts.length>1)throw Error('PROFILE_INVALID');
-      const superAccount=superAccounts[0];
-      let identityChanged=false;
-      if(superAccount&&superAccount.role!=='superbeheerder'){superAccount.role='superbeheerder';identityChanged=true;}
-      if(superAccount&&!state.securityIdentityV1){
-        state.superAdminId=superAccount.id;
-        state.emailTestCopy={actor:superAccount.id,address:'redacted@example.invalid'};
-        state.securityIdentityV1=true;identityChanged=true;
-      }
-      if(identityChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
-    }
-    const denied = () => esmojoReply_({ ok: false, code: 'FORBIDDEN' });
-    const conflict = () => esmojoReply_({ ok: false, code: 'CONFLICT' });
-    if(preparing){
-      if(!actor)return denied();
-      const companyChanged=esmojoMigrateAccountCompanies_(state);
-      if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
-      return esmojoReply_({ok:true,data:{modulesExplicit:state.profiles.every(profile=>Array.isArray(profile.modules)),identityPinned:typeof state.superAdminId==='string',copyRecipientConfigured:typeof state.emailTestCopy?.address==='string'}});
+    const actor=state.profiles.find(profile=>profile.id===request.actor&&!profile.disabled);
+    const denied=()=>esmojoReply_({ok:false,code:'FORBIDDEN'});
+    const conflict=()=>esmojoReply_({ok:false,code:'CONFLICT'});
+    // De eerder geverifieerde vaste identiteit staat uitsluitend in het private register.
+    const superId=state.superAdminId;
+    if(actor&&typeof superId==='string'){
+      const pinned=state.profiles.find(profile=>profile.id===superId);
+      if(!pinned||pinned.disabled||pinned.role!=='superbeheerder')throw Error('REGISTER_INVALID');
     }
     if (request.operation === 'self') {
       if(!actor)return denied();
@@ -73,7 +57,9 @@ function esmojoAccounts_(input) {
       if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
       let homeDashboard=null;
       if(request.includeHome===true&&actor.activated&&hasModule(actor,'shows')){try{homeDashboard=esmojoHomeDashboard_({operation:'home-dashboard',actor:actor.id},folder);}catch{/* Fout in de homepage blokkeert nooit aanmelden. */}}
-      return esmojoReply_({ok:true,data:request.includeHome===true?Object.assign({},actor,{homeDashboard}):actor});
+      const copy=state.emailTestCopy;
+      const result=Object.assign({},actor,request.includeHome===true?{homeDashboard}:{},actor.id===superId&&isSuperAdministrator(actor)&&copy?.actor===actor.id&&typeof copy.address==='string'?{emailTestCopyTo:copy.address}:{});
+      return esmojoReply_({ok:true,data:result});
     }
     if (request.operation === 'activate') {
       if (!actor) return denied();
@@ -94,12 +80,11 @@ function esmojoAccounts_(input) {
     const profile = request.profile;
     if (['create', 'bootstrap', 'update'].includes(request.operation)) {
       if (!profile || !['beheerder', 'superbeheerder', 'gebruiker'].includes(profile.role)) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
-      const email=request.operation==='update'?target?.email:profile.email;
-      if(profile.role==='superbeheerder'&&(request.operation!=='update'||!isSuperAdministrator(target)||!isSuperAdministrator(actor)||target.id!==actor.id||typeof email!=='string'||email.toLowerCase()!==ESMOJO_SUPER_ADMIN_EMAIL))return denied();
+      if(profile.role==='superbeheerder'&&(request.operation!=='update'||!isSuperAdministrator(target)||!isSuperAdministrator(actor)||target.id!==actor.id||target.id!==superId))return denied();
       for (const key of ['firstName', 'lastName', 'jobTitle']) {
         if (typeof profile[key] !== 'string' || !profile[key].trim() || profile[key].length > 120) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       }
-      const effectiveRole=['create','bootstrap'].includes(request.operation)?(email?.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL?'superbeheerder':request.operation==='bootstrap'?'beheerder':profile.role):profile.role;
+      const effectiveRole=request.operation==='bootstrap'?'beheerder':profile.role;
       try{validateAccountEmployment(Object.assign({},profile,{role:effectiveRole}));}catch(_){return esmojoReply_({ok:false,code:'PROFILE_INVALID'});}
       if(Object.prototype.hasOwnProperty.call(profile,'modules')){try{profile.modules=validateAccountModules(profile.modules);}catch(_){return esmojoReply_({ok:false,code:'PROFILE_INVALID'});}}
       if (profile.photo !== undefined && profile.photo !== '' && (typeof profile.photo !== 'string' || profile.photo.length > 100000 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(profile.photo))) return denied();
@@ -108,8 +93,8 @@ function esmojoAccounts_(input) {
       if (!/^[0-9a-f-]{36}$/i.test(profile.id || '') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email || '')) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       if (state.profiles.some(item => item.id === profile.id || item.email.toLowerCase() === profile.email.toLowerCase())) return conflict();
       state.profiles.push({ id: profile.id, email: profile.email.toLowerCase(), firstName: profile.firstName,
-        lastName: profile.lastName, company:profile.company, jobTitle: profile.jobTitle, role: profile.email.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL?'superbeheerder':request.operation === 'bootstrap' ? 'beheerder' : profile.role,
-        modules:profile.modules===undefined?accountModules.map(module=>module.id):profile.modules, photo: profile.photo || '', activated: false, disabled: false });
+        lastName: profile.lastName, company:profile.company, jobTitle: profile.jobTitle, role: request.operation === 'bootstrap' ? 'beheerder' : profile.role,
+        modules:profile.modules===undefined?[]:profile.modules, photo: profile.photo || '', activated: false, disabled: false });
     } else if (request.operation === 'photo') {
       if (Object.keys(request).some(key => !['operation', 'actor', 'photo'].includes(key))
           || typeof request.photo !== 'string' || request.photo.length > 100000

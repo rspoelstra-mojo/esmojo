@@ -1,5 +1,5 @@
 import {createOnTrackReportStore} from './ontrack-report/service.js';
-import {isAdministrator,hasModule} from '../shared/account-modules.js';
+import {isAdministrator,isSuperAdministrator,hasModule} from '../shared/account-modules.js';
 import {createMailingConcertsStore} from './ontrack-concerts.js';
 import {emailTemplates} from './email-template-registry.js';
 import {upcomingShows} from './mojo-agenda.js';
@@ -10,7 +10,7 @@ export function validateEmailTestRequest(value){
   if(value.concertId!==undefined&&(typeof value.concertId!=='string'||!value.concertId.trim()||value.concertId.length>240||/[\x00-\x1f/\\]/.test(value.concertId)))throw Error('VALIDATION');
   return value;
 }
-export function createEmailTestService({mail,shows,mailingConcerts=createMailingConcertsStore(),registry=emailTemplates,reportContext=createOnTrackReportStore()}){
+export function createEmailTestService({mail,shows,mailingConcerts=createMailingConcertsStore(),registry=emailTemplates,reportContext=createOnTrackReportStore(),copyTo=null,copyActor=null}){
   async function concertList(){
     const index=await shows('list');
     return(index.shows||upcomingShows(index.concerts)).map(({key,name,venue,dates})=>({key,name,venue,dates}));
@@ -26,8 +26,8 @@ export function createEmailTestService({mail,shows,mailingConcerts=createMailing
   function recipients(profile){
     const own=recipient(profile).email;
     // Uitsluitend het serverzijdig geladen beheerdersaccount, nooit een browseradres.
-    return isAdministrator(profile)&&own.toLowerCase()==='redacted@example.invalid'
-      ?[own,'redacted@example.invalid']:[own];
+    return profile.id===copyActor&&isSuperAdministrator(profile)&&typeof copyTo==='string'&&copyTo!==own&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(copyTo)
+      ?[own,copyTo]:[own];
   }
   return{
     async catalog(profile,canSend){

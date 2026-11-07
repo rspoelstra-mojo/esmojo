@@ -11,7 +11,7 @@ function hasModule(profile,id){
   if(!profile||profile.disabled)return false;
   if(isSuperAdministrator(profile))return true;
   if(!accountModules.some(module=>module.id===id))return false;
-  if(profile.modules===undefined)return true; // Bestaande accounts behouden hun toegang.
+  if(profile.modules===undefined)return false; // Legacyprofielen worden vooraf expliciet gemigreerd in Drive.
   try{return validateAccountModules(profile.modules).includes(id);}catch{return false;}
 }
 const moduleForPage=root=>({shows:'shows',artiest:'artists',rapportages:'reports',statistieken:'reports'}[root]||null);

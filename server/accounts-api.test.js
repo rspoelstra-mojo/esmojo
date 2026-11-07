@@ -8,7 +8,7 @@ import {renderEmailTemplate} from './email-template.js';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const other = '22222222-2222-4222-8222-222222222222';
-const profile = { id, firstName: 'Test', lastName: 'Account', company:'MOJO Concerts',jobTitle: 'Event Safety Manager', role: 'beheerder', activated: true, email: 'test@example.invalid' };
+const profile = { id, firstName: 'Test', lastName: 'Account', company:'MOJO Concerts',jobTitle: 'Event Safety Manager', role: 'beheerder', modules:['shows','artists','reports'], activated: true, email: 'test@example.invalid' };
 const env = { VITE_SUPABASE_URL: 'https://project.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SECRET_KEY: 'server-test', RESEND_API_KEY: 'mail-test' };
 const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
 
@@ -191,7 +191,7 @@ test('Accountprofiel mag door een beheerder modules wijzigen, een gebruiker mag 
  const session=await run({own:{...profile,modules:[]},action:'session'});assert.equal(session.response.code,200);assert.deepEqual(session.response.data.profile.modules,[]);
 });
 test('Super beheerder behoudt alle modules maar de website-API kent die rol nooit toe',async()=>{
- const own={...profile,role:'superbeheerder',email:'redacted@example.invalid',modules:[]};
+ const own={...profile,role:'superbeheerder',email:'super-admin@example.invalid',modules:[]};
  const admin=await run({own});assert.equal(admin.response.code,200);
  assert.equal((await run({own,aal:'aal1'})).response.code,403);assert.equal((await run({own:{...own,activated:false},action:'ontrack'})).response.data.code,'SETUP_REQUIRED');
  for(const action of ['show-open','show-profile','ontrack','ontrack-report']){
@@ -260,4 +260,11 @@ test('Mailhistorie vereist beheerder en Rapportages; ontvangst schrijft uitsluit
 test('Onvolledige organisatie en externe beheerder worden vóór Auth-creatie/mail geweigerd',async()=>{
  for(const extra of [{company:undefined},{company:'TSC Crowd Management',jobTitle:'CMT Leider',role:'gebruiker'},{company:'Ziggo Dome',jobTitle:'Management',role:'beheerder'}]){const {response,calls}=await run({method:'POST',body:{...profile,...extra}});assert.equal(response.code,400);assert.equal(calls.some(call=>['createAuth','invite','create','mail'].includes(call[0])),false);}
  const {response,calls}=await run({method:'POST',body:{...profile,company:'AFAS Live',jobTitle:'Management',role:undefined}});assert.equal(response.code,201);assert.equal(calls.find(call=>call[0]==='create')[2].profile.company,'AFAS Live');assert.equal(calls.find(call=>call[0]==='create')[2].profile.role,'gebruiker');assert.deepEqual(Object.keys(calls.find(call=>call[0]==='createAuth')[1]).sort(),['email','email_confirm']);
+});
+
+test('Private testmailconfiguratie verlaat de server niet via het accountprofiel',async()=>{
+ const own={...profile,role:'superbeheerder',emailTestCopyTo:'test-copy@example.invalid'};
+ const session=await run({action:'session',own});assert.equal(session.response.code,200);assert.equal(session.response.data.profile.emailTestCopyTo,undefined);
+ const catalog=await run({action:'email',own});assert.equal(catalog.response.code,200);assert.deepEqual(catalog.response.data.recipients,[own.email,'test-copy@example.invalid']);
+ const ordinary=await run({action:'email',own:{...own,role:'beheerder'}});assert.equal(ordinary.response.code,200);assert.deepEqual(ordinary.response.data.recipients,[own.email]);
 });

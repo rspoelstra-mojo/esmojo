@@ -1,5 +1,5 @@
 // Tijdelijke beleidsregel op één plaats. Later uitschakelen/vervangen zonder UI-wijziging.
-function esmojoHomeManagerPolicy_(){return{enabled:true,email:ESMOJO_SUPER_ADMIN_EMAIL,role:'event-safety-manager',source:'temporary-gashouder-v1'};}
+function esmojoHomeManagerPolicy_(){return{enabled:true,role:'event-safety-manager',source:'temporary-gashouder-v1'};}
 function esmojoHomeAssignments_(folder){
  const file=esmojoShowFile_(folder,'_esmojo_show_assignments_v1.json');
  const document=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{managedBy:'ESMOJO/ShowAssignments-v1',classification:'vertrouwelijk',version:1,revision:0,assignments:[]};
@@ -10,8 +10,8 @@ function esmojoHomeAssignments_(folder){
 function esmojoSyncHomeManagers_(root,production,index){
  const policy=esmojoHomeManagerPolicy_();if(!policy.enabled)return{state:'disabled'};
  const profilesFile=esmojoShowFile_(root,'_esmojo_accounts_v1.json');if(!profilesFile)return{state:'missing-account'};
- const profiles=JSON.parse(profilesFile.getBlob().getDataAsString('UTF-8')).profiles;if(!Array.isArray(profiles))throw Error('ASSIGNMENTS_INVALID');
- const matches=profiles.filter(profile=>typeof profile.email==='string'&&profile.email.toLowerCase()===policy.email.toLowerCase());
+ const accounts=JSON.parse(profilesFile.getBlob().getDataAsString('UTF-8')),profiles=accounts.profiles;if(!Array.isArray(profiles))throw Error('ASSIGNMENTS_INVALID');
+ const matches=profiles.filter(profile=>typeof accounts.superAdminId==='string'&&profile.id===accounts.superAdminId);
  if(matches.length!==1)return{state:matches.length?'ambiguous-account':'missing-account'};
  const target=matches[0];if(typeof target.id!=='string'||!target.id||target.id.length>100||!target.activated||target.disabled)return{state:'inactive-account'};
  const {file,document}=esmojoHomeAssignments_(production),known=new Set(document.assignments.map(link=>JSON.stringify([link.concertId,link.userId,link.role])));let changed=false;

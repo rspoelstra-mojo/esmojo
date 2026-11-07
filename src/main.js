@@ -1,3 +1,4 @@
+import {barrierReferenceCache} from './barrier-images.js';
 import {createMobileNavigation} from './mobile-navigation.js';
 import {loadShowStorageAlerts} from './lib/show-storage-alerts.js';
 import {loadReportAlerts} from './lib/report-alerts.js';
@@ -62,7 +63,7 @@ const reportsOnly=current=>hasModule(current,'reports')&&!hasModule(current,'sho
 function updateModuleProfile(current){
   const changed=profile?.id!==current.id||profile?.role!==current.role||moduleFingerprint(profile)!==moduleFingerprint(current);
   if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();}
-  homeDashboardCache.bind(current);reportCatalogueCache.bind(current);
+  homeDashboardCache.bind(current);reportCatalogueCache.bind(current);barrierReferenceCache.bind(current);
   profile=current;
   document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=link.dataset.page===''?reportsOnly(profile):Boolean(module&&!hasModule(profile,module));});
   document.querySelector('[data-page="beheerder"]').hidden=!isAdministrator(profile);
@@ -173,7 +174,7 @@ startAuth({
     mobileNavigation.setEnabled(false);
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
-    homeDashboardCache.clear();reportCatalogueCache.clear();
+    homeDashboardCache.clear();reportCatalogueCache.clear();barrierReferenceCache.clear();
     profile = null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
     document.querySelector('.content-box').replaceChildren();
     document.querySelector('.avatar').replaceChildren();
