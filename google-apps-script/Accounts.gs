@@ -6,6 +6,13 @@ function esmojoMigrateAccountCompanies_(state){
  if(!missing.length)return false;
  missing.forEach(profile=>{profile.company='MOJO Concerts';});state.companyMigrationV1=true;return true;
 }
+// Eenmalig het bestaande legacybeleid expliciet maken, vóór fail-closed clients.
+// Alleen ontbrekende velden; expliciete keuzes (ook []/ongeldig) nooit verruimen.
+function esmojoMigrateAccountModules_(state){
+ if(state.moduleMigrationV1)return false;
+ state.profiles.forEach(profile=>{if(profile.modules===undefined)profile.modules=accountModules.map(module=>module.id);});
+ state.moduleMigrationV1=true;return true;
+}
 // Alleen ondertekend serververkeer. Profielen blijven binnen de vaste Drive-map.
 function esmojoAccounts_(input) {
   const secret = PropertiesService.getScriptProperties().getProperty('ESMOJO_SHARED_SECRET');
@@ -36,21 +43,34 @@ function esmojoAccounts_(input) {
     const state = file ? JSON.parse(file.getBlob().getDataAsString('UTF-8')) : { profiles: [], nonces: {} };
     if (!Array.isArray(state.profiles) || !state.nonces || typeof state.nonces !== 'object') throw new Error();
     if (request.operation === 'bootstrap-check') return esmojoReply_({ ok: state.profiles.length === 0, code: state.profiles.length ? 'CONFLICT' : undefined, data: { empty: state.profiles.length === 0 } });
-    const actor = state.profiles.find(profile => profile.id === request.actor && !profile.disabled);
+    const preparing=request.operation==='security-prepare'&&Object.keys(request).join(',')==='operation';
+    const actor = preparing?state.profiles.find(profile=>!profile.disabled&&profile.activated&&isAdministrator(profile)):state.profiles.find(profile => profile.id === request.actor && !profile.disabled);
     // Eenmalige, expliciet opgedragen roltoekenning; uitsluitend het vaste bestaande account.
     if(actor){
       const superAccounts=state.profiles.filter(item=>typeof item.email==='string'&&item.email.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL);
       if(superAccounts.length>1)throw Error('PROFILE_INVALID');
       const superAccount=superAccounts[0];
-      if(superAccount&&superAccount.role!=='superbeheerder'){
-        superAccount.role='superbeheerder';stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));
+      let identityChanged=false;
+      if(superAccount&&superAccount.role!=='superbeheerder'){superAccount.role='superbeheerder';identityChanged=true;}
+      if(superAccount&&!state.securityIdentityV1){
+        state.superAdminId=superAccount.id;
+        state.emailTestCopy={actor:superAccount.id,address:'redacted@example.invalid'};
+        state.securityIdentityV1=true;identityChanged=true;
       }
+      if(identityChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
     }
     const denied = () => esmojoReply_({ ok: false, code: 'FORBIDDEN' });
     const conflict = () => esmojoReply_({ ok: false, code: 'CONFLICT' });
+    if(preparing){
+      if(!actor)return denied();
+      const companyChanged=esmojoMigrateAccountCompanies_(state);
+      if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
+      return esmojoReply_({ok:true,data:{modulesExplicit:state.profiles.every(profile=>Array.isArray(profile.modules)),identityPinned:typeof state.superAdminId==='string',copyRecipientConfigured:typeof state.emailTestCopy?.address==='string'}});
+    }
     if (request.operation === 'self') {
       if(!actor)return denied();
-      if(esmojoMigrateAccountCompanies_(state)){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
+      const companyChanged=esmojoMigrateAccountCompanies_(state);
+      if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
       let homeDashboard=null;
       if(request.includeHome===true&&actor.activated&&hasModule(actor,'shows')){try{homeDashboard=esmojoHomeDashboard_({operation:'home-dashboard',actor:actor.id},folder);}catch{/* Fout in de homepage blokkeert nooit aanmelden. */}}
       return esmojoReply_({ok:true,data:request.includeHome===true?Object.assign({},actor,{homeDashboard}):actor});
@@ -62,7 +82,7 @@ function esmojoAccounts_(input) {
     } else if (request.operation === 'bootstrap') {
       if (state.profiles.length) return conflict();
     } else if (!actor || !isAdministrator(actor) || !actor.activated) return denied();
-    if(request.operation==='list'&&esmojoMigrateAccountCompanies_(state)){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
+    if(request.operation==='list'){const companyChanged=esmojoMigrateAccountCompanies_(state);if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}}
     if (request.operation === 'list') return esmojoReply_({ ok: true, data: state.profiles.map(profile => {
       const copy = Object.assign({}, profile); delete copy.photo; return copy;
     }) });
@@ -108,7 +128,7 @@ function esmojoAccounts_(input) {
       } else if (request.operation === 'disable') target.disabled = true;
       else state.profiles = state.profiles.filter(item => item.id !== target.id);
     } else return denied();
-    esmojoMigrateAccountCompanies_(state);
+    esmojoMigrateAccountCompanies_(state);esmojoMigrateAccountModules_(state);
     const serialized = JSON.stringify(state);
     stage = 'DRIVE_WRITE';
     if (file) file.setContent(serialized);
