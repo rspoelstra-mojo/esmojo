@@ -237,3 +237,13 @@ test('PDF-meldingen na login vereisen sessie, MFA en Rapportages; de actor komt 
  for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker',modules:['shows']}},{own:{...profile,activated:false}}]){const result=await run({action:'report-alerts',...input});assert.ok([401,403].includes(result.response.code));assert.equal(result.calls.some(call=>call[0]==='ontrack-report'),false);}
  const result=await run({action:'report-alerts',own:{...profile,modules:['reports']}});assert.equal(result.response.code,200);assert.deepEqual(result.calls.find(call=>call[0]==='ontrack-report').slice(0,3),['ontrack-report','pdf-alerts',id]);assert.equal(result.calls.some(call=>call[0]==='mail'),false);assert.equal((await run({action:'report-alerts',method:'POST'})).response.code,405);
 });
+
+
+test('Login combineert actuele Drive-controle en sessiecookie in één profielread',async()=>{
+ const {response,calls}=await run({action:'login',method:'POST',body:{refreshToken:'synthetic-refresh-token'}});
+ assert.equal(response.code,200);assert.equal(response.data.profile.id,id);assert.match(response.headers['Set-Cookie'],/HttpOnly; Secure/);assert.equal(calls.filter(call=>call[0]==='self').length,1);assert.equal(calls[0][2].includeHome,true);
+});
+test('Actieve replaypoort weigert direct Auth-token zonder applicatiebewijs vóór Drive',async()=>{
+ const {response,calls}=await run({action:'session',configuration:{...env,MFA_REPLAY_ENABLED:'true'}});
+ assert.equal(response.code,403);assert.equal(response.data.code,'MFA_REQUIRED');assert.equal(calls.length,0);
+});

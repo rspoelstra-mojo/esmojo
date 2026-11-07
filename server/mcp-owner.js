@@ -1,6 +1,7 @@
 import {isAdministrator,hasModule} from '../shared/account-modules.js';
 import { createClient } from '@supabase/supabase-js';
 import { createProfiles } from './account-profiles.js';
+import {hasAppMfa} from './mfa-cookie.js';
 import { sessionDeadline } from './session-cookie.js';
 
 export function createMcpOwnerCheck({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), now = Date.now } = {}) {
@@ -18,6 +19,7 @@ export function createMcpOwnerCheck({ env = process.env, clientFactory = createC
     let claims; try { claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()); } catch { throw Error('FORBIDDEN'); }
     if (claims.sub !== data.user.id || claims.aal !== 'aal2' || !claims.amr?.some(x => x.method === 'totp')
       || !data.user.factors?.some(x => x.factor_type === 'totp' && x.status === 'verified') || (sessionDeadline(claims) || 0) <= now()) throw Error('FORBIDDEN');
+    if (!hasAppMfa(req, env, claims, now())) throw Error('FORBIDDEN');
     return active(data.user.id);
   } };
 }

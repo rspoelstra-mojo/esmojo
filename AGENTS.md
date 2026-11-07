@@ -1240,3 +1240,21 @@ sectie-/focusacties moeten na sluiten/heropenen of resizen vervallen.
 Rapportages op mobiel met foto: titel/zaal, foto, datumtabs. Zonder foto blijven
 de datumtabs direct onder de titel staan. Desktopvolgorde en fotoverhoudingen
 blijven gelijk. Native dialoog mag zelf geen scrollcontainer worden.
+
+
+## MFA-poort en Upstash (V1.66)
+
+TOTP blijft bij Supabase Auth via officiële SDK challenge/verify. De gebruiker
+heeft Upstash toegevoegd voor gedeelde 30s-replaybescherming; Redis krijgt alleen
+HMAC-vingerafdrukken en tijdelijke leases, nooit ruwe codes, tokens, IP-adressen
+of profielen. Gebruik de bestaande KV_REST_API_URL/KV_REST_API_TOKEN of de
+UPSTASH_REDIS_REST_* varianten uitsluitend server-side. Activeer de extra poort
+met MFA_REPLAY_ENABLED=true pas na de vaste OIDC-healthworkflow en bevestigde
+Supabase IP address forwarding. Zie docs/mfa-beveiliging.md. Geen procesgeheugen-
+fallback of blinde automatische MFA-retries bij onzekere provideruitkomsten.
+
+De private app/API en MCP-beheertoestemming vereisen bij actieve poort een
+serverversleuteld, sessiegebonden HttpOnly MFA-bewijs. Bestaande veilige 72u-
+sessiecookies blijven geldig. Preview-authenticatie loopt via de productiepoort;
+alleen het opaque MFA-bewijs mag beveiligde productie-reads vergezellen, geen
+refresh-cookie of Drive-sleutel. Bedrijfswrites blijven in preview uitgeschakeld.
