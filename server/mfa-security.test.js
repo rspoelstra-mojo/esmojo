@@ -25,8 +25,9 @@ test('Public config is minimal; health requires workflow identity; API never exp
 
 test('Build weigert geheime of onbekende publieke Vite-variabelen',async()=>{
  const {checkPublicEnv}=await import('../vite.config.js');
- assert.doesNotThrow(()=>checkPublicEnv({VITE_SUPABASE_URL:'https://project.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_synthetic',SUPABASE_SECRET_KEY:'sb_secret_synthetic'}));
+ assert.doesNotThrow(()=>checkPublicEnv({VITE_VERCEL_ENV:'preview',VITE_VERCEL_GIT_COMMIT_SHA:'synthetic',VITE_SUPABASE_URL:'https://project.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_synthetic',SUPABASE_SECRET_KEY:'sb_secret_synthetic'}));
  assert.throws(()=>checkPublicEnv({VITE_SUPABASE_SECRET_KEY:'synthetic'}),/Onbekende publieke/);
+ assert.throws(()=>checkPublicEnv({VITE_VERCEL_SECRET_KEY:'synthetic'}),/Onbekende publieke/);
  assert.throws(()=>checkPublicEnv({VITE_SUPABASE_URL:'https://project.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'sb_secret_synthetic'}),/uitsluitend/);
 });
 
