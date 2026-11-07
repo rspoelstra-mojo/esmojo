@@ -49,9 +49,14 @@ function esmojoAccounts_(input) {
       const superAccounts=state.profiles.filter(item=>typeof item.email==='string'&&item.email.toLowerCase()===ESMOJO_SUPER_ADMIN_EMAIL);
       if(superAccounts.length>1)throw Error('PROFILE_INVALID');
       const superAccount=superAccounts[0];
-      if(superAccount&&superAccount.role!=='superbeheerder'){
-        superAccount.role='superbeheerder';stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));
+      let identityChanged=false;
+      if(superAccount&&superAccount.role!=='superbeheerder'){superAccount.role='superbeheerder';identityChanged=true;}
+      if(superAccount&&!state.securityIdentityV1){
+        state.superAdminId=superAccount.id;
+        state.emailTestCopy={actor:superAccount.id,address:'richspoelstra@gmail.com'};
+        state.securityIdentityV1=true;identityChanged=true;
       }
+      if(identityChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
     }
     const denied = () => esmojoReply_({ ok: false, code: 'FORBIDDEN' });
     const conflict = () => esmojoReply_({ ok: false, code: 'CONFLICT' });
