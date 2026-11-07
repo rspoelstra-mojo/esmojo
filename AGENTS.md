@@ -1312,8 +1312,8 @@ worden alleen in de beveiligde webprojectie toegevoegd.
 ## Bedrijf/functie en fluid accounteditor (V1.70)
 
 De gebruiker classificeert Bedrijf expliciet als Vertrouwelijk: voeg company toe
-aan het bestaande Drive-profiel via de beveiligde Vercel-route. Geen profiel-
-velden in Supabase Auth-metadata, mails of persistente browseropslag. jobTitle
+aan het bestaande Drive-profiel via de beveiligde Vercel-route. Bedrijf en functie gaan niet naar Supabase Auth-metadata, mails of persistente
+browseropslag. jobTitle
 blijft het bestaande vertrouwelijke functieveld.
 
 Aanmaken/bewerken gebruikt verplichte voornaam, achternaam, e-mail, bedrijf en

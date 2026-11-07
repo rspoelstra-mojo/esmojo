@@ -122,7 +122,7 @@ accounts die daarna met een gekozen bedrijf worden gemaakt blijven extern.
 Een oude functie buiten de catalogus blijft leesbaar; bij bewerken wordt een
 geldige nieuwe functiekeuze vereist. Foto wijzigen/activeren blijft apart werken.
 
-Profielvelden gaan niet naar Supabase-metadata of uitnodigingsmails. De bestaande
+Bedrijf en functie gaan niet naar Supabase-metadata of uitnodigingsmails. De bestaande
 uitnodiging en verplichte authenticator blijven dezelfde beveiligde route volgen.
 De editor keert na verzenden direct terug naar de lijst; de write loopt onder de
 bestaande achtergrondopslag door. Tests maken geen echte accounts of e-mails aan.
