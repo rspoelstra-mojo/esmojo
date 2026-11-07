@@ -1206,3 +1206,23 @@ De route sluit automatisch op 7 november 00:00 Nederlandse tijd. Vaste
 idempotentiesleutels binnen die beperkte periode voorkomen extra mails bij
 verloren bevestiging/herhaling. Geen schema, appfunctie of rapportagetrigger
 wijzigen. Geen datum/batch automatisch verlengen zonder nieuw gebruikersverzoek.
+
+## Uitsluitend mobiele navigatie (V1.64)
+
+Op 7 november vraagt de gebruiker alleen op mobiel een kleine ronde menuknop
+linksboven, met paginavullende fluid-inhoud en kaarten onder elkaar. Tot en met
+700 CSS-pixels (en op korte aanraakschermen tot 1000px in liggende stand)
+gebruikt mobile-navigation.js dezelfde rail/submenu-elementen in
+een native dialoog; geen kopie van catalogus, autorisatie of opslag. Gesloten
+menu neemt geen inhoudsbreedte of lange lijst boven de inhoud in. Sectiekeuze
+houdt het menu open voor het submenu; een paginakeuze sluit het en focust inhoud.
+Bestaande zoek-, laad- en toegangsstatussen blijven leidend. De kleine header
+spiegelt bestaande aria-busy-status, zonder nieuwe dataverzoeken.
+
+Behoud de gewone desktopweergave, inclusief oorspronkelijke DOM-positie van beide
+menu's bij resizen. Herstel focus en scrollen bij sluiten, Escape, sessieverlies
+en viewportwissel. Gebruik een eigen CSS-scroll-lock; overschrijf nooit de
+inline scroll-lock van bestaande formulierdialogen. Houd bestaande concepten
+en achtergrondopslag intact. Geen schaaltransforms, zoombeperking of andere
+lettergroottes voor bestaande inhoud. Horizontale datum-/showtabs mogen binnen
+hun eigen rij scrollen; de pagina zelf blijft op telefoonbreedte.
