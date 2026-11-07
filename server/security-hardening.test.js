@@ -1,4 +1,5 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';import {createHash} from 'node:crypto';
+import {barrierReferenceManifest as referenceManifest} from '../shared/barrier-reference-manifest.js';
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync,existsSync,readdirSync} from 'node:fs';import vm from 'node:vm';import {createHash} from 'node:crypto';
 import {createOAuthAbuseGuard,OAUTH_LIMIT_SCRIPT} from './oauth-abuse.js';
 import {makeMcpOAuthHandler} from './mcp-oauth.js';
 import {createBarrierReferenceService,validateReferenceRequest} from './barrier-references.js';
@@ -43,4 +44,15 @@ test('CSP blokkeert framing en onbekende inline scripts; opstartscript krijgt ex
 
 test('Node en Drive gebruiken hetzelfde vaste referentiemanifest',()=>{
  assert.equal(readFileSync('google-apps-script/BarrierReferenceManifest.gs','utf8').split('\n').slice(1).join('\n'),readFileSync('shared/barrier-reference-manifest.js','utf8').replaceAll('export ',''));
+});
+
+test('Geen originele private PNG-kopieën of persoonlijke mailadressen opnieuw in Git',()=>{
+ const hashes=new Set(Object.values(referenceManifest).map(row=>row.sha256));
+ const paths=['AGENTS.md','index.html','package.json','vercel.json'];
+ function walk(directory){for(const entry of readdirSync(directory,{withFileTypes:true})){if(['node_modules','.git','dist'].includes(entry.name)||entry.isSymbolicLink())continue;const path=directory+'/'+entry.name;if(entry.isDirectory())walk(path);else if(entry.isFile())paths.push(path);}}
+ for(const directory of ['src','server','shared','google-apps-script','public','docs','tools','.agents','onderzoeksprompts','.github'])walk(directory);
+ for(const path of paths){if(!existsSync(path))continue;
+  if(/\.png$/i.test(path))assert.equal(hashes.has(createHash('sha256').update(readFileSync(path)).digest('hex')),false,'Private referentiebytes in '+path);
+  if(/\.(?:js|mjs|gs|md|txt|json|yml)$/.test(path))assert.equal(/\b[A-Z0-9._%+-]+@(?:mojo\.nl|gmail\.com)\b/i.test(readFileSync(path,'utf8')),false,'Gebruik fictieve adressen of private configuratie: '+path);
+ }
 });
