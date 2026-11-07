@@ -97,3 +97,15 @@ Script en een succesvolle Apps Script-publicatierun bevestigd. Supabase-gebruik,
 medewerkersauthenticatie, Drive-bestandsfuncties en een echte e-mailflow zijn
 nog niet gebouwd of functioneel bewezen. Deze beschrijving kan verouderen:
 actuele code, commits en aantoonbare resultaten zijn leidend.
+
+## Na de historische opschoning van 7 november 2026
+
+De gebruiker heeft de geteste eenmalige historieopschoning expliciet goedgekeurd.
+De gepubliceerde branches hebben nieuwe commit-ID's; de actuele websitebestanden
+zijn daarbij onveranderd gebleven. Het normale verbod op force-pushes blijft gelden.
+
+Gebruik een nieuwe checkout of synchroniseer zorgvuldig met de nieuwe main.
+Bewaar ongepubliceerd werk eerst apart en bouw gewenste wijzigingen opnieuw op de
+nieuwe geschiedenis. Merge of push geen oude branches terug: daarmee kunnen juist
+verwijderde gegevens opnieuw bereikbaar worden. Een publieke herstelbranch met de
+oude geschiedenis is niet toegestaan. Oude PR-/cachekopieën beheert GitHub zelf.
