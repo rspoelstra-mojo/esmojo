@@ -1,12 +1,12 @@
 import './show-planning.css';
 import {showPlanning,planningDate} from './lib/show-planning.js';
 const node=(tag,className,text)=>{const el=document.createElement(tag);el.className=className;if(text!==undefined)el.textContent=text;return el;};
-const icons={check:'<path d="m5 12 4 4L19 6"/>',flag:'<path d="M6 21V4m0 0c5-5 7 5 13 0v10c-6 5-8-5-13 0"/>',next:'<path d="M5 4v10a3 3 0 0 0 3 3h12m-4-4 4 4-4 4"/>'};
+const icons={check:'<path d="m5 12 4 4L19 6"/>',flag:'<path d="M6 21V4m0 0c5-5 7 5 13 0v10c-6 5-8-5-13 0"/>'};
 function icon(name){const el=node('span','planning-icon');el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;return el;}
 export function createShowPlanning(parent,{show,data,now=()=>new Date()}){
   const card=node('section','show-planning');card.setAttribute('aria-label','Planning en deadlines');parent.append(card);let disposed=false;
   function render(){
-    if(disposed)return;const model=showPlanning(show,data.planningSnapshot(),now());card.replaceChildren();
+    if(disposed)return;const model=showPlanning(show,data.planningSnapshot(),now());card.replaceChildren(node('h2','planning-title','Planning'));
     if(!model){card.append(node('p','planning-unavailable','De planning is beschikbaar zodra de concertdatum bekend is.'));return;}
     const timeline=node('div','planning-timeline'),track=node('div','planning-track');
     const marker=node('div','planning-today'),today=node('span','planning-today-label','Vandaag · '+planningDate(model.today));marker.append(today);timeline.append(marker);
@@ -22,9 +22,7 @@ export function createShowPlanning(parent,{show,data,now=()=>new Date()}){
       if(index<4){const segment=node('span','planning-segment');segment.style.left=(10+20*index)+'%';if(step.completed)segment.dataset.completed='true';track.append(segment);}
     });
     timeline.append(track,list);
-    const next=model.next,relative=next.id==='show'?(next.days<0?'voorbij':next.days===0?'vandaag':next.days===1?'morgen':`over ${next.days} dagen`):next.badge.toLocaleLowerCase('nl-NL');
-    const footer=node('div','planning-footer');footer.append(icon('next'),node('span','',`${next.days<0&&next.id!=='show'?'Openstaande':'Volgende'} deadline: ${next.label.toLocaleLowerCase('nl-NL')} · ${relative}`));
-    card.append(timeline,footer);
+    card.append(timeline);
   }
   const unsubscribe=data.subscribe(render);render();
   // Ook een pagina die over middernacht open blijft gebruikt de juiste NL-dag.
