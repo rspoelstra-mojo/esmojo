@@ -1258,3 +1258,11 @@ serverversleuteld, sessiegebonden HttpOnly MFA-bewijs. Bestaande veilige 72u-
 sessiecookies blijven geldig. Preview-authenticatie loopt via de productiepoort;
 alleen het opaque MFA-bewijs mag beveiligde productie-reads vergezellen, geen
 refresh-cookie of Drive-sleutel. Bedrijfswrites blijven in preview uitgeschakeld.
+
+## Rapportages eerst kiezen (V1.67)
+
+Vanuit het hoofdmenu opent /rapportages geen rapportage automatisch. Toon direct
+‘Kies eerst een rapportage’, horizontaal en verticaal gecentreerd in het volledige
+fluid-inhoudsvlak, donkergrijs in licht thema en leesbaar grijs in donker thema.
+Menucache/verversing mag geen selectie maken. Expliciete submenu-keuzes en directe
+/rapportages/<concert-ID>-links blijven de betreffende rapportage openen.
