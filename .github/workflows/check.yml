@@ -88,6 +88,7 @@ jobs:
           node server/fluid-preview.test.js
           node server/fluid-preview-source.test.js
           node server/fluid-interactions.test.js
+          node server/mobile-navigation.test.js
           node server/risk-analysis-page.test.js
           node .agents/skills/esmojo-concertonderzoek/scripts/workflow.test.mjs
       - name: Email previews zonder verzending
