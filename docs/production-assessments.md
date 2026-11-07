@@ -31,12 +31,14 @@ en verplichte inhoud. Historische afgeronde records zonder deze nieuwe eigenscha
 blijven zonder migratie leesbaar; nieuwe afrondingen krijgen geen uitzondering.
 
 `shared/barrier-layout.js` bevat de zes exacte labels en vijf exacte bestandsnamen.
-`src/barrier-images.js` koppelt deze centraal via Vite aan
-`src/assets/barrier-layouts/*.png`. Plaats de vijf later aangeleverde bestanden
-met hun exacte namen in die map; de volgende normale build/publicatie neemt ze
-zonder verdere logica-aanpassing op. Tot die tijd is er een neutrale placeholder,
-zonder ontbrekende bestanden op te vragen. Ontbrekende afbeeldingen blokkeren niet.
-Afbeeldingen blijven volledig zichtbaar met object-fit contain.
+De vijf originele PNG's staan sinds V1.72 uitsluitend in de private Drive-map
+`_esmojo_private_references_v1` onder de vaste ESMOJO-root. Het manifest
+`shared/barrier-reference-manifest.js` bevat alleen vaste namen, maten en hashes.
+`src/barrier-images.js` haalt beelden via de MFA-/Shows-beveiligde
+`barrier-reference`-route op; geen bytes in Git, publieke assets of browseropslag.
+Een sessiecache houdt eerder getoonde beelden direct beschikbaar en revokeert
+blob-URL's bij afmelden of wijziging van account/rechten. De weergave blijft
+object-fit contain; ontbrekende beelden blokkeren de beoordeling niet.
 
 De afwijkende opstelling vereist een PNG/PDF-upload en niet-lege toelichting.
 De huidige ondertekende JSON-transportarchitectuur ondersteunt bestanden tot 2 MiB;

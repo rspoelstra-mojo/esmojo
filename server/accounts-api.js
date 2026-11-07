@@ -78,12 +78,12 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if(!isFluidPreview(env)&&!hasAppMfa(req,env,claims))return reply(403,{error:'Bevestig je aanmelding opnieuw met je authenticator.',code:'MFA_REQUIRED'});
       const actor = data.user.id;
       const previewReads=isFluidPreview(env)?(previewSource||createFluidPreviewSource({token,mfaCookie:(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>/^__Host-esmojo-mfa=[A-Za-z0-9_-]{1,2000}$/.test(x))})):null;
-      let previewDeadline=null,homeDashboard=null;
+      let previewDeadline=null,homeDashboard=null,emailTestCopyTo=null;
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
           const result=await profiles('self',actor,['session','restore','login'].includes(action)?{includeHome:true}:{});
-          const {homeDashboard:home,...profile}=result;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
+          const {homeDashboard:home,emailTestCopyTo:copyTo,...profile}=result;emailTestCopyTo=copyTo||null;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
           if (failure.message === 'FORBIDDEN') throw new Error('ACCOUNT_DISABLED');
@@ -266,7 +266,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }catch(error){const status=error.message==='VALIDATION'?400:error.message==='CONFLICT'?409:error.message==='FORBIDDEN'?403:503;return reply(status,{error:status===400?'Selecteer geldige ontvangeraccounts.':status===409?'De ontvangers zijn intussen gewijzigd. Je selectie is behouden; laad de actuele instellingen voordat je opnieuw opslaat.':'OnTrack kon niet worden geladen of opgeslagen. Je selectie is behouden. Probeer opnieuw.'});}
       }
       if(action==='email'){
-        const service=createEmailTestService({mail,shows,mailingConcerts,reportContext:ontrackReportStore});
+        const service=createEmailTestService({mail,shows,mailingConcerts,reportContext:ontrackReportStore,copyTo:emailTestCopyTo,copyActor:own.id});
         try{
           if(req.method==='GET')return reply(200,await service.catalog(own,Boolean(env.RESEND_API_KEY)));
           if(req.method==='POST'){

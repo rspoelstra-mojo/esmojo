@@ -153,7 +153,7 @@ test('datumlookup gebruikt actieve index en exacte datum, lekt geen folder/actor
 test('OAuth-toestemming eist server-gevalideerde Supabase MFA, 72h deadline en actuele beheerderrol',async()=>{
   const now=Date.now(),claims={sub:actor,aal:'aal2',amr:[{method:'password',timestamp:Math.floor(now/1000)},{method:'totp'}]},user={id:actor,factors:[{factor_type:'totp',status:'verified'}]};
   const token=c=>'x.'+Buffer.from(JSON.stringify(c)).toString('base64url')+'.x';
-  const check=createMcpOwnerCheck({env:{VITE_SUPABASE_URL:'https://example.invalid',VITE_SUPABASE_PUBLISHABLE_KEY:'test'},clientFactory:()=>({auth:{getUser:async()=>({data:{user}})}}),profiles:async()=>({activated:true,role:'beheerder'}),now:()=>now});
+  const check=createMcpOwnerCheck({env:{VITE_SUPABASE_URL:'https://example.invalid',VITE_SUPABASE_PUBLISHABLE_KEY:'test'},clientFactory:()=>({auth:{getUser:async()=>({data:{user}})}}),profiles:async()=>({activated:true,role:'beheerder',modules:['shows']}),now:()=>now});
   assert.equal(await check.login({headers:{authorization:'Bearer '+token(claims)}}),actor);
   for(const c of [{...claims,aal:'aal1'},{...claims,sub:'other'},{...claims,amr:[{method:'password',timestamp:Math.floor(now/1000)-73*3600},{method:'totp'}]}])await assert.rejects(check.login({headers:{authorization:'Bearer '+token(c)}}),/FORBIDDEN/);
   for(const profile of [{activated:true,role:'gebruiker'},{activated:false,role:'beheerder'},{activated:true,role:'beheerder',disabled:true}]){
