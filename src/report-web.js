@@ -73,8 +73,8 @@ function renderDailyReport(parent,report){
  const view=node('div','report-day'),disposers=[];let activeFilter=null;
  const selectFilter=filter=>{activeFilter=activeFilter===filter?null:filter;updateIncidents();incidents.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
  const grid=node('div','report-summary-grid');
- grid.append(statCard('Medisch',report.kpis.medical,[['treatments','Behandelingen'],['selfcare','Zelfzorg'],['unwell','Onwelwordingen'],['ambulance','Ambulancetransporten']],'report-medical',selectFilter),
-  statCard('Beveiliging',report.kpis.security,[['verbal','Verbale agressie'],['physical','Fysieke agressie'],['evictions','Uitzettingen'],['arrests','Aanhoudingen']],'report-security',selectFilter),
+ grid.append(statCard('Medisch',report.kpis.medical,medicalReportFilters.map(({id,label})=>[id,label]),'report-medical',selectFilter),
+  statCard('Beveiliging',report.kpis.security,securityReportFilters.map(({id,label})=>[id,label]),'report-security',selectFilter),
   typesCard('Medisch · incidenttypes',report.types.medical,'report-medical-types'),typesCard('Beveiliging · incidenttypes',report.types.security,'report-security-types'));
  const timeline=card('Showverloop','report-timeline'),chart=node('div','report-line-chart');timeline.append(chart,node('p','report-card-caption','Aantal incidenten per halfuur'));
  const legend=node('div','report-line-legend');for(const [label,index]of [['Medisch',0],['Beveiliging',2]]){const item=node('span',''),line=node('span','report-line-key report-series-'+index);line.setAttribute('aria-hidden','true');item.append(line,node('span','',label));legend.append(item);}timeline.append(legend);
