@@ -44,3 +44,10 @@ fictieve test-/documentatiewaarden. Afgesloten bezorgproef kan niet heropenen.
 Volledige regressie, 648 autorisatiecombinaties, echte lokale Redis-concurrency,
 productieheaders/-afwijzingen en browser-CSP worden apart gecontroleerd.
 Historie verwijderen blijft een afzonderlijk te beoordelen stap.
+
+Nacontrole: V1.72 en alle documentheaders zijn op productie bevestigd. De oude
+publieke diagram-URL geeft 404 en de nieuwe route weigert anoniem met 401.
+De geteste oude deployment-URL's leiden naar Vercel-aanmelding en leverden geen
+PNG-bytes. Voeg een CI-controle toe die herintroductie van originele referentie-
+PNG's en persoonlijke adresliterals voorkomt; de oude bronmap-README verwijst
+voortaan uitsluitend naar de private Drive-route. Geen productgedrag wijzigen.
