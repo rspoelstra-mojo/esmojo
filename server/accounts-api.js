@@ -293,7 +293,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (req.method === 'POST') {
-        const profile = validateProfile(input);
+        const profile = validateProfile(input,{defaultRole:'gebruiker'});
         const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new Error('VALIDATION');
         if (!env.RESEND_API_KEY) return reply(503, { error: 'Uitnodigingsmail is nog niet geconfigureerd.' });
