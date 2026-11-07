@@ -16,7 +16,7 @@ const tabs=['Overzicht','Showprofiel','Risicoanalyse','Maatregelen','Documenten'
 const svg=paths=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,initialTab=requestedShowTab(globalThis.location?.search||''),memory=request===access?showMemory:createShowMemory({request})}={}){
   let disposed=false,opening=false,releasePage=()=>{};
-  const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,content):null;
+  const menu=document.querySelector('#submenu-navigation [aria-current="page"]')||document.querySelector('#submenu-title'),loading=menu?createSubmenuLoading(menu,content):null;
   async function open(){
     if(disposed||opening)return;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
@@ -54,8 +54,10 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
         const panel=document.createElement('section');panel.id=`show-panel-${index}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);panel.tabIndex=0;
         if(label==='Overzicht'){
           const layout=document.createElement('div');layout.className='show-overview';
+          const team=document.createElement('section');team.className='show-team';
+          const teamTitle=document.createElement('h2');teamTitle.textContent='Show team';team.append(teamTitle);
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          layout.append(planning);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
+          layout.append(team,planning);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
         }
         if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
         if(label==='Maatregelen')disposeMeasures=createShowMeasures(panel,{show,data,readOnly});

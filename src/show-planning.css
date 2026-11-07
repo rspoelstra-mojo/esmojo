@@ -1,10 +1,12 @@
-.show-overview { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:20px; align-items:start; }
+.show-overview { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:20px; align-items:stretch; }
+.show-team { min-width:0; padding:20px; background:var(--fluid-card,#fff); border:1px solid var(--line); border-radius:12px; }
+.show-team h2 { margin:0; color:var(--text); font-size:16px; line-height:1.5; font-weight:600; }
 .show-overview-planning { min-width:0; container-type:inline-size; }
 @container (max-width: 1000px) {
   .show-overview { grid-template-columns:minmax(0,1fr); }
 }
-.show-planning { --planning-surface:#fff; --planning-footer:#f8fafc; --planning-text:#242424; --planning-muted:#637083; --planning-line:#cbd2dc; --planning-blue:#083ade; --planning-blue-soft:#edf2ff; --planning-blue-text:#315bc5; --planning-green:#25744b; --planning-green-soft:#e6f4eb; color:var(--planning-text); background:var(--planning-surface); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-:root[data-theme="dark"] .show-planning { --planning-surface:#212832; --planning-footer:#1a2029; --planning-text:#e5e9f1; --planning-muted:#a8b4c7; --planning-line:#465365; --planning-blue:#0750ce; --planning-blue-soft:#192b4a; --planning-blue-text:#8eacff; --planning-green:#9fd2b1; --planning-green-soft:#163b2a; border-color:var(--planning-line); }
+.show-planning { --planning-surface:var(--fluid-card,#fff); --planning-footer:var(--canvas); --planning-text:var(--text); --planning-muted:var(--muted); --planning-line:var(--line); --planning-blue:var(--blue,#002ff4); --planning-blue-soft:#edf2ff; --planning-blue-text:#315bc5; --planning-green:#25744b; --planning-green-soft:#e6f4eb; color:var(--planning-text); background:var(--planning-surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+:root[data-theme="dark"] .show-planning { --planning-blue:#7092ff; --planning-blue-soft:#192b4a; --planning-blue-text:#8eacff; --planning-green:#9fd2b1; --planning-green-soft:#163b2a; }
 .planning-timeline { position:relative; padding:48px 12px 16px; }
 .planning-steps { position:relative; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; list-style:none; padding:0; margin:0; }
 .planning-step { min-width:0; display:grid; grid-template-rows:20px 36px minmax(60px,auto) 24px; row-gap:8px; justify-items:center; text-align:center; }
