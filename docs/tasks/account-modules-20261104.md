@@ -13,7 +13,7 @@ projectafspraken en V1.30. Geen moduledata in Supabase/Auth/JWT of publieke opsl
 Bestaande service-/onderzoek-/cronintegraties behouden hun afzonderlijke beveiliging.
 Publicatie via normale CI/main/Apps Script-workflow. Geen echte mails versturen.
 
-Aanvullend expliciet gevraagd: het bestaande account redacted@example.invalid krijgt
+Aanvullend expliciet gevraagd: het bestaande account super-admin@example.invalid krijgt
 Super beheerder. Vast aan dat ene serverzijdig opgeslagen account gebonden;
 alle huidige/toekomstige modules, alle bestaande beheerdersfuncties, geen rol-
 of modulebypass voor andere accounts. De bestaande MFA, activatie en sessiecontrole

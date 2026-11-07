@@ -23,7 +23,7 @@ test('Een nieuw geldig modulebestand verschijnt automatisch in hetzelfde catalog
 
 test('Huidige accounttemplate-test heeft uitsluitend de eigen ontvanger en geen echte activatielink',async()=>{
  const sent=[],service=createEmailTestService({reportContext:async()=>({managerName:null}),registry:emailTemplates,mail:async(...args)=>sent.push(args),shows:async()=>({shows:[]})});
- const own={email:'zelf@example.invalid',firstName:'Anne Marie'},catalog=await service.catalog(own,true);assert.equal(catalog.templates.length,2);assert.equal(sent.length,0);assert.deepEqual(catalog.shows,[]);
+ const own={modules:['reports'],email:'zelf@example.invalid',firstName:'Anne Marie'},catalog=await service.catalog(own,true);assert.equal(catalog.templates.length,2);assert.equal(sent.length,0);assert.deepEqual(catalog.shows,[]);
  await service.send(own,{templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'});
  assert.equal(sent.length,1);const message=sent[0][0],rendered=renderEmailTemplate(message);assert.match(rendered.subject,/^\[TEST\]/);assert.equal(message.to,own.email);assert.match(rendered.text,/Beste Anne Marie,/);assert.equal(rendered.html.includes('test-only-not-an-activation'),false);assert.equal(message.actions[0].url,'https://esmojo.nl/');
 });
@@ -32,7 +32,7 @@ test('Toekomstige showtemplates testen met werkelijk gekozen concert en alle sho
  const show={key:'Reeks',name:'Fixture artiest',venue:'Gashouder',dates:['2026-11-06','2026-11-07']};let sent;
  const template={id:'fixture-show',label:'Fixture show',requiresShow:true,buildTest:()=>({to:'ander@example.invalid',subject:'Showbericht',preheader:'Fixture',title:'Fixture',context:{kind:'show',show:{...show,name:'Niet gebruiken'}},paragraphs:['Testinhoud']})};
  const service=createEmailTestService({reportContext:async()=>({managerName:null}),registry:{list:async()=>[{id:template.id,label:template.label,requiresShow:true}],get:async id=>id===template.id?template:null},shows:async()=>({shows:[show]}),mail:async message=>{sent=message;}});
- const own={email:'zelf@example.invalid',firstName:'Eigen naam'},base={templateId:template.id,requestId:'11111111-1111-4111-8111-111111111111'};
+ const own={modules:['reports'],email:'zelf@example.invalid',firstName:'Eigen naam'},base={templateId:template.id,requestId:'11111111-1111-4111-8111-111111111111'};
  assert.equal((await service.catalog(own,true)).shows[0].key,show.key);await assert.rejects(service.send(own,base),/VALIDATION/);await assert.rejects(service.send(own,{...base,concertId:'Onbekend'}),/EMAIL_SHOW_NOT_FOUND/);
  await service.send(own,{...base,concertId:show.key});const rendered=renderEmailTemplate(sent);assert.equal(sent.to,own.email);assert.ok(rendered.text.includes('Fixture artiest · Gashouder · 6 november 2026 · 7 november 2026'));assert.equal(rendered.text.includes('Niet gebruiken'),false);
 });
@@ -42,8 +42,8 @@ test('Showrapportage verschijnt automatisch en verzendt gekoppelde showtekst met
  const show={key:'rapport-fixture',name:'Fixture & artiest',venue:'Gashouder',dates:['2026-11-14']};
  let payload,calls=0;
  const service=createEmailTestService({reportContext:async()=>({managerName:null}),registry:emailTemplates,shows:async()=>({shows:[show]}),mail:async(message,options)=>sendEmail(message,{...options,env:{RESEND_API_KEY:'fixture'},fetchImpl:async(url,request)=>{calls++;payload=JSON.parse(request.body);return{ok:true,json:async()=>({id:'mock-only'})};}})});
- assert.ok((await service.catalog({email:'zelf@example.invalid'},true)).templates.some(t=>t.id==='show-report'&&t.label==='Showrapportage'&&t.requiresShow));
- await service.send({email:'zelf@example.invalid',firstName:'Anne Marie'},{templateId:'show-report',concertId:show.key,requestId:'11111111-1111-4111-8111-111111111111'});
+ assert.ok((await service.catalog({modules:['reports'],email:'zelf@example.invalid'},true)).templates.some(t=>t.id==='show-report'&&t.label==='Showrapportage'&&t.requiresShow));
+ await service.send({modules:['reports'],email:'zelf@example.invalid',firstName:'Anne Marie'},{templateId:'show-report',concertId:show.key,requestId:'11111111-1111-4111-8111-111111111111'});
  assert.equal(calls,1);assert.equal(payload.to,'zelf@example.invalid');assert.equal(payload.from,'ESMOJO <showrapportage@esmojo.nl>');assert.equal(payload.subject,'[TEST] Showrapportage Fixture & artiest - 14 november 2026');assert.ok(payload.text.includes('Beste Anne Marie,'));assert.ok(payload.text.includes('Hierbij ontvang je de showrapportage van Fixture & artiest op 14 november 2026 in de Gashouder.'));assert.ok(payload.html.includes('Fixture &amp; artiest'));assert.ok(payload.text.includes('Met vriendelijke groet,\nEvent Safety Mobility Operations'));
  assert.equal(payload.attachments,undefined);const doc=await PDFDocument.create();doc.addPage();const bytes=Buffer.from(await doc.save());assert.ok(!payload.text.includes('De PDF is ook bijgevoegd.'));
  assert.throws(()=>showReportEmail({to:'zelf@example.invalid',show,includePdf:true}),/PDF is verplicht/);assert.throws(()=>showReportEmail({show:{...show,dates:[]}}),/Showdatums ontbreken/);
@@ -56,17 +56,17 @@ test('Showrapportage verschijnt automatisch en verzendt gekoppelde showtekst met
 
 test('Alle testtemplates hebben alleen voor Richards beheerdersaccount twee vaste ontvangers',async()=>{
  const calls=[],show={key:'testconcert',name:'Testartiest',venue:'Gashouder',dates:['2026-11-04']};
- const service=createEmailTestService({reportContext:async()=>({managerName:null}),mail:async(message,options)=>calls.push({message,options}),shows:async()=>({shows:[show]}),mailingConcerts:async()=>({concerts:[]})});
- const own={role:'beheerder',email:'redacted@example.invalid',firstName:'Richard'},input={requestId:'11111111-1111-4111-8111-111111111111'};
- const catalog=await service.catalog(own,true);assert.deepEqual(catalog.recipients,[own.email,'redacted@example.invalid']);assert.equal(calls.length,0);
+ const service=createEmailTestService({copyTo:'test-copy@example.invalid',copyActor:'synthetic-owner',reportContext:async()=>({managerName:null}),mail:async(message,options)=>calls.push({message,options}),shows:async()=>({shows:[show]}),mailingConcerts:async()=>({concerts:[]})});
+ const own={id:'synthetic-owner',role:'superbeheerder',email:'super-admin@example.invalid',firstName:'Richard'},input={requestId:'11111111-1111-4111-8111-111111111111'};
+ const catalog=await service.catalog(own,true);assert.deepEqual(catalog.recipients,[own.email,'test-copy@example.invalid']);assert.equal(calls.length,0);
  for(const template of catalog.templates){
   calls.length=0;await service.send(own,{...input,templateId:template.id,...(template.requiresShow?{concertId:show.key}:{})});
   assert.deepEqual(calls.map(row=>row.message.to),catalog.recipients);assert.notEqual(calls[0].options.idempotencyKey,calls[1].options.idempotencyKey);
   assert.equal(renderEmailTemplate(calls[0].message).html,renderEmailTemplate(calls[1].message).html);
   assert.equal(calls[0].message.attachments,calls[1].message.attachments);
  }
- calls.length=0;await service.send({...own,role:'superbeheerder',modules:[]},{...input,templateId:'account-activation'});assert.deepEqual(calls.map(row=>row.message.to),[own.email,'redacted@example.invalid']);
- for(const profile of [{...own,email:'ander@example.invalid'},{...own,role:'medewerker'},{...own,email:'redacted@example.invalid.example.invalid'}]){
+ calls.length=0;await service.send({...own,role:'superbeheerder',modules:[]},{...input,templateId:'account-activation'});assert.deepEqual(calls.map(row=>row.message.to),[own.email,'test-copy@example.invalid']);
+ for(const profile of [{...own,id:'other',email:'ander@example.invalid'},{...own,role:'medewerker'},{...own,id:'other',email:'super-admin@example.invalid.example.invalid'}]){
   calls.length=0;assert.deepEqual((await service.catalog(profile,true)).recipients,[profile.email]);
   await service.send(profile,{...input,templateId:'account-activation'});assert.deepEqual(calls.map(row=>row.message.to),[profile.email]);
  }
@@ -75,20 +75,20 @@ test('Alle testtemplates hebben alleen voor Richards beheerdersaccount twee vast
 
 test('Herhalen na mislukte extra testmail gebruikt dezelfde afzonderlijke idempotentiesleutels',async()=>{
  const calls=[];let fail=true;
- const service=createEmailTestService({reportContext:async()=>({managerName:null}),mail:async(message,options)=>{calls.push({to:message.to,key:options.idempotencyKey});if(message.to==='redacted@example.invalid'&&fail){fail=false;throw Error('Tijdelijke mailfout');}},shows:async()=>({shows:[]})});
- const profile={role:'beheerder',email:'redacted@example.invalid',firstName:'Richard'},request={templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'};
+ const service=createEmailTestService({copyTo:'test-copy@example.invalid',copyActor:'synthetic-owner',reportContext:async()=>({managerName:null}),mail:async(message,options)=>{calls.push({to:message.to,key:options.idempotencyKey});if(message.to==='test-copy@example.invalid'&&fail){fail=false;throw Error('Tijdelijke mailfout');}},shows:async()=>({shows:[]})});
+ const profile={id:'synthetic-owner',role:'superbeheerder',email:'super-admin@example.invalid',firstName:'Richard'},request={templateId:'account-activation',requestId:'11111111-1111-4111-8111-111111111111'};
  await assert.rejects(service.send(profile,request),/Tijdelijke mailfout/);assert.deepEqual(await service.send(profile,request),{ok:true});
  assert.deepEqual(calls.slice(0,2),calls.slice(2));
 });
 test('Showrapportage-test is zonder Rapportages-module niet opvraagbaar of verzendbaar, ook niet als beheerder',async()=>{
- let calls=0;const service=createEmailTestService({reportContext:async()=>({managerName:null}),mail:async()=>{calls++;},shows:async()=>{throw Error('Geen showgegevens zonder toegang nodig');}});
+ let calls=0;const service=createEmailTestService({copyTo:'test-copy@example.invalid',copyActor:'synthetic-owner',reportContext:async()=>({managerName:null}),mail:async()=>{calls++;},shows:async()=>{throw Error('Geen showgegevens zonder toegang nodig');}});
  const profile={role:'beheerder',email:'fixture@example.invalid',modules:['artists']};const catalog=await service.catalog(profile,true);assert.deepEqual(catalog.templates.map(template=>template.id),['account-activation']);
  await assert.rejects(service.send(profile,{templateId:'show-report',requestId:'11111111-1111-4111-8111-111111111111',concertId:'bekende-show'}),/FORBIDDEN/);assert.equal(calls,0);
 });
 
 test('Rapportagetest haalt uitsluitend naam uit servercontext; ontbrekende manager houdt afgesproken merkondertekening',async()=>{
  const show={key:'Synthetisch_Ziggo-Dome_04112026',name:'Synthetisch',venue:'Ziggo Dome',dates:['2026-11-04']},calls=[],sent=[];
- const service=createEmailTestService({reportContext:async(...args)=>{calls.push(args);return{managerName:'Jean Pierre Van de Test'};},mail:async message=>sent.push(message),shows:async()=>({shows:[show]})});
+ const service=createEmailTestService({copyTo:'test-copy@example.invalid',copyActor:'synthetic-owner',reportContext:async(...args)=>{calls.push(args);return{managerName:'Jean Pierre Van de Test'};},mail:async message=>sent.push(message),shows:async()=>({shows:[show]})});
  await service.send({id:'synthetic-admin',role:'beheerder',modules:['reports'],email:'admin@example.invalid',firstName:'Eigen voornaam'},{templateId:'show-report',concertId:show.key,requestId:'11111111-1111-4111-8111-111111111111'});
  assert.deepEqual(calls,[['email-context','synthetic-admin',{concertId:show.key}]]);assert.equal(sent.length,1);assert.equal(sent[0].senderName,'Jean Pierre Van de Test');assert.equal(sent[0].recipient.firstName,'Eigen voornaam');assert.equal(sent[0].actions[0].url,'https://esmojo.nl/rapportages/'+show.key);
  const {showReportEmail}=await import('./email-templates/show-report.js');const fallback=showReportEmail({show});assert.equal(fallback.senderName,'Event Safety Mobility Operations');

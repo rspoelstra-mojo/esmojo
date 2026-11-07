@@ -344,8 +344,9 @@ Bewaar beoordelingen en historie in het bestaande productionele-risicos.json;
 losse bijlagen uitsluitend als private bestanden in dezelfde canonieke Drive-showmap.
 Account/MFA, servervalidatie en revisiecontrole blijven vereist. Alleen referenties
 in beoordelingen; geen bestandsinhoud in JSON, logs of persistente browseropslag.
-Standaard-PNG’s worden later aangeleverd in src/assets/barrier-layouts; geen
-vervangende afbeeldingen zoeken of genereren. Zie docs/production-assessments.md.
+Standaard-PNG’s zijn oorspronkelijk aangeleverd via src/assets/barrier-layouts;
+sinds V1.72 alleen private Drive-referenties. Geen vervangende afbeeldingen zoeken
+of genereren. Zie docs/production-assessments.md.
 
 ## Fluid-designstandaard
 
@@ -567,8 +568,8 @@ in de PDF-weergave verwijderd met een afgeronde uitsnede van de grijze tegel.
 Deze toestemming geldt voor die presentatie; het oorspronkelijke PNG-bestand
 blijft byte-identiek bewaard. De ON-lettervormen, kleur en klikbare link behouden.
 
-Uitsluitend voor het serverzijdig geladen beheerdersaccount redacted@example.invalid
-heeft de gebruiker een vaste extra testmailontvanger redacted@example.invalid
+Uitsluitend voor het serverzijdig geladen beheerdersaccount super-admin@example.invalid
+heeft de gebruiker een vaste extra testmailontvanger test-copy@example.invalid
 bevestigd. Iedere bewuste testverzending via Beheerder → Email stuurt hetzelfde
 gekozen testtemplate afzonderlijk naar beide adressen, met aparte stabiele
 idempotentiesleutels. Dit geldt niet voor andere accounts of productiemails.
@@ -622,9 +623,9 @@ voordat die visuele verversing plaatsvindt. Bewaar de bestaande rol-/MFA-beveili
 
 ## Super beheerder uitsluitend via code
 
-Op 4 november 2026 heeft de gebruiker het bestaande account redacted@example.invalid
-expliciet aangewezen als Super beheerder. Alleen de vaste code in de ondertekende
-Drive-accountbrug kent die rol toe; bestaande profielcontrole promoveert dit
+Op 4 november 2026 heeft de gebruiker het vaste bestaande beheerdersaccount
+expliciet aangewezen als Super beheerder; de identiteit staat uitsluitend in Drive. De vaste private identiteit in de ondertekende
+Drive-accountbrug behoudt die rol; bestaande profielcontrole promoveert dit
 account eenmaal in hetzelfde register. Geen rolwijziging via websitekeuzes of
 browserpayload. Gewone beheerders kunnen dit account niet degraderen, blokkeren
 of verwijderen. Andere accounts krijgen deze rol niet.
@@ -1336,3 +1337,36 @@ Fluid kaarten Accountgegevens, Organisatie, Toegang en Profielfoto herschikken
 naar één kolom op smal beeld. Bestaande rond uitsnijden, uitnodiging, MFA en
 achtergrondopslag blijven werken. Nieuwe bedrijfskeuze maakt de functie leeg;
 nooit een oude functie of beheerderrol bij een extern bedrijf laten staan.
+
+## Beveiligingsversterking na onderzoek (V1.72)
+
+Publieke OAuth-register/authorize/token-routes zijn atomair begrensd via de
+bestaande Redis-integratie vóór Drive-I/O. Alleen HMAC-IP-vingerafdrukken en
+60s-tellers; geen ruwe IP's, profielen of OAuth-geheimen. Falen gesloten bij
+cacheproblemen. Ongebruikte clients verlopen na 15 minuten; clients met actieve
+codes/grants blijven. Exacte callback/PKCE, scopes en toestemming behouden.
+
+AccountModules weigert ontbrekende modulevelden. De vooraf gepubliceerde,
+eenmalige private Drive-migratie maakt bestaande legacytoegang expliciet zonder
+expliciet beperkte accounts te verruimen. Nieuwe ontbrekende modulekeuzes geven
+geen modules. De vaste superbeheerder-ID en bestaande testmailuitzondering staan
+alleen in het private accountregister; geen persoonsadressen in broncode/tests/docs.
+Node verwijdert de private extra configuratie uit de browserprofielresponse.
+
+Standaard barrierdiagrammen zijn op expliciet verzoek afgeschermd. De vijf originele
+PNG's zijn hash-gecontroleerd geïmporteerd in _esmojo_private_references_v1 onder
+de vaste private Drive-root; bytes niet meer opnemen in src, public of Git/builds.
+Alleen barrier-reference met MFA/actuele Shows-toegang kan ze lezen. Browsercache
+uitsluitend sessiegeheugen en revoke bij afmelden/account-/rechtenwissel. De
+gecontroleerde OIDC-importactie is na bevestiging verwijderd, niet heropenen.
+
+Appdocumenten krijgen een CSP met exacte hash voor het bestaande opstartscript,
+frame-ancestors none, geen onbekende inline scripts/eval en beperkte bronhosts.
+Behoud bestaande inline stijlen omdat fluid UI/grafieken die gebruiken. Genereer
+headers na wijziging van het opstartscript met tools/security/browser-headers.mjs
+--write; test ook de uiteindelijke dist/index.html. Algemene browserheaders moeten
+op iedere specifieke documentregel blijven staan (Vercel-overschrijfgedrag).
+
+Geen force-push of historieherschrijving als normale publicatiestap. Historische
+publieke kopieën vragen een afzonderlijk concreet opschoningsvoorstel, inclusief
+oude branches/PR-referenties, samenwerking en eventuele GitHub-supportactie.

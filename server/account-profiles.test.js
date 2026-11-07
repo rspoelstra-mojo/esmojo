@@ -9,8 +9,8 @@ const secret = 'test-only-secret-'.repeat(4);
 const admin = '11111111-1111-4111-8111-111111111111';
 const user = '22222222-2222-4222-8222-222222222222';
 const profile = (id, role = 'beheerder') => ({ id, email: `${id}@example.invalid`, firstName: 'Test', lastName: 'User', company:'MOJO Concerts',jobTitle: 'Event Safety Manager', role, activated: true, disabled: false });
-function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exists = true, failWrite = false } = {}) {
-  let state = JSON.stringify({ profiles, nonces: {} });
+function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exists = true, failWrite = false,superAdminId,copyTo } = {}) {
+  let state = JSON.stringify({profiles,nonces:{},...(superAdminId?{superAdminId,emailTestCopy:{actor:superAdminId,address:copyTo},securityIdentityV1:true}:{})});
   let writes = 0, locked = false;
   const file = { getBlob: () => ({ getDataAsString: () => state }), setContent: value => { assert.ok(locked); state = value; writes++; } };
   const context = vm.createContext({ Date, JSON, Number, Object,
@@ -133,10 +133,10 @@ test('Drive bewaart modulekeuzes alleen via beheer en behoudt bestaande keuzes b
  assert.deepEqual(h.state().profiles[1].modules,['reports']);
  result=h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules:[]}}));assert.equal(result.ok,true);assert.deepEqual(h.state().profiles[1].modules,[]);
 });
-test('Alleen vaste codetoekenning promoveert Richard; geen website-/Drive-toekenning aan andere accounts of degradatie door gewone beheerders',()=>{
- const richard={...profile(user,'gebruiker'),email:'redacted@example.invalid',modules:[]},h=harness([profile(admin),richard]);
- const initial=h.send(signed({operation:'self',actor:user}));assert.equal(initial.ok,true);assert.equal(initial.data.role,'superbeheerder');assert.equal(h.state().profiles[1].role,'superbeheerder');assert.equal(h.writes(),2);
- assert.equal(h.send(signed({operation:'self',actor:user})).data.role,'superbeheerder');assert.equal(h.writes(),2);
+test('Private vaste beheerder-ID behoudt superrol; geen website-/Drive-toekenning aan anderen of degradatie door gewone beheerders',()=>{
+ const richard={...profile(user,'superbeheerder'),email:'super-admin@example.invalid',modules:[]},h=harness([profile(admin),richard],{superAdminId:user,copyTo:'test-copy@example.invalid'});
+ const initial=h.send(signed({operation:'self',actor:user}));assert.equal(initial.ok,true);assert.equal(initial.data.role,'superbeheerder');assert.equal(h.state().profiles[1].role,'superbeheerder');assert.equal(initial.data.emailTestCopyTo,'test-copy@example.invalid');assert.equal(h.writes(),1);
+ assert.equal(h.send(signed({operation:'self',actor:user})).data.role,'superbeheerder');assert.equal(h.writes(),1);
  for(const operation of ['disable','delete'])assert.equal(h.send(signed({operation,actor:admin,id:user})).ok,false);
  assert.equal(h.send(signed({operation:'update',actor:admin,id:user,profile:{...richard,role:'beheerder'}})).ok,false);
  assert.equal(h.send(signed({operation:'update',actor:admin,id:admin,profile:{...profile(admin),role:'superbeheerder'}})).ok,false);
@@ -160,7 +160,7 @@ test('Bestaande accounts krijgen één keer MOJO zonder functies/rechten te wijz
 });
 test('Onbevoegde requests voeren geen bedrijfsmigratie uit; bootstrap kan de externe rolregel niet omzeilen',()=>{
  const old=profile(admin);delete old.company;const h=harness([old,profile(user,'gebruiker')]);assert.equal(h.send(signed({operation:'list',actor:user})).ok,false);assert.equal(h.writes(),0);
- for(const email of ['bootstrap@example.invalid','redacted@example.invalid']){const fresh=harness([],{exists:false});assert.equal(fresh.send(signed({operation:'bootstrap',actor:'operator',profile:{...profile(admin,'gebruiker'),email,company:'Ziggo Dome',jobTitle:'Management'}})).code,'PROFILE_INVALID');assert.equal(fresh.writes(),0);}
+ for(const email of ['bootstrap@example.invalid','super-admin@example.invalid']){const fresh=harness([],{exists:false});assert.equal(fresh.send(signed({operation:'bootstrap',actor:'operator',profile:{...profile(admin,'gebruiker'),email,company:'Ziggo Dome',jobTitle:'Management'}})).code,'PROFILE_INVALID');assert.equal(fresh.writes(),0);}
 });
 
 test('Beveiligingsmigratie maakt legacytoegang eenmaal expliciet zonder beperkte accounts uit te breiden',()=>{
@@ -172,8 +172,10 @@ test('Beveiligingsmigratie maakt legacytoegang eenmaal expliciet zonder beperkte
  const writes=h.writes();assert.equal(h.send(signed({operation:'self',actor:user})).ok,true);assert.equal(h.writes(),writes);
 });
 
-test('Alleen de ondertekende vaste voorbereidingsactie migreert zonder gebruikersdata te retourneren',()=>{
- const h=harness();assert.equal(h.send({action:'accounts',body:JSON.stringify({operation:'security-prepare'})}).ok,false);
- const result=h.send(signed({operation:'security-prepare'}));assert.equal(result.ok,true);assert.equal(result.data.modulesExplicit,true);assert.equal(JSON.stringify(result).includes(admin),false);
- const writes=h.writes();assert.equal(h.send(signed({operation:'security-prepare',actor:'injected'})).ok,false);assert.equal(h.writes(),writes);
+test('Private mailuitzondering is uitsluitend zichtbaar voor het vaste superaccount',()=>{
+ const h=harness([profile(admin),profile(user,'superbeheerder')],{superAdminId:user,copyTo:'test-copy@example.invalid'});
+ const own=h.send(signed({operation:'self',actor:admin}));assert.equal(own.data.emailTestCopyTo,undefined);
+ const fixed=h.send(signed({operation:'self',actor:user}));assert.equal(fixed.data.emailTestCopyTo,'test-copy@example.invalid');
+ assert.equal(JSON.stringify(h.send(signed({operation:'list',actor:admin}))).includes('test-copy@example.invalid'),false);
+ assert.equal(h.send(signed({operation:'security-prepare'})).ok,false);
 });

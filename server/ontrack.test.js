@@ -7,7 +7,7 @@ import {createOnTrackStore,validateOnTrackRecipients} from './ontrack-store.js';
 const admin='11111111-1111-4111-8111-111111111111',user='22222222-2222-4222-8222-222222222222',inactive='33333333-3333-4333-8333-333333333333';
 const folderId='1V5lw-IicMW_bkphtjD4HIEejCpsOapps',rootId='1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk',secret='fixture-secret-'.repeat(4);
 function fixture(){
- const profiles=[{id:admin,role:'beheerder',activated:true,email:'admin@example.invalid'},{id:user,role:'gebruiker',activated:true,email:'user@example.invalid'},{id:inactive,role:'gebruiker',activated:false}],files=[],reads=[];let stored=null,locked=false;
+ const profiles=[{id:admin,role:'beheerder',activated:true,email:'admin@example.invalid'},{id:user,role:'gebruiker',activated:true,email:'user@example.invalid'},{id:inactive,role:'gebruiker',activated:false}].map(profile=>({...profile,modules:['reports']})),files=[],reads=[];let stored=null,locked=false;
  const iterator=items=>{let i=0;return{hasNext:()=>i<items.length,next:()=>items[i++]};};
  const file=(id,name)=>({getId:()=>id,getName:()=>name,isTrashed:()=>false,getDateCreated:()=>new Date('2026-11-03T01:00:00Z'),getLastUpdated:()=>new Date('2026-11-03T01:00:00Z')});files.push(file('csv1','Tickets.CSV'),file('ignore','notes.txt'));
  const register={getBlob:()=>({getDataAsString:()=>stored}),setContent:value=>{stored=value;}};
