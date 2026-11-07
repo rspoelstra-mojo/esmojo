@@ -1,12 +1,13 @@
 // Preview leest uitsluitend via de bestaande beveiligde productie-API.
-// Geen Drive-sleutels kopiëren, geen cookies/refresh-tokens doorsturen, geen writes.
-export function createFluidPreviewSource({token,request=fetch}){
+// Geen Drive-sleutels of refresh-tokens doorsturen, geen bedrijfswrites.
+// Alleen het op productie uitgegeven, sessiegebonden MFA-bewijs mag mee.
+export function createFluidPreviewSource({token,mfaCookie,request=fetch}){
   async function read(action,method='GET',body){
     let response,result;
     try{
       response=await request('https://esmojo.nl/api/access?action='+action,{
         method,cache:'no-store',redirect:'error',signal:AbortSignal.timeout(90000),
-        headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},
+        headers:{Authorization:'Bearer '+token,...(/^__Host-esmojo-mfa=[A-Za-z0-9_-]{1,2000}$/.test(mfaCookie||'')?{Cookie:mfaCookie}:{}),...(body?{'Content-Type':'application/json'}:{})},
         ...(body?{body:JSON.stringify(body)}:{}),
       });
       result=await response.json();

@@ -29,3 +29,11 @@ test('Bronfouten geven veilige sessie-/bereikbaarheidsmeldingen zonder rechten t
  const expired=await run({request:async()=>Response.json({error:'fixture'},{status:401})});assert.equal(expired.response.code,401);assert.equal(expired.response.data.code,'SESSION_EXPIRED');
  const unavailable=await run({request:async()=>{throw Error('Privé-inhoud mag niet worden getoond');}});assert.equal(unavailable.response.code,503);assert.equal(unavailable.response.data.code,'PREVIEW_SOURCE_UNAVAILABLE');assert.equal(JSON.stringify(unavailable.response.data).includes('Privé-inhoud'),false);
 });
+
+test('Preview stuurt uitsluitend het opaque MFA-bewijs door, nooit andere cookies',async()=>{
+ let sent;
+ const source=createFluidPreviewSource({token:'synthetic-token',mfaCookie:'__Host-esmojo-mfa=synthetic-proof',request:async(url,options)=>{sent=options.headers;return Response.json({ok:true});}});
+ await source.session();assert.equal(sent.Cookie,'__Host-esmojo-mfa=synthetic-proof');
+ const injected=createFluidPreviewSource({token:'synthetic-token',mfaCookie:'__Host-esmojo-mfa=proof; __Host-esmojo-session=private-refresh',request:async(url,options)=>{sent=options.headers;return Response.json({ok:true});}});
+ await injected.session();assert.equal(sent.Cookie,undefined);
+});

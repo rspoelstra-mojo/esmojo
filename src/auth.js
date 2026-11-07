@@ -1,3 +1,4 @@
+import {createMfaVerifier} from './lib/mfa-verification.js';
 import {retrySave} from './lib/save-retry.js';
 import {backgroundSaves,isSaveRequest,saveRequestInfo,SAVE_EXIT_MESSAGE} from './lib/background-saves.js';
 import {homeDashboardCache} from './lib/home-cache.js';
@@ -8,6 +9,8 @@ import logo from './assets/ESMOJO-logo.svg?raw';
 import { singleSubmission } from './lib/single-submission.js';
 
 let client;
+const mfaVerifier=createMfaVerifier();
+let authEpoch=0;
 let onReady;
 let onSignedOut;
 let running = false;
@@ -46,7 +49,7 @@ async function performAccess(action, { method = 'GET', body } = {}) {
     if (response.status === 401 || ['ACCOUNT_DISABLED', 'MFA_REQUIRED'].includes(result.code)) await logout('Je sessie is niet meer geldig. Log opnieuw in.');
     throw Object.assign(new Error(result.error || 'Het verzoek is mislukt.'),{retryable:response.status>=500||response.status===429});
   }
-  if(result.profile&&result.profile.id===data.session.user.id&&homeContext.ticket===homeDashboardCache.context().ticket&&['session','restore'].includes(action)){homeDashboardCache.bind(result.profile);if(result.homeDashboard)homeDashboardCache.accept(result.homeDashboard,{actor:result.profile.id});}
+  if(result.profile&&result.profile.id===data.session.user.id&&homeContext.ticket===homeDashboardCache.context().ticket&&['session','restore','login'].includes(action)){homeDashboardCache.bind(result.profile);if(result.homeDashboard)homeDashboardCache.accept(result.homeDashboard,{actor:result.profile.id});}
   if(action==='show-profile-pdf'&&body?.concertId&&result.state&&!result.storageStale)homeDashboardCache.confirmProfile(body.concertId,result.state,{...homeContext,actor:data.session.user.id});
   if(result.homePlanning)homeDashboardCache.patch(result.homePlanning,{...homeContext,actor:data.session.user.id});
   return accessResultPayload(result);
@@ -152,11 +155,11 @@ async function continueLogin() {
     const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
     if (assurance.error) throw new Error('Je sessie kon niet worden gecontroleerd.');
     if (assurance.data.currentLevel === 'aal2') {
-      const { profile } = await access('session');
-      if (!profile.activated) return setPassword();
-      const { data } = await client.auth.getSession();
-      const deadline = await remember(data.session);
-      enter(profile, deadline); return;
+      const epoch=authEpoch,{data}=await client.auth.getSession();
+      const result=await access('login',{method:'POST',body:{refreshToken:data.session.refresh_token}});
+      if(epoch!==authEpoch)return;
+      if(!result.profile.activated)return setPassword();
+      enter(result.profile,result.expiresAt);return;
     }
     const listed = await client.auth.mfa.listFactors();
     if (listed.error) throw new Error('Authenticatorgegevens konden niet worden opgehaald.');
@@ -176,12 +179,18 @@ async function continueLogin() {
 }
 
 function codeForm(factorId, totp) {
+  const epoch=authEpoch;let verified=false;void mfaVerifier.prepare();
   const form = screen(totp ? 'Scan de QR-code' : '2-stapsverificatie', 'Voer de 6-cijferige code uit je authenticator in. Deze verandert iedere 30 seconden.', [
     { label: 'Authenticatorcode', name: 'code', type: 'text', inputmode: 'numeric', pattern: '[0-9]{6}', maxlength: '6', autocomplete: 'one-time-code', required: '' },
   ], 'Bevestigen', async fields => {
-    const result = await client.auth.mfa.challengeAndVerify({ factorId, code: fields.get('code') });
-    if (result.error) throw new Error('Deze code is ongeldig of verlopen. Gebruik de huidige code uit je app.');
-    await continueLogin();
+    if(!verified){
+      const {data}=await client.auth.getSession();if(!data.session)throw Error('Je aanmelding is verlopen. Log opnieuw in.');
+      const result=await mfaVerifier.verify({factorId,code:fields.get('code'),accessToken:data.session.access_token,isCurrent:()=>epoch===authEpoch&&form.isConnected});
+      if(!result||epoch!==authEpoch||!form.isConnected)return;
+      const applied=await client.auth.setSession(result);if(applied.error)throw Error('Je sessie kon niet worden bevestigd. Log opnieuw in.');
+      if(epoch!==authEpoch||!form.isConnected)return;verified=true;const input=form.querySelector('input[name="code"]');input.value='';input.required=false;input.disabled=true;
+    }
+    if(epoch===authEpoch&&form.isConnected)await continueLogin();
   });
   if (totp) {
     const image = document.createElement('img'); image.width = 200; image.height = 200;
@@ -218,6 +227,7 @@ function addLogout(form) {
 export async function logout(message) {
   if (loggingOut) return;
   if(message===undefined&&backgroundSaves.unconfirmed&&!window.confirm(SAVE_EXIT_MESSAGE))return;
+  authEpoch++;mfaVerifier.clear();
   loggingOut = true; armExpiry(null); activeSession = null;
   onSignedOut();
   try {
@@ -239,6 +249,7 @@ export async function startAuth(callbacks) {
         setTimeout(() => { if (!loggingOut && expiresAt) void remember(session).catch(() => logout('Je sessie kon niet worden vernieuwd. Log opnieuw in.')); }, 0);
       }
       if (event === 'SIGNED_OUT' && !loggingOut) {
+        authEpoch++;mfaVerifier.clear();
         activeSession = null; armExpiry(null); onSignedOut(); signIn();
         void fetch('/api/access?action=forget', { method: 'POST', credentials: 'same-origin', cache: 'no-store' }).catch(() => {});
       }

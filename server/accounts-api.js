@@ -1,3 +1,4 @@
+import {hasAppMfa,clearMfaCookie} from './mfa-cookie.js';
 import {createOnlineReportMailService} from './online-report-mail.js';
 import {createWebCatalogueService} from './web-report-catalogue.js';
 import {createWebReportService} from './report-web.js';
@@ -41,12 +42,12 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const origin = req.headers.origin;
       if (origin && origin !== 'https://esmojo.nl' && origin !== env.APP_ORIGIN && !fluidPreviewOrigin(origin,env)) return reply(403, { error: 'Geen toegang.' });
       const action = req.query.action;
-      if (action === 'forget' && req.method === 'POST') { clearSessionCookie(res); return reply(200, { ok: true }); }
+      if (action === 'forget' && req.method === 'POST') { clearSessionCookie(res);clearMfaCookie(req,res,env); return reply(200, { ok: true }); }
       let token = /^Bearer ([A-Za-z0-9._-]+)$/.exec(req.headers.authorization || '')?.[1];
       const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
       const auth = clientFactory(url, publicKey, options);
       let restored = null, remembered = null;
-      const expired = () => { clearSessionCookie(res); return reply(401, { error: 'Je sessie is verlopen. Log opnieuw in.', code: 'SESSION_EXPIRED' }); };
+      const expired = () => { clearSessionCookie(res);clearMfaCookie(req,res,env); return reply(401, { error: 'Je sessie is verlopen. Log opnieuw in.', code: 'SESSION_EXPIRED' }); };
       if (action === 'restore' && req.method === 'POST') {
         remembered = readSessionCookie(req, env);
         if (!remembered) return expired();
@@ -73,13 +74,14 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         clearSessionCookie(res);
         return reply(403, { error: 'Rond eerst de 2-stapsverificatie af.', code: 'MFA_REQUIRED' });
       }
+      if(!isFluidPreview(env)&&!hasAppMfa(req,env,claims))return reply(403,{error:'Bevestig je aanmelding opnieuw met je authenticator.',code:'MFA_REQUIRED'});
       const actor = data.user.id;
-      const previewReads=isFluidPreview(env)?(previewSource||createFluidPreviewSource({token})):null;
+      const previewReads=isFluidPreview(env)?(previewSource||createFluidPreviewSource({token,mfaCookie:(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>/^__Host-esmojo-mfa=[A-Za-z0-9_-]{1,2000}$/.test(x))})):null;
       let previewDeadline=null,homeDashboard=null;
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          const result=await profiles('self',actor,['session','restore'].includes(action)?{includeHome:true}:{});
+          const result=await profiles('self',actor,['session','restore','login'].includes(action)?{includeHome:true}:{});
           const {homeDashboard:home,...profile}=result;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
@@ -98,6 +100,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (remembered) expiresAt = Math.min(expiresAt || 0, remembered.expiresAt);
       if (own.activated && (!expiresAt || expiresAt <= Date.now())) return expired();
       if (action === 'session' && req.method === 'GET') return reply(200, { profile: own, expiresAt,homeDashboard });
+      if(action==='login'&&req.method==='POST'){
+        if(!req.body||Object.keys(req.body).join(',')!=='refreshToken'||typeof req.body.refreshToken!=='string'||req.body.refreshToken.length<8||req.body.refreshToken.length>2000)throw Error('VALIDATION');
+        if(own.activated)writeSessionCookie(res,{userId:actor,refreshToken:req.body.refreshToken,expiresAt},env);
+        return reply(200,{profile:own,expiresAt,homeDashboard});
+      }
       if (action === 'restore' && req.method === 'POST') {
         if (!own.activated) return expired();
         writeSessionCookie(res, { userId: actor, refreshToken: restored.refresh_token, expiresAt }, env);

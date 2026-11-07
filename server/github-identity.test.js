@@ -50,3 +50,11 @@ test('Eenmalige bezorgproef accepteert uitsluitend de eigen workflow/audience op
  const audience='https://esmojo.nl/api/email-deliverability',workflow='email-deliverability.yml',signed=token({aud:audience,workflow_ref:`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`});
  assert.deepEqual(await verifyImportIdentity(signed,{request,now,audience,workflow}),{runId:'123'});await assert.rejects(verifyImportIdentity(signed,{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience,workflow}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(signed,{request,now,workflow}),/FORBIDDEN/);
 });
+
+test('MFA-cachecheck vereist eigen vaste workflow, audience en main-identiteit',async()=>{
+ const audience='https://esmojo.nl/api/mfa',workflow='mfa-security-check.yml';
+ const signed=token({aud:audience,workflow_ref:`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`});
+ assert.deepEqual(await verifyImportIdentity(signed,{request,now,audience,workflow}),{runId:'123'});
+ await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience,workflow}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(signed,{request,now,audience:'other',workflow}),/FORBIDDEN/);
+});
