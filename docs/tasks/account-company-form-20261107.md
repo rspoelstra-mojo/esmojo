@@ -11,5 +11,7 @@ laatste-beheerderbescherming, modules, MFA, uitnodiging en achtergrondopslag hou
 Bestaande profielen zonder bedrijf niet automatisch indelen of herschrijven.
 
 Scope accountformulier en gerichte fluid CSS, gedeelde profielvalidatie,
-account-API/Drive-profiel, gerichte tests en versie. Classificatie van nieuw
-Bedrijf-veld is gevraagd; nog geen nieuwe profielopslag/verwerking gebouwd.
+account-API/Drive-profiel, gerichte tests en versie. Bedrijf is expliciet
+Vertrouwelijk via Drive/Vercel. Gebruiker staat toe alle bestaande accounts
+zonder bedrijf herhaalbaar aan MOJO Concerts te koppelen, zonder andere velden
+of rollen te wijzigen.

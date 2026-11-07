@@ -39,7 +39,7 @@ Er zijn geen Supabase-profieltabellen of Storage-buckets nodig.
 Voeg voor latere Supabase-datatoegang RLS toe die minstens `aal2` afdwingt;
 deze implementatie geeft geen anonieme toegang tot tabellen.
 
-Apps Script moet de nieuwe `Accounts.gs` en bijgewerkte `Code.gs` bevatten.
+Apps Script bevat `Accounts.gs`, `AccountEmployment.gs` en `Code.gs`.
 Publicatie via de bestaande GitHub Actions-workflow behoudt manifest,
 deployment-ID, URL en Script Properties. Controleer of de bestaande OAuth-scopes
 Drive-schrijven toestaan: zo nodig moet de eigenaar de nieuwe scope autoriseren.
@@ -60,7 +60,7 @@ npm ci
 node tools/bootstrap-account.mjs
 ```
 
-Het script vraagt alleen e-mailadres, voornaam, achternaam en functie via stdin,
+Het script vraagt e-mailadres, voornaam, achternaam, bedrijf en functie via stdin,
 nooit een wachtwoord of secrets. Het maakt uitsluitend de eerste beheerder aan
 wanneer het Drive-register nog leeg is. Er is geen publieke bootstraproute.
 De beheerder ontvangt een uitnodiging, koppelt een authenticator, bevestigt een
@@ -94,3 +94,35 @@ Mocktests en een build bewijzen de live configuratie niet. Merge de verplichte
 login niet ongecontroleerd naar productie: bij ontbrekende configuratie sluit
 de login af en zou de website onbruikbaar worden. Laat de implementatie in de
 draft PR totdat configuratie, bootstrap en live acceptatie mogelijk zijn.
+
+## Bedrijf, functie en rol
+
+Bedrijf (`company`) is expliciet Vertrouwelijk, net als het bestaande `jobTitle`.
+De accounteditor gebruikt verplichte namen, e-mail en de volgende keuzes:
+
+| Bedrijf | Functies | Rollen |
+| --- | --- | --- |
+| MOJO Concerts | Event Safety Manager, Productiemanager, CMT Leider | Gebruiker; handmatig Beheerder |
+| TSC Crowd Management | Projectleider, Management | Gebruiker |
+| Ziggo Dome | Management | Gebruiker |
+| AFAS Live | Management | Gebruiker |
+| Insomniac | Management | Gebruiker |
+
+De gedeelde catalogus en identieke Drive-validator controleren alle combinaties.
+Nieuwe accounts krijgen bij ontbrekende rol veilig Gebruiker; profielupdates
+vereisen een expliciete rol (de vaste eigen superrol behoudt zijn uitzondering).
+Een nieuwe bedrijfskeuze maakt de functiekeuze leeg en verwijdert een niet meer
+toegestane beheerderskeuze. Zelf-/laatste-beheerderbescherming blijft gelden.
+
+Op expliciet verzoek krijgen bestaande profielen zonder bedrijfsveld MOJO Concerts.
+Dit gebeurt onder de bestaande Drive-lock bij de eerste beveiligde profiel-/
+accountread of een geldige write, met een eenmalige registermarkering. Bestaande
+functieteksten, rollen, modules en relaties worden niet gewijzigd. Externe
+accounts die daarna met een gekozen bedrijf worden gemaakt blijven extern.
+Een oude functie buiten de catalogus blijft leesbaar; bij bewerken wordt een
+geldige nieuwe functiekeuze vereist. Foto wijzigen/activeren blijft apart werken.
+
+Profielvelden gaan niet naar Supabase-metadata of uitnodigingsmails. De bestaande
+uitnodiging en verplichte authenticator blijven dezelfde beveiligde route volgen.
+De editor keert na verzenden direct terug naar de lijst; de write loopt onder de
+bestaande achtergrondopslag door. Tests maken geen echte accounts of e-mails aan.

@@ -1,3 +1,6 @@
+import {accountCompanies,companyJobs,validateAccountEmployment} from '../shared/account-employment.js';
+import {singleSubmission} from './lib/single-submission.js';
+import {detailBackButton} from './detail-back.js';
 import {createPageFeedback} from './lib/page-feedback.js';
 import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
 import {accountModules,hasModule,isSuperAdministrator} from '../shared/account-modules.js';
@@ -87,43 +90,70 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
   function edit(account) {
     mode='edit';viewRevision++;const draft=backgroundSaves.form('account:'+(account?.id||'new'));const initial={...account,...draft.fields};
     view.replaceChildren();
-    const toolbar = element('div', '', 'accounts-toolbar'); toolbar.append(element('h1', account ? 'Account bewerken' : 'Account aanmaken')); view.append(toolbar);
-    const form = element('form', '', 'account-form');
-    for (const [name, title, type] of [['firstName', 'Voornaam', 'text'], ['lastName', 'Achternaam', 'text'], ['jobTitle', 'Functie', 'text'], ['email', 'E-mailadres', 'email']]) {
+    const toolbar = element('div', '', 'accounts-toolbar account-editor-heading analysis-editor-header'),back=detailBackButton(element('button','','profile-back'));back.addEventListener('click',load);toolbar.append(back,element('h1', account ? 'Account bewerken' : 'Account aanmaken'));view.append(toolbar);
+    const form = element('form', '', 'account-form account-editor');form.method='post';form.autocomplete='off';
+    const main=element('div','','account-editor-main'),aside=element('div','','account-editor-aside');
+    const card=title=>{const section=element('section','','account-editor-card');section.append(element('h2',title));return section;};
+    const identity=card('Accountgegevens'),organisation=card('Organisatie'),permissions=card('Toegang'),portrait=card('Profielfoto');
+    const identityFields=element('div','','account-editor-fields');identity.append(identityFields);main.append(identity,organisation);aside.append(permissions,portrait);form.append(main,aside);
+    for (const [name, title, type] of [['firstName', 'Voornaam', 'text'], ['lastName', 'Achternaam', 'text'], ['email', 'E-mailadres', 'email']]) {
       const label = element('label', title), input = element('input');
       input.name = name; input.type = type; input.required = true; input.maxLength = name === 'email' ? 254 : 120;
       input.value = initial[name] || '';
       if (account && name === 'email') input.readOnly = true;
-      label.append(input); form.append(label);
+      label.append(input);label.classList.add('account-editor-field-'+name);identityFields.append(label);
     }
+    const companyLabel=element('label','Bedrijf'),company=element('select');company.name='company';company.required=true;
+    const companyPlaceholder=element('option','Kies een bedrijf');companyPlaceholder.value='';company.append(companyPlaceholder);
+    for(const definition of accountCompanies){const option=element('option',definition.name);option.value=definition.name;company.append(option);}
+    company.value=initial.company||'';companyLabel.append(company);
+    const jobLabel=element('label','Functie'),job=element('select');job.name='jobTitle';job.required=true;jobLabel.append(job);
+    const legacyJob=element('p','','account-notice');legacyJob.hidden=true;organisation.append(companyLabel,jobLabel,legacyJob);
     const roleLabel = element('label', 'Rol'), select = element('select'); select.name = 'role';
     for (const [value, title] of [['gebruiker', 'Gebruiker'], ['beheerder', 'Beheerder']]) { const option = element('option', title); option.value = value; select.append(option); }
     select.value = isSuperAdministrator(account)?'beheerder':initial.role || 'gebruiker';
     if (account?.id === currentUser.id) select.disabled = true;
     if(isSuperAdministrator(account)){const fixedRole=element('input');fixedRole.type='text';fixedRole.readOnly=true;fixedRole.value='Super beheerder';roleLabel.append(fixedRole);}else roleLabel.append(select);
-    form.append(roleLabel);
+    permissions.append(roleLabel);
+    const roleHint=element('p','','account-notice');permissions.append(roleHint);
+    function updateEmployment(first=false){
+      const jobs=companyJobs(company.value);job.replaceChildren();const placeholder=element('option',company.value?'Kies een functie':'Kies eerst een bedrijf');placeholder.value='';job.append(placeholder);
+      for(const title of jobs){const option=element('option',title);option.value=title;job.append(option);}
+      job.disabled=!company.value;job.value=first&&jobs.includes(initial.jobTitle)?initial.jobTitle:'';
+      const ownRole=account?.id===currentUser.id,external=company.value!=='MOJO Concerts';
+      select.querySelector('option[value="beheerder"]').disabled=external;
+      if(external)select.value='gebruiker';else if(ownRole||isSuperAdministrator(account))select.value=isSuperAdministrator(account)?'beheerder':account.role;else if(first)select.value=isSuperAdministrator(account)?'beheerder':initial.role||'gebruiker';
+      select.disabled=ownRole||external||isSuperAdministrator(account);
+      company.setCustomValidity(ownRole&&account.role!=='gebruiker'&&company.value&&external?'Je kunt je eigen beheerderaccount niet naar een ander bedrijf wijzigen.':'');
+      roleHint.textContent=isSuperAdministrator(account)?'De vaste superbeheerderrol blijft behouden.':external?'Alleen medewerkers van MOJO Concerts kunnen Beheerder zijn.':'Standaard Gebruiker. Kies handmatig Beheerder als dat nodig is.';
+      legacyJob.hidden=!(first&&account?.jobTitle&&!jobs.includes(account.jobTitle));if(!legacyJob.hidden)legacyJob.textContent='Huidige functie: '+account.jobTitle+'. Kies de passende functie uit de lijst.';
+    }
+    company.addEventListener('change',()=>updateEmployment());job.addEventListener('change',()=>{legacyJob.hidden=true;});updateEmployment(true);
+
     const modules=element('fieldset','','account-modules'),legend=element('legend','Modules');modules.append(legend);
     const moduleInputs=accountModules.map(module=>{
       const label=element('label',module.label),input=element('input');input.type='checkbox';input.checked=draft.fields?.modules?draft.fields.modules.includes(module.id):account?hasModule(account,module.id):true;input.disabled=isSuperAdministrator(account);input.value=module.id;input.dataset.module=module.id;label.prepend(input);modules.append(label);return input;
-    });form.append(modules);
-    if(isSuperAdministrator(account))form.append(element('p','Super beheerder heeft altijd toegang tot alle huidige en toekomstige modules.','account-notice'));
+    });permissions.append(modules);
+    if(isSuperAdministrator(account))permissions.append(element('p','Super beheerder heeft altijd toegang tot alle huidige en toekomstige modules.','account-notice'));
     const photoLabel = element('label', 'Profielfoto (optioneel)'), photo = element('input');
-    photo.type = 'file'; photo.accept = 'image/png,image/jpeg,image/webp'; photoLabel.append(photo); form.append(photoLabel);
-    const clearLabel = element('label', 'Bestaande profielfoto verwijderen'), clear = element('input'); clear.type = 'checkbox'; clearLabel.append(clear);
-    if (account) form.append(clearLabel);
+    photo.type = 'file'; photo.accept = 'image/png,image/jpeg,image/webp'; photoLabel.append(photo); portrait.append(photoLabel);
+    const clearLabel = element('label', 'Bestaande profielfoto verwijderen'), clear = element('input'); clear.type = 'checkbox'; clearLabel.classList.add('account-editor-check');clearLabel.append(clear);
+    if (account) portrait.append(clearLabel);
     const message = element('p', '', 'form-message'); message.setAttribute('role', 'alert');
     const buttons = element('div', '', 'form-actions'), save = element('button', account ? 'Opslaan' : 'Account aanmaken', 'primary-button');
     save.disabled=Boolean(draft.busy)||isSuperAdministrator(account)&&!isSuperAdministrator(currentUser);
     const cancel = element('button', 'Annuleren', 'secondary-button'); cancel.type = 'button'; cancel.addEventListener('click', load);
     buttons.append(save, cancel); form.append(message, buttons); view.append(form);
-    form.addEventListener('submit', async event => {
-      event.preventDefault(); save.disabled = true; message.textContent = '';
+    const submitOnce=singleSubmission(async()=>{
+      if(draft.busy||isSuperAdministrator(account)&&!isSuperAdministrator(currentUser)||!form.reportValidity())return;
+      save.disabled = true; message.textContent = '';
       try {
         const fields = Object.fromEntries(new FormData(form));
         fields.modules=moduleInputs.filter(input=>input.checked).map(input=>input.value);
         if (account) fields.id = account.id;
         if(isSuperAdministrator(account))delete fields.role;
-        else if (select.disabled) fields.role = account.role;
+        else if (select.disabled) fields.role = account?.id===currentUser.id?account.role:'gebruiker';
+        validateAccountEmployment({...fields,role:isSuperAdministrator(account)?'superbeheerder':fields.role});
         if(draft.fields?.photo!==undefined)fields.photo=draft.fields.photo;
         if (clear.checked) fields.photo = '';
         if (photo.files[0]) {
@@ -138,7 +168,8 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
 
       } catch { report('De accountactie is niet bevestigd.',true); }
       finally { save.disabled = Boolean(draft.busy)||isSuperAdministrator(account)&&!isSuperAdministrator(currentUser); }
-    });
+    },()=>form.isConnected);
+    form.addEventListener('submit',event=>{event.preventDefault();void submitOnce();});
   }
   const offActivity=backgroundSaves.subscribe(()=>{if(!disposed&&mode==='list'&&accountsCache)renderAccounts(accountsCache);});
   load();
