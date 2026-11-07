@@ -26,6 +26,7 @@ export function createFluidPreviewSource({token,mfaCookie,request=fetch}){
   return{
     session:()=>read('session'),
     menu:()=>read('shows'),
+    reference:type=>read('barrier-reference','POST',{type}),
     photo:concertId=>read('show-photo','POST',{concertId}),
     async shows(operation,payload={}){
       if(operation==='list')return read('shows');

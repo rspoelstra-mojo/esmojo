@@ -1,0 +1,25 @@
+name: Prepare security migration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify fixed preparation without exposing private values
+        run: |
+          node --input-type=module <<'JS'
+          const endpoint='https://esmojo.nl/api/access?action=security-maintenance';
+          const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+          const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});
+          if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
+          const {value}=await identity.json();console.log(`::add-mask::${value}`);
+          const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:JSON.stringify({operation:'prepare'}),signal:AbortSignal.timeout(240000)});
+          const data=await response.json();
+          if(!response.ok||!data.ok||!data.modulesExplicit||!data.identityPinned||!data.copyRecipientConfigured||data.referencesVerified!==5)throw Error('Beveiligingsvoorbereiding niet bevestigd.');
+          console.log(JSON.stringify({ok:true,modulesExplicit:true,identityPinned:true,copyRecipientConfigured:true,referencesVerified:5}));
+          JS

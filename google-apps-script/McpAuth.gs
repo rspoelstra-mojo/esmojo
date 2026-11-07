@@ -37,7 +37,7 @@ function esmojoMcpAuth_(input) {
     if (writing) {
       state.codes = state.codes.filter(x => x.expiresAt > now);
       state.grants = state.grants.filter(x => x.expiresAt > now);
-      state.clients = state.clients.filter(x => x.createdAt > now - 86400000 || state.codes.some(c => c.clientId === x.id) || state.grants.some(g => g.clientId === x.id));
+      state.clients = state.clients.filter(x => x.createdAt > now - 15 * 60000 || state.codes.some(c => c.clientId === x.id) || state.grants.some(g => g.clientId === x.id));
     }
     const save = () => {
       const value = JSON.stringify(state);
