@@ -1,0 +1,24 @@
+name: Check MFA replay cache
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Controleer uitsluitend technische cache-instellingen
+        run: |
+          node --input-type=module <<'JS'
+          const endpoint='https://esmojo.nl/api/mfa';
+          const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+          const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});
+          if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
+          const {value}=await identity.json();console.log(`::add-mask::${value}`);
+          const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:JSON.stringify({operation:'health'}),signal:AbortSignal.timeout(15000)});
+          const data=await response.json();
+          console.log(JSON.stringify({ok:data.ok===true,enabled:data.enabled===true,redisReady:data.redisReady===true,secretKeyReady:data.secretKeyReady===true}));
+          if(!response.ok||!data.ok||!data.secretKeyReady)throw Error('MFA-instellingen niet bevestigd.');
+          JS
