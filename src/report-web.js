@@ -1,3 +1,4 @@
+import {createMailOpenReceipt} from './lib/mail-open-receipt.js';
 import {reportChronology,timetableEntryLabel} from '../shared/show-timetable.js';
 import {medicalReportFilters} from '../shared/report-medical.js';
 import {createReportDateTabs} from './report-date-tabs.js';
@@ -102,15 +103,16 @@ function renderDailyReport(parent,report){
  return()=>{for(const dispose of disposers)dispose();view.replaceChildren();};
 }
 export function createWebReportPage(content,submenuLink,{concertId,request=access,onSelected=()=>{}}={}){
+ const receipt=createMailOpenReceipt({concertId,request});
  let disposed=false,cleanup=()=>{},currentConcertId=concertId,revision=0,rendered=false,loading=createSubmenuLoading(submenuLink,content);
  async function load(){
   const ticket=++revision,finish=loading.start(),id=currentConcertId;
   try{const data=await request('report-web',{method:'POST',body:{concertId:id}});if(disposed||ticket!==revision)return;cleanup();
-   cleanup=renderWebReport(content,data,{onSelected:(date,id)=>{currentConcertId=id;onSelected(date,id);},loadDate:async date=>{const show=data.availableShows.find(show=>show.date===date);if(!show)throw Error('NOT_FOUND');return request('report-web',{method:'POST',body:{concertId:show.concertId}});}});rendered=true;document.title=`${data.show.name} · Rapportages · ESMOJO`;
+   cleanup=renderWebReport(content,data,{onSelected:(date,id)=>{currentConcertId=id;onSelected(date,id);},loadDate:async date=>{const show=data.availableShows.find(show=>show.date===date);if(!show)throw Error('NOT_FOUND');return request('report-web',{method:'POST',body:{concertId:show.concertId}});}});rendered=true;if(data.report)receipt.shown();document.title=`${data.show.name} · Rapportages · ESMOJO`;
   }
   catch{if(!disposed&&ticket===revision){const message=node('p','form-message','De rapportage kon niet worden geladen. Probeer opnieuw.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>void load();if(!rendered)content.replaceChildren(message,retry);}}
   finally{finish();}
  }
- void load();const dispose=()=>{disposed=true;revision++;cleanup();loading.dispose();content.replaceChildren();};
+ void load();const dispose=()=>{disposed=true;receipt.dispose();revision++;cleanup();loading.dispose();content.replaceChildren();};
  dispose.reload=(nextId,nextLink)=>{currentConcertId=nextId;if(nextLink!==submenuLink){loading.dispose();submenuLink=nextLink;loading=createSubmenuLoading(submenuLink,content);}void load();};return dispose;
 }

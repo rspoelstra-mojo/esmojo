@@ -43,6 +43,7 @@ jobs:
           node server/ontrack-concerts.test.js
           node --test server/ontrack-report/*.test.js
           node server/online-report-mail.test.js
+          node server/email-engagement.test.js
           node --test tools/apps-script/deploy.test.mjs
           node server/mcp.test.js
           node server/showprofile-risks.test.js

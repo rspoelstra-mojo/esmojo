@@ -7,3 +7,26 @@
 .email-admin-form > button { justify-self: start; max-width: 100%; }
 .email-admin-form .account-notice, .email-admin-form .form-message { margin: 0; overflow-wrap: anywhere; }
 .email-admin-form .account-notice:empty { display: none; }
+.email-engagement-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr)); gap:20px; margin-top:24px; }
+.email-engagement-card { min-width:0; padding:20px; background:var(--fluid-card,var(--canvas)); border:1px solid var(--line); border-radius:12px; }
+.email-engagement-card h2 { margin:0 0 6px; font-size:18px; }
+.email-engagement-caption { display:block; margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+.email-engagement-list { margin-top:16px; }
+.email-engagement-row { width:100%; display:flex; align-items:center; gap:12px; padding:14px 0; border:0; border-top:1px solid var(--line); background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.email-engagement-row > span:first-child { flex:1; min-width:0; }
+.email-engagement-name { display:block; margin:0; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.email-engagement-count { color:var(--muted); font-size:12px; }
+.email-engagement-chevron { font-size:22px; color:var(--muted); }
+.email-engagement-dialog { width:720px; max-width:calc(100vw - 24px); max-height:calc(100dvh - 32px); overflow:auto; padding:24px; background:var(--fluid-card,var(--canvas)); color:var(--text); border:1px solid var(--line); border-radius:14px; }
+.email-engagement-dialog::backdrop { background:#0008; }
+.email-engagement-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.email-engagement-dialog h2 { margin:0; font-size:20px; overflow-wrap:anywhere; }
+.email-engagement-recipients { list-style:none; margin:20px 0 0; padding:0; }
+.email-engagement-recipient { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0; border-top:1px solid var(--line); }
+.email-engagement-recipient > div { min-width:0; }
+.email-engagement-status { max-width:300px; }
+.email-engagement-check { display:flex; align-items:center; gap:8px; font-size:13px; }
+.email-engagement-check input { width:16px; height:16px; margin:0; accent-color:#138357; opacity:1; }
+@media(max-width:600px) { .email-engagement-row { flex-wrap:wrap; } .email-engagement-count { margin-left:auto; } .email-engagement-recipient { flex-direction:column; align-items:stretch; } .email-engagement-dialog { padding:20px; } }
+
+body.email-engagement-modal-open { overflow:hidden; }

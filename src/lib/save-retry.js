@@ -1,4 +1,4 @@
-// Eén stille herpoging, uitsluitend voor versiegebonden showwrites. De tweede
+// Eén stille herpoging voor versiegebonden showwrites en de idempotente mailontvangst. De tweede
 // write behoudt exact dezelfde revisie, bron, upload-ID en inhoud. Geen retries
 // van accountcreatie, uitnodigingen, mailacties of onbekende mutaties.
 const operations={
@@ -7,7 +7,7 @@ const operations={
  measure:['draft','complete','reopen','upload','remove','edit-text'],
  'show-profile':['save'],'analysis-finalization':['complete'],'ticket-data':['review','reopen'],
 };
-export function canRetrySave(action,body={}){return ['production-risks','operational-risk'].includes(action)||operations[action]?.includes(body.operation)||false;}
+export function canRetrySave(action,body={}){return ['report-email-open','production-risks','operational-risk'].includes(action)||operations[action]?.includes(body.operation)||false;}
 export async function retrySave(action,options,run,{active=()=>true}={}){
  const snapshot=structuredClone(options),body=snapshot.body||{};
  try{return await run(action,snapshot);}catch(first){
