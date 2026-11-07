@@ -25,3 +25,12 @@ De compatibele eerste fase legt ook de bestaande vaste beheerder-ID en reeds
 bestaande testmailuitzondering vast in hetzelfde private accountregister. De
 vervolgfase kan zo persoonsadressen uit de code verwijderen zonder de ingestelde
 superrol of extra testmailontvanger te veranderen.
+
+Fase B: bestaande Redis-integratie begrenst publieke OAuth-aanroepen vóór Drive,
+ongebruikte clients verlopen na 15 minuten. CSP/anti-framing en overige headers
+beschermen appdocumenten; de officiële compatibele Vercel-update repareert Zod.
+Een uitsluitend door de vaste main/OIDC-workflow bereikbare voorbereidingsactie
+verifieert de private identiteitsconfiguratie en importeert de vijf onveranderde
+referentiebeelden in een private Drive-map. Alleen technische booleans/aantallen
+komen terug. Na bevestigde import verwijdert fase C de bronbeelden en adresliterals
+uit de actuele broncode en schakelt de frontend over naar geautoriseerde reads.

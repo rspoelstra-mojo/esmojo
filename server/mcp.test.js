@@ -30,7 +30,7 @@ function storeHarness() {
   return {store,raw,envelope,reads:()=>reads,content:()=>content,advance:n=>{time+=n;},now:()=>time,block:()=>{locked=true;}};
 }
 function oauthHarness(h=storeHarness()) {
-  const owner={login:async()=>actor,active:async()=>actor}, handler=makeMcpOAuthHandler({env,store:h.store,owner,now:h.now});
+  const owner={login:async()=>actor,active:async()=>actor}, handler=makeMcpOAuthHandler({env,store:h.store,owner,now:h.now,guard:async()=>{}});
   const call=async(action,body,headers={},query={})=>{const res=response();await handler({method:body===undefined?'GET':'POST',query:{action,...query},headers,body},res);return res;};
   return {...h,owner,handler,call};
 }
@@ -239,4 +239,13 @@ test('ChatGPT OAuth-toolmetadata en foutresultaat leiden naar nieuwe consent zon
 test('Onderzoeksbeheer gebruikt dezelfde modulecontrole en blijft beschikbaar voor Super beheerder',async()=>{
  const denied=createMcpOwnerCheck({profiles:async()=>({activated:true,role:'beheerder',modules:['reports']})});await assert.rejects(denied.active('fixture'),/FORBIDDEN/);
  const allowed=createMcpOwnerCheck({profiles:async()=>({activated:true,role:'superbeheerder',modules:[]})});assert.equal(await allowed.active('fixture'),'fixture');
+});
+
+test('Ongebruikte OAuth-clients verlopen na 15 minuten; actieve grants blijven bruikbaar',async()=>{
+ const h=oauthHarness(),pending=await h.call('register',{redirect_uris:[callback],token_endpoint_auth_method:'none'}),active=await connect(h);
+ const token=await h.call('token',{grant_type:'authorization_code',client_id:active.client.client_id,redirect_uri:callback,code:active.code,code_verifier:active.verifier,resource:RESOURCE});assert.equal(token.code,200);
+ h.advance(16*60000);assert.equal((await h.call('register',{redirect_uris:[callback],token_endpoint_auth_method:'none'})).code,201);
+ await assert.rejects(h.store({operation:'client',clientId:pending.data.client_id}),/INVALID_CLIENT/);
+ assert.equal((await h.store({operation:'client',clientId:active.client.client_id})).id,active.client.client_id);
+ assert.equal((await h.store({operation:'verify',accessHash:digest(token.data.access_token)})).actor,actor);
 });

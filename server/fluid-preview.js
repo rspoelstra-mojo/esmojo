@@ -4,7 +4,7 @@ export const isFluidPreview=env=>env.VERCEL_ENV==='preview'||(env.VERCEL_ENV!=='
 export function fluidPreviewOrigin(origin,env){return isFluidPreview(env)&&[env.VERCEL_URL,env.VERCEL_BRANCH_URL].filter(Boolean).some(host=>origin==='https://'+host);}
 export function fluidAccountRead(action,method,body){
   return (action==='session'&&method==='GET')||(['restore','remember','forget','login'].includes(action)&&method==='POST')
-    ||(action==='shows'&&method==='GET')||(action==='show-photo'&&method==='POST')||(action==='fluid-preview'&&method==='POST');
+    ||(action==='barrier-reference'&&method==='POST')||(action==='shows'&&method==='GET')||(action==='show-photo'&&method==='POST')||(action==='fluid-preview'&&method==='POST');
 }
 export function isolateFluidApi(handler,env=process.env){return(req,res)=>{if(isFluidPreview(env)){res.setHeader('Cache-Control','no-store, private');return res.status(403).json({error:'Deze testomgeving is uitsluitend alleen-lezen.'});}return handler(req,res);};}
 export function createFluidPreviewService({shows,pdfService,now=()=>new Date()}){
