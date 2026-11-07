@@ -9,6 +9,7 @@ const fail = (status, code) => Object.assign(Error(code), {status, code});
 export function mfaFailure(error) {
   const {code, status} = error || {};
   if (status === 429 || code === 'over_request_rate_limit') return fail(429, 'MFA_RATE_LIMIT');
+  if (code === 'mfa_verification_rejected') return fail(403, 'MFA_DENIED');
   if (['mfa_verification_failed', 'mfa_challenge_expired', 'mfa_ip_address_mismatch', 'mfa_factor_not_found'].includes(code)) return fail(400, 'MFA_INVALID_CODE');
   if (status === 401 || ['session_not_found', 'bad_jwt'].includes(code)) return fail(401, 'MFA_SESSION_EXPIRED');
   return fail(503, 'MFA_UNAVAILABLE');

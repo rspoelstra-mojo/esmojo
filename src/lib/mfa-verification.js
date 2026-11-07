@@ -1,6 +1,7 @@
 import {createMfaClient} from './supabase.js';
 const message=error=>{
  const code=error?.code;if(error?.status===429||['over_request_rate_limit','MFA_RATE_LIMIT'].includes(code))return 'Te veel pogingen. Wacht even en probeer het opnieuw.';
+ if(['MFA_DENIED','mfa_verification_rejected'].includes(code))return 'Deze verificatie is niet toegestaan. Neem contact op met de beheerder.';
  if(code==='MFA_REPLAY')return 'Deze code is al gebruikt. Wacht op de volgende code uit je app.';
  if(code==='MFA_BUSY')return 'Er wordt al een code gecontroleerd. Wacht even.';
  if(['mfa_verification_failed','mfa_challenge_expired','mfa_ip_address_mismatch','mfa_factor_not_found','MFA_INVALID_CODE'].includes(code))return 'Deze code is ongeldig of verlopen. Gebruik de huidige code uit je app.';
