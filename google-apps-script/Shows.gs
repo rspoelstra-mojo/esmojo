@@ -14,10 +14,11 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['sync', 'profile-save','show-open','home-photo-cache'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['sync', 'profile-save','show-open','home-photo-cache','reference-install'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if(['reference-read','reference-install'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return esmojoReply_({ok:true,data:esmojoBarrierReference_(request)});}
     const finish=data=>esmojoReply_({ok:true,data:typeof esmojoHomeResult_==='function'?esmojoHomeResult_(request,data):data});
     if(request.operation.startsWith('active-')){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return esmojoReply_({ok:true,data:esmojoActiveStorage_(request)});}
     if(typeof esmojoActiveLegacyWriteAllowed_==='function'&&/^(profile-save|final-complete|risk-(production|operational)-save|barrier-(draft|complete|reopen|upload|remove-upload)|floor-(draft|complete|reopen)|measure-(draft|complete|reopen|edit-text|upload|remove)|ticket-(review|reopen))$/.test(request.operation))esmojoActiveLegacyWriteAllowed_(request.concertId);
