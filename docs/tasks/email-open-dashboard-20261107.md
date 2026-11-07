@@ -14,10 +14,15 @@ Geen trackingpixels of toeschrijven van scans aan gebruikers. Vertrouwelijke
 registratie in Drive via bestaande beveiligde Vercel/Apps Script-route, alleen
 beheerder kan overzichten lezen. Geen nieuwe accounts/rechten of testmails.
 
-Noodzakelijke verduidelijking loopt: classificatie klikgegevens en herkomst van
-showprofielmails. Tot antwoord geen nieuwe klikopslag/verwerking bouwen. Oude
+Gebruiker bevestigt: klikregistratie Vertrouwelijk via Drive/Vercel; tweede
+blok klaarzetten voor toekomstige showprofielmailflow. Oude
 mails hebben zonder eerdere registratie geen aantoonbare openingsstatus.
 
 Verwachte scope: email-admin UI/CSS, mailactie-link/routeafhandeling, beveiligde
 API en bestaand Drive-verzendregister, documentatie en gerichte tests. Geen
 wijziging van mailmoment, ontvangerselectie of bijlagen.
+
+Aanvullend gebruikersverzoek: voor accounts met uitsluitend Rapportages het
+homepage-icoon verbergen en root meteen vervangen door /rapportages, vóór enig
+homepage-renderen. Bestaande serverweigering van homepagegegevens blijft intact.
+Andere modules, rollen, directe rapportagelinks en beheerdersrechten behouden.

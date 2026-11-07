@@ -32,7 +32,7 @@ export function createOnTrackReportService({store=createOnTrackReportStore(),ren
   },
   async run(){
    await store('scan',null);let loaded;try{loaded=await assets();}catch{loaded=null;}
-   const blocked=!loaded?.icon;await store('pipeline',null,{status:blocked?'assets-missing':'running'});let processed=0,sent=0;
+   const blocked=!loaded?.icon;const capabilities=await store('pipeline',null,{status:blocked?'assets-missing':'running'});let processed=0,sent=0;
    for(let i=0;i<(blocked?0:2);i++){
     const job=await store('reserve',null,{jobId:randomUUID(),layoutVersion:SHOW_REPORT_LAYOUT});if(job.state!=='reserved')break;
     try{
@@ -48,10 +48,10 @@ export function createOnTrackReportService({store=createOnTrackReportStore(),ren
     }catch(error){await store('fail',null,{sourceId:job.sourceId,jobId:job.jobId,errorCode:error.code||error.message,errorRow:error.row}).catch(()=>{});}
    }
    for(let i=0;i<10;i++){
-    const delivery=await store('delivery-reserve',null,{jobId:randomUUID()});if(delivery.state!=='reserved')break;
+    const delivery=await store('delivery-reserve',null,{jobId:randomUUID(),...(capabilities?.tracking==='mail-open-v1'?{trackingVersion:'mail-open-v1'}:{})});if(delivery.state!=='reserved')break;
     const reference={reportId:delivery.reportId,recipientId:delivery.recipientId,jobId:delivery.jobId};
-    try{if(!['online-report-v1','online-report-v2','online-report-v3'].includes(delivery.mailVersion))throw Error('REPORT_UNAVAILABLE');const includePdf=delivery.mailVersion!=='online-report-v3',bytes=includePdf?Buffer.from(delivery.pdfBase64||'','base64'):null;if(includePdf&&hash(bytes)!==delivery.sha256)throw Error('REPORT_UNAVAILABLE');
-     const message=showReportEmail({to:delivery.recipient.email,firstName:delivery.recipient.firstName,show:delivery.show,managerName:delivery.managerName,senderId:delivery.senderId||'default',legacyHeader:delivery.mailVersion==='online-report-v1',includePdf,...(includePdf?{pdf:{filename:delivery.fileName,content:bytes}}:{})}),confirmation=await mail(message,{idempotencyKey:delivery.idempotencyKey});
+    try{if(!['online-report-v1','online-report-v2','online-report-v3','online-report-v4'].includes(delivery.mailVersion))throw Error('REPORT_UNAVAILABLE');const includePdf=!['online-report-v3','online-report-v4'].includes(delivery.mailVersion),bytes=includePdf?Buffer.from(delivery.pdfBase64||'','base64'):null;if(includePdf&&hash(bytes)!==delivery.sha256)throw Error('REPORT_UNAVAILABLE');
+     const message=showReportEmail({to:delivery.recipient.email,firstName:delivery.recipient.firstName,show:delivery.show,managerName:delivery.managerName,senderId:delivery.senderId||'default',...(delivery.receiptToken?{receiptToken:delivery.receiptToken}:{}),legacyHeader:delivery.mailVersion==='online-report-v1',includePdf,...(includePdf?{pdf:{filename:delivery.fileName,content:bytes}}:{})}),confirmation=await mail(message,{idempotencyKey:delivery.idempotencyKey});
      if(typeof confirmation?.id!=='string'||!confirmation.id)throw Error('DELIVERY_UNCONFIRMED');
      // Nooit opnieuw mailen om alleen een verloren opslagbevestiging te herstellen.
      try{await store('delivery-commit',null,{...reference,providerId:confirmation.id});}catch{await store('delivery-commit',null,{...reference,providerId:confirmation.id});}sent++;
