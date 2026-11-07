@@ -4,7 +4,7 @@ import {createMfaReplay} from './mfa-replay.js';
 import {createMfaVerification} from './mfa-verification.js';
 import {issueMfaCookie,hasAppMfa,clearMfaCookie} from './mfa-cookie.js';
 import {writeSessionCookie} from './session-cookie.js';
-import {makeMfaHandler} from '../api/mfa.js';
+import {makeMfaHandler} from './mfa-api.js';
 const user='11111111-1111-4111-8111-111111111111',factor='22222222-2222-4222-8222-222222222222',sid='33333333-3333-4333-8333-333333333333';
 const env={MFA_REPLAY_ENABLED:'true',VERCEL:'1',SUPABASE_SECRET_KEY:'sb_secret_synthetic_only',VITE_SUPABASE_URL:'https://project.supabase.co',UPSTASH_REDIS_REST_URL:'https://synthetic.upstash.io',UPSTASH_REDIS_REST_TOKEN:'synthetic_only'};
 const claims={sub:user,session_id:sid,iss:env.VITE_SUPABASE_URL+'/auth/v1',aud:'authenticated',role:'authenticated',aal:'aal2',amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)},{method:'totp'}]};
@@ -55,4 +55,12 @@ test('Preview proxies only MFA authentication, preserving opaque proof; health c
 test('MCP owner login enforces application MFA before looking up administrator profile',async()=>{
  const {createMcpOwnerCheck}=await import('./mcp-owner.js');let profiles=0;const owner=createMcpOwnerCheck({env,profiles:async()=>{profiles++;return{activated:true,role:'beheerder',modules:['shows']};},clientFactory:()=>({auth:{getUser:async()=>({data:{user:{id:user,factors:[{factor_type:'totp',status:'verified'}]}}})}})});
  await assert.rejects(owner.login({headers:{authorization:'Bearer '+jwt(claims)}}),/FORBIDDEN/);assert.equal(profiles,0);
+});
+
+
+test('MFA-route deelt bestaande serverfunctie zonder private accountcontrole te omzeilen',async()=>{
+ const {makeAccessDispatcher}=await import('../api/access.js');let auth=0,accounts=0;
+ const handle=makeAccessDispatcher({mfa:()=>auth++,accounts:()=>accounts++});
+ handle({query:{action:'mfa'}},{});handle({query:{action:'session'}},{});
+ assert.equal(auth,1);assert.equal(accounts,1);
 });
