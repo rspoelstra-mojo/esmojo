@@ -74,6 +74,8 @@ schrijven. Incidentgegevens worden niet via de score-API teruggestuurd.
 `node --test server/incident-metrics.test.js` controleert gewichten, grenswaarden,
 nulreferenties, bezoekersweging, onvolledigheid, duplicate detectie, Drive-opslag,
 revisies, broncorrecties, rapportagepariteit, autorisatie en actuele voorbereiding.
+`node tools/ui/check-incident-registration.mjs` test ook revisies tijdens
+stille refresh en behoud van invoer na fouten in echte Chrome.
 Daarnaast bestaande rapportage-, account-, analyse-, wachtrij- en publicatietests.
 Browsercontroles gebruiken uitsluitend fictieve fixtures: volle/lege kaart,
 batterij/legenda, twaalf uitklappers en formules, desktop/mobiel en licht/donker.

@@ -53,4 +53,10 @@ beheerders bevestigen aanwezigheid en volledigheid in Overzicht. Uitsluitend
 Drive-opslag voor het nieuwe register; alle berekeningen in Vercel-geheugen.
 Bestaande actuele voorbereiding en centrale webrapportagetellingen hergebruikt.
 Artiestkaart en drie beheerderskaarten responsief getest met fictieve gegevens.
-Productieversie V1.95. Geen echte historische aanwezigheid of volledigheid ingevuld.
+Productieversie V1.96. Geen echte historische aanwezigheid of volledigheid ingevuld.
+
+Aanvullende Chrome-regressiecontrole in tools/ui/check-incident-registration.mjs:
+een stille achtergrondrefresh mag de oorspronkelijke formulier-revisie niet
+verhogen tijdens typen. Een gelijktijdige wijziging blijft daardoor een conflict.
+Deze controle draait voortaan ook in CI. De volledige 652 tests en lokale
+browsertests slagen; Apps Script-publicatie van e33b22f en beide CI-checks slagen.
