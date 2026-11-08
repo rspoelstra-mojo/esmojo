@@ -18,6 +18,13 @@ test('alleen geldig GitHub-token voor vaste workflow, repository, main en audien
 test('ontbrekende, vervalste of alg-none tokens en onbekende sleutels krijgen geen toegang', async () => {
   for (const value of [undefined, 'invalid', token().slice(0, -10), token({}, { alg: 'none' }), token({}, { kid: 'untrusted' })]) await assert.rejects(verifyImportIdentity(value, { request, now }), /FORBIDDEN/);
 });
+test('Biografieworker accepteert uitsluitend eigen audience/main/workflow; push en workflow_run verruimen geen andere worker',async()=>{
+ const audience='https://esmojo.nl/api/artist-biographies-sync',workflow='artist-biographies.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
+ for(const event_name of ['schedule','workflow_dispatch','push','workflow_run'])assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),{runId:'123'});
+ for(const event_name of ['push','workflow_run'])await assert.rejects(verifyImportIdentity(token({event_name}),{request,now}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'pull_request'}),{request,now,audience,workflow}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',ref:'refs/heads/other'}),{request,now,audience,workflow}),/FORBIDDEN/);
+});
 test('immutable subject en eigenaar-/repository-ID zijn verplicht, niet alleen herbruikbare namen', async () => {
   for (const change of [{ repository_id: '1' }, { repository_owner_id: '1' }, { sub: 'repo:rspoelstra-mojo/esmojo:ref:refs/heads/main' }]) await assert.rejects(verifyImportIdentity(token(change), { request, now }), /FORBIDDEN/);
 });

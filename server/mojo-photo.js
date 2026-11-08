@@ -1,6 +1,6 @@
 import {normalizeArtistSlug,readableArtistName} from '../shared/artist-names.js';
 const cache = new Map();
-function mojoArtistPageUrl(value){
+export function mojoArtistPageUrl(value){
   try {const url=new URL(value);return ['https://www.mojo.nl','https://mojo.nl'].includes(url.origin)&&!url.username&&!url.password&&!url.search&&!url.hash&&/^\/[a-z0-9-]+\/?$/i.test(url.pathname)?url.href:null;}catch{return null;}
 }
 export function mojoArtistUrl(name){

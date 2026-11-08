@@ -67,7 +67,7 @@ function esmojoArtistProfile_(request){
  const photo=shows.map(show=>photos.get(show.sourceUrl)).find(Boolean)
   ||inventory.sources.find(source=>matches(source.show.name)&&esmojoHomeValidPhoto_(source.entry?.mojo?.photo))?.entry.mojo.photo.imageUrl||null;
  const target=recent?.seriesId?esmojoResearchTarget_(recent.concertId):null;
- return {concerts,photo,latestDate:recent?.date||null,profileConcertId:target?.primary.concertId||null,audience:target?esmojoArtistAudience_(target):{}};
+ return {concerts,photo,biography:esmojoArtistBiography_(request.artistIds),latestDate:recent?.date||null,profileConcertId:target?.primary.concertId||null,audience:target?esmojoArtistAudience_(target):{}};
 }
 
 function esmojoArtistAudience_(target){

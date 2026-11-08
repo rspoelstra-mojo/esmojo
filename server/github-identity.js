@@ -14,8 +14,8 @@ export async function verifyImportIdentity(token, { request = fetch, now = Date.
         || claims.sub !== 'repo:rspoelstra-mojo@350283629/esmojo@1439724175:ref:refs/heads/main'
         || claims.repository_id !== '1439724175' || claims.repository_owner_id !== '350283629'
         || claims.repository !== 'rspoelstra-mojo/esmojo' || claims.ref !== 'refs/heads/main'
-        || !['mojo-shows.yml','ontrack-reports.yml','web-reports.yml','show-storage.yml','email-deliverability.yml','mfa-security-check.yml'].includes(workflow) || claims.workflow_ref !== `rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`
-        || !['schedule', 'workflow_dispatch'].includes(claims.event_name)
+        || !['mojo-shows.yml','ontrack-reports.yml','web-reports.yml','show-storage.yml','email-deliverability.yml','mfa-security-check.yml','artist-biographies.yml'].includes(workflow) || claims.workflow_ref !== `rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`
+        || !(['schedule', 'workflow_dispatch'].includes(claims.event_name)||workflow==='artist-biographies.yml'&&audience==='https://esmojo.nl/api/artist-biographies-sync'&&['push','workflow_run'].includes(claims.event_name))
         || !Number.isFinite(claims.exp) || !Number.isFinite(claims.nbf) || !Number.isFinite(claims.iat)
         || claims.exp * 1000 <= now || claims.nbf * 1000 > now + 30000 || claims.iat * 1000 < now - 600000) throw new Error();
     const response = await request('https://token.actions.githubusercontent.com/.well-known/jwks', { signal: AbortSignal.timeout(10000) });

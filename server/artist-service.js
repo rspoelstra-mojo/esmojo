@@ -42,7 +42,7 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
     return entry?.summary?.trim()||researchView(entry).summaryText||null;
    });
    const audienceStoredAt=audience.map((text,index)=>{const date=profile.audience?.[index+1]?.storedAt;return text&&typeof date==='string'&&Number.isFinite(Date.parse(date))?date:null;});
-   return {...detail,profile:{concerts:profile.concerts,photo:image,latestDate:profile.latestDate,audience,audienceStoredAt}};},
+   return {...detail,profile:{concerts:profile.concerts,photo:image,biography:profile.biography||null,latestDate:profile.latestDate,audience,audienceStoredAt}};},
   async record(actor,body){input(body,true);await artist(actor,body.artistId);const result=await views.record(body.artistId,body.eventId);try{return{...result,mostViewed:top(await catalogue(actor),await views.counts())};}catch{return result;}},
  };
 }
