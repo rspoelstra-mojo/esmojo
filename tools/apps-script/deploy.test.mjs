@@ -7,12 +7,12 @@ import {scriptSource} from './check-syntax.mjs';
 const config=JSON.parse(readFileSync(new URL('./deployment.json',import.meta.url),'utf8'));
 const env={CLASPRC_JSON:JSON.stringify({tokens:{default:{refresh_token:'fake-test-only'}}}),GITHUB_SHA:'a'.repeat(40)};
 const manifest=JSON.stringify({timeZone:'Europe/Amsterdam',runtimeVersion:'V8',webapp:{access:'ANYONE_ANONYMOUS',executeAs:'USER_DEPLOYING'}});
-function fixture({verifyOnly=false,missing=false,mismatch=false,wrongVersion=false,failCommand=null}={}){
- const commands=[];let temporary,active=11,saved;
+function fixture({verifyOnly=false,missing=false,mismatch=false,wrongVersion=false,failCommand=null,staleReads=0}={}){
+ const commands=[],pauses=[];let temporary,active=11,saved;
  const execute=(args,source)=>{
   temporary=dirname(source);const offset=args.includes('--json')?5:4,command=args[offset];commands.push(command);
   if(command===failCommand)throw {stderr:'Syntax error: Unexpected token = line: 42 file: Artists private-token'};
-  if(command==='list-deployments')return JSON.stringify(missing?[]:[{deploymentId:config.deploymentId,versionNumber:wrongVersion?10:active}]);
+  if(command==='list-deployments')return JSON.stringify(missing?[]:[{deploymentId:config.deploymentId,versionNumber:wrongVersion?10:active===12&&staleReads-->0?11:active}]);
   if(command==='pull'){
    if(args.includes('--versionNumber')){
     assert.equal(args[offset+2],String(active));
@@ -32,7 +32,7 @@ function fixture({verifyOnly=false,missing=false,mismatch=false,wrongVersion=fal
   if(command==='update-deployment'){assert.equal(args[offset+1],config.deploymentId);active=12;return JSON.stringify({deploymentId:config.deploymentId,versionNumber:active});}
   return '';
  };
- return{commands,execute,temporary:()=>temporary,env:{...env,...(verifyOnly?{APPS_SCRIPT_VERIFY_ONLY:'true'}:{})}};
+ return{commands,pauses,pause:async ms=>{pauses.push(ms);},execute,temporary:()=>temporary,env:{...env,...(verifyOnly?{APPS_SCRIPT_VERIFY_ONLY:'true'}:{})}};
 }
 
 test('Ontbrekende credentials veroorzaken geen netwerkactie',async()=>{
@@ -48,6 +48,11 @@ test('Bestaande URL/manifest/remote extra bestanden blijven behouden en vaste ge
 test('Alleen verifiëren leest de gepubliceerde versie zonder push, nieuwe versie of deploymentwrite',async()=>{
  const f=fixture({verifyOnly:true});assert.equal((await deploy({...f,verify:false})).versionNumber,11);
  assert.deepEqual(f.commands,['list-deployments','list-deployments','pull']);assert.equal(existsSync(f.temporary()),false);
+});
+test('Vertraagde Google-versiepropagatie wordt uitsluitend door begrensde reads bevestigd, zonder dubbele publicatie',async()=>{
+ const f=fixture({staleReads:2});assert.equal((await deploy({...f,verify:false})).versionNumber,12);
+ assert.deepEqual(f.pauses,[1000,2000]);assert.equal(f.commands.filter(c=>c==='create-version').length,1);assert.equal(f.commands.filter(c=>c==='update-deployment').length,1);assert.equal(f.commands.filter(c=>c==='push').length,1);
+ const mismatch=fixture({wrongVersion:true});await assert.rejects(deploy({...mismatch,verify:false}),/APPS_SCRIPT_VERSION/);assert.equal(mismatch.pauses.length,5);assert.equal(mismatch.commands.filter(c=>c==='update-deployment').length,1);
 });
 test('Onbekende deployment, verkeerde versie en afwijkende bron falen gesloten en ruimen credentials op',async()=>{
  for(const [options,error]of [[{missing:true},/niet gevonden/],[{wrongVersion:true},/APPS_SCRIPT_VERSION/],[{mismatch:true},/SOURCE_MISMATCH/]]){

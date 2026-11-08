@@ -29,7 +29,7 @@ export async function overlaySources(source, target) {
   }
 }
 
-export async function deploy({ env = process.env, execute, verify = true, request = fetch, sourceDirectory = scriptSource } = {}) {
+export async function deploy({ env = process.env, execute, verify = true, request = fetch, sourceDirectory = scriptSource, pause=ms=>new Promise(done=>setTimeout(done,ms)) } = {}) {
   await checkSources(sourceDirectory);
   const filenames=(await readdir(sourceDirectory)).filter(name=>/\.(gs|html)$/.test(name));
   const verifyOnly=env.APPS_SCRIPT_VERIFY_ONLY==='true';
@@ -85,8 +85,15 @@ export async function deploy({ env = process.env, execute, verify = true, reques
       result=command(['update-deployment',config.deploymentId,'--versionNumber',String(versionNumber),'--description',description],true);
       if(result.deploymentId!==config.deploymentId||result.versionNumber!==versionNumber)throw Error('Google heeft de verwachte deploymentversie niet bevestigd.');
     }
-    const live=command(['list-deployments'],true);
-    if(!Array.isArray(live)||!live.some(item=>item.deploymentId===config.deploymentId&&item.versionNumber===versionNumber))throw Error('APPS_SCRIPT_VERSION: actieve deployment wijkt af van de verwachte versie.');
+    let live=command(['list-deployments'],true);
+    const confirmed=()=>Array.isArray(live)&&live.some(item=>item.deploymentId===config.deploymentId&&item.versionNumber===versionNumber);
+    // De update is al bevestigd. Alleen opnieuw lezen tijdens Google-propagatie;
+    // geen tweede versie/deploymentwrite en nooit een afwijkende versie accepteren.
+    if(!verifyOnly)for(const delay of [1000,2000,4000,8000,8000]){
+      if(confirmed())break;
+      await pause(delay);live=command(['list-deployments'],true);
+    }
+    if(!confirmed())throw Error('APPS_SCRIPT_VERSION: actieve deployment wijkt af van de verwachte versie.');
     // Read the immutable deployed version into an EMPTY directory. A HEAD pull or
     // leftover overlay files cannot falsely confirm that the new code is live.
     await rm(source,{recursive:true,force:true});await mkdir(source,{mode:0o700});
