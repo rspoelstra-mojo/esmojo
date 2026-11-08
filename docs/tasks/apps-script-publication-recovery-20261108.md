@@ -39,6 +39,6 @@ slaagt met Google-versie 65 en terugleesvergelijking van alle 48 bronbestanden.
 verify_only-dispatch 42462865438 slaagt zonder writes. Geen Google-grant vernieuwd.
 Vercel-productie success; V1.80 op echte artiestroute; anonieme profielread 401.
 MFA/Redis-productiecheck 42462551805 slaagt. Gebruikerscreenshot bevestigt foto en
-historie op de echte artiestpagina; de vier kaarten zijn aanwezig maar zonder
-informatie. Gevuld bezoekersprofiel en rechten vanuit tweede Codex-account nog
-niet live bevestigd. Vercel-plugin is nog door workspacebeheer geblokkeerd.
+historie op de echte artiestpagina. De gebruiker bevestigt vervolgens met een
+tweede screenshot ook een gevuld bezoekersprofiel met alle vier kaarten. Rechten
+vanuit het tweede Codex-account zijn nog niet onafhankelijk geverifieerd. Vercel-plugin is nog door workspacebeheer geblokkeerd.

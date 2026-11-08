@@ -52,12 +52,11 @@ zijn. Laat dat account onderstaande niet-destructieve controle zelfstandig doen.
   `/artiest/freyaskye` serveert V1.80; anonieme artist-detail/includeProfile-read
   geeft HTTP 401. Productiecheck MFA [42462551805](https://github.com/rspoelstra-mojo/esmojo/actions/runs/42462551805)
   bevestigt enabled/redisReady/secretKeyReady=true, zonder geheimen uit te lezen.
-- De gebruiker toont vanuit de echte website de artiestfoto, concertdatum en vier
-  bezoekerskaarten. Foto/historie zijn daarmee zichtbaar bevestigd. De kaarten
-  melden geen beschikbare informatie; die screenshot bevestigt nog geen gevuld
-  bezoekersprofiel. De huidige projectie zoekt bezoekersinformatie bij een reeds
-  gespeelde show. Een artiest met opgeslagen analyses moet nog ingelogd worden
-  gecontroleerd; brongegevens zijn voor deze test niet gewijzigd.
+- De gebruiker bevestigt daarna met een tweede productie-screenshot een gevuld
+  artiestprofiel: opgeslagen foto, concertgeschiedenis, laatste bezoek en alle vier
+  bezoekerskaarten verschijnen. De ingelogde functionele controle met bestaande
+  gegevens is daarmee ook bevestigd. De eerdere toekomstshow toont terecht geen
+  bezoekersinformatie uit een nog niet gespeelde show. Geen concertgegevens gewijzigd.
 - Volledig instellingenbeheer vanuit beide accounts is nog NIET aangetoond:
   Vercel blijft door workspacebeheer uitgeschakeld; de tweede Codex-sessie moet
   zelfstandig haar koppelingen controleren. Actions-secret-/settingsbeheer is

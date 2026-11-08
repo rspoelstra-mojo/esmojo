@@ -10,5 +10,5 @@ credential-, broncode- of concertwijzigingen.
 Bewijs vastgelegd: automatische Google-publicatie 42462765878 (versie 65),
 alleen-lezen hercontrole 42462865438, Vercel-deployment 7633469364 en MFA-check
 42462551805 slagen. Echte pagina serveert V1.80 en weigert anonieme profielreads.
-Gebruikerscreenshot bevestigt foto/historie; gevuld bezoekersprofiel nog niet
-bevestigd. Geen secret-/Vercel-/tweede-accountrechten verzonnen of verruimd.
+Twee gebruikersscreenshots bevestigen foto/historie en vervolgens ook alle vier
+ingevulde bezoekerskaarten vanuit de echte website. Geen secret-/Vercel-/tweede-accountrechten verzonnen of verruimd.
