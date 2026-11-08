@@ -49,6 +49,7 @@ jobs:
             if(!/^historical-[a-z0-9-]{1,70}\.json$/.test(process.env.HISTORICAL_BATCH||''))throw Error('Ongeldige batchnaam.');
             let complete=false;for(let i=0;i<600;i++){
               const result=await call({historicalImport:true,batch:process.env.HISTORICAL_BATCH,phase});
+              if(![result.total,result.complete,result.pending].every(Number.isSafeInteger)||result.total<1||result.total>1000||result.complete<0||result.pending<0||result.complete+result.pending!==result.total)throw Error('Import-API niet actief of ongeldige bevestiging; stop zonder herhaling.');
               console.log(JSON.stringify({total:result.total,complete:result.complete,pending:result.pending}));
               if(result.pending===0){complete=true;break;}
             }if(!complete)throw Error('Import nog niet volledig; hervat dezelfde batch.');
@@ -63,6 +64,7 @@ jobs:
           if(importing){
             let offset=0;for(let i=0;i<200;i++){
               const result=await call({historicalVerify:true,batch:process.env.HISTORICAL_BATCH,phase,offset});
+              if(![result.total,result.verified,result.nextOffset].every(Number.isSafeInteger)||result.total<1||result.total>1000||result.verified<0||result.verified>5||result.nextOffset!==offset+result.verified||result.nextOffset>result.total)throw Error('Verificatie-API niet actief of ongeldige bevestiging.');
               if(result.nextOffset===offset&&offset<result.total)throw Error('Verificatie niet volledig.');
               offset=result.nextOffset;console.log(JSON.stringify({verified:offset,total:result.total}));if(offset===result.total)break;
             }
