@@ -9,14 +9,18 @@ export function cleanReportMenu(reports,{revisions=false}={}){
  if(!Array.isArray(reports)||reports.length>10000)throw Error('REPORT_MENU');
  const seen=new Set();return reports.map(report=>{
   if(!report||!id(report.concertId)||seen.has(report.concertId)||!text(report.label,160)||!Array.isArray(report.shows)||!report.shows.length||report.shows.length>1000)throw Error('REPORT_MENU');seen.add(report.concertId);
-  const ids=new Set(),dates=new Set(),shows=report.shows.map(show=>{
-   if(!show||!id(show.concertId)||ids.has(show.concertId)||!date(show.date)||dates.has(show.date)||!text(show.venue,160))throw Error('REPORT_MENU');ids.add(show.concertId);dates.add(show.date);
+  const ids=new Set(),dates=new Map(),shows=report.shows.map(show=>{
+   if(!show||!id(show.concertId)||ids.has(show.concertId)||!date(show.date)||!text(show.venue,160))throw Error('REPORT_MENU');ids.add(show.concertId);
+   const slot=show.concertId.endsWith('_S1')?'middag':show.concertId.endsWith('_S2')?'avond':null;
+   if(show.performance!==undefined&&show.performance!==slot)throw Error('REPORT_MENU');
+   if(!dates.has(show.date))dates.set(show.date,[]);dates.get(show.date).push(show);
    const row={concertId:show.concertId,date:show.date,venue:show.venue};
    if(revisions&&show.revision!==undefined){if(typeof show.revision!=='string'||!(/^[a-f0-9]{64}$/).test(show.revision))throw Error('REPORT_MENU');row.revision=show.revision;}
    return row;
   });
+  for(const sameDay of dates.values())if(sameDay.length>1&&(sameDay.length!==2||sameDay[0].venue!==sameDay[1].venue||!sameDay.some(show=>show.concertId.endsWith('_S1'))||!sameDay.some(show=>show.concertId.endsWith('_S2'))))throw Error('REPORT_MENU');
   if(!ids.has(report.concertId))throw Error('REPORT_MENU');
-  return{concertId:report.concertId,label:report.label,dates:shows.map(show=>show.date),shows};
+  return{concertId:report.concertId,label:report.label,dates:[...dates.keys()],shows};
  });
 }
 export function createReportCatalogueCache({now=Date.now,storage=null}={}){
