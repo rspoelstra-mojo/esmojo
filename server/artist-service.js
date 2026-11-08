@@ -13,6 +13,6 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
   async menu(actor){return{artists:await catalogue(actor)};},
   async ranking(actor){const [artists,counts]=await Promise.all([catalogue(actor),views.counts()]);return{mostViewed:artistTopFive(artists,counts)};},
   async detail(actor,body){input(body);return{artist:await artist(actor,body.artistId)};},
-  async record(actor,body){input(body,true);await artist(actor,body.artistId);return views.record(body.artistId,body.eventId);},
+  async record(actor,body){input(body,true);await artist(actor,body.artistId);const result=await views.record(body.artistId,body.eventId);try{return{...result,mostViewed:artistTopFive(await catalogue(actor),await views.counts())};}catch{return result;}},
  };
 }

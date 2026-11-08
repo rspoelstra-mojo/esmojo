@@ -7,7 +7,7 @@ test('Catalogus coalescet reads, bewaart alleen metadata en telt geen menu/detai
  await service.record('actor',{artistId:rows[0].id,eventId:randomUUID()});assert.equal(recorded,1);await assert.rejects(service.record('actor',{artistId:rows[0].id,eventId:randomUUID(),userId:'injected'}),/VALIDATION/);await assert.rejects(service.record('actor',{artistId:'a_'+'f'.repeat(64),eventId:randomUUID()}),/NOT_FOUND/);assert.equal(recorded,1);clock+=31000;await service.menu('actor');assert.equal(calls,3);
 });
 test('Een defecte ranking blokkeert het artiestenmenu of de detailpagina niet',async()=>{
- const service=createArtistService({shows:async()=>({artists:rows}),views:{counts:async()=>{throw Error('ARTIST_VIEWS_UNAVAILABLE');}}});assert.deepEqual((await service.menu('actor')).artists,rows);await assert.rejects(service.ranking('actor'),/ARTIST_VIEWS_UNAVAILABLE/);assert.equal((await service.detail('actor',{artistId:rows[0].id})).artist.id,rows[0].id);
+ const service=createArtistService({shows:async()=>({artists:rows}),views:{record:async()=>({recorded:true}),counts:async()=>{throw Error('ARTIST_VIEWS_UNAVAILABLE');}}});assert.deepEqual((await service.menu('actor')).artists,rows);await assert.rejects(service.ranking('actor'),/ARTIST_VIEWS_UNAVAILABLE/);assert.equal((await service.detail('actor',{artistId:rows[0].id})).artist.id,rows[0].id);assert.deepEqual(await service.record('actor',{artistId:rows[0].id,eventId:randomUUID()}),{recorded:true});
 });
 test('Alle artiestacties vereisen actuele MFA, activering, sessie en Artiestenmodule; geen impliciete Shows-/Rapportagesrechten',async()=>{
  const actor='actor',actions={'artist-menu':'GET','artist-ranking':'GET','artist-detail':'POST','artist-view':'POST'};

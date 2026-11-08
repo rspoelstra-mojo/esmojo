@@ -30,8 +30,13 @@ bij gelijke aantallen alfabetisch. Maximaal vijf artiesten met minimaal één pu
 Namen/IDs worden na actuele sessie-/modulecontrole direct uit de expliciet
 goedgekeurde lokale menucache hersteld. Top 5 en aantallen blijven sessiegeheugen.
 Metadata en ranking vernieuwen onafhankelijk bij openen/focus/zichtbaar worden en
-elke 30 seconden. Een defecte ranking blokkeert artiestkeuze of detailreads niet.
-Klikregistratie loopt los van paginaweergave, met één herpoging en dezelfde UUID;
+elke 30 seconden. Binnen dezelfde module worden verse menugegevens hergebruikt;
+iedere artiestklik start niet opnieuw alle menureads. Een defecte ranking blokkeert artiestkeuze of detailreads niet.
+De pagina wacht niet op klikregistratie. Die sluit aan ná de metadataread, met
+één herpoging en dezelfde UUID. De bevestiging bevat meteen de bijgewerkte top 5,
+zodat daarvoor geen extra authenticatie-/API-read nodig is. Oudere rankingreads
+kunnen deze bevestigde stand niet overschrijven. Bij slechts een rankingstoring
+blijft een succesvol geregistreerd punt bevestigd;
 keepalive behoudt het kleine verzoek bij verlaten. Reads/kliktelemetrie worden
 niet als een te bevestigen gebruikersformulier behandeld.
 

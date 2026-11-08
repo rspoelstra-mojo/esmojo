@@ -14,3 +14,7 @@ test('Verversen/detailzoeken geeft geen punt; een echte klik wordt met hetzelfde
 test('Geblokkeerde browseropslag of mislukte vernieuwing verwijdert de bestaande artiestnamen niet',async()=>{
  const cache=createArtistCatalogueCache({storage:{getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}}});cache.bind(profile);await cache.refreshMenu(async()=>({artists}));await assert.rejects(cache.refreshMenu(async()=>{throw Error('offline');},{force:true}),/offline/);assert.deepEqual(cache.current().artists,artists);
 });
+test('Klikregistratie wacht achter de pagina; bevestigde top 5 wint van een oudere GET zonder extra request',async()=>{
+ const cache=createArtistCatalogueCache(),page=deferred(),ranking=deferred(),calls=[];cache.bind(profile);const request=async(action)=>{calls.push(action);if(action==='artist-detail')return page.promise;if(action==='artist-ranking')return ranking.promise;if(action==='artist-view')return{recorded:true,mostViewed:[{...artists[0],views:9}]};};
+ const opening=cache.detail(request,artists[0].id),reading=cache.refreshRanking(request),writing=cache.record(request,artists[0].id,randomUUID());await tick();assert.equal(calls.includes('artist-view'),false);page.resolve({artist:artists[0]});await opening;await writing;assert.equal(calls.filter(x=>x==='artist-view').length,1);assert.equal(cache.current().mostViewed[0].views,9);ranking.resolve({mostViewed:[{...artists[0],views:1}]});await reading;assert.equal(cache.current().mostViewed[0].views,9);assert.equal(calls.filter(x=>x==='artist-ranking').length,1);
+});

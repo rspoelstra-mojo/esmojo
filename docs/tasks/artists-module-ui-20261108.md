@@ -23,3 +23,10 @@ zoekfocus, nieuwe artiesten zonder refresh, juiste top 5, geen punten bij typen/
 refresh/directe URL, retry met hetzelfde event-ID, laadiconen tijdens herschikking,
 permissiegebonden cache en uitsluitend gewhiteliste opslag. Build/diff-check slagen.
 Bridgepublicatie #128 / 579ec66 is bevestigd; deze UI-publicatie wordt V1.76.
+
+Laatste snelheidscontrole: interne artiestnavigatie hergebruikt verse menu-/ranking-
+gegevens. Kliktelemetrie volgt pas na de metadataread en blokkeert de pagina niet.
+Een bevestigde viewresponse bevat de bijgewerkte top 5; geen extra auth-read per
+klik. Oude GET-responses kunnen deze stand niet terugdraaien. Extra regressietest
+legt die race en de volgorde metadata vóór telemetrie vast. Een defecte ranking
+maakt een al geregistreerd punt niet ten onrechte ongedaan.

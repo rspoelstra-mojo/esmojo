@@ -29,7 +29,8 @@ import { createSubmenuSearch } from './submenu-search.js';
 import { createShowsSubmenu, refreshShowsMenu } from './shows.js';
 
 installSaveExitWarning();createSaveNotice();
-let profile = null, menuRefreshTimer=null;
+let profile = null, menuRefreshTimer=null,renderedRoot=null;
+const warmArtistMenu=()=>artistCatalogueCache.refreshMenu(access).then(()=>artistCatalogueCache.refreshRanking(access));
 let disposePage = () => {}, disposeLayout = () => {};
 const submenuSearch = createSubmenuSearch({
   heading: document.querySelector('.submenu-heading'), input: document.querySelector('#submenu-search-input'),
@@ -78,7 +79,7 @@ async function refreshModuleAccess(){
     if(updateModuleProfile(data.profile)){renderAvatar(document.querySelector('.avatar'),profile);renderPage();}
     if(hasModule(profile,'shows'))void refreshShowsMenu();
     if(hasModule(profile,'reports'))void reportCatalogueCache.refresh(access).catch(()=>{});
-    if(hasModule(profile,'artists'))void artistCatalogueCache.refresh(access).catch(()=>{});
+    if(hasModule(profile,'artists'))void warmArtistMenu().catch(()=>{});
   }catch{/* Serverweigeringen blijven leidend; geen oude rechten aan de server aanbieden. */}
   finally{refreshingModules=false;}
 }
@@ -94,6 +95,7 @@ function renderPage() {
   if(route===''&&reportsOnly(profile)){history.replaceState(null,'','/rapportages'+location.search+location.hash);route='rapportages';}
   const fluidPreview=__ESMOJO_FLUID_PREVIEW__&&route==='test/fluid-layout';
   const root = fluidPreview?'shows':route.split('/')[0];
+  const enteringSection=root!==renderedRoot;renderedRoot=root;
   if (!fluidPreview) disposeLayout = enableFluidLayout(content, {variant: root === 'shows' ? 'show' : 'page'});
   const title = pages[root] || 'Pagina niet gevonden';
   mobileNavigation.setTitle(title);
@@ -128,7 +130,7 @@ function renderPage() {
   }
   if(root==='artiest'){
     let selected;try{selected=decodeURIComponent(route.split('/')[1]||'')||null;}catch{selected='invalid';}
-    disposePage=createArtistsPage(content,submenu,{selected});
+    disposePage=createArtistsPage(content,submenu,{selected,forceRefresh:enteringSection});
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
@@ -168,7 +170,7 @@ startAuth({
     clearInterval(menuRefreshTimer);
     if(hasModule(profile,'shows'))void refreshShowsMenu();
     if(hasModule(profile,'reports'))void reportCatalogueCache.refresh(access).catch(()=>{});
-    if(hasModule(profile,'artists'))void artistCatalogueCache.refresh(access).catch(()=>{});
+    if(hasModule(profile,'artists'))void warmArtistMenu().catch(()=>{});
     menuRefreshTimer=setInterval(()=>{if(!document.hidden)void refreshModuleAccess();},60000);
     document.querySelector('.rail').hidden = false;
     document.querySelector('.workspace').hidden = false;
@@ -183,7 +185,7 @@ startAuth({
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
     homeDashboardCache.clear();reportCatalogueCache.clear();artistCatalogueCache.clear();barrierReferenceCache.clear();
-    profile = null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
+    profile = null;renderedRoot=null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
     document.querySelector('.content-box').replaceChildren();
     document.querySelector('.avatar').replaceChildren();
     document.querySelector('.rail').hidden = true;
