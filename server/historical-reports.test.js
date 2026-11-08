@@ -92,3 +92,16 @@ test('CSV met Schoonmaak, gemengde discipline, gewijzigde bron of ongeldige best
  b.file.setContent(b.file.content.toString().replace('1234','4321'));
  await assert.rejects(f.store('historical-import-commit',null,{batch:'historical-synthetic.json',phase:'all',batchHash:read.batchHash,concertId:b.row.concertId,sourceHash:b.row.sha256}),/SOURCE_CHANGED/);
 });
+test('Native Drive-catalogus en artiestshow houden middag/avond en eigen kaartverkoop gescheiden',async()=>{
+ const f=setup(),b=batchFixture(f),base=b.row.concertId,rows=['middag','avond'].map((performance,index)=>({...b.row,concertId:base+'_S'+(index+1),performance,seriesId:base+'_S1',ticket_sales:index?'5678':'1234',audit:{managedBy:'ESMOJO/HistoricalImportAudit-v1',classification:'vertrouwelijk',concertId:base+'_S'+(index+1)}}));
+ b.file.setContent(JSON.stringify({managedBy:'ESMOJO/HistoricalImport-v1',classification:'vertrouwelijk',version:1,entries:rows}));
+ assert.equal((await b.run({batch:'historical-synthetic.json',phase:'all'})).pending,0);
+ await createWebCatalogueService({store:f.store}).synchronize(null,{historicalOnly:true});
+ for(const name of ['ArtistCatalogue.gs','Artists.gs'])vm.runInContext(readFileSync('google-apps-script/'+name,'utf8'),f.ctx);
+ f.profiles[0].modules.push('artists');f.updateProfiles();
+ const artistIds=['a_'+sha(b.row.artist.toLowerCase())],request={operation:'artist-show',actor:'reader',artistIds,date:b.row.date,venue:b.row.venue};
+ assert.throws(()=>f.ctx.esmojoArtistShow_(request),/REPORT_CONFLICT/);
+ for(const row of rows){const show=f.ctx.esmojoArtistShow_({...request,performance:row.performance});assert.equal(show.report.show.key,row.concertId);assert.equal(artistPreparation(show.preparation,show.show).general.soldTickets,Number(row.ticket_sales));assert.equal(show.report.series.shows.length,2);}
+ f.ctx.esmojoHomePhotosRead_=()=>({data:{photos:{}}});
+ const profile=f.ctx.esmojoArtistProfile_({operation:'artist-profile',actor:'reader',artistIds});assert.equal(profile.concerts.length,1);assert.equal(profile.concerts[0].performances.length,2);
+});
