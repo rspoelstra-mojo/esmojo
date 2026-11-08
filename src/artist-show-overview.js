@@ -26,7 +26,8 @@ export function renderArtistShowOverview(data,{onBack=()=>{}}={}){
  statistic('Beveiliging','security',securityReportFilters);
  const production=card('Productioneel','production');
  const yesNo=answer=>typeof answer==='boolean'?answer?'Ja':'Nee':null;
- const densities=productionData?.seated?'N.v.t. (Seated)':productionData?.densities?.length?productionData.densities.map(row=>row.name+': '+densityFormat.format(row.density)+' bezoekers/m²').join('\n'):null;
+ const standing=productionData?.densities?.find(row=>row.name?.trim().toLocaleLowerCase('nl-NL')==='staanplaatsen');
+ const densities=productionData?.seated?'N.v.t. (Seated)':standing?densityFormat.format(standing.density)+' bezoekers/m²':null;
  fields(production,[['Ingangsconstructie',productionData?.entrance],['Barrieropstelling',productionData?.barrier],['Vloerdruk',densities],['Vuurwerk',yesNo(productionData?.fireworks)],['Open vuur',yesNo(productionData?.openFire)],['Drones',yesNo(productionData?.drones)]]);
  statistic('Medisch','medical',medicalReportFilters);
  const risks=card('Risico analyse','risks'),tiles=node('dl','artist-risk-tiles');
