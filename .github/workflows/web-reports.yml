@@ -26,7 +26,7 @@ concurrency:
 jobs:
   index:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: ${{ (inputs.historical_import == 'sample' || inputs.historical_import == 'all' || inputs.historical_only == true) && 180 || 7 }}
     steps:
       - name: Publish web reports and deliver online mail independently of PDF generation
         env:
