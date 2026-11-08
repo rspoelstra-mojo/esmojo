@@ -8,11 +8,13 @@ import {sendEmail} from '../email.js';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 export function createOnTrackReportStore({env=process.env,request=fetch,now=Date.now}={}){
  return async(operation,actor,payload={})=>{
+  const failure=(message,workerCode=message)=>Object.assign(Error(message),{workerCode,workerOperation:operation});
   const url=env.GOOGLE_DRIVE_SCRIPT_URL,secret=env.GOOGLE_DRIVE_SHARED_SECRET;if(!url||!secret||secret.length<32)throw Error('ONTRACK_REPORT_UNAVAILABLE');const parsed=new URL(url);
   if(parsed.origin!=='https://script.google.com'||!/^\/macros\/s\/[\w-]+\/exec$/.test(parsed.pathname)||parsed.search||parsed.hash||parsed.username||parsed.password)throw Error('ONTRACK_REPORT_UNAVAILABLE');
   const body=JSON.stringify({operation,...(actor?{actor}:{}),...payload}),timestamp=now(),nonce=randomBytes(16).toString('hex'),digest=hash(body),signature=createHmac('sha256',secret).update(`ontrack-reports\n${timestamp}\n${nonce}\n${digest}`).digest('hex');
-  let response;try{response=await request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'ontrack-reports',timestamp,nonce,signature,body}),signal:AbortSignal.timeout(60000)});}catch{throw Error('ONTRACK_REPORT_UNAVAILABLE');}
-  if(!response.ok)throw Error('ONTRACK_REPORT_UNAVAILABLE');let result;try{result=await response.json();}catch{throw Error('ONTRACK_REPORT_UNAVAILABLE');}if(!result.ok)throw Error(['FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','NOT_FOUND'].includes(result.code)?result.code:'ONTRACK_REPORT_UNAVAILABLE');return result.data;
+  let response;try{response=await request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'ontrack-reports',timestamp,nonce,signature,body}),signal:AbortSignal.timeout(60000)});}catch(error){throw failure('ONTRACK_REPORT_UNAVAILABLE',['TimeoutError','AbortError'].includes(error?.name)?'DRIVE_TIMEOUT':'DRIVE_CONNECTION');}
+  if(!response.ok)throw failure('ONTRACK_REPORT_UNAVAILABLE','DRIVE_HTTP');let result;try{result=await response.json();}catch{throw failure('ONTRACK_REPORT_UNAVAILABLE','DRIVE_RESPONSE');}
+  if(!result.ok){const message=['FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','NOT_FOUND'].includes(result.code)?result.code:'ONTRACK_REPORT_UNAVAILABLE';throw failure(message,result.code==='BUSY'?'BUSY':message);}return result.data;
  };
 }
 export function validateOnTrackReportRequest(input){

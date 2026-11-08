@@ -17,6 +17,12 @@ export function makeWebReportsSync({identify=token=>verifyImportIdentity(token,{
     // Eén bestaande batch houdt de Drive-rondreizen ruim binnen de verzoeklimiet.
     await service.synchronize(null,{historicalOnly:true});
     const status=await service.historicalStatus();return res.status(200).json({ok:status.invalid===0,...status});
-   }await service.synchronize();if(online)await online.run();return res.status(200).json({ok:true});}catch{return res.status(503).json({error:'Webrapportage-inventarisatie niet bevestigd.'});}};
+   }await service.synchronize();if(online)await online.run();return res.status(200).json({ok:true});}catch(error){
+   const worker=req.body?.historicalOnly===true||req.body?.historicalImport===true||req.body?.historicalVerify===true;
+   const codes=['BUSY','DRIVE_TIMEOUT','DRIVE_CONNECTION','DRIVE_HTTP','DRIVE_RESPONSE','FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','NOT_FOUND','ONTRACK_REPORT_UNAVAILABLE'];
+   const stages=['web-scan','web-source','web-commit','web-historical-status','historical-import-read','historical-import-commit','historical-import-verify'];
+   const code=codes.includes(error.workerCode||error.message)?error.workerCode||error.message:'UNCONFIRMED',stage=stages.includes(error.workerOperation)?error.workerOperation:'UNKNOWN';
+   return res.status(503).json({error:'Webrapportage-inventarisatie niet bevestigd.',...(worker?{code,stage}:{})});
+  }};
 }
 export default isolateFluidApi(makeWebReportsSync({online:createOnlineReportMailService({store:createOnTrackReportStore()})}));
