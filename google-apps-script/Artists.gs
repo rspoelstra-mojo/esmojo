@@ -39,7 +39,7 @@ function esmojoArtistProfile_(request){
  }
  let recent=null;
  for(const show of shows){
-  if(show.date<=today)recent||=show;
+  if(show.date<=today&&!recent)recent=show;
   knownDates.add(identity(show.venue,show.date));
   add(show.seriesId||show.concertId,show.venue,show.date);
  }

@@ -3,12 +3,13 @@ import { mkdtemp, mkdir, writeFile, readFile, readdir, copyFile, rm } from 'node
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {checkSources,scriptSource} from './check-syntax.mjs';
+import {publicationFailure} from './diagnostics.mjs';
 
 const toolDir = fileURLToPath(new URL('.', import.meta.url));
-const repository = resolve(toolDir, '../..');
 
 // Pull behoudt het bestaande manifest en eventuele niet door Git beheerde code.
-// Wijzigingen van Code.gs worden uitsluitend uit de repository overgenomen.
+// Beheerde bronbestanden worden uitsluitend uit de repository overgenomen.
 export async function overlaySources(source, target) {
   const manifest = await readFile(join(target, 'appsscript.json'), 'utf8');
   JSON.parse(manifest);
@@ -16,7 +17,7 @@ export async function overlaySources(source, target) {
     if (entry.isSymbolicLink()) throw new Error('Geen symlinks in Apps Script-broncode toegestaan.');
     if (entry.isDirectory()) {
       await mkdir(join(target, entry.name), { recursive: true });
-      // Momenteel één Code.gs; submappen pas na expliciete ondersteuning.
+      // De huidige Apps Script-bron is vlak; submappen vragen expliciete ondersteuning.
       throw new Error('Apps Script-submappen worden nog niet ondersteund.');
     }
     if (entry.isFile() && /\.(gs|html)$/.test(entry.name)) {
@@ -28,7 +29,10 @@ export async function overlaySources(source, target) {
   }
 }
 
-export async function deploy({ env = process.env, execute, verify = true } = {}) {
+export async function deploy({ env = process.env, execute, verify = true, request = fetch, sourceDirectory = scriptSource } = {}) {
+  await checkSources(sourceDirectory);
+  const filenames=(await readdir(sourceDirectory)).filter(name=>/\.(gs|html)$/.test(name));
+  const verifyOnly=env.APPS_SCRIPT_VERIFY_ONLY==='true';
   if (!env.CLASPRC_JSON) throw new Error('GitHub-secret CLASPRC_JSON ontbreekt. Rond eerst de Google-autorisatie af.');
   let credentials;
   try { credentials = JSON.parse(env.CLASPRC_JSON); } catch { throw new Error('CLASPRC_JSON bevat geen geldige JSON.'); }
@@ -55,31 +59,55 @@ export async function deploy({ env = process.env, execute, verify = true } = {})
             encoding: 'utf8', timeout: 120000, stdio: ['ignore', 'pipe', 'pipe'], env: childEnv,
           });
         }
-      } catch {
-        // Geen raw tool-output: Google-fouten kunnen credentialinformatie bevatten.
-        throw new Error(`clasp ${args[0]} mislukt. Controleer de Apps Script API-toegang, autorisatie en projectrechten.`);
+      } catch(error) {
+        throw publicationFailure(args[0],error,filenames);
       }
-      return json ? JSON.parse(output) : output;
+      if(!json)return output;
+      try{return JSON.parse(output);}catch{throw Error('APPS_SCRIPT_RESPONSE: clasp geeft geen geldige JSON-bevestiging.');}
     };
     const deployments = command(['list-deployments'], true);
-    if (!deployments.some(item => item.deploymentId === config.deploymentId)) throw new Error('Bestaande webapp-deployment niet gevonden; er wordt geen nieuwe aangemaakt.');
-    command(['pull']);
-    await overlaySources(join(repository, 'google-apps-script'), source);
-    command(['push']);
-    const description = `ESMOJO ${(env.GITHUB_SHA || 'manual').slice(0, 12)}`;
-    const { versionNumber } = command(['create-version', description], true);
-    if (!Number.isInteger(versionNumber) || versionNumber < 1) throw new Error('Google heeft geen geldig versienummer teruggegeven.');
-    const result = command(['update-deployment', config.deploymentId, '--versionNumber', String(versionNumber), '--description', description], true);
-    if (result.deploymentId !== config.deploymentId || result.versionNumber !== versionNumber) throw new Error('Google heeft de verwachte deploymentversie niet bevestigd.');
+    const existing=Array.isArray(deployments)&&deployments.find(item=>item.deploymentId===config.deploymentId);
+    if (!existing) throw new Error('Bestaande webapp-deployment niet gevonden; er wordt geen nieuwe aangemaakt.');
+    let manifest,versionNumber,result;
+    if(verifyOnly){
+      versionNumber=existing.versionNumber;
+      if(!Number.isInteger(versionNumber)||versionNumber<1)throw Error('APPS_SCRIPT_VERSION: bestaande deployment heeft geen vaste versie.');
+    }else{
+      command(['pull']);
+      manifest=await readFile(join(source,'appsscript.json'),'utf8');
+      await overlaySources(sourceDirectory, source);
+      await checkSources(source);
+      command(['push']);
+      const sha=/^[a-f0-9]{40}$/.test(env.GITHUB_SHA||'')?env.GITHUB_SHA.slice(0,12):'manual';
+      const description=`ESMOJO ${sha}`;
+      ({versionNumber}=command(['create-version',description],true));
+      if(!Number.isInteger(versionNumber)||versionNumber<1)throw Error('Google heeft geen geldig versienummer teruggegeven.');
+      result=command(['update-deployment',config.deploymentId,'--versionNumber',String(versionNumber),'--description',description],true);
+      if(result.deploymentId!==config.deploymentId||result.versionNumber!==versionNumber)throw Error('Google heeft de verwachte deploymentversie niet bevestigd.');
+    }
+    const live=command(['list-deployments'],true);
+    if(!Array.isArray(live)||!live.some(item=>item.deploymentId===config.deploymentId&&item.versionNumber===versionNumber))throw Error('APPS_SCRIPT_VERSION: actieve deployment wijkt af van de verwachte versie.');
+    // Read the immutable deployed version into an EMPTY directory. A HEAD pull or
+    // leftover overlay files cannot falsely confirm that the new code is live.
+    await rm(source,{recursive:true,force:true});await mkdir(source,{mode:0o700});
+    command(['pull','--versionNumber',String(versionNumber)]);
+    for(const name of filenames){
+      let published;try{published=await readFile(join(source,name),'utf8');}catch{throw Error('APPS_SCRIPT_SOURCE_MISMATCH: gepubliceerd bronbestand ontbreekt.');}
+      const expected=await readFile(join(sourceDirectory,name),'utf8');
+      if(published.replace(/\r\n/g,'\n').trimEnd()!==expected.replace(/\r\n/g,'\n').trimEnd())throw Error('APPS_SCRIPT_SOURCE_MISMATCH: gepubliceerde bron wijkt af van de geteste main.');
+    }
+    if(manifest!==undefined&&await readFile(join(source,'appsscript.json'),'utf8')!==manifest)throw Error('Het bestaande Google-manifest is onverwacht gewijzigd.');
     if (verify) {
-      const response = await fetch(`https://script.google.com/macros/s/${config.deploymentId}/exec`, { signal: AbortSignal.timeout(30000) });
+      const response = await request(`https://script.google.com/macros/s/${config.deploymentId}/exec`, { signal: AbortSignal.timeout(30000) });
       if (!response.ok) throw new Error('Nieuwe webapp-versie is gepubliceerd, maar de bereikbaarheidstest geeft een HTTP-fout.');
       let health;
       try { health = await response.json(); } catch { throw new Error('Nieuwe webapp-versie is gepubliceerd, maar geeft geen JSON-status terug.'); }
       if (health.ok !== false || health.error !== 'Gebruik een ondertekend serververzoek.') throw new Error('Nieuwe webapp-versie is gepubliceerd, maar de anonieme toegang wordt niet zoals verwacht geweigerd.');
     }
-    console.log(`Apps Script versie ${versionNumber} gepubliceerd op de bestaande webapp-URL.`);
-    return result;
+    const report=`Apps Script versie ${versionNumber} ${verifyOnly?'geverifieerd':'gepubliceerd'} op de bestaande webapp-URL; ${filenames.length} bronbestanden teruggelezen en gelijk aan geteste main.`;
+    console.log(report);
+    if(env.GITHUB_STEP_SUMMARY)await writeFile(env.GITHUB_STEP_SUMMARY,report+'\n',{flag:'a'});
+    return result||{deploymentId:config.deploymentId,versionNumber};
   } finally {
     // Alleen de hierboven aangemaakte tijdelijke directory, ook bij fouten.
     await rm(temporary, { recursive: true, force: true });
