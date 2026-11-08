@@ -17,3 +17,14 @@ test('Alle artiestacties vereisen actuele MFA, activering, sessie en Artiestenmo
   await handler({method,query:{action},body:method==='POST'?{artistId:rows[0].id}:undefined,headers:{authorization:input.token===false?undefined:'Bearer '+token}},res);const allowed=Object.keys(input).length===0;assert.equal(calls,allowed?1:0,action+' '+JSON.stringify(input));assert.equal(res.code,allowed?200:input.token===false||input.expired?401:403,JSON.stringify(input));
  }
 });
+test('Hernoemen behoudt oude links en retry-IDs en telt oude/nieuwe klikrecords samen',async()=>{
+ const legacy=buildArtistCatalogue(['U2: The Greatest Show On Earth World Tour','U2'],v=>createHash('sha256').update(v).digest('hex')),old=legacy.find(row=>row.name.startsWith('U2:')),canonical=legacy.find(row=>row.name==='U2'),writes=[];
+ const service=createArtistService({shows:async()=>({artists:legacy}),views:{counts:async()=>[{id:old.id,views:7},{id:canonical.id,views:2}],record:async(id,eventId)=>{writes.push({id,eventId});return{recorded:false};}}});
+ assert.deepEqual((await service.menu('actor')).artists,[canonical]);const detail=await service.detail('actor',{artistId:old.id});assert.deepEqual(detail.artist,{id:old.id,name:'U2'});assert.equal(detail.canonicalArtistId,canonical.id);assert.equal((await service.ranking('actor')).mostViewed[0].views,9);
+ const eventId=randomUUID(),record=await service.record('actor',{artistId:old.id,eventId});assert.deepEqual(writes,[{id:old.id,eventId}]);assert.equal(record.recorded,false);assert.equal(record.mostViewed[0].views,9);
+});
+test('Leesbare URL-referenties openen de juiste artiest; tellen blijft op interne IDs gebaseerd',async()=>{
+ const raw=buildArtistCatalogue(['U2: The Greatest Show On Earth World Tour','New Wave - All Stars','¥ØU$UK€ ¥UK1MAT$U (Yousuke Yukimatsu)'],v=>createHash('sha256').update(v).digest('hex')),service=createArtistService({shows:async()=>({artists:raw}),views:{counts:async()=>[]}});
+ for(const [slug,name]of [['u2','U2'],['newwave','New Wave'],['yousukeyukimatsu','Yousuke Yukimatsu']]){const result=await service.detail('actor',{artistId:slug});assert.equal(result.artist.name,name);assert.equal(result.canonicalArtistSlug,slug);assert.equal(result.requestedReference,slug);}
+ await assert.rejects(service.detail('actor',{artistId:'../u2'}),/VALIDATION/);await assert.rejects(service.record('actor',{artistId:'u2',eventId:randomUUID()}),/VALIDATION/);
+});

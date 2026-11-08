@@ -1,5 +1,6 @@
 import {hasModule,moduleFingerprint} from '../../shared/account-modules.js';
-import {cleanArtistMenu,artistTopFive,validArtistId} from '../../shared/artist-catalogue.js';
+import {artistTopFive,validArtistId} from '../../shared/artist-catalogue.js';
+import {cleanReadableArtistMenu as cleanArtistMenu} from '../../shared/artist-names.js';
 const STORAGE_KEY='esmojo-artist-menu-v1';
 export function createArtistCatalogueCache({storage=null,now=Date.now}={}){
  let scope=null,saved=null,artists=null,mostViewed=[],rankingLoaded=false,generation=0,rankRevision=0,menuPending=null,rankingPending=null,menuChecked=null,rankingChecked=null;
@@ -20,15 +21,16 @@ export function createArtistCatalogueCache({storage=null,now=Date.now}={}){
  async function record(request,id,eventId){
   if(!scope||!validArtistId(id))return false;const ticket=generation;let failure,result;
   // Let the page's metadata request finish before adding telemetry auth/I/O.
-  await details.get(id)?.catch(()=>{});if(ticket!==generation)return false;
+  const waiting=[...details.values()].reverse().find(entry=>entry.ids.has(id));await waiting?.promise.catch(()=>{});if(ticket!==generation)return false;
   for(let attempt=0;attempt<2;attempt++)try{result=await request('artist-view',{method:'POST',body:{artistId:id,eventId}});if(typeof result?.recorded!=='boolean')throw Object.assign(Error('ARTIST_VIEWS'),{retryable:true});failure=null;break;}catch(error){failure=error;if(ticket!==generation||!error.retryable)break;}
   if(failure)throw failure;if(ticket!==generation)return false;
   // Apply the confirmed ranking without another authenticated request. Older
   // concurrent GETs cannot overwrite it; a failed ranking never undoes a point.
   if(result.mostViewed){rankRevision++;acceptRanking(result.mostViewed);}return true;
  }
- function detail(request,id){const task=Promise.resolve().then(()=>request('artist-detail',{method:'POST',body:{artistId:id}}));details.set(id,task);return task.finally(()=>{if(details.get(id)===task)details.delete(id);});}
- return{bind,current,refreshMenu,refreshRanking,refresh(request,options){return Promise.all([refreshMenu(request,options),refreshRanking(request,options)]);},detail,record,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},clear(){bind(null);}};
+ function trackDetail(reference,ids){const entry=details.get(reference);if(entry)for(const id of ids)if(validArtistId(id))entry.ids.add(id);}
+ function detail(request,reference,ids=[]){const task=Promise.resolve().then(()=>request('artist-detail',{method:'POST',body:{artistId:reference}})),entry={promise:task,ids:new Set(validArtistId(reference)?[reference]:[])};details.set(reference,entry);trackDetail(reference,ids);return task.finally(()=>{if(details.get(reference)===entry)details.delete(reference);});}
+ return{bind,current,refreshMenu,refreshRanking,refresh(request,options){return Promise.all([refreshMenu(request,options),refreshRanking(request,options)]);},detail,trackDetail,record,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},clear(){bind(null);}};
 }
 let storage;try{storage=globalThis.localStorage;}catch{}
 export const artistCatalogueCache=createArtistCatalogueCache({storage});
