@@ -66,6 +66,18 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
  }
  const service={
   async request(operation,payload={}){
+   if(operation==='artist-profile'){
+    const profile=await drive(operation,payload);
+    if(!profile.profileConcertId||!await enabled())return profile;
+    const row=await repository.get(profile.profileConcertId);
+    if(!row)return profile;
+    const audience={};
+    for(let number=1;number<=4;number++){
+     const analysis=row.snapshot.profile.analyses[number];
+     audience[number]={...profile.audience[number],summary:analysis?.status==='completed'?analysis.summary:null};
+    }
+    return {...profile,audience};
+   }
    if(!applies(operation)||!payload.concertId)return drive(operation,payload);
    if(!await enabled())return drive(operation,payload);
    let row;
