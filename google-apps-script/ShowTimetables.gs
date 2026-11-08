@@ -1,8 +1,8 @@
 // Openbare tijdschema's staan gescheiden van vertrouwelijke CSV/PDF-rapporten.
-function esmojoTimetableCatalogue_(){
+function esmojoTimetableCatalogue_({allVenues=false}={}){
  const rows=[],root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),folders=root.getFoldersByName('Productie'),production=folders.hasNext()?folders.next():null;
  if(folders.hasNext())throw Error('REPORT_CATALOG');
- if(production){const file=esmojoOnTrackFile_(production,'_esmojo_shows_v1.json');if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw Error('REPORT_CATALOG');const active=new Set(index.active);rows.push(...index.concerts.filter(row=>row.venue==='Gashouder'&&row.city==='Amsterdam').map(row=>({...row,active:active.has(row.concertId)})));}}
+ if(production){const file=esmojoOnTrackFile_(production,'_esmojo_shows_v1.json');if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw Error('REPORT_CATALOG');const active=new Set(index.active);rows.push(...index.concerts.filter(row=>allVenues||row.venue==='Gashouder'&&row.city==='Amsterdam').map(row=>({...row,active:active.has(row.concertId)})));}}
  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_concerts_v1.json');
  if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw Error('REPORT_CATALOG');const active=new Set(index.active);rows.push(...index.concerts.map(row=>({...row,active:active.has(row.concertId)})));}
  const catalogue=new Map();for(const row of rows){
