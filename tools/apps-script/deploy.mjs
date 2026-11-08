@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {checkSources,scriptSource} from './check-syntax.mjs';
-import {publicationFailure} from './diagnostics.mjs';
+import {publicationFailure,publicationAnnotation} from './diagnostics.mjs';
 
 const toolDir = fileURLToPath(new URL('.', import.meta.url));
 
@@ -115,5 +115,10 @@ export async function deploy({ env = process.env, execute, verify = true, reques
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  deploy().catch(error => { console.error(error.message); process.exitCode = 1; });
+  deploy().catch(async error => {
+    console.error(error.message);
+    let filenames=[];try{filenames=await readdir(scriptSource);}catch{/* Alleen vaste code bij ontbrekende lokale bronnen. */}
+    console.error('::error::'+publicationAnnotation(error,filenames));
+    process.exitCode = 1;
+  });
 }

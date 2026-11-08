@@ -1,5 +1,19 @@
 // Never forward clasp stdout/stderr, OAuth URLs, identities, tokens or source.
 // Only fixed diagnostic categories and allowlisted repository filenames escape.
+export function publicationAnnotation(error,filenames=[]){
+ const codes=['SOURCE_SYNTAX','OAUTH_REAUTHORIZE','API_DISABLED','PROJECT_PERMISSION','OAUTH_UNAUTHENTICATED','GOOGLE_QUOTA','UPSTREAM_UNAVAILABLE','TOOL_FAILURE','RESPONSE','VERSION','SOURCE_MISMATCH','SYNTAX'];
+ const message=String(error?.message||''),code=codes.find(value=>message.startsWith('APPS_SCRIPT_'+value+':'));
+ if(!code)return 'APPS_SCRIPT_PUBLICATION_FAILED';
+ const command=/\bclasp (list-deployments|pull|push|create-version|update-deployment) mislukt\./.exec(message)?.[1];
+ let location='';
+ if(code==='SOURCE_SYNTAX')for(const filename of filenames){
+  if(!/^[A-Za-z0-9_-]+\.gs$/.test(filename))continue;
+  const start=message.indexOf(' '+filename+':');if(start<0)continue;
+  const line=/^([0-9]{1,6})\./.exec(message.slice(start+filename.length+2))?.[1];
+  if(line)location=' '+filename+':'+Number(line);break;
+ }
+ return 'APPS_SCRIPT_'+code+(command?' '+command:'')+location;
+}
 export function publicationFailure(command,error,filenames=[]){
  const raw=[error?.message,error?.stdout,error?.stderr].map(value=>String(value||'')).join('\n');
  let code='TOOL_FAILURE',hint='Controleer API-toegang, Google-autorisatie en projectrechten.';
