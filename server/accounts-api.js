@@ -132,10 +132,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
       const requiredModule=['barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
-      if(['artist-menu','artist-ranking','artist-detail','artist-view'].includes(action)){
+      if(['artist-menu','artist-ranking','artist-detail','artist-view','artist-show'].includes(action)){
         const method=['artist-menu','artist-ranking'].includes(action)?'GET':'POST';
         if(req.method!==method){res.setHeader('Allow',method);return reply(405,{error:'Niet toegestaan.'});}
-        try{return reply(200,await artistService[{'artist-menu':'menu','artist-ranking':'ranking','artist-detail':'detail','artist-view':'record'}[action]](actor,req.body));}
+        try{return reply(200,await artistService[{'artist-menu':'menu','artist-ranking':'ranking','artist-detail':'detail','artist-view':'record','artist-show':'show'}[action]](actor,req.body));}
         catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:error.message==='NOT_FOUND'?404:503;
           return reply(status,{error:status===400?'Ongeldig artiestverzoek.':status===403?'Je hebt geen toegang tot Artiesten.':status===404?'Deze artiest is niet beschikbaar.':action==='artist-view'||action==='artist-ranking'?'Meest bekeken kon niet worden bijgewerkt.':'De artiesten konden niet worden geladen.',...(status===403?{code:'MODULE_FORBIDDEN',module:'artists'}:{})});}
       }

@@ -1,4 +1,6 @@
 import {peopleIconPaths} from './lib/profile-icons.js';
+import {timetableClock} from '../shared/show-timetable.js';
+import {renderArtistShowOverview} from './artist-show-overview.js';
 const unavailable='Informatie niet beschikbaar';
 const topics=['Man/ vrouw verhouding','Leeftijdsrange','Aankomstprofiel','Typische kenmerken'];
 const monthYear=new Intl.DateTimeFormat('nl-NL',{month:'long',year:'numeric',timeZone:'UTC'});
@@ -33,8 +35,10 @@ export function artistTimeline(concerts=[]){
  return [...years].map(([year,events])=>({year,events}));
 }
 
-export function renderArtistProfile(name,profile={}){
+export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,onBusy=()=>()=>{},onError=()=>{},onReady=()=>{}}={}){
+ let disposed=false,selection=0;const buttons=[];
  const page=node('section','artist-page');
+ page.dispose=()=>{disposed=true;selection++;};
  const layout=node('div','artist-profile-layout');
  const main=node('div','artist-profile-main');
  const header=node('header','artist-page-heading');
@@ -65,7 +69,20 @@ export function renderArtistProfile(name,profile={}){
   card.append(heading,node('p','',profile.audience?.[index]||unavailable));
   cards.append(card);
  });
- main.append(header,cards);
+ const detail=node('div','artist-detail-panel');detail.append(cards);
+ function reset(){selection++;detail.replaceChildren(cards);for(const button of buttons)button.removeAttribute('aria-pressed');}
+ async function openShow(event,button){
+  if(!loadShow||event.date>=timetableClock(now()).date)return;
+  const ticket=++selection,finish=onBusy();button.setAttribute('aria-busy','true');
+  try{const data=await loadShow(event);if(disposed||ticket!==selection)return;
+   detail.replaceChildren(renderArtistShowOverview(data,{onBack:()=>{reset();button.focus();}}));
+   for(const other of buttons)other.setAttribute('aria-pressed',String(other===button));
+   onReady();
+   detail.querySelector('.artist-show-title')?.focus({preventScroll:true});
+  }catch{if(!disposed&&ticket===selection)onError();}
+  finally{button.removeAttribute('aria-busy');finish();}
+ }
+ main.append(header,detail);
 
  const history=node('section','artist-profile-card artist-concert-history');
  history.append(node('h2','','Concert historie'));
@@ -76,8 +93,10 @@ export function renderArtistProfile(name,profile={}){
    item.append(node('h3','artist-year-badge',year));
    const entries=node('ol','artist-year-events');
    for(const {venue,date} of events){
-    const event=node('li','artist-timeline-event'),time=node('time','',concertDay.format(new Date(date+'T12:00:00Z')));
-    time.dateTime=date;event.append(time,document.createTextNode(', '+venue));entries.append(event);
+    const past=date<timetableClock(now()).date,item=node('li','artist-timeline-event '+(past?'artist-event-past':'artist-event-upcoming')),event=node('button','artist-concert-select'),time=node('time','',concertDay.format(new Date(date+'T12:00:00Z')));
+    event.type='button';event.disabled=!past;event.dataset.concertDate=date;event.dataset.concertVenue=venue;
+    event.title=past?'Toon showoverzicht':'Beschikbaar na de concertdag';
+    time.dateTime=date;event.append(time,document.createTextNode(', '+venue));event.onclick=()=>openShow({date,venue},event);buttons.push(event);item.append(event);entries.append(item);
    }
    item.append(entries);
    list.append(item);

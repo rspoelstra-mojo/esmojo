@@ -1,5 +1,7 @@
 import {createHash} from 'node:crypto';
-import {createReadableArtistDirectory,resolveReadableArtist,foldArtistViews,validArtistReference} from '../shared/artist-names.js';
+import {createReadableArtistDirectory,resolveReadableArtist,foldArtistViews,validArtistReference,readableArtistName} from '../shared/artist-names.js';
+import {timetableClock,validTimetableDate} from '../shared/show-timetable.js';
+import {createWebReportService} from './report-web.js';
 import {artistTopFive,validArtistId} from '../shared/artist-catalogue.js';
 import {researchView} from '../src/lib/research-view.js';
 import {createArtistViews,validArtistViewEvent} from './artist-views.js';
@@ -17,6 +19,17 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
  return{
   async menu(actor){return{artists:(await catalogue(actor)).artists};},
   async ranking(actor){const [directory,counts]=await Promise.all([catalogue(actor),views.counts()]);return{mostViewed:top(directory,counts)};},
+  async show(actor,body){
+   if(!body||Array.isArray(body)||Object.keys(body).sort().join(',')!=='artistId,date,venue'||!validArtistReference(body.artistId)||!validTimetableDate(body.date)||body.date>=timetableClock(now()).date||typeof body.venue!=='string'||!body.venue||body.venue.length>200)throw Error('VALIDATION');
+   const row=await artist(actor,body.artistId),directory=await catalogue(actor),artistIds=[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)];
+   const source=await shows('artist-show',{actor,artistIds,date:body.date,venue:body.venue});
+   if(source?.show?.date!==body.date||source.show.venue!==body.venue||readableArtistName(source.show.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
+   const general={name:row.name,venue:body.venue,date:body.date};
+   if(!source.report)return{show:general,timetable:source.timetable||null,kpis:null,reportId:null};
+   if(source.report.show?.date!==body.date||source.report.show?.venue!==body.venue||readableArtistName(source.report.show?.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
+   const data=await createWebReportService({store:async()=>source.report,photo:async()=>null})(actor,{concertId:source.report.show.key});
+   return{show:general,timetable:data.report.timetable,kpis:data.report.kpis,reportId:data.show.key};
+  },
   async detail(actor,body){input(body);const row=await artist(actor,body.artistId),directory=await catalogue(actor);const detail={artist:{...row,id:validArtistId(body.artistId)?body.artistId:row.id},requestedReference:body.artistId,canonicalArtistId:row.id,canonicalArtistSlug:directory.routes.get(row.id)};
    if(!body.includeProfile||!directory.profileSupported)return detail;
    const artistIds=[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)];

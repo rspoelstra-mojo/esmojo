@@ -13,7 +13,7 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
  function selection(){content.classList.add('artist-selection-empty');content.replaceChildren(node('p','artist-selection-prompt','Kies eerst een artiest'));}
  if(!selected)selection();
  function openArtist(id,links){
-  let cancelled=false,busy=false;const loaders=new Map(),error=createPageFeedback({key:'artist-page:'+id,label:'Artiest laden',route:'/artiest/'+id});
+  let cancelled=false,busy=false,profileView=null;const loaders=new Map(),error=createPageFeedback({key:'artist-page:'+id,label:'Artiest laden',route:'/artiest/'+id});
   function setLinks(next){const elements=next.length?next:[heading];for(const [el,loader]of loaders)if(!elements.includes(el)){loader.ui.dispose();loaders.delete(el);}for(const el of elements)if(!loaders.has(el)){const ui=createSubmenuLoading(el,content);loaders.set(el,{ui,finish:busy?ui.start():()=>{}});}cache.trackDetail(id,next.map(el=>el.dataset.artistId));if(busy)content.setAttribute('aria-busy','true');}
   async function load(){if(cancelled||busy)return;busy=true;content.classList.remove('artist-selection-empty');content.replaceChildren();for(const loader of loaders.values())loader.finish=loader.ui.start();
    try{
@@ -24,14 +24,20 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     const known=[...(cache.current()?.artists||[]),{id:canonicalId,name:artist.name}],slug=data.canonicalArtistSlug||artistRouteMap(known).get(canonicalId);
     if(!validArtistSlug(slug))throw Error('ARTIST_CATALOGUE');
     resolvedArtist={id:canonicalId,name:artist.name};selected=activeId=normalizeArtistSlug(slug);
-    content.replaceChildren(renderArtistProfile(artist.name,data.profile));document.title=artist.name+' · Artiesten · ESMOJO';
+    profileView?.dispose();profileView=renderArtistProfile(artist.name,data.profile,{
+     loadShow:event=>request('artist-show',{method:'POST',body:{artistId:canonicalId,...event}}),
+     onBusy:()=>{const finishes=[...loaders.values()].map(loader=>loader.ui.start());return()=>finishes.forEach(finish=>finish());},
+     onError:()=>error.show('Het showoverzicht kon niet worden geladen. Klik opnieuw op de concertdatum om het nogmaals te proberen.'),
+     onReady:()=>error.resolved(),
+    });
+    content.replaceChildren(profileView);document.title=artist.name+' · Artiesten · ESMOJO';
     const path='/artiest/'+encodeURIComponent(selected);if(location.pathname!==path)history.replaceState(null,'',path+location.search+location.hash);
     render(cache.current());error.resolved();
    }
    catch{if(!cancelled)error.show('De artiest kon niet worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
    finally{busy=false;for(const loader of loaders.values())loader.finish();if(!cancelled)content.removeAttribute('aria-busy');}
   }
-  setLinks(links);void load();return{setLinks,dispose(){cancelled=true;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
+  setLinks(links);void load();return{setLinks,dispose(){cancelled=true;profileView?.dispose();for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
  }
  function render(state){if(disposed||!state)return;const known=new Map([...submenu.querySelectorAll('[data-artist-link]')].map(el=>[el.dataset.artistLink,el])),selectedLinks=[],routes=artistRouteMap([...(state.artists||[]),...state.mostViewed]);submenu.replaceChildren();
   for(const [group,title,rows]of [['most','Meest bekeken',state.mostViewed],['all','Alle artiesten',state.artists||[]]]){

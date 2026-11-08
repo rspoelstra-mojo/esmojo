@@ -83,3 +83,24 @@ function esmojoArtistAudience_(target){
  }
  return audience;
 }
+
+// Alleen de gekozen historische show van deze artiest. CSV blijft serverzijdig;
+// Node projecteert uitsluitend totalen en het opgeslagen tijdschema naar de UI.
+function esmojoArtistShow_(request){
+ if(Object.keys(request).sort().join(',')!=='actor,artistIds,date,operation,venue'||!Array.isArray(request.artistIds)||!request.artistIds.length||request.artistIds.length>1000||!request.artistIds.every(validArtistId)||!validTimetableDate(request.date)||typeof request.venue!=='string'||!request.venue||request.venue.length>200)throw Error('VALIDATION');
+ esmojoArtistActor_(request.actor);
+ if(request.date>=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'))throw Error('VALIDATION');
+ const ids=new Set(request.artistIds),matches=name=>typeof name==='string'&&ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(name)));
+ const catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),registered=[];
+ const inventory=esmojoWebInventory_(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue,null,registered);
+ const sources=inventory.available.filter(source=>matches(source.show.name)&&source.show.date===request.date&&source.show.venue===request.venue);
+ if(sources.length>1)throw Error('REPORT_CONFLICT');
+ const canonical=[...catalogue.values()].find(show=>matches(show.artist)&&show.date===request.date&&show.venue===request.venue);
+ const historical=registered.find(show=>matches(show.name)&&show.venue===request.venue&&Array.isArray(show.dates)&&show.dates.includes(request.date));
+ if(!sources.length&&!canonical&&!historical)throw Error('NOT_FOUND');
+ const source=sources[0],show={name:source?source.show.name:canonical?canonical.artist:historical.name,venue:request.venue,date:request.date};
+ let timetable=null;
+ if(source){const report=esmojoWebReports_({operation:'web-read',actor:request.actor,concertId:source.show.key},inventory);return{show,report};}
+ if(canonical){try{timetable=esmojoWebTimetable_({key:canonical.concertId,date:canonical.date,venue:canonical.venue});}catch{/* Geen tijden verzinnen. */}}
+ return{show,report:null,timetable};
+}
