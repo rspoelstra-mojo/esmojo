@@ -26,10 +26,13 @@ test('Biografie neemt oorspronkelijke alinea’s over, geen tijdschema, tickets,
  const parsed=parseMojoBiography(html,'Fixture act');assert.ok(parsed.startsWith(text+'\n\n'));assert.equal(parsed.includes('Tickets'),false);assert.equal(parsed.includes('<p>'),false);
  assert.throws(()=>parseMojoBiography(html,'Different artist'),/CONTEXT/);
  assert.throws(()=>parseMojoBiography('<main><h1>Fixture act</h1><p>Geen biografie.</p></main>','Fixture act'),/FORMAT/);
+ const joint='<main><h1>Bloc Party &amp; Interpol</h1><div class="rich-text"><p>Bloc Party maakt al jaren eigenzinnige muziek. Hun concerten zijn bekend om de energie en de herkenbare gitaren.</p><p>Interpol brengt een eigen karakter en sound mee op het podium, gevormd door jaren van internationale optredens.</p></div></main>';
+ assert.ok(parseMojoBiography(joint,'Bloc Party & Interpol').includes('Interpol brengt'));
 });
 test('Ophalen volgt uitsluitend begrensde MOJO-doorverwijzingen en behoudt bron en tekst',async()=>{
  let calls=0;const data=await fetchMojoBiography('Fixture act',{request:async url=>{calls++;return calls===1?new Response(null,{status:302,headers:{location:'/concerten/fixture'}}):new Response(html,{headers:{'Content-Type':'text/html'}});}});
  assert.equal(data.sourceUrl,'https://www.mojo.nl/concerten/fixture');assert.ok(data.text.startsWith(text));
+ const query=await fetchMojoBiography('Fixture act',{request:async url=>url.includes('?date=')?new Response(html,{headers:{'Content-Type':'text/html'}}):new Response(null,{status:302,headers:{location:'/fixtureact?date=2026-11-20'}})});assert.equal(query.sourceUrl,'https://www.mojo.nl/fixtureact');
  let unsafe=0;await assert.rejects(fetchMojoBiography('Fixture act',{request:async()=>{unsafe++;return new Response(null,{status:302,headers:{location:'https://evil.invalid'}});}}),/REDIRECT/);assert.equal(unsafe,1);
 });
 function drive(){
