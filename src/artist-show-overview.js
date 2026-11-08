@@ -8,7 +8,7 @@ export function renderArtistShowOverview(data,{onBack=()=>{}}={}){
  const panel=node('section','artist-show-overview'),bar=node('div','analysis-editor-header artist-show-toolbar'),back=detailBackButton(node('button','profile-back artist-show-back'));
  back.setAttribute('aria-label','Terug naar artiestoverzicht');back.title='Terug naar artiestoverzicht';back.onclick=onBack;
  const date=new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(data.show.date+'T12:00:00Z'));
- const title=node('h2','artist-show-title',date+' · '+data.show.venue);title.tabIndex=-1;bar.append(back,title);panel.append(bar);
+ const title=node('h2','artist-show-title',date+(data.show.performance?' ('+data.show.performance+')':'')+' · '+data.show.venue);title.tabIndex=-1;bar.append(back,title);panel.append(bar);
  const grid=node('div','artist-show-grid');
  const preparation=data.preparation,generalData=preparation?.general,productionData=preparation?.production,pending='Nog toe te voegen';
  const numbers=new Intl.NumberFormat('nl-NL'),densityFormat=new Intl.NumberFormat('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});

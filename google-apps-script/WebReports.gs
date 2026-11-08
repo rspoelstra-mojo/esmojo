@@ -10,9 +10,9 @@ function esmojoWebIndex_(folder){
 function esmojoWebInventory_(folder,knownCatalogue,artistNames,registeredShows){
  const index=esmojoWebIndex_(folder),mailFile=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json'),mail=mailFile?JSON.parse(mailFile.getBlob().getDataAsString('UTF-8')):{version:1,sources:[]};if(mail.version!==1||!Array.isArray(mail.sources))throw Error('REPORT_UNAVAILABLE');
  if(artistNames||registeredShows)for(const report of [...(mail.reports||[]),...(mail.onlineReports||[])])if(typeof report?.show?.name==='string'){artistNames?.push(report.show.name);registeredShows?.push(report.show);}
- const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'),catalogue=knownCatalogue||esmojoTimetableCatalogue_(),choices=[...catalogue.values()].filter(show=>show.date<=today).map(show=>({key:show.concertId,name:show.artist,venue:show.venue,dates:[show.date]})),files=folder.getFiles(),sources=[];let unlinked=0;
+ const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'),catalogue=knownCatalogue||esmojoTimetableCatalogue_(),choices=[...catalogue.values()].filter(show=>show.date<=today).map(show=>({key:show.concertId,name:show.artist,venue:show.venue,dates:[show.date]})),files=folder.getFiles(),sources=[],historical=typeof esmojoHistoricalRegister_==='function'?esmojoHistoricalRegister_().entries:[],historicalIds=new Set(historical.map(row=>row.source.id));let unlinked=0;
  while(files.hasNext()){
-  const file=files.next();if(file.isTrashed()||!/\.csv$/i.test(file.getName()))continue;
+  const file=files.next();if(file.isTrashed()||historicalIds.has(file.getId())||!/\.csv$/i.test(file.getName()))continue;
   const linked=mail.sources.find(source=>source.id===file.getId()),automatic=linked?.showKey?null:reportConcertMatch(file.getName(),choices,ESMOJO_WEB_REPORT_VENUES,today);let choice=linked?.showKey?choices.find(show=>show.key===linked.showKey):automatic.show,show;
   if(choice){const canonical=catalogue.get(choice.key);show={key:choice.key,name:choice.name,venue:choice.venue,date:canonical.date,sourceUrl:canonical.sourceUrl||null,origin:'catalogue'};}
   else if(!linked?.showKey&&automatic.state!=='ambiguous')show=reportFilenameShow(file.getName(),ESMOJO_WEB_REPORT_VENUES,today,[...catalogue.values()].map(show=>show.artist));
@@ -26,7 +26,7 @@ function esmojoWebInventory_(folder,knownCatalogue,artistNames,registeredShows){
  }
  const valid=sources.filter(source=>source.entry?.state==='valid'),latest=new Map();
  for(const source of valid.sort((a,b)=>b.modifiedAt.localeCompare(a.modifiedAt)||a.id.localeCompare(b.id)))if(!latest.has(source.show.key))latest.set(source.show.key,source);
- const available=[...latest.values()],reports=reportCatalogue(available.map(source=>({concertId:source.show.key,name:source.show.name,date:source.show.date,venue:source.show.venue,revision:esmojoOnTrackHash_(source.entry.context+'\n'+source.entry.sourceHash+'\n'+JSON.stringify(source.entry.mojo))})),today);
+ const available=[...latest.values()],reports=reportCatalogue(available.map(source=>({concertId:source.show.key,name:source.show.name,date:source.show.date,venue:source.show.venue,...(source.show.performance?{performance:source.show.performance}:{}),revision:esmojoOnTrackHash_(source.entry.context+'\n'+source.entry.sourceHash+'\n'+JSON.stringify(source.entry.mojo))})),today);
  return{index,catalogue,sources,available,reports,unlinked,pending:sources.some(source=>!source.entry)};
 }
 function esmojoWebSource_(source){

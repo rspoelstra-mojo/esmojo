@@ -2,7 +2,7 @@ import {cleanArtistMenu,normalizeArtistName,validArtistId,compareArtistNames} fr
 const tourText=value=>/\b(?:world[\s-]*tour|tour(?:nee)?|wereldtournee)(?=\b|\d)/iu.test(value);
 const liveYearText=value=>/^live\s+['’‘]?(?:\d{4}|\d{2})$/iu.test(value);
 const performanceText=value=>tourText(value)||liveYearText(value)||/^(?:live|dj[ -]?set|live[ -]?set|solo show|extra show|sold out|uitverkocht)$/iu.test(value.trim());
-const confirmedName=value=>/^(?:Yousuke Yukimatsu|¥ØU\$UK€\s+¥UK1MAT\$U(?:\s*\(Yousuke Yukimatsu\))?)$/iu.test(value)?'Yousuke Yukimatsu':/^new\s+wave(?:\s*(?:[-–—]\s*)?all[\s-]+stars)?$/iu.test(value)?'New Wave':/^u2$/iu.test(value)?'U2':/^oasis$/iu.test(value)?'Oasis':/^numidia(?:\s+[-–—]\s+muziekfeest van het jaar)?$/iu.test(value)?'Numidia':null;
+const confirmedName=value=>/^bouke(?:\s*&\s*the\s+elvismatters(?:\s+band)?|\s+with\s+symphonic\s+orchestra)?$/iu.test(value)?'Bouke':/^(?:Yousuke Yukimatsu|¥ØU\$UK€\s+¥UK1MAT\$U(?:\s*\(Yousuke Yukimatsu\))?)$/iu.test(value)?'Yousuke Yukimatsu':/^new\s+wave(?:\s*(?:[-–—]\s*)?all[\s-]+stars)?$/iu.test(value)?'New Wave':/^u2$/iu.test(value)?'U2':/^oasis$/iu.test(value)?'Oasis':/^numidia(?:\s+[-–—]\s+muziekfeest van het jaar)?$/iu.test(value)?'Numidia':null;
 function undecorate(value){const stripped=value.replace(/^[\s\p{Extended_Pictographic}\uFE0F\u200D★☆✦✧]+|[\s\p{Extended_Pictographic}\uFE0F\u200D★☆✦✧]+$/gu,'').trim();return stripped||value;}
 export function readableArtistName(value){
  normalizeArtistName(value);let name=value.normalize('NFKC').trim().replace(/\s+/g,' ').replace(/^#{1,6}\s+/u,'');

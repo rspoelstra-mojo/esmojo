@@ -1382,3 +1382,17 @@ willekeurig gebeurtenis-ID) als Vertrouwelijk, via beveiligde Vercel en bestaand
 Redis, met 31-daagse bewaartermijn. Geen accountnamen/IDs, IP's of zoektermen.
 Eén gezamenlijke top 5 van echte openkliks in Artiesten, aflopend; alleen typen,
 menu laden/verversen en een directe URL openen leveren geen punt op.
+
+## Historische rapportages (8 november 2026, V1.91)
+
+De gebruiker heeft na de steekproef de gecontroleerde historische collectie
+geautoriseerd. Historische incidents_CSV's staan centraal in private OnTrack;
+bezoekersdata.json en importcontrole.json blijven in Productie/concertmap.
+Registreer historische bron-IDs vóór blootstelling als .csv, zodat normale
+mail/PDF-workers ze overslaan, ook bij een afgebroken import. Alle Division-rijen
+met Schoonmaak (ook gecombineerde disciplines) worden vóór opslag verwijderd.
+Dezelfde native parser en weergave blijven leidend. Bezoekers is ticket_sales,
+eenmaal per voorstelling; ook de artiestshow leest dit bestaande veld.
+Rapportages-submenu maximaal 45 dagen terug; oude rapporten blijven via artiesten
+en directe links beschikbaar. Middag/avond blijven afzonderlijke _S1/_S2-concerten.
+Zie docs/historical-report-import.md voor private batches, OIDC en hervatten.

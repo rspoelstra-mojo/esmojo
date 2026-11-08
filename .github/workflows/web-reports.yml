@@ -8,25 +8,63 @@ on:
         description: Alleen historische rapportages indexeren; geen mails versturen
         type: boolean
         default: false
+      historical_import:
+        description: Privé Drive-batch historisch importeren zonder mail/PDF/AI
+        type: choice
+        options: [none, sample, all]
+        default: none
+      historical_batch:
+        description: Bestandsnaam van de gecontroleerde batch in private Productie
+        type: string
+        default: ''
 permissions:
   contents: read
   id-token: write
 concurrency:
-  group: web-reports-production
+  group: ${{ inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || 'web-reports-production' }}
   cancel-in-progress: false
 jobs:
   index:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 90
     steps:
       - name: Publish web reports and deliver online mail independently of PDF generation
         env:
+          HISTORICAL_IMPORT: ${{ inputs.historical_import }}
+          HISTORICAL_BATCH: ${{ inputs.historical_batch }}
           HISTORICAL_ONLY: ${{ inputs.historical_only }}
         run: |
           node --input-type=module <<'JS'
-          const endpoint='https://esmojo.nl/api/web-reports-sync',url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
-          const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
-          const {value}=await identity.json();console.log(`::add-mask::${value}`);
-          const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},...(process.env.HISTORICAL_ONLY==='true'?{body:JSON.stringify({historicalOnly:true})}:{}),signal:AbortSignal.timeout(310000)});if(!response.ok)throw Error('Webinventarisatie niet bevestigd; geen broninhoud in logs.');
-          const result=await response.json();if(result.ok!==true)throw Error('Webinventarisatie niet bevestigd.');console.log(JSON.stringify(process.env.HISTORICAL_ONLY==='true'?{ok:result.ok,registered:result.registered,validated:result.validated,invalid:result.invalid,available:result.available}:{ok:true}));
+          const endpoint='https://esmojo.nl/api/web-reports-sync';
+          async function call(body){
+            const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+            const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
+            const {value}=await identity.json();console.log(`::add-mask::${value}`);
+            const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(310000)});
+            if(!response.ok)throw Error('Verwerking niet bevestigd; geen broninhoud in logs.');
+            const result=await response.json();if(result.ok!==true)throw Error('Verwerking niet bevestigd.');return result;
+          }
+          const phase=process.env.HISTORICAL_IMPORT,importing=['sample','all'].includes(phase);
+          if(importing){
+            if(!/^historical-[a-z0-9-]{1,70}\.json$/.test(process.env.HISTORICAL_BATCH||''))throw Error('Ongeldige batchnaam.');
+            let complete=false;for(let i=0;i<600;i++){
+              const result=await call({historicalImport:true,batch:process.env.HISTORICAL_BATCH,phase});
+              console.log(JSON.stringify({total:result.total,complete:result.complete,pending:result.pending}));
+              if(result.pending===0){complete=true;break;}
+            }if(!complete)throw Error('Import nog niet volledig; hervat dezelfde batch.');
+          }
+          if(importing||process.env.HISTORICAL_ONLY==='true'){
+            let complete=false;for(let i=0;i<200;i++){
+              const result=await call({historicalOnly:true});
+              console.log(JSON.stringify({registered:result.registered,validated:result.validated,invalid:result.invalid}));
+              if(result.registered===result.validated){complete=true;break;}
+            }if(!complete)throw Error('Historische indexering nog niet volledig.');
+          }else{await call();console.log(JSON.stringify({ok:true}));}
+          if(importing){
+            let offset=0;for(let i=0;i<200;i++){
+              const result=await call({historicalVerify:true,batch:process.env.HISTORICAL_BATCH,phase,offset});
+              if(result.nextOffset===offset&&offset<result.total)throw Error('Verificatie niet volledig.');
+              offset=result.nextOffset;console.log(JSON.stringify({verified:offset,total:result.total}));if(offset===result.total)break;
+            }
+          }
           JS
