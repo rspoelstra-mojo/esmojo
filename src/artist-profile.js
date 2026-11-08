@@ -71,7 +71,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
   }catch{if(!disposed&&ticket===selection)onError();}
   finally{button.removeAttribute('aria-busy');finish();}
  }
- main.append(header,detail);
+ main.append(detail);
 
  const history=node('section','artist-profile-card artist-concert-history');
  history.append(node('h2','','Concert historie'));
@@ -94,7 +94,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
   }
   history.append(list);
  }else history.append(node('p','',unavailable));
- layout.append(main,history);
- page.append(layout);
+ layout.append(history,main);
+ page.append(header,layout);
  return page;
 }
