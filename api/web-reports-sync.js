@@ -24,8 +24,8 @@ export function makeWebReportsSync({identify=(token,{metricsOnly=false}={})=>ver
     const status=await service.historicalStatus();return res.status(200).json({ok:status.invalid===0,...status});
    }await service.synchronize();if(online)await online.run();return res.status(200).json({ok:true});}catch(error){
    const worker=req.body?.incidentRefresh===true||req.body?.historicalOnly===true||req.body?.historicalImport===true||req.body?.historicalVerify===true;
-   const codes=['DUPLICATE_CONCERT','INVALID_TOTAL','INVALID_CONCERT','SHOWS_UNAVAILABLE','SHOWS_CONFIG','BUSY','DRIVE_TIMEOUT','DRIVE_CONNECTION','DRIVE_HTTP','DRIVE_RESPONSE','FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','NOT_FOUND','ONTRACK_REPORT_UNAVAILABLE'];
-   const stages=['incident-read','incident-source','incident-counts','web-scan','web-source','web-commit','web-historical-status','historical-import-read','historical-import-commit','historical-import-verify'];
+   const codes=['INCIDENT_REFERENCES_NO_ELIGIBLE_REPORTS','DUPLICATE_CONCERT','INVALID_TOTAL','INVALID_CONCERT','SHOWS_UNAVAILABLE','SHOWS_CONFIG','BUSY','DRIVE_TIMEOUT','DRIVE_CONNECTION','DRIVE_HTTP','DRIVE_RESPONSE','FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','NOT_FOUND','ONTRACK_REPORT_UNAVAILABLE'];
+   const stages=['incident-daily-state','incident-daily-start','incident-daily-publish','incident-daily-read','incident-read','incident-source','incident-counts','web-scan','web-source','web-commit','web-historical-status','historical-import-read','historical-import-commit','historical-import-verify'];
    const code=codes.includes(error.workerCode||error.message)?error.workerCode||error.message:'UNCONFIRMED',stage=stages.includes(error.workerOperation)?error.workerOperation:'UNKNOWN';
    return res.status(503).json({error:'Webrapportage-inventarisatie niet bevestigd.',...(worker?{code,stage}:{})});
   }};

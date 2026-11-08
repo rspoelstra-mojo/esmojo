@@ -112,3 +112,28 @@ V1.99: interactieve Incidenten- en artiestscore-reads voeren geen CSV-herbouw ui
 Eén metadata-/cacheread geeft direct de stand en voortgang terug. Uitsluitend de
 achtergrondwerker leest en verwerkt de CSV-bronnen. Geen wachtrij van writes
 voor het weergeven van de beheerpagina.
+
+## Vaste dagstand rond Nederlandse middernacht
+
+De aanvullende gebruikersopdracht vervangt de actualisatie gedurende de dag.
+`_esmojo_incident_daily_v1.json` bewaart één complete vertrouwelijke dagstand in
+Drive. Dagstand bevat de referenties, twaalf volledige rekensommen en de compacte
+alleen-lezen concertgegevens. `incident-daily-read` controleert actuele rechten
+en leest uitsluitend dit bestand; geen inventarisatie, CSV of berekening.
+De beheerpagina leest eenmaal bij openen en heeft geen automatische polling.
+
+De webworkflow behoudt zijn gewone vijfminutenplanning voor rapportages/mail,
+maar verandert daarbij geen incidentcijfers meer. De afzonderlijke cron
+`0 22,23 * * *` controleert Europe/Amsterdam en voert uitsluitend om lokaal 00:00
+de incidenttaak uit. De andere UTC-ronde stopt zonder API-aanroep. GitHub kan
+geplande taken later starten; het opgeslagen tijdstip is de echte publicatietijd.
+Een nachtelijke herbouw toont de vorige complete stand tot de nieuwe klaar is.
+Eerste installatie mag eenmalig direct de reeds complete tellingen publiceren.
+
+Server en Drive bewaken de kalenderdag: dezelfde dagstand wordt nooit door een
+herhaalde workflow, nieuwe CSV of paginabezoek overschreven. Een begonnen nacht-
+taak kan gecontroleerd afronden (maximaal vier uur); daarna blijven alleen de
+vorige complete cijfers staan. Fouten of onvolledige bronnen publiceren niets.
+Artiestenscores gebruiken dezelfde gepubliceerde referenties; de eigen actuele
+volledige analyses blijven apart leesbaar. Alle opslag blijft vertrouwelijk in
+Drive. Geen nieuwe browseropslag, Supabase-tabel of openbare leesroute.

@@ -135,7 +135,7 @@ jobs:
           node server/mobile-navigation.test.js
           node server/risk-analysis-page.test.js
           node .agents/skills/esmojo-concertonderzoek/scripts/workflow.test.mjs
-      - name: Automatische incidentgegevens in Chrome
+      - name: Vaste incidentdagstand in Chrome
         run: node tools/ui/check-incident-registration.mjs
       - name: Email previews zonder verzending
         run: node tools/email/check-preview.mjs /tmp/esmojo-email-preview

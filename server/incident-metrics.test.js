@@ -50,19 +50,23 @@ test('Historische CSV vóór 1 november gebruikt ingevoerde tickets 1:1; grensda
  const fresh=drive();fresh.sales('');assert.equal(fresh.call('incident-read').rows[0].visitors,null);fresh.sales('1001',false);assert.equal(fresh.call('incident-read').rows[0].visitors,null);fresh.sales('0');assert.equal(fresh.call('incident-read').rows[0].visitors,0);
  fresh.sales(JSON.stringify([{date:'2026-11-01',count:'9000'},{date:'2026-11-02',count:'1000'}]));assert.equal(fresh.call('incident-read').rows[0].visitors,975);fresh.sales('2000');assert.equal(fresh.call('incident-read').rows[0].visitors,1950);assert.equal(fresh.writes(),0);
 });
-test('Service lekt geen bronregistraties via artiestantwoord en geeft bij ontbrekende gegevens geen score',async()=>{
- const service=createIncidentMetricsService({shows:async op=>{assert.equal(op,'incident-read');return{policyVersion:2,rows:[row('a')],jobs:[],updatedAt:null};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references.indicators.security.total.rate,0);
+test('Artiestscore gebruikt dezelfde gepubliceerde dagreferenties en geeft geen beheerregistraties door',async()=>{
+ const rows=[row('a')],references=incidentReferences(rows);let reads=0;
+ const service=createIncidentMetricsService({shows:async(op,body)=>{reads++;if(op==='incident-daily-read'){assert.equal(body.referencesOnly,true);return{references,updatedAt:'2026-11-08T00:00:00Z'};}assert.equal(op,'incident-read');return{policyVersion:2,rows,jobs:[]};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references,references);assert.equal(reads,2);
 });
-test('Bron naar telling gebruikt dezelfde rapportagerekenlaag, onafhankelijke totalen en personenweging; gewijzigde bytes worden geweigerd',async()=>{
+test('Nachtwerker behoudt rapportagerekenlaag en vorige dagstand bij gewijzigde bytes; overdag alleen snapshot-read',async()=>{
  const {csvFixture}=await import('./test-support/web-reports-drive.js'),{calculateReport}=await import('./ontrack-report/data.js'),{webReportKpis}=await import('./report-web.js');
- const csv=csvFixture('2026-11-01',[{ID:'1',Division:'Medisch',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'2'},{ID:'2',Division:'Beveiliging',Type:'Verbale agressie','Resolved Status':'Eviction','Affected Person':'3'},{ID:'3',Division:'Medisch',Type:'Contusie / Distorsie'}]),hash=createHash('sha256').update(csv).digest('hex');let cache=null,commits=0,tampered=false;
+ const csv=csvFixture('2026-11-01',[{ID:'1',Division:'Medisch',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'2'},{ID:'2',Division:'Beveiliging',Type:'Verbale agressie','Resolved Status':'Eviction','Affected Person':'3'},{ID:'3',Division:'Medisch',Type:'Contusie / Distorsie'}]),hash=createHash('sha256').update(csv).digest('hex');let cache=null,commits=0,tampered=false,published=null,day='2026-11-08',lastOp=null;
  const service=createIncidentMetricsService({shows:async(op,payload)=>{
-  if(op==='incident-read')return{policyVersion:2,workerVersion:2,rows:[row('a',{kpis:cache,sourceReady:true,hasSource:true})],jobs:cache?[]:['a'],updatedAt:null};
+  lastOp=op;if(op==='incident-daily-start')return{workerVersion:3,day,needsUpdate:!published||published.day!==day};
+  if(op==='incident-daily-read')return published?.payload||{references:null,status:'not-ready'};
+  if(op==='incident-daily-publish'){published={day:payload.day,payload:payload.payload};return{ok:true};}
+  if(op==='incident-read')return{policyVersion:2,workerVersion:2,rows:[row('a',{kpis:cache,sourceReady:true,hasSource:true})],jobs:cache?[]:['a']};
   if(op==='incident-source')return{csvBase64:Buffer.from(tampered?csv+'tampered':csv).toString('base64'),sourceHash:hash,date:'2026-11-01',modifiedAt:'2026-11-02T00:00:00Z'};
-  assert.equal(op,'incident-counts');assert.equal(payload.worker,true);assert.equal(payload.actor,undefined);assert.equal(payload.sourceHash,hash);cache=payload.kpis;commits++;return{ok:true};
+  assert.equal(op,'incident-counts');assert.equal(payload.worker,true);assert.equal(payload.sourceHash,hash);cache=payload.kpis;commits++;return{ok:true};
  }});
- const refreshed=await service.refresh();assert.equal(refreshed.status,'complete');const result=await service.snapshot('actor');assert.equal(result.pending,false);assert.deepEqual(cache,webReportKpis(calculateReport(Buffer.from(csv),{generatedAt:'2026-11-02T00:00:00Z'})));assert.equal(cache.medical.total,2);assert.equal(cache.medical.ambulance,2);assert.equal(cache.security.total,1);assert.equal(cache.security.evictions,3);assert.equal(cache.security.verbal,1);assert.equal(commits,1);
- await service.snapshot('actor');assert.equal(commits,1);cache=null;tampered=true;await assert.rejects(service.refresh(),/SOURCE_CHANGED/);assert.equal(commits,1);
+ assert.equal((await service.refresh()).status,'complete');const result=await service.snapshot('actor');assert.equal(lastOp,'incident-daily-read');assert.equal(result.pending,false);assert.deepEqual(cache,webReportKpis(calculateReport(Buffer.from(csv),{generatedAt:'2026-11-02T00:00:00Z'})));assert.equal(cache.medical.total,2);assert.equal(cache.medical.ambulance,2);assert.equal(cache.security.total,1);assert.equal(cache.security.evictions,3);assert.equal(commits,1);
+ await service.refresh();assert.equal(commits,1);const previous=published;cache=null;tampered=true;day='2026-11-09';await assert.rejects(service.refresh(),/SOURCE_CHANGED/);assert.equal(commits,1);assert.equal(published,previous);
 });
 test('Incidentbeheer vereist beheerder, MFA en actieve sessie; artiestscore wordt apart door Artiestenrechten beschermd',async()=>{
  const {makeAccountsHandler}=await import('./accounts-api.js');
@@ -110,21 +114,49 @@ test('Historische telling en cachecommit vermijden de volledige inventaris, maar
  f.advance(1000);file.setContent(csvFixture('2025-02-01',[{ID:'changed'}]));assert.throws(()=>f.ctx.esmojoIncidentMetrics_({operation:'incident-source',...request}),/SOURCE_CHANGED/);
  file.moveTo(f.outside);assert.throws(()=>f.ctx.esmojoIncidentMetrics_({operation:'incident-source',...request}),/SOURCE_MISSING/);
 });
-test('Interactieve reads wachten nooit op CSV-herbouw en rapporteren echte voortgang zonder onvolledige score',async()=>{
- let calls=0;const service=createIncidentMetricsService({shows:async(op)=>{
-  calls++;assert.equal(op,'incident-read','Een paginaverzoek mag geen CSV ophalen of telling opslaan');
-  return{policyVersion:2,rows:[row('a',{hasSource:true,sourceReady:true,kpis:kpis()}),row('b',{hasSource:true,sourceReady:true,kpis:null})],jobs:['b'],jobSources:{b:'source-b'}};
- }});
- const data=await service.snapshot('actor');assert.equal(calls,1);assert.equal(data.pending,true);assert.equal(data.references,null);assert.equal(data.score,null);assert.deepEqual(data.progress,{available:2,eligible:2,processed:1,visitors:2000});
+test('Beheerpagina doet precies één snapshot-read en geen inventarisatie, CSV-read of schrijfverzoek',async()=>{
+ let calls=0;const frozen={pending:false,references:incidentReferences([row('a')]),shows:[],updatedAt:'2026-11-08T00:01:00Z',day:'2026-11-08',status:'ready'};
+ const service=createIncidentMetricsService({shows:async(op)=>{calls++;assert.equal(op,'incident-daily-read');return frozen;}});
+ assert.equal(await service.snapshot('actor'),frozen);assert.equal(calls,1);
 });
-test('Worker v2 verwerkt vijf per ronde, hergebruikt bronverwijzingen en controleert de complete referenties vóór gereedmelding',async()=>{
- const {csvFixture}=await import('./test-support/web-reports-drive.js');const csv=csvFixture('2026-11-01'),hash=createHash('sha256').update(csv).digest('hex'),rows=Array.from({length:6},(_,i)=>row('id-'+i,{kpis:null,sourceReady:true,hasSource:true}));let reads=0,writes=0;
+test('Nachtwerker verwerkt vijf per ronde en publiceert één complete dagstand; dezelfde dag geen nieuwe bronreads',async()=>{
+ const {csvFixture}=await import('./test-support/web-reports-drive.js');const csv=csvFixture('2026-11-01'),hash=createHash('sha256').update(csv).digest('hex'),rows=Array.from({length:6},(_,i)=>row('id-'+i,{kpis:null,sourceReady:true,hasSource:true}));let reads=0,writes=0,published=null;
  const service=createIncidentMetricsService({shows:async(op,payload)=>{
+  if(op==='incident-daily-start')return{workerVersion:3,day:'2026-11-08',needsUpdate:!published};
+  if(op==='incident-daily-publish'){assert.equal(payload.payload.references.concerts,6);published=payload.payload;return{ok:true};}
   if(op==='incident-read'){reads++;return{policyVersion:2,workerVersion:2,rows:structuredClone(rows),jobs:rows.filter(row=>!row.kpis).map(row=>row.concertId),jobSources:Object.fromEntries(rows.map(row=>[row.concertId,'source-'+row.concertId]))};}
-  assert.equal(payload.worker,true);assert.equal(payload.actor,undefined);assert.equal(payload.sourceId,'source-'+payload.concertId);
+  assert.equal(payload.worker,true);assert.equal(payload.sourceId,'source-'+payload.concertId);
   if(op==='incident-source')return{csvBase64:Buffer.from(csv).toString('base64'),sourceHash:hash,date:'2026-11-01',modifiedAt:'2026-11-02T00:00:00Z'};
   assert.equal(op,'incident-counts');rows.find(row=>row.concertId===payload.concertId).kpis=payload.kpis;writes++;return{ok:true};
  }});
- assert.deepEqual(await service.refresh(),{ok:true,workerVersion:2,pending:true,status:'processing'});assert.equal(writes,5);assert.equal(reads,1);
- assert.deepEqual(await service.refresh(),{ok:true,workerVersion:2,pending:false,status:'complete'});assert.equal(writes,6);assert.equal(reads,2);
+ assert.deepEqual(await service.refresh(),{ok:true,workerVersion:3,pending:true,status:'processing'});assert.equal(writes,5);assert.equal(reads,1);assert.equal(published,null);
+ assert.deepEqual(await service.refresh(),{ok:true,workerVersion:3,pending:false,status:'complete'});assert.equal(writes,6);assert.equal(reads,2);
+ await service.refresh();assert.equal(writes,6);assert.equal(reads,2);
+});
+function dailyDrive(at='2026-11-08T14:00:00Z'){
+ let clock=Date.parse(at),text=null,writes=0,auth=0;class Clock extends Date{constructor(...args){super(...(args.length?args:[clock]));}}
+ const file={getBlob:()=>({getDataAsString:()=>text}),setContent:value=>{writes++;text=value;}},folder={createFile:blob=>{writes++;text=blob.text;return file;}};
+ const ctx=vm.createContext({Date:Clock,Number,Object,Array,JSON,DriveApp:{getFolderById:()=>folder},ESMOJO_FOLDER_ID:'root',esmojoShowFile_:()=>text?file:null,Utilities:{newBlob:text=>({text}),formatDate:(date,zone,pattern)=>new Intl.DateTimeFormat(pattern==='HH'?'en-GB':'en-CA',{timeZone:zone,...(pattern==='HH'?{hour:'2-digit',hourCycle:'h23'}:{year:'numeric',month:'2-digit',day:'2-digit'})}).format(date)},validTimetableDate:v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&new Date(v).toISOString().slice(0,10)===v,esmojoIncidentActor_:(actor,admin)=>{auth++;if(actor!=='admin'&&(admin||actor!=='artist'))throw Error('FORBIDDEN');},esmojoIncidentInventory_:()=>{throw Error('UNEXPECTED_SCAN');}});
+ vm.runInContext(readFileSync('google-apps-script/IncidentDaily.gs','utf8'),ctx);
+ return{call:(operation,body={})=>JSON.parse(JSON.stringify(ctx.esmojoIncidentDaily_({operation,...(operation==='incident-daily-read'?{actor:'admin'}:{worker:true}),...body}))),time:at=>clock=Date.parse(at),writes:()=>writes,auth:()=>auth,payload:(visitors=1000)=>({pending:false,references:incidentReferences([row('fixture',{visitors,visitorUnits:Math.round(visitors*40),kpis:kpis(1)})]),progress:{available:1,eligible:1,processed:1,visitors},shows:[],score:null,updatedAt:new Date(clock).toISOString()})};
+}
+test('Drive-dagstand initialiseert eenmaal; overdag geen overschrijven, inventariseren of rekenen bij openen',()=>{
+ const d=dailyDrive();assert.equal(d.call('incident-daily-state').needsUpdate,true);assert.equal(d.call('incident-daily-read').status,'not-ready');assert.equal(d.writes(),0);
+ const state=d.call('incident-daily-start'),payload=d.payload();assert.equal(state.day,'2026-11-08');d.call('incident-daily-publish',{day:state.day,payload});const stored=d.call('incident-daily-read');assert.equal(stored.references.visitors,1000);assert.equal(stored.day,state.day);assert.equal(d.auth(),2);
+ const writes=d.writes();assert.equal(d.call('incident-daily-start').needsUpdate,false);assert.equal(d.call('incident-daily-publish',{day:state.day,payload:d.payload(2000)}).unchanged,true);assert.equal(d.call('incident-daily-read').references.visitors,1000);assert.equal(d.writes(),writes);
+ assert.throws(()=>d.call('incident-daily-read',{actor:'artist'}),/FORBIDDEN/);const limited=d.call('incident-daily-read',{actor:'artist',referencesOnly:true});assert.equal(limited.references.visitors,1000);assert.equal('shows' in limited,false);
+ assert.throws(()=>d.call('incident-daily-publish',{worker:false,day:state.day,payload}),/FORBIDDEN/);
+ const fractional=dailyDrive(),start=fractional.call('incident-daily-start');fractional.call('incident-daily-publish',{day:start.day,payload:fractional.payload(975.975)});assert.equal(fractional.call('incident-daily-read').references.visitors,975.975);
+});
+test('Alleen Nederlandse nacht opent volgende dagstand; vorige complete stand blijft bij ongeldige publicatie of fout',()=>{
+ const d=dailyDrive(),initial=d.call('incident-daily-start');d.call('incident-daily-publish',{day:initial.day,payload:d.payload()});
+ d.time('2026-11-08T22:59:00Z');assert.equal(d.call('incident-daily-state').needsUpdate,false);d.time('2026-11-08T23:00:00Z');assert.equal(d.call('incident-daily-state').needsUpdate,true);const next=d.call('incident-daily-start');assert.equal(next.day,'2026-11-09');assert.equal(d.call('incident-daily-read').day,'2026-11-08');
+ const invalid=d.payload(2000);invalid.references.indicators.medical.total.visitors=1;assert.throws(()=>d.call('incident-daily-publish',{day:next.day,payload:invalid}),/VALIDATION/);assert.equal(d.call('incident-daily-read').references.visitors,1000);
+ d.call('incident-daily-publish',{day:next.day,payload:d.payload(2000)});d.time('2026-11-09T14:00:00Z');assert.equal(d.call('incident-daily-state').needsUpdate,false);assert.equal(d.call('incident-daily-read').references.visitors,2000);
+ d.time('2026-11-10T14:00:00Z');assert.equal(d.call('incident-daily-state').needsUpdate,false);assert.throws(()=>d.call('incident-daily-publish',{day:'2026-11-10',payload:d.payload(3000)}),/FORBIDDEN/);assert.equal(d.call('incident-daily-read').day,'2026-11-09');
+});
+test('Nachtelijke verwerking mag na 00:59 afronden; verlopen herbouw publiceert overdag niet onverwacht',()=>{
+ for(const [at,allowed]of [['2026-11-09T01:00:00Z',true],['2026-11-09T04:00:00Z',false]]){
+  const d=dailyDrive(),initial=d.call('incident-daily-start');d.call('incident-daily-publish',{day:initial.day,payload:d.payload()});d.time('2026-11-08T23:00:00Z');d.call('incident-daily-start');d.time(at);assert.equal(d.call('incident-daily-state').needsUpdate,allowed,at);
+ }
 });

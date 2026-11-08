@@ -18,20 +18,30 @@ export function createIncidentMetricsService({shows}={}){
    await invoke('incident-counts',{...authority,concertId,sourceHash:source.sourceHash,kpis});return kpis;
   })().finally(()=>running.delete(key));running.set(key,job);return job;
  }
+ function project(source){
+  const references=incidentReferences(source.rows),eligible=source.rows.filter(row=>row.sourceReady&&row.securityComplete&&row.medicalComplete&&incidentVisitorUnits(row)>0);
+  const progress={available:source.rows.filter(row=>row.sourceReady).length,eligible:eligible.length,processed:eligible.filter(suitableIncidents).length,visitors:eligible.reduce((sum,row)=>sum+incidentVisitorUnits(row),0)/40};
+  return{pending:false,references,progress,updatedAt:new Date().toISOString(),score:null,shows:source.rows.map(({kpis,visitorsFinal,artistFinal,visitorsRating,artistRating,operationalLevels,activeConcertId,...row})=>({...row,countsReady:Boolean(kpis)}))};
+ }
  async function snapshot(actor,artistIds=null){
-  const payload={actor,...(artistIds?{artistIds}:{})},source=await invoke('incident-read',payload);
-  const pending=Boolean(source.jobs?.length),references=pending?null:incidentReferences(source.rows);
-  const eligible=source.rows.filter(row=>row.sourceReady&&row.securityComplete&&row.medicalComplete&&incidentVisitorUnits(row)>0),progress={available:source.rows.filter(row=>row.sourceReady).length,eligible:eligible.length,processed:eligible.filter(suitableIncidents).length,visitors:eligible.reduce((sum,row)=>sum+incidentVisitorUnits(row),0)/40};
-  const own=artistIds?source.rows.filter(row=>artistIds.includes('a_'+createHash('sha256').update(normalizeArtistName(row.name)).digest('hex'))):null;
-  return{pending,references,progress,updatedAt:new Date().toISOString(),score:own&&!pending?calculateArtistRisk(own,references):null,...(!artistIds?{shows:source.rows.map(({kpis,visitorsFinal,artistFinal,visitorsRating,artistRating,operationalLevels,activeConcertId,...row})=>({...row,countsReady:Boolean(kpis)}))}:{})};
+  // De beheerpagina heeft exact één geautoriseerde read, zonder inventarisatie.
+  const published=await invoke('incident-daily-read',{actor,...(artistIds?{referencesOnly:true}:{})});
+  if(!artistIds)return published;
+  const source=await invoke('incident-read',{actor,artistIds}),own=source.rows.filter(row=>artistIds.includes('a_'+createHash('sha256').update(normalizeArtistName(row.name)).digest('hex')));
+  return{pending:false,references:published.references,updatedAt:published.updatedAt,score:calculateArtistRisk(own,published.references)};
  }
  return{snapshot,async refresh({checkOnly=false}={}){
-  const data=await invoke('incident-read',{worker:true});
-  if(data.workerVersion!==2)throw Error('SHOWS_UNAVAILABLE');
+  const state=await invoke(checkOnly?'incident-daily-state':'incident-daily-start',{worker:true});
+  if(state.workerVersion!==3)throw Error('SHOWS_UNAVAILABLE');
+  if(checkOnly||!state.needsUpdate)return{ok:true,workerVersion:3,pending:Boolean(state.needsUpdate),status:state.needsUpdate?'processing':'complete'};
+  const data=await invoke('incident-read',{worker:true});if(data.workerVersion!==2)throw Error('SHOWS_UNAVAILABLE');
   const batch=(data.jobs||[]).slice(0,5);
-  if(!checkOnly)for(const concertId of batch){const kpis=await update(null,concertId,true,data.jobSources?.[concertId]);const row=data.rows.find(row=>row.concertId===concertId);if(row)row.kpis=kpis;}
-  const pending=checkOnly?Boolean(data.jobs?.length):(data.jobs?.length||0)>batch.length;
-  if(!checkOnly&&!pending)incidentReferences(data.rows);
-  return{ok:true,workerVersion:2,pending,status:pending?'processing':data.rows.some(row=>row.sourceReady&&incidentVisitorUnits(row)>0)?'complete':'no_eligible_reports'};
+  for(const concertId of batch){const kpis=await update(null,concertId,true,data.jobSources?.[concertId]);const row=data.rows.find(row=>row.concertId===concertId);if(row)row.kpis=kpis;}
+  const pending=(data.jobs?.length||0)>batch.length;
+  if(pending)return{ok:true,workerVersion:3,pending:true,status:'processing'};
+  const payload=project(data);
+  if(payload.progress.available>0&&payload.references.concerts===0)throw Error('INCIDENT_REFERENCES_NO_ELIGIBLE_REPORTS');
+  await invoke('incident-daily-publish',{worker:true,day:state.day,payload});
+  return{ok:true,workerVersion:3,pending:false,status:'complete'};
  }};
 }

@@ -24,6 +24,12 @@ overschrijven en ontbrekende verkoop/CSV niet als nul behandelen. Reken zonder
 tussentijdse afronding. Bij referentie nul: artiestfrequentie nul geeft nul punten;
 positief geeft het categoriepuntenmaximum.
 
+De gebruiker vraagt aanvullend een vaste incidentdagstand: dagelijks rond 00.00
+Nederlandse tijd atomair publiceren en de rest van die kalenderdag niet wijzigen.
+Beheerpagina leest uitsluitend de vertrouwelijke opgeslagen Drive-dagstand, zonder
+inventarisatie of berekening bij openen. Eenmalige eerste initialisatie mag direct.
+Behoud vorige complete dagstand bij fouten; geen herbouw iedere vijf minuten.
+
 ## Uitvoering en publicatie
 
 Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende

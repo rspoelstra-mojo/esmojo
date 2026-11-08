@@ -71,6 +71,7 @@ function esmojoIncidentCountsValid_(kpis){
  return Object.entries({security:['total','verbal','physical','mischief','evictions','arrests'],medical:['total','treatments','selfcare','unwell','contusion','ambulance']}).every(([group,keys])=>kpis[group]&&Object.keys(kpis[group]).sort().join()===keys.sort().join()&&keys.every(key=>Number.isSafeInteger(kpis[group][key])&&kpis[group][key]>=0));
 }
 function esmojoIncidentMetrics_(request){
+ if(String(request.operation).startsWith('incident-daily-'))return esmojoIncidentDaily_(request);
  const op=request.operation,allowed={'incident-read':['actor','artistIds','worker','operation'],'incident-source':['actor','concertId','sourceId','worker','operation'],'incident-counts':['actor','concertId','sourceId','sourceHash','kpis','worker','operation']}[op];
  if(!allowed||Object.keys(request).some(key=>!allowed.includes(key)))throw Error('VALIDATION');
  if(request.worker!==undefined&&request.worker!==true)throw Error('VALIDATION');
