@@ -41,17 +41,18 @@ export function showMeasures(show,snapshot={}){
  return{rows,allRisksCompleted,complete:allRisksCompleted&&definition.known&&rows.every(row=>row.implemented)};
 }
 export function showPlanning(show,snapshot={},now=new Date()){
-  const dates=[...(show.dates||[])].sort();if(!dates.length||dates.some(date=>calendarDay(date)===null))return null;
+  const dates=[...new Set(show.dates||[])].sort();if(!dates.length||dates.some(date=>calendarDay(date)===null))return null;
   const start=calendarDay(dates[0]),today=dutchToday(now),todayTime=calendarDay(today);
+  const lastShowDate=dates.at(-1),nextShowDate=dates.find(date=>date>=today&&(!show.activeDates||show.activeDates.includes(date)))||lastShowDate;
   const completed=snapshot.completion||{profile:snapshot.pdf?.state==='ready',production:productionComplete(show,snapshot),operational:operationalComplete(snapshot),measures:showMeasures(show,snapshot).complete};
   const profileDates=Object.values(snapshot.profile?.finalization?.categories||{}).map(row=>row.completedAt).filter(value=>Number.isFinite(Date.parse(value))).sort();
   const steps=definitions.map(([id,label,offset])=>{
-    const date=new Date(start-offset*DAY).toISOString().slice(0,10),days=Math.round((calendarDay(date)-todayTime)/DAY),done=completed[id]===true;
+    const date=id==='show'?nextShowDate:new Date(start-offset*DAY).toISOString().slice(0,10),days=Math.round((calendarDay(date)-todayTime)/DAY),done=id==='show'?today>lastShowDate:completed[id]===true;
     const completedAt=id==='profile'&&done?profileDates.at(-1):null;
     const relative=days===0?'Vandaag':days===1?'Morgen':days===-1?'1 dag te laat':days<0?`${-days} dagen te laat`:`Over ${days} dagen`;
     return{id,label,date,days,completed:done,completedAt,badge:done?'Afgerond'+(completedAt?' · '+planningDate(dutchToday(new Date(completedAt))):''):id==='show'?'Showdag':relative};
   });
-  const next=steps.find(step=>!step.completed&&step.id!=='show')||steps[4];next.current=true;
+  const next=steps.find(step=>!step.completed&&step.id!=='show')||steps[4];next.current=!next.completed;
   const points=steps.map(step=>calendarDay(step.date));let position=10;
   if(todayTime>=points[4])position=90;
   else if(todayTime>points[0]){const i=points.findIndex(point=>point>=todayTime);position=10+20*(i-1+(todayTime-points[i-1])/(points[i]-points[i-1]));}

@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const now=new Date('2026-11-04T12:00:00Z'),show=(key,date,extra={})=>({key,name:key,venueId:'gashouder',venue:'Gashouder',city:'Amsterdam',dates:[date],assigned:true,snapshot:{},...extra});
 test('Alleen Gashouder; vijf kaarten maar volledige persoonlijke deadline- en showverzameling',()=>{
  const data={shows:[...Array.from({length:8},(_,i)=>show('show-'+i,`2026-11-${String(i+5).padStart(2,'0')}`)),show('andere-zaal','2026-11-04',{venueId:'ziggo-dome',venue:'Ziggo Dome'}),show('verwijderd','2026-11-04',{deleted:true}),show('ongekoppeld','2026-11-04',{assigned:false})]};
- const model=homePlanning(data,now);assert.equal(model.shows.length,9);assert.equal(model.upcoming.length,5);assert.equal(model.upcoming[0].key,'ongekoppeld');assert.equal(model.assigned.length,8);assert.equal(model.tasks.length,40);assert.equal(model.completedCount,0);assert.ok(model.tasks.every(task=>task.showKey.startsWith('show-')));assert.equal(model.groups.at(-1).tasks.some(task=>task.date>'2026-11-08'),false);assert.equal(model.tasks.some(task=>task.date>'2026-11-08'),true);
+ const model=homePlanning(data,now);assert.equal(model.shows.length,9);assert.equal(model.upcoming.length,5);assert.equal(model.upcoming[0].key,'ongekoppeld');assert.equal(model.assigned.length,8);assert.equal(model.tasks.length,40);assert.equal(model.completedCount,0);assert.ok(model.tasks.every(task=>task.showKey.startsWith('show-')));assert.equal(model.groups.find(group=>group.id==='week').tasks.some(task=>task.date>'2026-11-08'),false);assert.equal(model.groups.find(group=>group.id==='next-week').tasks.every(task=>task.date>'2026-11-08'&&task.date<='2026-11-15'),true);assert.equal(model.tasks.some(task=>task.date>'2026-11-08'),true);
 });
 test('Bestaande planning eerste reeksdatum; ontbrekende gegevens worden geen verzonnen tijden/statussen',()=>{
  const data={shows:[show('reeks','2026-11-03',{dates:['2026-11-03','2026-11-04','2026-11-05'],times:{'2026-11-04':'19:30'},snapshot:{pdf:{state:'ready'}}}),show('onleesbaar','2026-11-05',{planningUnavailable:true})]};
@@ -71,4 +71,19 @@ test('Een bevestigde afronding/heropening wijzigt de jaarteller onmiddellijk zon
 test('Elke deadline linkt in één klik naar de canonieke show en het bijbehorende tabblad',()=>{
  const model=homePlanning({shows:[show('BUNT._Gashouder_01122026','2026-12-01',{routeKey:'canonieke reeks'})]},now);
  assert.deepEqual(model.calendarTasks.map(task=>new URL(task.href,'https://esmojo.nl').searchParams.get('tab')),['showprofiel','risicoanalyse','risicoanalyse','maatregelen','overzicht']);assert.ok(model.calendarTasks.every(task=>task.href.startsWith('/shows/canonieke%20reeks?tab=')));
+});
+
+test('Buiten Westen blijft vandaag tot en met de laatste showdag; kalender bewaart alle drie dagen',()=>{
+ const source=show('Buiten-Westen_Gashouder_06112026','2026-11-06',{dates:['2026-11-06','2026-11-07','2026-11-08'],activeDates:['2026-11-07','2026-11-08'],snapshot:{completion:ready}}),data={shows:[source]};
+ for(const day of ['2026-11-07','2026-11-08']){
+  const model=homePlanning(data,new Date(day+'T12:00:00Z'));assert.equal(model.openCount,1);assert.equal(model.tasks[0].kind,'show');assert.equal(model.tasks[0].date,day);assert.equal(model.groups[0].id,'today');assert.equal(model.groups.some(group=>group.id==='overdue'),false);
+  const calendar=model.calendarTasks.filter(task=>task.kind==='show');assert.deepEqual(calendar.map(task=>task.date),source.dates);assert.equal(new Set(calendar.map(task=>task.id)).size,3);assert.ok(calendar.filter(task=>task.date<day).every(task=>task.completed));assert.ok(calendar.filter(task=>task.date>=day).every(task=>!task.completed));
+ }
+ const ended=homePlanning(data,new Date('2026-11-08T23:00:00Z'));assert.equal(ended.openCount,0);assert.equal(ended.groups.length,0);assert.equal(ended.upcoming.length,0);assert.ok(ended.calendarTasks.filter(task=>task.kind==='show').every(task=>task.completed));
+});
+test('De volgende showdag staat in de juiste kalenderweek en wordt niet voor iedere resterende dag gedupliceerd',()=>{
+ const source=show('reeks','2026-11-06',{dates:['2026-11-06','2026-11-07','2026-11-08'],snapshot:{completion:ready}}),data={shows:[source]};
+ const nextWeek=homePlanning(data,new Date('2026-10-31T12:00:00Z'));assert.equal(nextWeek.groups[0].id,'next-week');assert.equal(nextWeek.groups[0].title,'Volgende week');assert.equal(nextWeek.groups[0].tasks.length,1);assert.equal(nextWeek.groups[0].tasks[0].date,'2026-11-06');assert.equal(nextWeek.weekCount,0);
+ const thisWeek=homePlanning(data,new Date('2026-11-05T12:00:00Z'));assert.equal(thisWeek.groups[0].id,'week');assert.equal(thisWeek.groups[0].tasks.length,1);assert.equal(thisWeek.weekCount,1);
+ const between=homePlanning({shows:[{...source,dates:['2026-11-06','2026-11-08']}]},new Date('2026-11-07T12:00:00Z'));assert.equal(between.tasks[0].date,'2026-11-08');assert.equal(between.groups[0].id,'week');
 });
