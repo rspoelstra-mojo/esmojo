@@ -97,3 +97,37 @@ test('Achtergrondherbouw vereist geverifieerde workflow, bevestigt actieve versi
  r=res();await handler({method:'POST',query:{incidentMetrics:'1'},headers:{authorization:'Bearer trusted'},body:{}},r);assert.equal(r.code,503);assert.equal(calls,2);
  const d=drive();assert.equal(d.call('incident-read',{worker:true},null).rows.length,1);assert.throws(()=>d.call('incident-read',{worker:true},'user'),/VALIDATION/);
 });
+test('Historische telling en cachecommit vermijden de volledige inventaris, maar behouden broncontext, hash en parentcontrole',async()=>{
+ const {webDriveFixture,csvFixture}=await import('./test-support/web-reports-drive.js'),{createWebCatalogueService}=await import('./web-report-catalogue.js');
+ const f=webDriveFixture(),production=f.root.createFolder('Productie'),artist=production.createFolder('Historical Artist'),id='Historical-Artist_Ziggo-Dome_01022025',folder=artist.createFolder(id),file=f.addFile(folder,'incidents_'+id+'.csv','text/csv',csvFixture('2025-02-01'));
+ const entry={concertId:id,artist:'Historical Artist',venue:'Ziggo Dome',city:'Amsterdam',date:'2025-02-01',performance:null,seriesId:id,ticket_sales:'1234',source:{id:file.id,folderId:folder.id,name:file.name,size:file.getSize(),modifiedAt:file.getLastUpdated().toISOString(),sha256:createHash('sha256').update(file.content).digest('hex')}};
+ f.addFile(production,'_esmojo_historical_reports_v1.json','application/json',JSON.stringify({version:1,managedBy:'ESMOJO/HistoricalReports-v1',classification:'vertrouwelijk',entries:[entry]}));
+ await createWebCatalogueService({store:f.store}).synchronize(null,{historicalOnly:true});
+ f.ctx.esmojoShowFile_=f.ctx.esmojoOnTrackFile_;vm.runInContext(readFileSync('google-apps-script/IncidentMetrics.gs','utf8'),f.ctx);
+ let scans=0;f.ctx.esmojoIncidentInventory_=()=>{scans++;throw Error('FULL_SCAN');};
+ const request={worker:true,concertId:id,sourceId:file.id};const source=f.ctx.esmojoIncidentMetrics_({operation:'incident-source',...request});assert.equal(source.sourceHash,entry.source.sha256);assert.equal(scans,0);
+ assert.equal(f.ctx.esmojoIncidentMetrics_({operation:'incident-counts',...request,sourceHash:source.sourceHash,kpis:kpis()}).ok,true);assert.equal(scans,0);
+ f.advance(1000);file.setContent(csvFixture('2025-02-01',[{ID:'changed'}]));assert.throws(()=>f.ctx.esmojoIncidentMetrics_({operation:'incident-source',...request}),/SOURCE_CHANGED/);
+ file.moveTo(f.outside);assert.throws(()=>f.ctx.esmojoIncidentMetrics_({operation:'incident-source',...request}),/SOURCE_MISSING/);
+});
+test('Onvoltooide herbouw rapporteert echte voortgang en bezoekersbasis, maar geen onvolledige referenties of score',async()=>{
+ const {csvFixture}=await import('./test-support/web-reports-drive.js');const csv=csvFixture('2026-11-01'),hash=createHash('sha256').update(csv).digest('hex');let ready=false;
+ const service=createIncidentMetricsService({shows:async(op,payload)=>{
+  if(op==='incident-read')return{policyVersion:2,rows:[row('a',{hasSource:true,sourceReady:true,kpis:ready?kpis():null}),row('b',{hasSource:true,sourceReady:true,kpis:null})],jobs:ready?['b']:['a','b'],jobSources:{a:'source-a',b:'source-b'}};
+  assert.equal(payload.sourceId,'source-a');
+  if(op==='incident-source')return{csvBase64:Buffer.from(csv).toString('base64'),sourceHash:hash,date:'2026-11-01',modifiedAt:'2026-11-02T00:00:00Z'};
+  assert.equal(op,'incident-counts');ready=true;return{ok:true};
+ }});
+ const data=await service.snapshot('actor');assert.equal(data.pending,true);assert.equal(data.references,null);assert.equal(data.score,null);assert.deepEqual(data.progress,{available:2,eligible:2,processed:1,visitors:2000});
+});
+test('Worker v2 verwerkt vijf per ronde, hergebruikt bronverwijzingen en controleert de complete referenties vóór gereedmelding',async()=>{
+ const {csvFixture}=await import('./test-support/web-reports-drive.js');const csv=csvFixture('2026-11-01'),hash=createHash('sha256').update(csv).digest('hex'),rows=Array.from({length:6},(_,i)=>row('id-'+i,{kpis:null,sourceReady:true,hasSource:true}));let reads=0,writes=0;
+ const service=createIncidentMetricsService({shows:async(op,payload)=>{
+  if(op==='incident-read'){reads++;return{policyVersion:2,workerVersion:2,rows:structuredClone(rows),jobs:rows.filter(row=>!row.kpis).map(row=>row.concertId),jobSources:Object.fromEntries(rows.map(row=>[row.concertId,'source-'+row.concertId]))};}
+  assert.equal(payload.worker,true);assert.equal(payload.actor,undefined);assert.equal(payload.sourceId,'source-'+payload.concertId);
+  if(op==='incident-source')return{csvBase64:Buffer.from(csv).toString('base64'),sourceHash:hash,date:'2026-11-01',modifiedAt:'2026-11-02T00:00:00Z'};
+  assert.equal(op,'incident-counts');rows.find(row=>row.concertId===payload.concertId).kpis=payload.kpis;writes++;return{ok:true};
+ }});
+ assert.deepEqual(await service.refresh(),{ok:true,workerVersion:2,pending:true,status:'processing'});assert.equal(writes,5);assert.equal(reads,1);
+ assert.deepEqual(await service.refresh(),{ok:true,workerVersion:2,pending:false,status:'complete'});assert.equal(writes,6);assert.equal(reads,2);
+});

@@ -47,42 +47,59 @@ function esmojoIncidentAnalysis_(show){
  const profile=esmojoReadShowProfile_(esmojoShowFile_(target.folder,'showprofiel.json'),target.primary.concertId),state=esmojoAnalysisFinalState_(target,profile),final=esmojoReadAnalysisFinal_(finalFile,target.primary.concertId),risks=esmojoShowProfileRisks_({operation:'risk-view',concertId:show.concertId},target);
  return{visitorsFinal:Boolean(state.categories.visitors.completedAt),artistFinal:Boolean(state.categories.artist.completedAt),visitorsRating:final.categories.visitors?.score||null,artistRating:final.categories.artist?.score||null,operationalLevels:operationalComplete({risks})?risks.risks.map(row=>risks.operational.assessments[row.id].riskLevel):null};
 }
+// Historische bestanden hebben al een canoniek, hashgebonden register. Voor een
+// afzonderlijke telling is opnieuw doorlopen van alle 200+ CSV-bestanden overbodig.
+function esmojoIncidentSource_(concertId,sourceId){
+ if(typeof concertId!=='string'||!concertId||concertId.length>240||/[\x00-\x1f/\\]/.test(concertId)||sourceId!==undefined&&(typeof sourceId!=='string'||!/^[-\w]+$/.test(sourceId)))throw Error('VALIDATION');
+ if(sourceId){
+  const historical=esmojoHistoricalSources_().find(row=>row.show.key===concertId&&row.id===sourceId);
+  if(historical){
+   const context=esmojoOnTrackHash_(JSON.stringify(historical)),entry=esmojoWebIndex_(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID)).document.entries[sourceId];
+   if(entry?.state!=='valid'||entry.context!==context||entry.sourceHash!==historical.expectedHash)throw Error('SOURCE_CHANGED');
+   historical.context=context;historical.entry=entry;
+   const file=esmojoHistoricalSourceFile_(historical);
+   if(file.getName()!==historical.name||file.getLastUpdated().toISOString()!==historical.modifiedAt)throw Error('SOURCE_CHANGED');
+   return historical;
+  }
+ }
+ const {inventory}=esmojoIncidentInventory_(),source=inventory.available.find(row=>row.show.key===concertId&&(!sourceId||row.id===sourceId));
+ if(!source||inventory.sources.some(other=>other.show.key===concertId&&other.modifiedAt>source.modifiedAt))throw Error('REPORT_UNAVAILABLE');
+ return source;
+}
+function esmojoIncidentCountsValid_(kpis){
+ if(!kpis||Object.keys(kpis).sort().join()!=='medical,security')return false;
+ return Object.entries({security:['total','verbal','physical','mischief','evictions','arrests'],medical:['total','treatments','selfcare','unwell','contusion','ambulance']}).every(([group,keys])=>kpis[group]&&Object.keys(kpis[group]).sort().join()===keys.sort().join()&&keys.every(key=>Number.isSafeInteger(kpis[group][key])&&kpis[group][key]>=0));
+}
 function esmojoIncidentMetrics_(request){
- const op=request.operation,allowed={'incident-read':['actor','artistIds','worker','operation'],'incident-source':['actor','concertId','worker','operation'],'incident-counts':['actor','concertId','sourceHash','kpis','worker','operation']}[op];
+ const op=request.operation,allowed={'incident-read':['actor','artistIds','worker','operation'],'incident-source':['actor','concertId','sourceId','worker','operation'],'incident-counts':['actor','concertId','sourceId','sourceHash','kpis','worker','operation']}[op];
  if(!allowed||Object.keys(request).some(key=>!allowed.includes(key)))throw Error('VALIDATION');
  if(request.worker!==undefined&&request.worker!==true)throw Error('VALIDATION');
  if(request.worker===true){if(request.actor!==undefined||request.artistIds!==undefined)throw Error('VALIDATION');}else esmojoIncidentActor_(request.actor,op==='incident-read'&&!request.artistIds);
  if(request.artistIds!==undefined&&(!Array.isArray(request.artistIds)||!request.artistIds.length||request.artistIds.length>1000||!request.artistIds.every(validArtistId)))throw Error('VALIDATION');
+ if(op!=='incident-read'){
+  const source=esmojoIncidentSource_(request.concertId,request.sourceId);
+  if(op==='incident-source'){
+   const result=esmojoWebSource_(source);if(result.hash!==source.entry.sourceHash)throw Error('SOURCE_CHANGED');
+   return{csvBase64:Utilities.base64Encode(result.bytes),sourceHash:result.hash,modifiedAt:source.modifiedAt,date:source.show.date};
+  }
+  if(source.entry.sourceHash!==request.sourceHash)throw Error('SOURCE_CHANGED');
+  if(!esmojoIncidentCountsValid_(request.kpis))throw Error('VALIDATION');
+  const storage=esmojoIncidentRegister_(),document=storage.document,previous=document.counts[request.concertId];
+  if(previous?.definitionVersion===1&&previous.sourceHash===request.sourceHash&&esmojoIncidentCountsValid_(previous.kpis))return{ok:true};
+  document.counts[request.concertId]={definitionVersion:1,sourceHash:request.sourceHash,kpis:request.kpis};document.revision++;document.updatedAt=new Date().toISOString();esmojoIncidentSave_(storage);return{ok:true};
+ }
  const storage=esmojoIncidentRegister_(),{inventory,catalogue,shows}=esmojoIncidentInventory_(),document=storage.document;
  const available=new Map(inventory.available.filter(source=>!inventory.sources.some(other=>other.show.key===source.show.key&&other.modifiedAt>source.modifiedAt)).map(source=>[source.show.key,source]));
- if(op==='incident-read'){
-  const ids=request.artistIds?new Set(request.artistIds):null,rows=[],jobs=[],historical=new Map(esmojoHistoricalRegister_().entries.map(row=>[row.concertId,row])),targets=new Map();
-  for(const show of [...shows.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.concertId.localeCompare(b.concertId))){
-   const source=available.get(show.concertId),hasSource=inventory.sources.some(row=>row.show.key===show.concertId),cache=document.counts[show.concertId];
-   const kpis=source&&cache?.definitionVersion===1&&cache.sourceHash===source.entry.sourceHash?cache.kpis:null;
-   const canonical=catalogue.get(show.concertId)||show,attendance=esmojoIncidentAttendance_(canonical,historical,targets);
-   const row=Object.assign({},show,attendance,{securityComplete:hasSource,medicalComplete:hasSource,kpis,hasSource,sourceReady:Boolean(source)});
-   const suitable=row.visitors>0&&row.securityComplete&&row.medicalComplete;
-   if(suitable&&source&&!kpis)jobs.push(show.concertId);
-   if(ids&&suitable&&kpis&&ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(show.name))))Object.assign(row,esmojoIncidentAnalysis_(catalogue.get(show.concertId)));
-   rows.push(row);
-  }
-  return{policyVersion:2,rows,jobs,updatedAt:document.updatedAt};
+ const ids=request.artistIds?new Set(request.artistIds):null,rows=[],jobs=[],jobSources={},historical=new Map(esmojoHistoricalRegister_().entries.map(row=>[row.concertId,row])),targets=new Map();
+ for(const show of [...shows.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.concertId.localeCompare(b.concertId))){
+  const source=available.get(show.concertId),hasSource=inventory.sources.some(row=>row.show.key===show.concertId),cache=document.counts[show.concertId];
+  const kpis=source&&cache?.definitionVersion===1&&cache.sourceHash===source.entry.sourceHash&&esmojoIncidentCountsValid_(cache.kpis)?cache.kpis:null;
+  const canonical=catalogue.get(show.concertId)||show,attendance=esmojoIncidentAttendance_(canonical,historical,targets);
+  const row=Object.assign({},show,attendance,{securityComplete:hasSource,medicalComplete:hasSource,kpis,hasSource,sourceReady:Boolean(source)});
+  const suitable=row.visitors>0&&row.securityComplete&&row.medicalComplete;
+  if(suitable&&source&&!kpis){jobs.push(show.concertId);jobSources[show.concertId]=source.id;}
+  if(ids&&suitable&&kpis&&ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(show.name))))Object.assign(row,esmojoIncidentAnalysis_(catalogue.get(show.concertId)));
+  rows.push(row);
  }
- if(typeof request.concertId!=='string'||!shows.has(request.concertId))throw Error('NOT_FOUND');
- const source=available.get(request.concertId);
- if(op==='incident-source'){
-  if(!source)throw Error('REPORT_UNAVAILABLE');
-  const result=esmojoWebSource_(source);if(result.hash!==source.entry.sourceHash)throw Error('SOURCE_CHANGED');
-  return{csvBase64:Utilities.base64Encode(result.bytes),sourceHash:result.hash,modifiedAt:source.modifiedAt,date:source.show.date};
- }
- if(op==='incident-counts'){
-  if(!source||source.entry.sourceHash!==request.sourceHash)throw Error('SOURCE_CHANGED');
-  for(const [group,keys]of Object.entries({security:['total','verbal','physical','mischief','evictions','arrests'],medical:['total','treatments','selfcare','unwell','contusion','ambulance']}))if(!request.kpis||!request.kpis[group]||Object.keys(request.kpis[group]).sort().join()!==keys.sort().join()||keys.some(key=>!Number.isSafeInteger(request.kpis[group][key])||request.kpis[group][key]<0))throw Error('VALIDATION');
-  if(Object.keys(request.kpis).sort().join()!=='medical,security')throw Error('VALIDATION');
-  // De server heeft de bron geverifieerd en dezelfde webrapportagerekenlaag gebruikt.
-  const previous=document.counts[request.concertId];if(previous?.definitionVersion===1&&previous.sourceHash===request.sourceHash)return{ok:true};
-  document.counts[request.concertId]={definitionVersion:1,sourceHash:request.sourceHash,kpis:request.kpis};
- }
- document.revision++;document.updatedAt=new Date().toISOString();esmojoIncidentSave_(storage);return{ok:true};
+ return{policyVersion:2,workerVersion:2,rows,jobs,jobSources,updatedAt:document.updatedAt};
 }

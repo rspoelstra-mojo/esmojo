@@ -34,7 +34,7 @@ permissions:
   id-token: write
 concurrency:
   group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run') && 'incident-reference-rebuild' || inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || inputs.historical_only == true && 'web-reports-historical-index' || 'web-reports-production' }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' }}
 jobs:
   index:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
@@ -58,7 +58,7 @@ jobs:
             const response=await fetch(target,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(310000)});
             const result=await response.json().catch(()=>null);
             if(!response.ok){
-              const code=/^(?:SHOWS_UNAVAILABLE|SHOWS_CONFIG|BUSY|DRIVE_TIMEOUT|DRIVE_CONNECTION|DRIVE_HTTP|DRIVE_RESPONSE|FORBIDDEN|VALIDATION|REPORT_CONFLICT|REPORT_CATALOG|SOURCE_MISSING|SOURCE_CHANGED|REPORT_UNAVAILABLE|NOT_FOUND|ONTRACK_REPORT_UNAVAILABLE)$/.test(result?.code||'')?result.code:'UNCONFIRMED';
+              const code=/^(?:DUPLICATE_CONCERT|INVALID_TOTAL|INVALID_CONCERT|SHOWS_UNAVAILABLE|SHOWS_CONFIG|BUSY|DRIVE_TIMEOUT|DRIVE_CONNECTION|DRIVE_HTTP|DRIVE_RESPONSE|FORBIDDEN|VALIDATION|REPORT_CONFLICT|REPORT_CATALOG|SOURCE_MISSING|SOURCE_CHANGED|REPORT_UNAVAILABLE|NOT_FOUND|ONTRACK_REPORT_UNAVAILABLE)$/.test(result?.code||'')?result.code:'UNCONFIRMED';
               const stage=/^(?:incident-read|incident-source|incident-counts|web-scan|web-source|web-commit|web-historical-status|historical-import-read|historical-import-commit|historical-import-verify)$/.test(result?.stage||'')?result.stage:'UNKNOWN';
               throw Error(`Verwerking niet bevestigd: HTTP ${response.status}; ${code}; ${stage}. Geen broninhoud in logs.`);
             }
@@ -67,15 +67,18 @@ jobs:
           if(process.env.METRICS_ONLY==='true'){
             const pause=ms=>new Promise(done=>setTimeout(done,ms));let ready=false;
             for(let attempt=0;attempt<12;attempt++){
-              try{const result=await call({incidentRefresh:true,checkOnly:true});if(result.workerVersion===1){ready=true;break;}}catch{}
+              try{const result=await call({incidentRefresh:true,checkOnly:true});if(result.workerVersion===2){ready=true;break;}}catch{}
               await pause(20000);
             }
             if(!ready)throw Error('Incidentworker nog niet beschikbaar.');
+            console.log('::notice::INCIDENT_REFERENCE_READY');
             let complete=false;for(let page=0;page<600;page++){
-              const result=await call({incidentRefresh:true});if(result.workerVersion!==1||typeof result.pending!=='boolean')throw Error('Incidentworker niet bevestigd.');
-              if(!result.pending){complete=true;break;}
+              const result=await call({incidentRefresh:true});if(result.workerVersion!==2||typeof result.pending!=='boolean'||!['processing','complete','no_eligible_reports'].includes(result.status))throw Error('Incidentworker niet bevestigd.');
+              if(page===0)console.log('::notice::INCIDENT_REFERENCE_BATCH_CONFIRMED');
+              if(!result.pending){if(result.status==='no_eligible_reports')throw Error('INCIDENT_REFERENCES_NO_ELIGIBLE_REPORTS');complete=true;break;}
             }
             if(!complete)throw Error('Incidentherberekening nog niet volledig.');
+            console.log('::notice::INCIDENT_REFERENCE_COMPLETE');
             console.log(JSON.stringify({ok:true}));
           }else{
           const phase=process.env.HISTORICAL_IMPORT,importing=['sample','all'].includes(phase);

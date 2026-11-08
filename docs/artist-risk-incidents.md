@@ -62,7 +62,7 @@ Een nieuwere, ongeldige/onverwerkte export verdringt geen oude data als geldig
 resultaat. Een aangevulde of gecorrigeerde bron wordt automatisch herberekend bij
 de volgende paginalezing; open pagina's controleren iedere minuut. De bestaande webworkflow herberekent automatisch iedere vijf minuten. Na een
 publicatie wordt een begrensde herbouw tot gereed gestart, afzonderlijk van
-mail/import en zonder cijfers of broninhoud naar GitHub te sturen. Eén telling per verzoek
+mail/import en zonder cijfers of broninhoud naar GitHub te sturen. Eén telling per interactief verzoek
 wordt op de server verwerkt, met gedeeld lopend verzoek; de browser vraagt verder
 zolang er nog bronhashes ontbreken. Tijdens een onvolledige referentieherbouw
 geen gedeeltelijke artiestscore presenteren.
@@ -95,3 +95,15 @@ De herberekenfase gebruikt de eigen vaste audience en alias
 `/api/incident-references-sync`, die pas met de bijbehorende Vercel-publicatie
 beschikbaar is. Dit voorkomt dat een gereedheidsprobe op een oude webworker
 onbedoeld de normale rapport-/mailroute aanroept. Geen extra serverfunctie.
+
+## Herbouw en voortgang (V1.98)
+
+Historische bron-/commitreads lopen niet opnieuw alle CSV-bestanden door: het
+bestaande register, validatie-indexcontext, bronhash en actuele parent-/metadata-
+controle bepalen de bron. De achtergrondwerker behandelt vijf bronnen per ronde;
+interactieve reads blijven begrensd. Lopende cache wordt hergebruikt. Een nieuwe
+publicatie vervangt een verouderde herbouwtaak; idempotente Drive-writes blijven
+veilig hervatbaar. READY/BATCH_CONFIRMED/COMPLETE-meldingen bevatten geen privédata.
+De beheerkaart toont tijdens verwerking het aantal geschikte concerten, hun
+bezoekersbasis en hoeveel rapportages verwerkt zijn. Onberekende gemiddelden
+heten expliciet Nog niet berekend; geen fictieve nul of gedeeltelijke score.

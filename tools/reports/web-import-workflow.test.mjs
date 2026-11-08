@@ -24,11 +24,11 @@ test('Import, native index en begrensde terugleescontrole bevestigen hetzelfde c
 });
 test('Onvolledig verificatieantwoord faalt gesloten; normale planning herberekent daarna automatisch incidenten',async()=>{
  await assert.rejects(run([{ok:true,total:10,complete:10,pending:0},{ok:true,registered:10,validated:10,invalid:0},{ok:true}]),error=>error.message.includes('Verificatie-API niet actief')&&error.callCount===3);
- assert.deepEqual(await run([{ok:true},{ok:true,workerVersion:1,pending:false}],'none'),[null,{incidentRefresh:true}]);
+ assert.deepEqual(await run([{ok:true},{ok:true,workerVersion:2,pending:false,status:'complete'}],'none'),[null,{incidentRefresh:true}]);
 });
 
 test('Automatische herbouw wacht op actuele worker en verwerkt alleen incidenten tot gereed, zonder mail/import',async()=>{
- const calls=await run([{ok:true},{ok:true,workerVersion:1,pending:true},{ok:true,workerVersion:1,pending:true},{ok:true,workerVersion:1,pending:false}],'none',true);
+ const calls=await run([{ok:true},{ok:true,workerVersion:2,pending:true,status:'processing'},{ok:true,workerVersion:2,pending:true,status:'processing'},{ok:true,workerVersion:2,pending:false,status:'complete'}],'none',true);
  assert.equal(calls.length,4);assert.ok(calls.every(row=>row.incidentRefresh===true));assert.equal(calls[0].checkOnly,true);assert.equal(calls[1].checkOnly,true);assert.equal(calls[2].checkOnly,undefined);
 });
 test('Oude worker zonder versiebevestiging start geen herberekeningen',async()=>{

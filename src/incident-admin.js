@@ -7,13 +7,16 @@ const node=(tag,className,text)=>{const el=document.createElement(tag);if(classN
 const count=new Intl.NumberFormat('nl-NL'),rate=new Intl.NumberFormat('nl-NL',{minimumFractionDigits:3,maximumFractionDigits:3});
 export function renderIncidentReferenceCards(data){
  const grid=node('div','incident-reference-grid'),overview=node('section','incident-admin-card incident-overview');overview.append(node('h2','','Overzicht'));
- const stats=node('dl','incident-overview-stats');for(const [label,value]of [['Concerten',data.references?.concerts],['Bezoekers totaal',data.references?.visitors]]){const row=node('div','');row.append(node('dt','',label),node('dd','',value===undefined?'—':count.format(value)));stats.append(row);}overview.append(stats);
- overview.append(node('p','incident-muted',data.updatedAt?'Laatste actualisatie: '+new Intl.DateTimeFormat('nl-NL',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Amsterdam'}).format(new Date(data.updatedAt)):'Nog geen geschikte registraties.'));grid.append(overview);
+ const stats=node('dl','incident-overview-stats');for(const [label,value]of [['Concerten',data.references?.concerts??data.progress?.eligible],['Bezoekers totaal',data.references?.visitors??data.progress?.visitors]]){const row=node('div','');row.append(node('dt','',label),node('dd','',value===undefined?'—':count.format(value)));stats.append(row);}overview.append(stats);
+ overview.append(node('p','incident-muted',data.updatedAt?'Laatste actualisatie: '+new Intl.DateTimeFormat('nl-NL',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Amsterdam'}).format(new Date(data.updatedAt)):'Nog geen geschikte registraties.'));
+ const progress=data.progress;if(data.pending){const status=node('p','incident-muted','Referenties worden bijgewerkt'+(progress?': '+count.format(progress.processed)+' van '+count.format(progress.eligible)+' rapportages verwerkt.':'.'));status.setAttribute('role','status');overview.append(status);}else if(progress?.available>0&&progress.eligible===0)overview.append(node('p','incident-muted',count.format(progress.available)+' rapportages beschikbaar; er ontbreekt nog een bruikbare bezoekersbasis.'));
+ grid.append(overview);
  for(const [group,title]of [['security','Beveiliging'],['medical','Medisch']]){
   const card=node('section','incident-admin-card');card.append(node('h2','',title));
   for(const [key,label]of incidentIndicators[group]){
-   const value=data.references?.indicators[group][key],details=node('details','incident-indicator'),summary=node('summary','');summary.append(node('span','',label),node('strong','',value?.rate===null||!value?'—':rate.format(value.rate)));details.append(summary);
+   const value=data.references?.indicators[group][key],details=node('details','incident-indicator'),summary=node('summary','');summary.append(node('span','',label),node('strong','',!value&&data.pending?'Nog niet berekend':value?.rate===null||!value?'—':rate.format(value.rate)));details.append(summary);
    if(value){const dl=node('dl','incident-formula');for(const [term,result]of [['Incidenten',count.format(value.incidents)],['Gebruikte bezoekers',count.format(value.visitors)],['Berekening',value.visitors?'('+count.format(value.incidents)+' / '+count.format(value.visitors)+') × 1.000 = '+rate.format(value.rate):'Geen geschikte concerten beschikbaar'],['Per 1.000 bezoekers',value.rate===null?'Niet beschikbaar':rate.format(value.rate)]]){const row=node('div','');row.append(node('dt','',term),node('dd','',result));dl.append(row);}details.append(dl);}
+   if(!value&&data.pending)details.append(node('p','incident-muted','Deze referentiewaarde is nog niet beschikbaar.'));
    card.append(details);
   }
   grid.append(card);
