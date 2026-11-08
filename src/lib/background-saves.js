@@ -30,7 +30,7 @@ export function createSaveActivity(){
 }
 export const backgroundSaves=createSaveActivity();
 export function isSaveRequest(action,{method='GET',body={}}={}){
- if(!['POST','PATCH','PUT','DELETE'].includes(method)||['session','restore','login','remember','forget','complete','show-open','show-photo','show-risks','report-web','reports','home-metadata','fluid-preview'].includes(action))return false;
+ if(!['POST','PATCH','PUT','DELETE'].includes(method)||['session','restore','login','remember','forget','complete','show-open','show-photo','show-risks','report-web','reports','home-metadata','fluid-preview','artist-detail','artist-view'].includes(action))return false;
  return !['read','status','download','reserve','renew','release'].includes(body?.operation);
 }
 export function saveRequestInfo(action,body={}){

@@ -7,8 +7,9 @@ function esmojoWebIndex_(folder){
  if(Object.keys(document).sort().join(',')!=='classification,entries,managedBy,version'||document.managedBy!=='ESMOJO/WebReports-v1'||document.classification!=='vertrouwelijk'||document.version!==1||!document.entries||Array.isArray(document.entries))throw Error('REPORT_UNAVAILABLE');
  for(const [id,row]of Object.entries(document.entries))if(!/^[A-Za-z0-9_-]{1,200}$/.test(id)||!row||Object.keys(row).sort().join(',')!=='context,errorCode,mojo,sourceHash,state,validatedAt'||!/^[a-f0-9]{64}$/.test(row.context||'')||!esmojoWebMojoValid_(row.mojo)||!['valid','invalid'].includes(row.state)||typeof row.validatedAt!=='string'||!Number.isFinite(Date.parse(row.validatedAt))||row.state==='valid'&&(row.errorCode!==null||!/^[a-f0-9]{64}$/.test(row.sourceHash||''))||row.state==='invalid'&&(!/^CSV_[A-Z_]+$/.test(row.errorCode||'')||row.sourceHash!==null&&!/^[a-f0-9]{64}$/.test(row.sourceHash||'')))throw Error('REPORT_UNAVAILABLE');return{file,document};
 }
-function esmojoWebInventory_(folder,knownCatalogue){
+function esmojoWebInventory_(folder,knownCatalogue,artistNames){
  const index=esmojoWebIndex_(folder),mailFile=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json'),mail=mailFile?JSON.parse(mailFile.getBlob().getDataAsString('UTF-8')):{version:1,sources:[]};if(mail.version!==1||!Array.isArray(mail.sources))throw Error('REPORT_UNAVAILABLE');
+ if(artistNames)for(const report of [...(mail.reports||[]),...(mail.onlineReports||[])])if(typeof report?.show?.name==='string')artistNames.push(report.show.name);
  const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'),catalogue=knownCatalogue||esmojoTimetableCatalogue_(),choices=[...catalogue.values()].filter(show=>show.date<=today).map(show=>({key:show.concertId,name:show.artist,venue:show.venue,dates:[show.date]})),files=folder.getFiles(),sources=[];let unlinked=0;
  while(files.hasNext()){
   const file=files.next();if(file.isTrashed()||!/\.csv$/i.test(file.getName()))continue;
