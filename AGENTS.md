@@ -10,6 +10,15 @@ tekst na de show staan tot de volgende verschuldigde reeks. Een verdwenen pagina
 of parse-/netwerkfout wist niets. Gebruik alleen de zes bestaande MOJO-zalen.
 De artiestkop vervangt Laatste keer in Nederland en Populariteit door deze tekst.
 
+## Artiestenrisicoscore en incidentreferenties (8 november 2026)
+
+De gebruiker heeft afgeleide artiestenrisicoscores, historische incidentreferenties,
+totalen en actualisatiedatum expliciet Vertrouwelijk verklaard: verwerking via
+Vercel, opslag uitsluitend in Drive. Per concert zijn een daadwerkelijk
+bezoekersaantal en expliciete volledigheidsbevestigingen voor beveiliging en
+medisch toegestaan. Verkoop nooit als aanwezigheid overnemen. Bij referentie nul:
+artiestfrequentie nul geeft nul punten; positief geeft het categoriepuntenmaximum.
+
 ## Uitvoering en publicatie
 
 Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende

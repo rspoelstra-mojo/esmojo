@@ -49,3 +49,10 @@ test('Een mislukte herstelactie houdt de melding; afmelden wist callbacks en een
 });
 
 test('Een herstelcallback zonder expliciete bevestiging wist een opslagfout niet',async()=>{const saves=createSaveActivity();saves.fail({key:'row'});saves.recovery('row',async()=>undefined);await saves.retry('row');assert.equal(saves.messages.length,1);});
+
+test('Progressieve artiestreads tellen niet als writes; incidentbevestiging verwijst terug naar Incidenten',()=>{
+ assert.equal(isSaveRequest('artist-risk',{method:'POST',body:{artistId:'fixture'}}),false);
+ assert.equal(isSaveRequest('artist-show',{method:'POST',body:{artistId:'fixture',date:'2026-11-01'}}),false);
+ assert.equal(isSaveRequest('incidents',{method:'PATCH',body:{concertId:'fixture'}}),true);
+ assert.equal(saveRequestInfo('incidents',{concertId:'fixture'}).route,'/beheerder/incidenten');
+});

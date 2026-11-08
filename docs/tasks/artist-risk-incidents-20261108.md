@@ -36,3 +36,21 @@ GitHub-API ontbreekt in deze runtime; branch/taaknotitie registreert de taak.
   createArtistsPage met hangend eerste rapport (landing blijft interactief),
   klikprioriteit en navigatie; bestaande showoverzichttest op 390/1440px,
   lichte/donkere modus, ontbrekende rapportages en races.
+
+## Bevestigde keuzes
+
+Gebruiker bevestigt: nul/nul → 0 punten, positief/nul → categoriegewicht volledig;
+alle afgeleide gegevens Vertrouwelijk, verwerking Vercel, opslag uitsluitend Drive;
+per-concert aanwezigheidsaantal en beide volledigheidsbevestigingen toevoegen.
+De eerdere beslispauze is opgeheven. Bestaande brongegevens blijven leidend;
+het nieuwe register bevat alleen ontbrekende bevestigingen en een bronhashgebonden
+herberekenbare tellingcache. Geen verkoopmigratie of fictieve initiële scores.
+
+## Implementatie
+
+Zie docs/artist-risk-incidents.md. Score en referenties delen één rekenmodule;
+beheerders bevestigen aanwezigheid en volledigheid in Overzicht. Uitsluitend
+Drive-opslag voor het nieuwe register; alle berekeningen in Vercel-geheugen.
+Bestaande actuele voorbereiding en centrale webrapportagetellingen hergebruikt.
+Artiestkaart en drie beheerderskaarten responsief getest met fictieve gegevens.
+Productieversie V1.95. Geen echte historische aanwezigheid of volledigheid ingevuld.

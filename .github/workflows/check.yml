@@ -76,6 +76,7 @@ jobs:
           node server/artist-service.test.js
           node server/artist-show.test.js
           node server/artist-preparation.test.js
+          node --test server/incident-metrics.test.js
           node --test server/artist-biographies.test.js
           node --test src/artist-profile.test.js
           node server/artist-views.test.js

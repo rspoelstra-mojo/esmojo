@@ -1,3 +1,4 @@
+import {createIncidentAdminView} from './incident-admin.js';
 import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
 import {createArtistsPage} from './artists-page.js';
 import {barrierReferenceCache} from './barrier-images.js';
@@ -139,6 +140,9 @@ function renderPage() {
     submenu.append(link);
     link.dataset.submenuTitle = 'Accounts';
     if (route === 'beheerder/accounts') disposePage = createAccountsView(content, profile, link,{onSaved:()=>void refreshModuleAccess()});
+    const incidentLink=document.createElement('a');incidentLink.href='/beheerder/incidenten';incidentLink.className='submenu-link';incidentLink.textContent='Incidenten';incidentLink.dataset.submenuTitle='Incidenten';
+    if(route==='beheerder/incidenten')incidentLink.setAttribute('aria-current','page');submenu.append(incidentLink);
+    if(route==='beheerder/incidenten')disposePage=createIncidentAdminView(content,incidentLink);
     const emailLink=document.createElement('a');emailLink.href='/beheerder/email';emailLink.className='submenu-link';emailLink.textContent='Email';emailLink.dataset.submenuTitle='Email';
     if(route==='beheerder/email')emailLink.setAttribute('aria-current','page');submenu.append(emailLink);
     if(route==='beheerder/email')disposePage=createEmailAdminView(content,emailLink);

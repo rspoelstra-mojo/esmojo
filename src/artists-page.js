@@ -14,7 +14,7 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
  function selection(){content.classList.add('artist-selection-empty');content.replaceChildren(node('p','artist-selection-prompt','Kies eerst een artiest'));}
  if(!selected)selection();
  function openArtist(id,links){
-  let cancelled=false,busy=false,profileView=null,showMemory=null;const loaders=new Map(),error=createPageFeedback({key:'artist-page:'+id,label:'Artiest laden',route:'/artiest/'+id});
+  let cancelled=false,busy=false,profileView=null,showMemory=null,riskTimer=null;const riskAbort=new AbortController();const loaders=new Map(),error=createPageFeedback({key:'artist-page:'+id,label:'Artiest laden',route:'/artiest/'+id});
   function setLinks(next){const elements=next.length?next:[heading];for(const [el,loader]of loaders)if(!elements.includes(el)){loader.ui.dispose();loaders.delete(el);}for(const el of elements)if(!loaders.has(el)){const ui=createSubmenuLoading(el,content);loaders.set(el,{ui,finish:busy?ui.start():()=>{}});}cache.trackDetail(id,next.map(el=>el.dataset.artistId));if(busy)content.setAttribute('aria-busy','true');}
   async function load(){if(cancelled||busy)return;busy=true;content.classList.remove('artist-selection-empty');content.replaceChildren();for(const loader of loaders.values())loader.finish=loader.ui.start();
    try{
@@ -34,7 +34,11 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     });
     showMemory.subscribe((event,state)=>profileView?.updateShowStatus(event,state));
     content.replaceChildren(profileView);
-    requestAnimationFrame(()=>setTimeout(()=>{if(!cancelled)showMemory?.start();},0));
+    async function refreshRisk(){if(cancelled)return;if(document.hidden){riskTimer=setTimeout(refreshRisk,60000);return;}
+     try{const data=await request('artist-risk',{method:'POST',body:{artistId:canonicalId},signal:riskAbort.signal});if(cancelled)return;profileView.updateRisk(data.score);riskTimer=setTimeout(refreshRisk,data.pending?500:60000);}
+     catch{if(!cancelled){profileView.updateRisk(null);riskTimer=setTimeout(refreshRisk,60000);}}
+    }
+    requestAnimationFrame(()=>setTimeout(()=>{if(!cancelled){showMemory?.start();void refreshRisk();}},0));
     document.title=artist.name+' · Artiesten · ESMOJO';
     const path='/artiest/'+encodeURIComponent(selected);if(location.pathname!==path)history.replaceState(null,'',path+location.search+location.hash);
     render(cache.current());error.resolved();
@@ -42,7 +46,7 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
    catch{showMemory?.dispose();showMemory=null;if(!cancelled)error.show('De artiest kon niet worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
    finally{busy=false;for(const loader of loaders.values())loader.finish();if(!cancelled)content.removeAttribute('aria-busy');}
   }
-  setLinks(links);void load();return{setLinks,dispose(){cancelled=true;profileView?.dispose();showMemory?.dispose();showMemory=null;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
+  setLinks(links);void load();return{setLinks,dispose(){cancelled=true;clearTimeout(riskTimer);riskAbort.abort();profileView?.dispose();showMemory?.dispose();showMemory=null;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
  }
  function render(state){if(disposed||!state)return;const known=new Map([...submenu.querySelectorAll('[data-artist-link]')].map(el=>[el.dataset.artistLink,el])),selectedLinks=[],routes=artistRouteMap([...(state.artists||[]),...state.mostViewed]);submenu.replaceChildren();
   for(const [group,title,rows]of [['most','Meest bekeken',state.mostViewed],['all','Alle artiesten',state.artists||[]]]){

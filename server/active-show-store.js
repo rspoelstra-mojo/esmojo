@@ -1,3 +1,5 @@
+import {categoryReady} from '../shared/analysis-finalization.js';
+import {operationalComplete} from '../src/lib/show-planning.js';
 import {isDeepStrictEqual} from 'node:util';
 import {createClient} from '@supabase/supabase-js';
 import {createHash,randomUUID} from 'node:crypto';
@@ -67,6 +69,17 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
  }
  const service={
   async request(operation,payload={}){
+   if(operation==='incident-read'){
+    const data=await drive(operation,payload);
+    for(const item of data.rows||[])if(item.activeConcertId){
+     // Actieve voorbereiding blijft leidend; afgeleide score wordt nooit in DB opgeslagen.
+     if(!await enabled())continue;
+     const row=await repository.get(item.activeConcertId);if(!row)throw Error('ACTIVE_STORAGE_UNAVAILABLE');
+     const snapshot=validateActiveSnapshot(row.snapshot),risks=activeRiskView(snapshot),final=snapshot.final.categories;
+     Object.assign(item,{visitorsFinal:Boolean(final.visitors?.completedAt&&categoryReady('visitors',snapshot.profile.analyses,snapshot.ticketBasis.ready)),artistFinal:Boolean(final.artist?.completedAt&&categoryReady('artist',snapshot.profile.analyses,snapshot.ticketBasis.ready)),visitorsRating:final.visitors?.score||null,artistRating:final.artist?.score||null,operationalLevels:operationalComplete({risks})?risks.risks.map(risk=>risks.operational.assessments[risk.id].riskLevel):null});
+    }
+    return data;
+   }
    if(operation==='artist-show'){
     const data=await drive(operation,payload),preparation=data.preparation;
     if(!preparation?.concertId||!await enabled())return data;

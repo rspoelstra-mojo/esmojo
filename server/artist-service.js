@@ -32,6 +32,11 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
    const data=await createWebReportService({store:async()=>source.report,photo:async()=>null})(actor,{concertId:source.report.show.key});
    return{show:general,timetable:data.report.timetable,kpis:data.report.kpis,reportId:data.show.key,preparation};
   },
+  async risk(actor,body,incidentService){
+   input(body);if(body.includeProfile!==undefined)throw Error('VALIDATION');
+   const row=await artist(actor,body.artistId),directory=await catalogue(actor),artistIds=[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)];
+   const {score,pending,updatedAt}=await incidentService.snapshot(actor,artistIds);return{score,pending,updatedAt};
+  },
   async detail(actor,body){input(body);const row=await artist(actor,body.artistId),directory=await catalogue(actor);const detail={artist:{...row,id:validArtistId(body.artistId)?body.artistId:row.id},requestedReference:body.artistId,canonicalArtistId:row.id,canonicalArtistSlug:directory.routes.get(row.id)};
    if(!body.includeProfile||!directory.profileSupported)return detail;
    const artistIds=[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)];

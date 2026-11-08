@@ -90,3 +90,23 @@ main:has(> .artist-selection-empty) { display:flex; }
 .artist-concert-arrow { position: relative; display: inline-flex; align-items: center; justify-content: center; }
 @keyframes artist-report-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .artist-concert-select[data-load-state="loading"] .artist-concert-arrow::after { animation: none; } }
+
+.artist-score-card { margin-bottom:16px; min-height:150px; }
+.artist-score-body { margin-top:18px; }
+.artist-score-summary { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.artist-score-total { font-size:24px; }
+.artist-score-level { font-size:14px; font-weight:600; }
+.artist-score-battery { display:flex; height:32px; width:100%; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#edf0f3; }
+.artist-score-segment,.artist-score-remaining { display:block; flex-shrink:0; height:100%; }
+.artist-score-visitors { background:#2555e8; }.artist-score-artist { background:#7b53c7; }.artist-score-operational { background:#d88826; }.artist-score-incidents { background:#258878; }
+.artist-score-legend { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 24px; margin:18px 0 0; font-size:13px; }
+.artist-score-legend > div { display:flex; gap:12px; justify-content:space-between; flex-wrap:wrap; }
+.artist-score-legend dt { display:flex; align-items:center; gap:7px; }.artist-score-legend dd { margin:0; white-space:nowrap; }
+.artist-score-swatch { width:9px; height:9px; border-radius:3px; flex-shrink:0; }
+.artist-score-card .artist-score-note { font-size:11px; color:var(--muted); margin-top:18px; }
+:root[data-theme="dark"] .artist-score-battery { background:#303742; }
+@container artist-profile (max-width:460px) { .artist-score-legend { grid-template-columns:minmax(0,1fr); } }
+
+.artist-score-heading { display:flex; align-items:center; gap:12px; }
+.artist-score-body { min-height:190px; }
+@container artist-profile (max-width:460px) { .artist-score-body { min-height:290px; } }

@@ -1,3 +1,4 @@
+import {createIncidentMetricsService} from './incident-metrics.js';
 import {createArtistService} from './artist-service.js';
 import {createBarrierReferenceService} from './barrier-references.js';
 import {hasAppMfa,clearMfaCookie} from './mfa-cookie.js';
@@ -32,7 +33,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=createBarrierReferenceService({shows}), artistService=createArtistService({env,shows}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=createBarrierReferenceService({shows}), artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}) } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -132,6 +133,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
       const requiredModule=['barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
+      if(action==='artist-risk'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await artistService.risk(actor,req.body,incidentService));}
+        catch(error){return reply(error.message==='VALIDATION'?400:503,{error:'De risicoscore kon niet worden bijgewerkt. Probeer opnieuw.'});}
+      }
       if(['artist-menu','artist-ranking','artist-detail','artist-view','artist-show'].includes(action)){
         const method=['artist-menu','artist-ranking'].includes(action)?'GET':'POST';
         if(req.method!==method){res.setHeader('Allow',method);return reply(405,{error:'Niet toegestaan.'});}
@@ -261,6 +267,14 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='incidents'){
+        if(own.disabled)return reply(403,{error:'Geen toegang.'});
+        try{
+          if(req.method==='GET')return reply(200,await incidentService.snapshot(actor));
+          if(req.method==='PATCH')return reply(200,await incidentService.confirm(actor,req.body));
+          res.setHeader('Allow','GET, PATCH');return reply(405,{error:'Niet toegestaan.'});
+        }catch(error){return reply(error.message==='VALIDATION'?400:error.message==='CONFLICT'?409:error.message==='FORBIDDEN'?403:503,{error:error.message==='CONFLICT'?'De registratie is intussen gewijzigd. Laad de actuele gegevens; je invoer is behouden.':'De incidentgegevens konden niet worden geladen of opgeslagen. Controleer je invoer en probeer opnieuw.'});}
+      }
       if(action==='ontrack-report'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         try{const service=createOnTrackReportService({store:ontrackReportStore,mail}),result=await service.action(actor,req.body);if(['link','retry','send'].includes(req.body.operation))background((async()=>{await createOnlineReportMailService({store:ontrackReportStore,mail}).run();await service.run();})().catch(()=>{}));return reply(200,result);}

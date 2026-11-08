@@ -14,10 +14,14 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save','incident-confirm','incident-counts'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if(String(request.operation).startsWith('incident-')){
+      const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
+      return esmojoReply_({ok:true,data:esmojoIncidentMetrics_(request)});
+    }
     if(['biography-candidates','biography-save'].includes(request.operation)){
       if(request.operation==='biography-save'){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);}
       return esmojoReply_({ok:true,data:esmojoArtistBiographies_(request)});

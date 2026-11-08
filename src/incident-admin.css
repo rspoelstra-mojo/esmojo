@@ -1,0 +1,19 @@
+.incident-admin-page { width:100%; min-width:0; container-type:inline-size; }
+.incident-admin-page h1 { margin:0 0 24px; font-size:24px; }
+.incident-reference-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-bottom:20px; }
+.incident-admin-card { padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--fluid-card,#fff); min-width:0; }
+.incident-admin-card h2 { font-size:18px; margin:0 0 20px; }
+.incident-overview { grid-column:1/-1; }
+.incident-overview-stats { display:flex; flex-wrap:wrap; gap:24px 64px; margin:0; }
+.incident-overview-stats dt { font-size:14px; }.incident-overview-stats dd { margin:8px 0; font-size:28px; font-weight:650; }
+.incident-muted { color:var(--muted); font-size:12px; line-height:1.6; }
+.incident-indicator { border-top:1px solid var(--line); font-size:14px; }
+.incident-indicator summary { display:flex; justify-content:space-between; gap:16px; padding:17px 0; cursor:pointer; }
+.incident-indicator summary::after { content:''; width:7px; height:7px; flex-shrink:0; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:rotate(45deg); margin:3px 3px 0 0; }.incident-indicator[open] summary::after { transform:rotate(225deg); margin-top:7px; }
+.incident-indicator summary strong { margin-left:auto; font-weight:600; white-space:nowrap; }
+.incident-formula { margin:0 0 20px; font-size:12px; color:var(--muted); display:grid; gap:10px; }
+.incident-formula > div { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }.incident-formula dd { margin:0; }
+.incident-registration-form { display:grid; gap:16px; }.incident-field { display:grid; gap:8px; font-size:14px; }.incident-field input,.incident-field select { width:100%; min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font:inherit; color:inherit; background:transparent; }.incident-check { display:flex; align-items:start; gap:10px; font-size:14px; }.incident-registration-form button { justify-self:start; }
+@container (max-width:650px) { .incident-reference-grid { grid-template-columns:minmax(0,1fr); }.incident-admin-card { padding:18px; } }
+
+.incident-registration { border-top:1px solid var(--line); margin-top:20px; padding-top:18px; }.incident-registration > summary { font-size:14px; font-weight:600; cursor:pointer; }.incident-registration[open] > summary { margin-bottom:16px; }

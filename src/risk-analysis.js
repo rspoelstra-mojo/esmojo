@@ -1,3 +1,4 @@
+import {operationalIconPaths} from './lib/profile-icons.js';
 import {createPageFeedback} from './lib/page-feedback.js';
 import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
 import {detailBackButton} from './detail-back.js';
@@ -17,7 +18,7 @@ import { productionRiskGroups, validateProductionRiskState } from '../shared/pro
 const node = (tag, className, text) => { const el = document.createElement(tag); el.className = className; if (text !== undefined) el.textContent = text; return el; };
 const paths = {
   production: '<path d="m12 3 9 5-9 5-9-5 9-5ZM3 8v9l9 5 9-5V8M12 13v9"/>',
-  operational: '<path d="m12 3 10 18H2L12 3ZM12 9v5m0 3h.01"/>',
+  operational: operationalIconPaths,
   chevron: '<path d="m9 6 6 6-6 6"/>',
 };
 const glyph = (name, className) => { const el=node('span',className); el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`; return el; };
