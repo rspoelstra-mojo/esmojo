@@ -1,7 +1,8 @@
 import {cleanArtistMenu,normalizeArtistName,validArtistId,compareArtistNames} from './artist-catalogue.js';
 const tourText=value=>/\b(?:world[\s-]*tour|tour(?:nee)?|wereldtournee)(?=\b|\d)/iu.test(value);
-const performanceText=value=>tourText(value)||/^(?:live|dj[ -]?set|live[ -]?set|solo show|extra show|sold out|uitverkocht)$/iu.test(value.trim());
-const confirmedName=value=>/^(?:Yousuke Yukimatsu|¥ØU\$UK€\s+¥UK1MAT\$U(?:\s*\(Yousuke Yukimatsu\))?)$/iu.test(value)?'Yousuke Yukimatsu':/^new\s+wave(?:\s*(?:[-–—]\s*)?all[\s-]+stars)?$/iu.test(value)?'New Wave':/^u2$/iu.test(value)?'U2':null;
+const liveYearText=value=>/^live\s+['’‘]?(?:\d{4}|\d{2})$/iu.test(value);
+const performanceText=value=>tourText(value)||liveYearText(value)||/^(?:live|dj[ -]?set|live[ -]?set|solo show|extra show|sold out|uitverkocht)$/iu.test(value.trim());
+const confirmedName=value=>/^(?:Yousuke Yukimatsu|¥ØU\$UK€\s+¥UK1MAT\$U(?:\s*\(Yousuke Yukimatsu\))?)$/iu.test(value)?'Yousuke Yukimatsu':/^new\s+wave(?:\s*(?:[-–—]\s*)?all[\s-]+stars)?$/iu.test(value)?'New Wave':/^u2$/iu.test(value)?'U2':/^oasis$/iu.test(value)?'Oasis':/^numidia(?:\s+[-–—]\s+muziekfeest van het jaar)?$/iu.test(value)?'Numidia':null;
 function undecorate(value){const stripped=value.replace(/^[\s\p{Extended_Pictographic}\uFE0F\u200D★☆✦✧]+|[\s\p{Extended_Pictographic}\uFE0F\u200D★☆✦✧]+$/gu,'').trim();return stripped||value;}
 export function readableArtistName(value){
  normalizeArtistName(value);let name=value.normalize('NFKC').trim().replace(/\s+/g,' ').replace(/^#{1,6}\s+/u,'');
@@ -16,6 +17,8 @@ export function readableArtistName(value){
   }}
   const suffix=/^(.+?)(?:\s*:\s*|\s+[-–—]\s+)(.+)$/u.exec(name);
   if(suffix&&performanceText(suffix[2]))name=suffix[1].trim();
+  // A terminal LIVE + year is an event label; bare 'Live' may be an artist name.
+  name=name.replace(/\s+live\s+['’‘]?(?:\d{4}|\d{2})$/iu,'').trim();
   name=undecorate(name).replace(/^#{1,6}\s+/u,'');if(confirmedName(name))return confirmedName(name);if(name===previous)break;
  }
  normalizeArtistName(name);return name;
@@ -27,16 +30,20 @@ export function cleanReadableArtistMenu(input){
 // Raw source names/IDs are unchanged. Their derived aliases retain old links and
 // let old/new Redis-event IDs contribute to the same readable artist.
 export function createReadableArtistDirectory(input,hash){
- const artists=new Map(),aliases=new Map();
- for(const row of cleanArtistMenu(input)){const name=readableArtistName(row.name),id='a_'+hash(normalizeArtistName(name));if(!validArtistId(id))throw Error('ARTIST_CATALOGUE');if(!artists.has(id))artists.set(id,{id,name});if(row.id!==id)aliases.set(row.id,id);}
+ const artists=new Map(),aliases=new Map(),legacySlugs=new Map();
+ for(const row of cleanArtistMenu(input)){const name=readableArtistName(row.name),id='a_'+hash(normalizeArtistName(name));if(!validArtistId(id))throw Error('ARTIST_CATALOGUE');if(!artists.has(id))artists.set(id,{id,name});if(row.id!==id)aliases.set(row.id,id);
+  const legacy=normalizeArtistSlug(row.name).replace(/[^\p{L}\p{N}]/gu,'');if(validArtistSlug(legacy)){if(!legacySlugs.has(legacy))legacySlugs.set(legacy,new Set());legacySlugs.get(legacy).add(id);}
+ }
  for(const [id,target]of aliases)if(artists.has(id)&&id!==target)throw Error('ARTIST_CATALOGUE');
- const result={artists:[...artists.values()].sort(compareArtistNames),aliases};result.routes=artistRouteMap(result.artists);result.slugs=new Map([...result.routes].map(([id,slug])=>[slug,id]));if(result.slugs.size!==result.artists.length)throw Error('ARTIST_CATALOGUE');return result;
+ const result={artists:[...artists.values()].sort(compareArtistNames),aliases,legacySlugs};result.routes=artistRouteMap(result.artists);result.slugs=new Map([...result.routes].map(([id,slug])=>[slug,id]));if(result.slugs.size!==result.artists.length)throw Error('ARTIST_CATALOGUE');return result;
 }
 export function resolveReadableArtist(directory,reference){
  let canonical;
  if(validArtistId(reference))canonical=directory.aliases.get(reference)||reference;
  else if(validArtistSlug(reference)){
   const slug=normalizeArtistSlug(reference);canonical=directory.slugs.get(slug);
+  // Keep unambiguous pre-cleanup name URLs; current canonical routes take priority.
+  if(!canonical){const previous=directory.legacySlugs?.get(slug);if(previous?.size===1)canonical=[...previous][0];}
   if(!canonical){const legacy=/^(.+)-([a-f0-9]{8,64})$/.exec(slug);if(legacy){const targets=new Set();for(const [id,target]of [...directory.aliases,...directory.artists.map(row=>[row.id,row.id])]){const row=directory.artists.find(row=>row.id===target);if(id.slice(2).startsWith(legacy[2])&&(slugBase(row.name)||'artiest')===legacy[1])targets.add(target);}if(targets.size===1)canonical=[...targets][0];}}
  }
  return directory.artists.find(row=>row.id===canonical)||null;
