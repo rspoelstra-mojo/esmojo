@@ -30,13 +30,14 @@ export function createBiographyCapture({store,fetchBiography=fetchMojoBiography,
  return async(after=null)=>{
   const source=await store('biography-candidates'),candidates=biographyCandidates(source.concerts,source.saved,now()).filter(row=>after===null||row.artistId>after),batch=candidates.slice(0,6);
   const failed=[],samples=[];let captured=0,next=0;
-  async function worker(){while(next<batch.length){const series=batch[next++];try{
+  async function worker(){while(next<batch.length){const series=batch[next++];let stage='source';try{
    const biography=await fetchBiography(series.name,{fallbackUrl:series.sourceUrl});
+   stage='save';
    const {sourceUrl:unused,...identity}=series;
    const result=await store('biography-save',{series:identity,biography:{...biography,capturedAt:now().toISOString()}});
    if(!result.saved&&!result.unchanged)throw Error('BIOGRAPHY_VERIFY');captured+=Number(Boolean(result.saved));
    if(result.saved)samples.push({name:series.name,characters:biography.text.length,preview:biography.text.slice(0,100)});
-  }catch(error){failed.push({name:series.name,code:/^(?:MOJO_BIOGRAPHY_[A-Z_]+|BIOGRAPHY_VERIFY)$/.test(error.message||'')?error.message:'BIOGRAPHY_UNAVAILABLE'});}}}
+  }catch(error){failed.push({name:series.name,stage,code:/^(?:MOJO_BIOGRAPHY_[A-Z_]+|BIOGRAPHY_VERIFY|VALIDATION|BUSY|SHOWS_UNAVAILABLE)$/.test(error.message||'')?error.message:'BIOGRAPHY_UNAVAILABLE',...(typeof error.location==='string'?{location:error.location.slice(0,250)}:{})});}}}
   await Promise.all(Array.from({length:Math.min(2,batch.length)},worker));
   return{ok:true,checked:batch.length,captured,failed,samples,nextAfter:candidates.length>batch.length?batch.at(-1).artistId:null};
  };

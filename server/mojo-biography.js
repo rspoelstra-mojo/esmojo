@@ -5,6 +5,10 @@ const all=(node,match)=>{const found=[];function walk(item){if(match(item))found
 const text=node=>node.nodeName==='#text'?node.value:['script','style','nav','footer','form','aside'].includes(node.tagName)?'':children(node).map(text).join('').replace(/\s+/g,' ').trim();
 const fold=value=>value.normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const context=(value,name)=>(' '+fold(value)+' ').includes(' '+fold(name)+' ');
+const biographyContext=(value,name)=>context(value,name)||name.split(/\s+(?:&|\+)\s+/).length>1&&name.split(/\s+(?:&|\+)\s+/).every(part=>context(value,part));
+function sourceUrl(value){
+ try{const url=new URL(value),canonical=new URL(url);canonical.search='';canonical.hash='';return (mojoArtistPageUrl(canonical.href)||mojoConcertUrl(canonical.href))&&url.href.length<=2048?url.href:null;}catch{return null;}
+}
 const blockedHeading=/tijdschema|tickets|kaartverkoop|voorverkoop|bereikbaarheid|toegankelijkheid|praktische|veelgestelde|cookies|privacy|voorprogramma/i;
 export function parseMojoBiography(html,name){
  if(typeof html!=='string'||html.length>2000000)throw Error('MOJO_BIOGRAPHY_FORMAT');
@@ -24,7 +28,7 @@ export function parseMojoBiography(html,name){
    paragraphs.push(value);
   }
   const body=[...new Set(paragraphs)].join('\n\n');
-  if(body.length<120||body.length>20000||!context(body,name))continue;
+  if(body.length<120||body.length>20000||!biographyContext(body,name))continue;
   const score=(rich.includes(scope)?20:0)+(context(paragraphs[0]||'',name)?10:0)+Math.min(body.length,10000)/10000;
   candidates.push({text:body,score});
  }
@@ -34,7 +38,7 @@ export function parseMojoBiography(html,name){
  return candidates[0].text;
 }
 export async function fetchMojoBiography(name,{request=fetch,fallbackUrl=null}={}){
- const sources=[mojoArtistUrl(name),mojoConcertUrl(fallbackUrl)].filter((value,index,rows)=>value&&rows.indexOf(value)===index);
+ const sources=[mojoArtistUrl(name),sourceUrl(fallbackUrl)].filter((value,index,rows)=>value&&rows.indexOf(value)===index);
  let failure=Error('MOJO_BIOGRAPHY_SOURCE');
  for(const source of sources)try{
   let target=source,response;const signal=AbortSignal.timeout(20000);
@@ -42,11 +46,12 @@ export async function fetchMojoBiography(name,{request=fetch,fallbackUrl=null}={
    response=await request(target,{headers:{'User-Agent':'ESMOJO (+https://esmojo.nl)',Accept:'text/html'},redirect:'manual',signal});
    if(![301,302,303,307,308].includes(response.status))break;
    const location=response.headers.get('location');if(!location||hop===4)throw Error('MOJO_BIOGRAPHY_REDIRECT');
-   const next=new URL(location,target).href;target=mojoArtistPageUrl(next)||mojoConcertUrl(next);if(!target)throw Error('MOJO_BIOGRAPHY_REDIRECT');
+   const next=new URL(location,target).href;target=sourceUrl(next);if(!target){const error=Error('MOJO_BIOGRAPHY_REDIRECT');const url=new URL(next);error.location=url.origin+url.pathname;throw error;}
   }
   if(!response.ok)throw Error('MOJO_BIOGRAPHY_HTTP');
   if(!response.headers.get('content-type')?.includes('text/html')||Number(response.headers.get('content-length')||0)>2000000)throw Error('MOJO_BIOGRAPHY_FORMAT');
-  return{text:parseMojoBiography(await response.text(),name),sourceUrl:target};
+  const canonical=new URL(target);canonical.search='';canonical.hash='';
+  return{text:parseMojoBiography(await response.text(),name),sourceUrl:canonical.href};
  }catch(error){failure=error;}
  throw failure;
 }
