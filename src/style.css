@@ -61,6 +61,9 @@ h1 { font-size: 40px; font-weight: 550; letter-spacing: -1.4px; margin: 14px 0 3
 .submenu[hidden] { display: none; }
 .has-submenu { --submenu-width: 210px; }
 .submenu { position: fixed; top: 0; bottom: 0; left: 76px; width: var(--submenu-width); padding: calc(var(--menu-top) - 5px) 16px; border-right: 1px solid var(--line); background: var(--canvas); overflow-y: auto; }
+/* Houd lange submenu's scrollbaar zonder een zichtbare scrollbalk. */
+.submenu, .mobile-menu-scroll { scrollbar-width: none; }
+.submenu::-webkit-scrollbar, .mobile-menu-scroll::-webkit-scrollbar { display: none; }
 .submenu h2 { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 #submenu-navigation { align-items: stretch; gap: 4px; margin-top: 24px; }
 .has-submenu main { margin-left: var(--submenu-width); }

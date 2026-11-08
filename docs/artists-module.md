@@ -8,6 +8,21 @@ geen CSV-inhoud, bronbestandsnamen, Drive-IDs, ontvangers of accountrelaties.
 Case/spaties/NFKC worden genormaliseerd; geen fuzzy samenvoeging of verzonnen namen.
 De eerste canonieke schrijfwijze uit de concertcatalogus heeft voorrang.
 
+Een gedeelde leesbare weergavelaag in Node en de browser verwijdert duidelijke
+tour-/uitvoeringstoevoegingen en decoratieve randen. Bevestigde namen: Yousuke
+Yukimatsu, U2 en New Wave. Betekenisvolle tekens zoals in AC/DC en P!nk blijven
+behouden; onbekende omschrijvingen worden niet op goed geluk verwijderd.
+Concert-/rapportbronnen blijven ongewijzigd. Gelijk geworden namen krijgen één
+canoniek naam-ID; oorspronkelijke IDs blijven als aliassen bereikbaar. Bestaande
+Redis-kliks worden bij lezen opgeteld zonder records of bewaartermijnen te wijzigen.
+Klikretries behouden het oorspronkelijk aangevraagde ID en dezelfde UUID.
+
+Publieke routes gebruiken leesbare namen zonder spaties/diakritische tekens:
+/artiest/u2, /artiest/newwave en /artiest/yousukeyukimatsu. Echte naamcollisies
+krijgen een korte unieke ID-suffix. Oude ID-links blijven werken en worden via
+replaceState vervangen, zonder extra navigatie of klikpunt. Slugs en aliastabellen
+worden niet persistent opgeslagen; de menucache houdt uitsluitend namen/IDs.
+
 Node en Drive controleren onafhankelijk de actuele Artiestenrechten. De nieuwe
 accounts-acties artist-menu, artist-ranking, artist-detail en artist-view vereisen
 activering/MFA/actuele sessie. Shows- of Rapportagesrechten verlenen geen toegang.

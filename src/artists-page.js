@@ -1,35 +1,47 @@
 import './artists-page.css';
 import {access} from './auth.js';
 import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
-import {cleanArtistMenu,validArtistId} from '../shared/artist-catalogue.js';
+import {validArtistId,normalizeArtistName} from '../shared/artist-catalogue.js';
+import {cleanReadableArtistMenu as cleanArtistMenu,artistRouteMap,validArtistReference,validArtistSlug,normalizeArtistSlug} from '../shared/artist-names.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 import {createPageFeedback} from './lib/page-feedback.js';
 const node=(tag,className,text)=>{const el=document.createElement(tag);el.className=className;if(text!==undefined)el.textContent=text;return el;};
 export function createArtistsPage(content,submenu,{selected=null,forceRefresh=false,cache=artistCatalogueCache,request=access,heading=document.querySelector('#submenu-title'),eventId=()=>crypto.randomUUID()}={}){
- let disposed=false,page=null,activeId=null;const controller=new AbortController(),menuLoading=createSubmenuLoading(heading,content),feedbacks=new Map();
+ let disposed=false,page=null,activeId=null,resolvedArtist=null;const controller=new AbortController(),menuLoading=createSubmenuLoading(heading,content),feedbacks=new Map();
  const feedback=kind=>{if(!feedbacks.has(kind))feedbacks.set(kind,createPageFeedback({key:'artists:'+kind,label:kind==='ranking'?'Meest bekeken laden':'Artiesten laden',route:'/artiest'}));return feedbacks.get(kind);};
  function selection(){content.classList.add('artist-selection-empty');content.replaceChildren(node('p','artist-selection-prompt','Kies eerst een artiest'));}
  if(!selected)selection();
  function openArtist(id,links){
   let cancelled=false,busy=false;const loaders=new Map(),error=createPageFeedback({key:'artist-page:'+id,label:'Artiest laden',route:'/artiest/'+id});
-  function setLinks(next){const elements=next.length?next:[heading];for(const [el,loader]of loaders)if(!elements.includes(el)){loader.ui.dispose();loaders.delete(el);}for(const el of elements)if(!loaders.has(el)){const ui=createSubmenuLoading(el,content);loaders.set(el,{ui,finish:busy?ui.start():()=>{}});}if(busy)content.setAttribute('aria-busy','true');}
+  function setLinks(next){const elements=next.length?next:[heading];for(const [el,loader]of loaders)if(!elements.includes(el)){loader.ui.dispose();loaders.delete(el);}for(const el of elements)if(!loaders.has(el)){const ui=createSubmenuLoading(el,content);loaders.set(el,{ui,finish:busy?ui.start():()=>{}});}cache.trackDetail(id,next.map(el=>el.dataset.artistId));if(busy)content.setAttribute('aria-busy','true');}
   async function load(){if(cancelled||busy)return;busy=true;content.classList.remove('artist-selection-empty');content.replaceChildren();for(const loader of loaders.values())loader.finish=loader.ui.start();
-   try{const data=await cache.detail(request,id);if(cancelled)return;const artist=cleanArtistMenu([data.artist])[0];if(artist.id!==id)throw Error('ARTIST_CATALOGUE');const section=node('section','artist-page'),header=node('header','artist-page-heading');header.append(node('h1','artist-page-title',artist.name));section.append(header);content.replaceChildren(section);document.title=artist.name+' · Artiesten · ESMOJO';error.resolved();}
+   try{
+    const data=await cache.detail(request,id,[...loaders.keys()].map(el=>el.dataset.artistId));if(cancelled)return;
+    const artist=cleanArtistMenu([data.artist])[0];
+    if(validArtistId(id)&&artist.id!==id||data.requestedReference!==undefined&&data.requestedReference!==id)throw Error('ARTIST_CATALOGUE');
+    const canonicalId=data.canonicalArtistId||artist.id;if(!validArtistId(canonicalId))throw Error('ARTIST_CATALOGUE');
+    const known=[...(cache.current()?.artists||[]),{id:canonicalId,name:artist.name}],slug=data.canonicalArtistSlug||artistRouteMap(known).get(canonicalId);
+    if(!validArtistSlug(slug))throw Error('ARTIST_CATALOGUE');
+    resolvedArtist={id:canonicalId,name:artist.name};selected=activeId=normalizeArtistSlug(slug);
+    const section=node('section','artist-page'),header=node('header','artist-page-heading');header.append(node('h1','artist-page-title',artist.name));section.append(header);content.replaceChildren(section);document.title=artist.name+' · Artiesten · ESMOJO';
+    const path='/artiest/'+encodeURIComponent(selected);if(location.pathname!==path)history.replaceState(null,'',path+location.search+location.hash);
+    render(cache.current());error.resolved();
+   }
    catch{if(!cancelled)error.show('De artiest kon niet worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
    finally{busy=false;for(const loader of loaders.values())loader.finish();if(!cancelled)content.removeAttribute('aria-busy');}
   }
   setLinks(links);void load();return{setLinks,dispose(){cancelled=true;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
  }
- function render(state){if(disposed||!state)return;const known=new Map([...submenu.querySelectorAll('[data-artist-link]')].map(el=>[el.dataset.artistLink,el])),selectedLinks=[];submenu.replaceChildren();
+ function render(state){if(disposed||!state)return;const known=new Map([...submenu.querySelectorAll('[data-artist-link]')].map(el=>[el.dataset.artistLink,el])),selectedLinks=[],routes=artistRouteMap([...(state.artists||[]),...state.mostViewed]);submenu.replaceChildren();
   for(const [group,title,rows]of [['most','Meest bekeken',state.mostViewed],['all','Alle artiesten',state.artists||[]]]){
    const label=node('h3','submenu-group-heading',title);label.dataset.submenuGroupHeading=group;submenu.append(label);
    if(!rows.length&&(group==='all'?state.artists!==null:state.rankingLoaded)){const empty=node('p','submenu-group-empty',group==='all'?'Geen artiesten':'Nog geen bekeken artiesten');empty.dataset.submenuGroupEmpty=group;submenu.append(empty);}
-   for(const artist of rows){const key=group+':'+artist.id,link=known.get(key)||node('a','submenu-link');if(!known.has(key))link.append(node('span','artist-menu-name',artist.name));else if(link.dataset.submenuTitle!==artist.name)link.querySelector('.artist-menu-name').textContent=artist.name;link.href='/artiest/'+artist.id;link.dataset.artistLink=key;link.dataset.artistId=artist.id;link.dataset.submenuTitle=artist.name;link.dataset.submenuGroup=group;
+   for(const artist of rows){const key=group+':'+artist.id,link=known.get(key)||node('a','submenu-link');if(!known.has(key))link.append(node('span','artist-menu-name',artist.name));else if(link.dataset.submenuTitle!==artist.name)link.querySelector('.artist-menu-name').textContent=artist.name;link.href='/artiest/'+encodeURIComponent(routes.get(artist.id));link.dataset.artistLink=key;link.dataset.artistId=artist.id;link.dataset.submenuTitle=artist.name;link.dataset.submenuGroup=group;
     if(!known.has(key)){const count=event=>{if(event.defaultPrevented||event.type==='auxclick'&&event.button!==1||event.type==='click'&&event.button!==0)return;const id=link.dataset.artistId,clickId=eventId();setTimeout(()=>{void cache.record(request,id,clickId).catch(()=>{if(!disposed)feedback('ranking').show('Meest bekeken kon niet worden bijgewerkt. Je kunt gewoon verderwerken.');});},0);};link.addEventListener('click',count);link.addEventListener('auxclick',count);}
-    if(artist.id===selected){link.setAttribute('aria-current','page');selectedLinks.push(link);}else link.removeAttribute('aria-current');submenu.append(link);
+    if(artist.id===selected||validArtistSlug(selected)&&routes.get(artist.id)===normalizeArtistSlug(selected)||resolvedArtist&&normalizeArtistName(artist.name)===normalizeArtistName(resolvedArtist.name)){link.setAttribute('aria-current','page');selectedLinks.push(link);}else link.removeAttribute('aria-current');submenu.append(link);
    }
   }
-  if(selected){if(!validArtistId(selected)){feedback('page').show('Deze artiest is niet beschikbaar.');return;}if(activeId!==selected){page?.dispose();activeId=selected;page=openArtist(selected,selectedLinks);}else page?.setLinks(selectedLinks);}
+  if(selected){if(!validArtistReference(selected)){feedback('page').show('Deze artiest is niet beschikbaar.');return;}if(activeId!==selected){page?.dispose();activeId=selected;page=openArtist(selected,selectedLinks);}else page?.setLinks(selectedLinks);}
  }
  async function load(force=false){const pending=!selected&&cache.current()?.artists===null,finish=pending?menuLoading.start():()=>{};
   const menu=cache.refreshMenu(request,{force}).then(()=>{if(!disposed)feedback('menu').resolved();}).catch(()=>{if(!disposed)feedback('menu').show('Het artiestenmenu kon niet worden vernieuwd. De bekende artiesten blijven beschikbaar.',async()=>{await load(true);return cache.current()?.artists!==null;},'Opnieuw laden');}).finally(finish);
