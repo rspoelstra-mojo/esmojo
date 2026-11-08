@@ -13,8 +13,9 @@ const root=fileURLToPath(new URL('../../',import.meta.url)).replace(/\/$/,'');
 const html=`<!doctype html><html><head><meta charset="UTF-8"><link rel="stylesheet" href="/src/incident-admin.css"><style>:root{--line:#ddd;--muted:#888;--fluid-card:white}body{font-family:Arial}*{box-sizing:border-box}</style></head><body><a id="menu">Incidenten</a><main id="content"></main><script type="module">
 const originalTimeout=window.setTimeout;window.setTimeout=(fn,delay,...args)=>delay===60000?(window.poll=fn,0):originalTimeout(fn,delay,...args);
 import{createIncidentAdminView}from'/src/incident-admin.js';import{incidentReferences}from'/shared/artist-risk-score.js';
-let row={concertId:'fixture',name:'Fixture',date:'2026-11-01',venue:'Gashouder',revision:0,visitors:null,medicalComplete:false,securityComplete:false,zeroIncidents:false,hasSource:false,sourceReady:false,countsReady:false};window.body=null;window.fail=false;window.setServerRevision=value=>row.revision=value;
-window.dispose=createIncidentAdminView(document.querySelector('#content'),document.querySelector('#menu'),{request:async(action,options={})=>{if(options.method==='PATCH'){window.body=options.body;await new Promise(resolve=>window.confirmSave=resolve);if(window.fail)throw Error('FIXTURE');row={...row,...options.body,revision:row.revision+1};return{ok:true};}return{references:incidentReferences([]),shows:[row],updatedAt:null,pending:false};}});
+const zero={security:{total:0,verbal:0,physical:0,mischief:0,evictions:0,arrests:0},medical:{total:0,treatments:0,selfcare:0,unwell:0,contusion:0,ambulance:0}};
+let row={concertId:'fixture',name:'Fixture',date:'2026-11-02',venue:'Gashouder',soldTickets:1001,visitors:975.975,visitorUnits:39039,visitorBasis:'ticket-minus-2.5',medicalComplete:true,securityComplete:true,hasSource:true,sourceReady:true,countsReady:true,kpis:zero};window.requests=[];window.setServerSales=value=>{row.soldTickets=value;row.visitorUnits=value===null?null:value*39;row.visitors=value===null?null:row.visitorUnits/40;};
+window.dispose=createIncidentAdminView(document.querySelector('#content'),document.querySelector('#menu'),{request:async(action,options={})=>{window.requests.push(options.method||'GET');return{references:incidentReferences([row]),shows:[row],updatedAt:null,pending:false};}});
 </script></body></html>`;
 const server=createServer((req,res)=>{if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end(html);return;}const file=resolve(root,'.'+req.url);if(!file.startsWith(root+'/src/')&&!file.startsWith(root+'/shared/')){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8');res.end(file.endsWith('.js')?readFileSync(file,'utf8').replace(/import\s*['"][^'"]+\.css['"];?/g,'').replace(/import\s*\{\s*access\s*\}\s*from\s*'\.\/auth.js';/, 'const access=()=>{};'):readFileSync(file));});
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
@@ -40,18 +41,17 @@ try{
  await send('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/'});
  for(let n=0;n<100;n++){if(await evaluate("document.querySelector('select')?.options.length===2"))break;await pause(25);}
  assert.equal(await evaluate("document.querySelectorAll('.incident-admin-card').length"),3);
+ assert.equal(await evaluate("document.querySelectorAll('form,input,button').length"),0,'Geen bevestigingsformulier of opslagknop');
  await evaluate("document.querySelector('.incident-registration').open=true;const select=document.querySelector('select');select.value='fixture';select.dispatchEvent(new Event('change'))");
- assert.equal(await evaluate("document.querySelector('input[type=number]').value"),'');
- assert.equal(await evaluate("[...document.querySelectorAll('input[type=checkbox]')].some(e=>e.checked)"),false);
- await evaluate("document.querySelector('input[type=number]').value='1234';document.querySelectorAll('input[type=checkbox]').forEach(e=>e.checked=true);document.querySelector('form').requestSubmit()");await pause(25);
- assert.equal(await evaluate('window.body.visitors'),1234);assert.equal(await evaluate('window.body.revision'),0);
- assert.equal(await evaluate("[...document.querySelectorAll('input,select')].every(e=>e.disabled)"),true);
- await evaluate('window.confirmSave()');await pause(70);
- assert.equal(await evaluate("document.querySelector('input[type=number]').value"),'1234');
- await evaluate("window.fail=true;const input=document.querySelector('input[type=number]');input.value='2222';input.dispatchEvent(new Event('input',{bubbles:true}));window.setServerRevision(8);window.poll()");await pause(25);await evaluate("document.querySelector('form').requestSubmit()");await pause(25);assert.equal(await evaluate('window.body.revision'),1,'Een stille refresh mag de zichtbare formulierbasis niet verhogen');await evaluate('window.confirmSave()');await pause(70);
- assert.equal(await evaluate("document.querySelector('input[type=number]').value"),'2222','Invoer behouden bij onzekere opslag');
- assert.equal(await evaluate("document.querySelector('input[type=number]').disabled"),false);
- await evaluate('window.dispose()');console.log('Browser: drie hoofdkaarten, bevestigingen alleen na invoer; veilig vastgezette revisie/write; fout behoudt invoer; achtergrondrefresh verandert oorspronkelijke revisie niet.');
+ assert.equal(await evaluate("document.querySelector('.incident-registration').textContent.includes('975,975')&&document.querySelector('.incident-registration').textContent.includes('97,5%')"),true);
+ assert.equal(await evaluate("document.querySelectorAll('.incident-indicator').length"),12);
+ await evaluate('window.setServerSales(2000);window.poll()');await pause(70);
+ assert.equal(await evaluate("document.querySelector('select').value"),'fixture');
+ assert.equal(await evaluate("document.querySelector('.incident-registration').textContent.includes('1.950')"),true);
+ await evaluate('window.setServerSales(null);window.poll()');await pause(70);
+ assert.equal(await evaluate("document.querySelector('.incident-registration').textContent.includes('Niet beschikbaar')"),true);
+ assert.equal(await evaluate("window.requests.every(method=>method==='GET')"),true);
+ await evaluate('window.dispose()');console.log('Browser: drie kaarten/twaalf indicatoren; automatische bezoekersbasis; geen handmatige bevestiging; wijziging en ontbrekende verkoop worden automatisch verwerkt.');
 }finally{
  ws?.close();try{if(process.platform==='win32')child.kill('SIGTERM');else process.kill(-child.pid,'SIGTERM');}catch{}if(child.exitCode===null)await Promise.race([new Promise(done=>child.once('exit',done)),pause(1000)]);
  server.closeAllConnections();await new Promise(done=>server.close(done));rmSync(userData,{recursive:true,force:true,maxRetries:5,retryDelay:100});

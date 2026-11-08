@@ -11,24 +11,28 @@ export function operationalPoints(levels){
  let high=0,total=0;for(const level of levels)total+=level==='high'?(high++?5:7.5):level==='medium'?2:level==='low'?.5:0;
  return Math.min(15,total);
 }
+export function incidentVisitorUnits(row){
+ if(row?.visitorUnits!==undefined){const units=row.visitorUnits;return Number.isSafeInteger(units)&&units>=0&&row.visitors===units/40?units:null;}
+ return Number.isSafeInteger(row?.visitors)&&row.visitors>=0&&Number.isSafeInteger(row.visitors*40)?row.visitors*40:null;
+}
 export function incidentRateFraction(artist,reference){
- if(![artist,reference].every(row=>Number.isSafeInteger(row?.incidents)&&row.incidents>=0&&Number.isSafeInteger(row.visitors)&&row.visitors>0))throw Error('INVALID_REFERENCE');
- const left=BigInt(artist.incidents)*BigInt(reference.visitors),right=BigInt(reference.incidents)*BigInt(artist.visitors);
+ if(![artist,reference].every(row=>Number.isSafeInteger(row?.incidents)&&row.incidents>=0&&incidentVisitorUnits(row)>0))throw Error('INVALID_REFERENCE');
+ const left=BigInt(artist.incidents)*BigInt(incidentVisitorUnits(reference)),right=BigInt(reference.incidents)*BigInt(incidentVisitorUnits(artist));
  if(left<=right)return 0;if(right===0n)return 1;
  if(left*4n<=right*5n)return .25;if(left*2n<=right*3n)return .5;if(left*4n<right*7n)return .75;return 1;
 }
 export const riskClass=score=>score>=90?'Zeer hoog risico':score>=75?'Hoog risico':score>=55?'Midden risico':'Laag risico';
-export function suitableIncidents(row){return Boolean(row?.securityComplete===true&&row.medicalComplete===true&&Number.isSafeInteger(row.visitors)&&row.visitors>0&&validIncidentCounts(row.kpis));}
+export function suitableIncidents(row){return Boolean(row?.securityComplete===true&&row.medicalComplete===true&&incidentVisitorUnits(row)>0&&validIncidentCounts(row.kpis));}
 export function incidentReferences(rows){
  const unique=new Map();for(const row of rows){if(typeof row?.concertId!=='string'||!row.concertId)throw Error('INVALID_CONCERT');if(unique.has(row.concertId))throw Error('DUPLICATE_CONCERT');unique.set(row.concertId,row);}
  const included=[...unique.values()].filter(suitableIncidents),identities=new Set();
  for(const row of included){const identity=row.date&&row.venue?JSON.stringify([normalizeArtistName(readableArtistName(row.name)),row.date,row.venue.toLocaleLowerCase('nl-NL'),row.performance||null]):row.concertId;if(identities.has(identity))throw Error('DUPLICATE_CONCERT');identities.add(identity);}
- const visitors=included.reduce((n,row)=>n+row.visitors,0),indicators={};
- if(!Number.isSafeInteger(visitors))throw Error('INVALID_TOTAL');
+ const visitorUnits=included.reduce((n,row)=>n+incidentVisitorUnits(row),0),visitors=visitorUnits/40,indicators={};
+ if(!Number.isSafeInteger(visitorUnits))throw Error('INVALID_TOTAL');
  for(const [group,definitions]of Object.entries(incidentIndicators)){
-  indicators[group]={};for(const [key]of definitions){const incidents=included.reduce((n,row)=>n+row.kpis[group][key],0);if(!Number.isSafeInteger(incidents))throw Error('INVALID_TOTAL');indicators[group][key]={incidents,visitors,rate:visitors?incidents/visitors*1000:null};}
+  indicators[group]={};for(const [key]of definitions){const incidents=included.reduce((n,row)=>n+row.kpis[group][key],0);if(!Number.isSafeInteger(incidents))throw Error('INVALID_TOTAL');indicators[group][key]={incidents,visitors,visitorUnits,rate:visitors?incidents/visitors*1000:null};}
  }
- return{concerts:included.length,visitors,indicators};
+ return{concerts:included.length,visitors,visitorUnits,indicators};
 }
 export function calculateArtistRisk(rows,references){
  const eligible=rows.filter(row=>suitableIncidents(row)&&row.visitorsFinal===true&&row.artistFinal===true&&[row.visitorsRating,row.artistRating].every(n=>Number.isFinite(n)&&n>=1&&n<=10)&&operationalPoints(row.operationalLevels)!==null);

@@ -65,3 +65,10 @@ test('MFA-cachecheck vereist eigen vaste workflow, audience en main-identiteit',
  await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience,workflow}),/FORBIDDEN/);
  await assert.rejects(verifyImportIdentity(signed,{request,now,audience:'other',workflow}),/FORBIDDEN/);
 });
+test('Automatische incidentherberekening accepteert alleen webworkflow/main/eigen audience, geen fork of andere workflow',async()=>{
+ const audience='https://esmojo.nl/api/incident-references-sync',workflow='web-reports.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
+ for(const event_name of ['push','workflow_run']){
+  assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),{runId:'123'});
+  for(const patch of [{ref:'refs/heads/task'},{repository_id:'123'},{repository_owner_id:'123'},{aud:'other'},{workflow_ref:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name,...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
+ }
+});

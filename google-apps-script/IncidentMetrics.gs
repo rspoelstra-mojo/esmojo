@@ -21,6 +21,24 @@ function esmojoIncidentInventory_(){
  for(const source of inventory.sources)if(source.show.date<today)shows.set(source.show.key,{concertId:source.show.key,name:source.show.name,date:source.show.date,venue:source.show.venue,...(source.show.performance?{performance:source.show.performance}:{})});
  return{catalogue,inventory,shows};
 }
+function esmojoIncidentAttendance_(show,historical,targets){
+ const imported=historical.get(show.concertId);let sold=null;
+ if(imported&&validSaleCount(imported.ticket_sales))sold=Number(imported.ticket_sales);
+ else if(show.seriesId){
+  if(!targets.has(show.seriesId)){
+   const target=esmojoResearchTarget_(show.concertId),tickets=esmojoReadTicketData_(esmojoShowFile_(target.folder,'bezoekersdata.json'),target.primary.concertId),field=JSON.parse(tickets.workflow_json).visitors.fields.ticket_sales;
+   targets.set(show.seriesId,{content:field?.completed_at?field.content:null,shows:target.seriesShows});
+  }
+  const entry=targets.get(show.seriesId),rows=parseTicketSales(entry.content),selected=rows?.filter(row=>row.date===show.date);
+  if(selected?.length){
+   // Een voorstelling krijgt nooit automatisch het totaal van twee tijdsloten.
+   if(!show.performance||selected.length===1)sold=selected.reduce((sum,row)=>sum+Number(row.count),0);
+  }else if(validSaleCount(entry.content)&&entry.shows.length===1&&entry.shows[0].date===show.date)sold=Number(entry.content);
+ }
+ const historic=Boolean(imported&&show.date<'2026-11-01'),visitorUnits=sold===null?null:sold*(historic?40:39);
+ if(visitorUnits!==null&&!Number.isSafeInteger(visitorUnits))throw Error('VALIDATION');
+ return{soldTickets:sold,visitorUnits,visitors:visitorUnits===null?null:visitorUnits/40,visitorBasis:historic?'historical-attendance':'ticket-minus-2.5'};
+}
 function esmojoIncidentAnalysis_(show){
  if(!show||show.historical||!show.seriesId)return{};
  const target=esmojoResearchTarget_(show.concertId),marker=esmojoActiveMarker_(target).document;
@@ -30,24 +48,26 @@ function esmojoIncidentAnalysis_(show){
  return{visitorsFinal:Boolean(state.categories.visitors.completedAt),artistFinal:Boolean(state.categories.artist.completedAt),visitorsRating:final.categories.visitors?.score||null,artistRating:final.categories.artist?.score||null,operationalLevels:operationalComplete({risks})?risks.risks.map(row=>risks.operational.assessments[row.id].riskLevel):null};
 }
 function esmojoIncidentMetrics_(request){
- const op=request.operation,allowed={'incident-read':['actor','artistIds','operation'],'incident-confirm':['actor','concertId','revision','visitors','securityComplete','medicalComplete','zeroIncidents','operation'],'incident-source':['actor','concertId','operation'],'incident-counts':['actor','concertId','sourceHash','kpis','operation']}[op];
+ const op=request.operation,allowed={'incident-read':['actor','artistIds','worker','operation'],'incident-source':['actor','concertId','worker','operation'],'incident-counts':['actor','concertId','sourceHash','kpis','worker','operation']}[op];
  if(!allowed||Object.keys(request).some(key=>!allowed.includes(key)))throw Error('VALIDATION');
- esmojoIncidentActor_(request.actor,op==='incident-confirm'||op==='incident-read'&&!request.artistIds);
+ if(request.worker!==undefined&&request.worker!==true)throw Error('VALIDATION');
+ if(request.worker===true){if(request.actor!==undefined||request.artistIds!==undefined)throw Error('VALIDATION');}else esmojoIncidentActor_(request.actor,op==='incident-read'&&!request.artistIds);
  if(request.artistIds!==undefined&&(!Array.isArray(request.artistIds)||!request.artistIds.length||request.artistIds.length>1000||!request.artistIds.every(validArtistId)))throw Error('VALIDATION');
  const storage=esmojoIncidentRegister_(),{inventory,catalogue,shows}=esmojoIncidentInventory_(),document=storage.document;
  const available=new Map(inventory.available.filter(source=>!inventory.sources.some(other=>other.show.key===source.show.key&&other.modifiedAt>source.modifiedAt)).map(source=>[source.show.key,source]));
  if(op==='incident-read'){
-  const ids=request.artistIds?new Set(request.artistIds):null,rows=[],jobs=[];
+  const ids=request.artistIds?new Set(request.artistIds):null,rows=[],jobs=[],historical=new Map(esmojoHistoricalRegister_().entries.map(row=>[row.concertId,row])),targets=new Map();
   for(const show of [...shows.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.concertId.localeCompare(b.concertId))){
-   const saved=document.confirmations[show.concertId],source=available.get(show.concertId),hasSource=inventory.sources.some(row=>row.show.key===show.concertId),cache=document.counts[show.concertId];
-   const kpis=source&&cache?.definitionVersion===1&&cache.sourceHash===source.entry.sourceHash?cache.kpis:!hasSource&&saved?.zeroIncidents?{security:{total:0,verbal:0,physical:0,mischief:0,evictions:0,arrests:0},medical:{total:0,treatments:0,selfcare:0,unwell:0,contusion:0,ambulance:0}}:null;
-   const row=Object.assign({},show,{revision:saved?.revision||0,visitors:saved?.visitors??null,securityComplete:saved?.securityComplete===true,medicalComplete:saved?.medicalComplete===true,zeroIncidents:saved?.zeroIncidents===true,kpis,hasSource,sourceReady:Boolean(source),updatedAt:saved?.updatedAt||null});
+   const source=available.get(show.concertId),hasSource=inventory.sources.some(row=>row.show.key===show.concertId),cache=document.counts[show.concertId];
+   const kpis=source&&cache?.definitionVersion===1&&cache.sourceHash===source.entry.sourceHash?cache.kpis:null;
+   const canonical=catalogue.get(show.concertId)||show,attendance=esmojoIncidentAttendance_(canonical,historical,targets);
+   const row=Object.assign({},show,attendance,{securityComplete:hasSource,medicalComplete:hasSource,kpis,hasSource,sourceReady:Boolean(source)});
    const suitable=row.visitors>0&&row.securityComplete&&row.medicalComplete;
    if(suitable&&source&&!kpis)jobs.push(show.concertId);
    if(ids&&suitable&&kpis&&ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(show.name))))Object.assign(row,esmojoIncidentAnalysis_(catalogue.get(show.concertId)));
    rows.push(row);
   }
-  return{rows,jobs,updatedAt:document.updatedAt};
+  return{policyVersion:2,rows,jobs,updatedAt:document.updatedAt};
  }
  if(typeof request.concertId!=='string'||!shows.has(request.concertId))throw Error('NOT_FOUND');
  const source=available.get(request.concertId);
@@ -63,12 +83,6 @@ function esmojoIncidentMetrics_(request){
   // De server heeft de bron geverifieerd en dezelfde webrapportagerekenlaag gebruikt.
   const previous=document.counts[request.concertId];if(previous?.definitionVersion===1&&previous.sourceHash===request.sourceHash)return{ok:true};
   document.counts[request.concertId]={definitionVersion:1,sourceHash:request.sourceHash,kpis:request.kpis};
- }else{
-  if(!Number.isSafeInteger(request.revision)||request.revision<0||request.visitors!==null&&(!Number.isSafeInteger(request.visitors)||request.visitors<0||request.visitors>10000000)||['securityComplete','medicalComplete','zeroIncidents'].some(key=>typeof request[key]!=='boolean')||request.zeroIncidents&&inventory.sources.some(row=>row.show.key===request.concertId))throw Error('VALIDATION');
-  const previous=document.confirmations[request.concertId],current=previous?.revision||0;
-  const fields={visitors:request.visitors,securityComplete:request.securityComplete,medicalComplete:request.medicalComplete,zeroIncidents:request.zeroIncidents};
-  if(current!==request.revision){if(current===request.revision+1&&Object.keys(fields).every(key=>previous[key]===fields[key]))return{ok:true,revision:current};throw Error('CONFLICT');}
-  document.confirmations[request.concertId]={...fields,revision:current+1,updatedAt:new Date().toISOString(),updatedBy:request.actor};
  }
  document.revision++;document.updatedAt=new Date().toISOString();esmojoIncidentSave_(storage);return{ok:true};
 }

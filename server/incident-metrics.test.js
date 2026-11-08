@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {incidentIndicators,incidentReferences,calculateArtistRisk,incidentRateFraction,operationalPoints,riskClass,displayedRiskParts} from '../shared/artist-risk-score.js';
-import {createIncidentMetricsService,validateIncidentConfirmation} from './incident-metrics.js';
+import {createIncidentMetricsService} from './incident-metrics.js';
 const kpis=(value=0)=>Object.fromEntries(Object.entries(incidentIndicators).map(([group,defs])=>[group,Object.fromEntries(defs.map(([key])=>[key,value]))]));
 const row=(id,extra={})=>({concertId:id,name:'Fixture',visitors:1000,securityComplete:true,medicalComplete:true,kpis:kpis(),visitorsRating:10,artistRating:10,visitorsFinal:true,artistFinal:true,operationalLevels:['high','high','high'],...extra});
 test('Maximum 100, vijf gewichten, ongeronde classificatie en consistente nulregel',()=>{
@@ -27,34 +27,37 @@ test('Alleen complete concerten in score; ruimere referentiedataset bezoekersgew
  assert.equal(incidentReferences([row('missing',{kpis:null})]).indicators.medical.total.rate,null);
  const score={parts:{visitors:1/3,artist:1/3,operational:1/3,incidents:1/3},total:4/3};assert.equal(Math.round(Object.values(displayedRiskParts(score)).reduce((a,b)=>a+b)*100),Math.round(score.total*100));
 });
-test('Confirmatie valideert strikt en accepteert geen verkoop, actor, vrije bron of tellingen',()=>{
- const input={concertId:'fixture',revision:0,visitors:0,securityComplete:true,medicalComplete:true,zeroIncidents:true};assert.equal(validateIncidentConfirmation(input),input);
- for(const patch of [{actor:'other'},{sourceHash:'free'},{kpis:{}},{ticket_sales:500},{visitors:'100'},{revision:-1},{medicalComplete:null}])assert.throws(()=>validateIncidentConfirmation({...input,...patch}));
-});
-function drive(){
- let text=null,writes=0,profiles=[{id:'admin',role:'beheerder',activated:true},{id:'user',role:'gebruiker',activated:true,modules:['artists']}],sourceHash='a'.repeat(64);
+function drive({date='2026-11-02',historical=false}={}){
+ let text=null,writes=0,profiles=[{id:'admin',role:'beheerder',activated:true},{id:'user',role:'gebruiker',activated:true,modules:['artists']}];
+ let sale='1001',completed=true;
  const file={getBlob:()=>({getDataAsString:()=>text}),setContent:value=>{text=value;writes++;}},folder={createFile:blob=>{text=blob.text;writes++;return file;}};
- const source={show:{key:'fixture',name:'Fixture',date:'2026-11-01',venue:'Gashouder'},modifiedAt:'2026-11-02',entry:{sourceHash}};
- let sources=[];
- const ctx=vm.createContext({Map,Set,Date,JSON,Number,Object,Array,Utilities:{formatDate:()=> '2026-11-08',newBlob:text=>({text})},DriveApp:{getFolderById:()=>folder},ESMOJO_FOLDER_ID:'root',ESMOJO_ONTRACK_FOLDER_ID:'ontrack',esmojoShowFile_:()=>text?file:null,esmojoOnTrackProfiles_:()=>profiles,isAdministrator:p=>p.role==='beheerder',hasModule:(p,m)=>p.modules?.includes(m),validArtistId:v=>/^a_[a-f0-9]{64}$/.test(v),normalizeArtistName:v=>v.toLowerCase(),esmojoOnTrackHash_:v=>createHash('sha256').update(v).digest('hex'),esmojoTimetableCatalogue_:()=>new Map([['fixture',{concertId:'fixture',artist:'Fixture',date:'2026-11-01',venue:'Gashouder'}]]),esmojoWebInventory_:()=>({sources,available:sources})});
+ const source={show:{key:'fixture',name:'Fixture',date,venue:'Gashouder'},modifiedAt:'2026-11-03',entry:{sourceHash:'a'.repeat(64)}};let sources=[],ready=true;
+ const ctx=vm.createContext({Map,Set,Date,JSON,Number,Object,Array,Utilities:{formatDate:()=> '2026-11-08',newBlob:text=>({text})},DriveApp:{getFolderById:()=>folder},ESMOJO_FOLDER_ID:'root',ESMOJO_ONTRACK_FOLDER_ID:'ontrack',esmojoShowFile_:()=>text?file:null,esmojoOnTrackProfiles_:()=>profiles,isAdministrator:p=>p.role==='beheerder',hasModule:(p,m)=>p.modules?.includes(m),validArtistId:v=>/^a_[a-f0-9]{64}$/.test(v),normalizeArtistName:v=>v.toLowerCase(),esmojoOnTrackHash_:v=>createHash('sha256').update(v).digest('hex'),validSaleCount:v=>typeof v==='string'&&/^\d{1,9}$/.test(v),parseTicketSales:v=>{try{const rows=JSON.parse(v);return Array.isArray(rows)?rows:null;}catch{return null;}},esmojoResearchTarget_:()=>({folder,primary:{concertId:'fixture-series'},seriesShows:[{date}]}),esmojoReadTicketData_:()=>({workflow_json:JSON.stringify({visitors:{fields:{ticket_sales:{content:sale,completed_at:completed?'2026-11-01':null}}}})}),esmojoHistoricalRegister_:()=>({entries:historical?[{concertId:'fixture',date,ticket_sales:sale}]:[]}),esmojoTimetableCatalogue_:()=>new Map([['fixture',{concertId:'fixture',artist:'Fixture',date,venue:'Gashouder',...(historical?{historical:true}:{seriesId:'fixture-series'})}]]),esmojoWebInventory_:()=>({sources,available:ready?sources:[]})});
  vm.runInContext(readFileSync('google-apps-script/IncidentMetrics.gs','utf8'),ctx);
- return{call:(op,body={},actor='admin')=>ctx.esmojoIncidentMetrics_({operation:op,actor,...body}),writes:()=>writes,contents:()=>JSON.parse(text),source:()=>{sources=[source];},correct:()=>source.entry.sourceHash='b'.repeat(64),profiles:p=>profiles=p};
+ return{call:(op,body={},actor='admin')=>ctx.esmojoIncidentMetrics_({operation:op,...(actor===null?{}:{actor}),...body}),writes:()=>writes,contents:()=>text?JSON.parse(text):null,source:()=>{sources=[source];},correct:()=>source.entry.sourceHash='b'.repeat(64),profiles:p=>profiles=p,sales:(value,final=true)=>{sale=value;completed=final;},invalid:()=>{ready=false;}};
 }
-test('Drive actorcontrole, nulregistratie, revisie/idempotentie, bronhashcache en correctie zonder fictieve nullen',()=>{
- const d=drive();assert.throws(()=>d.call('incident-read',{},'user'),/FORBIDDEN/);assert.equal(d.call('incident-read',{artistIds:['a_'+'1'.repeat(64)]},'user').rows.length,1);assert.equal(d.call('incident-read').rows[0].kpis,null);
- const input={concertId:'fixture',revision:0,visitors:1000,securityComplete:true,medicalComplete:true,zeroIncidents:true};d.call('incident-confirm',input);assert.equal(d.call('incident-read').rows[0].kpis.security.total,0);assert.equal(d.contents().classification,'vertrouwelijk');assert.equal(d.writes(),1);d.call('incident-confirm',input);assert.equal(d.writes(),1);assert.throws(()=>d.call('incident-confirm',{...input,visitors:2}),/CONFLICT/);
- d.source();assert.equal(d.call('incident-read').rows[0].kpis,null);assert.equal(d.call('incident-read').jobs.length,1);assert.throws(()=>d.call('incident-counts',{concertId:'fixture',sourceHash:'f'.repeat(64),kpis:kpis()}),/SOURCE_CHANGED/);
- d.call('incident-counts',{concertId:'fixture',sourceHash:'a'.repeat(64),kpis:kpis(1)});assert.equal(d.call('incident-read').rows[0].kpis.security.total,1);d.correct();assert.equal(d.call('incident-read').rows[0].kpis,null);assert.equal(d.call('incident-read').jobs.length,1);
+test('Nieuwe bezoekersbasis exact 97,5%; CSV maakt disciplines volledig zonder handmatige bevestigingen of verkoopmutaties',()=>{
+ const d=drive();assert.throws(()=>d.call('incident-read',{},'user'),/FORBIDDEN/);let data=d.call('incident-read');assert.equal(data.rows[0].visitors,975.975);assert.equal(data.rows[0].visitorUnits,39039);assert.equal(data.rows[0].soldTickets,1001);assert.equal(data.rows[0].securityComplete,false);assert.equal(data.rows[0].kpis,null);assert.equal(d.writes(),0);
+ d.source();data=d.call('incident-read');assert.equal(data.rows[0].securityComplete,true);assert.equal(data.rows[0].medicalComplete,true);assert.equal(data.jobs.length,1);assert.equal(d.writes(),0);
+ assert.throws(()=>d.call('incident-confirm',{concertId:'fixture',visitors:1}),/VALIDATION/);
+ d.call('incident-counts',{concertId:'fixture',sourceHash:'a'.repeat(64),kpis:kpis(1)});assert.equal(d.call('incident-read').rows[0].kpis.security.total,1);assert.equal(d.contents().classification,'vertrouwelijk');d.correct();assert.equal(d.call('incident-read').rows[0].kpis,null);assert.equal(d.call('incident-read').jobs.length,1);
+ d.invalid();data=d.call('incident-read');assert.equal(data.rows[0].securityComplete,true);assert.equal(data.rows[0].sourceReady,false);assert.equal(data.rows[0].kpis,null);
  d.profiles([{id:'admin',role:'beheerder',activated:true,disabled:true}]);assert.throws(()=>d.call('incident-read'),/FORBIDDEN/);
 });
+test('Historische CSV vóór 1 november gebruikt ingevoerde tickets 1:1; grensdatum/ontbrekend/concept/nul/dagverkoop zijn afzonderlijk',()=>{
+ const old=drive({historical:true,date:'2026-10-31'});old.source();let row=old.call('incident-read').rows[0];assert.equal(row.visitors,1001);assert.equal(row.visitorUnits,40040);assert.equal(row.visitorBasis,'historical-attendance');
+ const boundary=drive({historical:true,date:'2026-11-01'});assert.equal(boundary.call('incident-read').rows[0].visitors,975.975);
+ const fresh=drive();fresh.sales('');assert.equal(fresh.call('incident-read').rows[0].visitors,null);fresh.sales('1001',false);assert.equal(fresh.call('incident-read').rows[0].visitors,null);fresh.sales('0');assert.equal(fresh.call('incident-read').rows[0].visitors,0);
+ fresh.sales(JSON.stringify([{date:'2026-11-01',count:'9000'},{date:'2026-11-02',count:'1000'}]));assert.equal(fresh.call('incident-read').rows[0].visitors,975);fresh.sales('2000');assert.equal(fresh.call('incident-read').rows[0].visitors,1950);assert.equal(fresh.writes(),0);
+});
 test('Service lekt geen bronregistraties via artiestantwoord en geeft bij ontbrekende gegevens geen score',async()=>{
- const service=createIncidentMetricsService({shows:async op=>{assert.equal(op,'incident-read');return{rows:[row('a')],jobs:[],updatedAt:null};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references.indicators.security.total.rate,0);
+ const service=createIncidentMetricsService({shows:async op=>{assert.equal(op,'incident-read');return{policyVersion:2,rows:[row('a')],jobs:[],updatedAt:null};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references.indicators.security.total.rate,0);
 });
 test('Bron naar telling gebruikt dezelfde rapportagerekenlaag, onafhankelijke totalen en personenweging; gewijzigde bytes worden geweigerd',async()=>{
  const {csvFixture}=await import('./test-support/web-reports-drive.js'),{calculateReport}=await import('./ontrack-report/data.js'),{webReportKpis}=await import('./report-web.js');
  const csv=csvFixture('2026-11-01',[{ID:'1',Division:'Medisch',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'2'},{ID:'2',Division:'Beveiliging',Type:'Verbale agressie','Resolved Status':'Eviction','Affected Person':'3'},{ID:'3',Division:'Medisch',Type:'Contusie / Distorsie'}]),hash=createHash('sha256').update(csv).digest('hex');let cache=null,commits=0,tampered=false;
  const service=createIncidentMetricsService({shows:async(op,payload)=>{
-  if(op==='incident-read')return{rows:[row('a',{kpis:cache})],jobs:cache?[]:['a'],updatedAt:null};
+  if(op==='incident-read')return{policyVersion:2,rows:[row('a',{kpis:cache})],jobs:cache?[]:['a'],updatedAt:null};
   if(op==='incident-source')return{csvBase64:Buffer.from(tampered?csv+'tampered':csv).toString('base64'),sourceHash:hash,date:'2026-11-01',modifiedAt:'2026-11-02T00:00:00Z'};
   assert.equal(op,'incident-counts');assert.equal(payload.actor,'actor');assert.equal(payload.sourceHash,hash);cache=payload.kpis;commits++;return{ok:true};
  }});
@@ -66,7 +69,7 @@ test('Incidentbeheer vereist beheerder, MFA en actieve sessie; artiestscore word
  for(const method of ['GET','PATCH'])for(const patch of [{role:'gebruiker'},{aal:'aal1'},{activated:false},{disabled:true},{token:false},{}]){
   let calls=0;const actor='actor',claims={sub:actor,aal:patch.aal||'aal2',amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)},{method:'totp'}]},token='h.'+Buffer.from(JSON.stringify(claims)).toString('base64url')+'.s';
   const run=async()=>{calls++;return{ok:true};},handler=makeAccountsHandler({env:{VITE_SUPABASE_URL:'url',VITE_SUPABASE_PUBLISHABLE_KEY:'key',SUPABASE_SECRET_KEY:'secret'},clientFactory:()=>({auth:{getUser:async()=>({data:{user:{id:actor,factors:[{factor_type:'totp',status:'verified'}]}}})}}),profiles:async()=>({id:actor,role:patch.role||'beheerder',activated:patch.activated!==false,disabled:patch.disabled===true,modules:[]}),incidentService:{snapshot:run,confirm:run}}),res={setHeader(){},status(n){this.code=n;return this;},json(data){this.data=data;return this;}};
-  await handler({method,query:{action:'incidents'},body:{},headers:{authorization:patch.token===false?undefined:'Bearer '+token}},res);assert.equal(calls,Object.keys(patch).length?0:1);assert.equal(res.code,Object.keys(patch).length?patch.token===false?401:403:200);
+  await handler({method,query:{action:'incidents'},body:{},headers:{authorization:patch.token===false?undefined:'Bearer '+token}},res);assert.equal(calls,Object.keys(patch).length||method!=='GET'?0:1);assert.equal(res.code,Object.keys(patch).length?patch.token===false?401:403:method==='GET'?200:405);
  }
 });
 test('Actieve voorbereiding is leidend; gewijzigde analysebasis maakt operationele beoordeling ongeldig en storing valt niet terug op Drive',async()=>{
@@ -75,4 +78,22 @@ test('Actieve voorbereiding is leidend; gewijzigde analysebasis maakt operatione
  const snapshot=JSON.parse(JSON.stringify(h.ctx.esmojoActiveSnapshot_(h.ctx.esmojoResearchTarget_(h.concertId))));
  let broken=false;const service=createActiveShowService({drive:async()=>({rows:[{activeConcertId:h.concertId,visitorsFinal:true,artistFinal:true,operationalLevels:['high']}]}),repository:{enabled:async()=>true,get:async()=>{if(broken)throw Error('ACTIVE_STORAGE_UNAVAILABLE');return{snapshot};}}});
  snapshot.profile.revision++;const data=await service.request('incident-read',{});assert.equal(data.rows[0].operationalLevels,null);assert.equal(data.rows[0].visitorsFinal,false);broken=true;await assert.rejects(service.request('incident-read',{}),/ACTIVE_STORAGE_UNAVAILABLE/);
+});
+
+test('Decimale bezoekersbasis behoudt exact 39/40 zonder afronding in referenties en vergelijkingsgrenzen',()=>{
+ const own=row('new',{visitors:975.975,visitorUnits:39039,kpis:kpis(2)}),past=row('old',{visitors:1001,visitorUnits:40040,kpis:kpis(1)}),refs=incidentReferences([own,past]);
+ assert.equal(refs.visitorUnits,79079);assert.equal(refs.visitors,1976.975);assert.equal(refs.indicators.security.total.rate,3/1976.975*1000);assert.ok(calculateArtistRisk([own],refs));
+ assert.equal(incidentRateFraction({incidents:7,visitors:97.5,visitorUnits:3900},{incidents:4,visitors:97.5,visitorUnits:3900}),1);
+ assert.equal(calculateArtistRisk([row('bad',{visitors:975.975,visitorUnits:39040})],refs),null);
+});
+test('Achtergrondherbouw vereist geverifieerde workflow, bevestigt actieve versie, lekt geen cijfers en start geen mail/import',async()=>{
+ const {makeWebReportsSync}=await import('../api/web-reports-sync.js');let calls=0;
+ const forbidden=async()=>{throw Error('Andere taken mogen niet worden gestart');},handler=makeWebReportsSync({identify:async token=>{if(token!=='trusted')throw Error('FORBIDDEN');},service:{synchronize:forbidden},online:{run:forbidden},metrics:{refresh:async({checkOnly})=>{calls++;return{ok:true,workerVersion:1,pending:!checkOnly};}}});
+ const res=()=>({setHeader(){},status(n){this.code=n;return this;},json(data){this.data=data;return this;}});
+ let r=res();await handler({method:'POST',headers:{},body:{incidentRefresh:true}},r);assert.equal(r.code,403);assert.equal(calls,0);
+ r=res();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{incidentRefresh:true,checkOnly:true}},r);assert.deepEqual(r.data,{ok:true,workerVersion:1,pending:false});
+ r=res();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{incidentRefresh:true,concertId:'free'}},r);assert.equal(r.code,503);assert.equal(calls,1);
+ r=res();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{incidentRefresh:true}},r);assert.deepEqual(r.data,{ok:true,workerVersion:1,pending:true});assert.equal(calls,2);
+ r=res();await handler({method:'POST',query:{incidentMetrics:'1'},headers:{authorization:'Bearer trusted'},body:{}},r);assert.equal(r.code,503);assert.equal(calls,2);
+ const d=drive();assert.equal(d.call('incident-read',{worker:true},null).rows.length,1);assert.throws(()=>d.call('incident-read',{worker:true},'user'),/VALIDATION/);
 });

@@ -328,6 +328,10 @@
       "destination": "/api/access?action=mfa"
     },
     {
+      "source": "/api/incident-references-sync",
+      "destination": "/api/web-reports-sync?incidentMetrics=1"
+    },
+    {
       "source": "/shows/:path*",
       "destination": "/index.html"
     },

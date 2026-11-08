@@ -271,8 +271,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(own.disabled)return reply(403,{error:'Geen toegang.'});
         try{
           if(req.method==='GET')return reply(200,await incidentService.snapshot(actor));
-          if(req.method==='PATCH')return reply(200,await incidentService.confirm(actor,req.body));
-          res.setHeader('Allow','GET, PATCH');return reply(405,{error:'Niet toegestaan.'});
+          res.setHeader('Allow','GET');return reply(405,{error:'Niet toegestaan.'});
         }catch(error){return reply(error.message==='VALIDATION'?400:error.message==='CONFLICT'?409:error.message==='FORBIDDEN'?403:503,{error:error.message==='CONFLICT'?'De registratie is intussen gewijzigd. Laad de actuele gegevens; je invoer is behouden.':'De incidentgegevens konden niet worden geladen of opgeslagen. Controleer je invoer en probeer opnieuw.'});}
       }
       if(action==='ontrack-report'){

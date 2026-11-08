@@ -1,5 +1,17 @@
 name: Index web reports
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/web-reports.yml'
+      - 'api/web-reports-sync.js'
+      - 'server/incident-metrics.js'
+      - 'google-apps-script/IncidentMetrics.gs'
+      - 'shared/artist-risk-score.js'
+  workflow_run:
+    workflows: ['Publish Apps Script']
+    types: [completed]
+    branches: [main]
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -21,15 +33,17 @@ permissions:
   contents: read
   id-token: write
 concurrency:
-  group: ${{ inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || inputs.historical_only == true && 'web-reports-historical-index' || 'web-reports-production' }}
+  group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run') && 'incident-reference-rebuild' || inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || inputs.historical_only == true && 'web-reports-historical-index' || 'web-reports-production' }}
   cancel-in-progress: false
 jobs:
   index:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (inputs.historical_import == 'sample' || inputs.historical_import == 'all' || inputs.historical_only == true) && 180 || 7 }}
+    timeout-minutes: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run' || inputs.historical_import == 'sample' || inputs.historical_import == 'all' || inputs.historical_only == true) && 180 || 7 }}
     steps:
       - name: Publish web reports and deliver online mail independently of PDF generation
         env:
+          METRICS_ONLY: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' }}
           HISTORICAL_IMPORT: ${{ inputs.historical_import }}
           HISTORICAL_BATCH: ${{ inputs.historical_batch }}
           HISTORICAL_ONLY: ${{ inputs.historical_only }}
@@ -37,18 +51,33 @@ jobs:
           node --input-type=module <<'JS'
           const endpoint='https://esmojo.nl/api/web-reports-sync';
           async function call(body){
-            const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+            const target=body?.incidentRefresh?'https://esmojo.nl/api/incident-references-sync':endpoint;
+            const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',target);
             const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
             const {value}=await identity.json();console.log(`::add-mask::${value}`);
-            const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(310000)});
+            const response=await fetch(target,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(310000)});
             const result=await response.json().catch(()=>null);
             if(!response.ok){
-              const code=/^(?:BUSY|DRIVE_TIMEOUT|DRIVE_CONNECTION|DRIVE_HTTP|DRIVE_RESPONSE|FORBIDDEN|VALIDATION|REPORT_CONFLICT|REPORT_CATALOG|SOURCE_MISSING|SOURCE_CHANGED|REPORT_UNAVAILABLE|NOT_FOUND|ONTRACK_REPORT_UNAVAILABLE)$/.test(result?.code||'')?result.code:'UNCONFIRMED';
-              const stage=/^(?:web-scan|web-source|web-commit|web-historical-status|historical-import-read|historical-import-commit|historical-import-verify)$/.test(result?.stage||'')?result.stage:'UNKNOWN';
+              const code=/^(?:SHOWS_UNAVAILABLE|SHOWS_CONFIG|BUSY|DRIVE_TIMEOUT|DRIVE_CONNECTION|DRIVE_HTTP|DRIVE_RESPONSE|FORBIDDEN|VALIDATION|REPORT_CONFLICT|REPORT_CATALOG|SOURCE_MISSING|SOURCE_CHANGED|REPORT_UNAVAILABLE|NOT_FOUND|ONTRACK_REPORT_UNAVAILABLE)$/.test(result?.code||'')?result.code:'UNCONFIRMED';
+              const stage=/^(?:incident-read|incident-source|incident-counts|web-scan|web-source|web-commit|web-historical-status|historical-import-read|historical-import-commit|historical-import-verify)$/.test(result?.stage||'')?result.stage:'UNKNOWN';
               throw Error(`Verwerking niet bevestigd: HTTP ${response.status}; ${code}; ${stage}. Geen broninhoud in logs.`);
             }
             if(result?.ok!==true)throw Error('Verwerking niet bevestigd.');return result;
           }
+          if(process.env.METRICS_ONLY==='true'){
+            const pause=ms=>new Promise(done=>setTimeout(done,ms));let ready=false;
+            for(let attempt=0;attempt<12;attempt++){
+              try{const result=await call({incidentRefresh:true,checkOnly:true});if(result.workerVersion===1){ready=true;break;}}catch{}
+              await pause(20000);
+            }
+            if(!ready)throw Error('Incidentworker nog niet beschikbaar.');
+            let complete=false;for(let page=0;page<600;page++){
+              const result=await call({incidentRefresh:true});if(result.workerVersion!==1||typeof result.pending!=='boolean')throw Error('Incidentworker niet bevestigd.');
+              if(!result.pending){complete=true;break;}
+            }
+            if(!complete)throw Error('Incidentherberekening nog niet volledig.');
+            console.log(JSON.stringify({ok:true}));
+          }else{
           const phase=process.env.HISTORICAL_IMPORT,importing=['sample','all'].includes(phase);
           if(importing){
             if(!/^historical-[a-z0-9-]{1,70}\.json$/.test(process.env.HISTORICAL_BATCH||''))throw Error('Ongeldige batchnaam.');
@@ -65,7 +94,7 @@ jobs:
               console.log(JSON.stringify({registered:result.registered,validated:result.validated,invalid:result.invalid}));
               if(result.registered===result.validated){complete=true;break;}
             }if(!complete)throw Error('Historische indexering nog niet volledig.');
-          }else{await call();console.log(JSON.stringify({ok:true}));}
+          }else{await call();await call({incidentRefresh:true});console.log(JSON.stringify({ok:true}));}
           if(importing){
             let offset=0;for(let i=0;i<200;i++){
               const result=await call({historicalVerify:true,batch:process.env.HISTORICAL_BATCH,phase,offset});
@@ -73,5 +102,6 @@ jobs:
               if(result.nextOffset===offset&&offset<result.total)throw Error('Verificatie niet volledig.');
               offset=result.nextOffset;console.log(JSON.stringify({verified:offset,total:result.total}));if(offset===result.total)break;
             }
+          }
           }
           JS

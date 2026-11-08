@@ -1,23 +1,30 @@
 # Artiestenrisicoscore en historische incidentreferenties
 
 De gegevens zijn door de gebruiker op 8 november 2026 Vertrouwelijk verklaard.
-Nieuwe aanwezigheid/volledigheidsbevestigingen en herberekenbare tellingcache staan
-uitsluitend in `_esmojo_incident_metrics_v1.json` in de afgesproken Drive-root.
-De bestaande rapportages, analyses en operationele beoordelingen blijven leidend.
-Geen Supabase-, log-, analytics- of persistente browseropslag van deze gegevens.
+De herberekenbare tellingcache staat uitsluitend in
+`_esmojo_incident_metrics_v1.json` in de afgesproken Drive-root. Oude handmatige
+bevestigingen blijven bewaard, maar worden sinds het aanvullende gebruikersverzoek
+niet meer voor de berekening gebruikt. Geen Supabase-, log-, analytics- of
+persistente browseropslag van deze gegevens.
 
 ## Gebruik
 
 Beheerder → Incidenten heeft drie hoofdkaarten. Overzicht bevat uitklapbaar
-Concertregistraties beheren. Kies een historisch concert, vul het werkelijke
-bezoekersaantal in en bevestig de volledigheid van beide disciplines. Lege invoer
-blijft onbekend. Nul bezoekers wordt bewaard, maar telt niet mee als noemer.
-Verkoop wordt nooit overgenomen. Zonder CSV is alleen een expliciet bevestigde
-nulregistratie een geldige incidentbron; een bestaande ongeldige CSV kan daarmee
-niet worden omzeild. Bevestigingen hebben per concert een revisie en actor/datum.
+Concertgegevens bekijken, uitsluitend alleen-lezen. Geen bevestigingsformulier.
+Een aanwezige CSV maakt beveiliging en medisch automatisch volledig. De bron moet
+wel geldig, actueel en eenduidig aan het juiste concert gekoppeld zijn voordat
+tellingen meetellen. Zonder CSV blijven tellingen onbekend; geen fictieve nullen.
+
+Voor historische CSV-importconcerten vóór 1 november 2026 is de geïmporteerde
+`ticket_sales` de bezoekersbasis (100%). Bij nieuwe concerten is dat exact 97,5%
+van de opgeslagen, afgeronde ticketverkoop van die showdag. Reekstotalen worden
+niet naar een willekeurige dag gekopieerd. De verkoopbron zelf blijft intact.
+Een ontbrekende/conceptverkoop blijft onbekend; nul bezoekers telt niet als noemer.
+De rekenbasis staat in de alleen-lezen concertgegevens. Twintig tickets geven
+bijvoorbeeld exact 19,5 als rekenbasis, zonder tussentijds afronden op personen.
 
 Referenties gebruiken alle geschikte, volledige incidentregistraties met >0
-werkelijk aanwezigen, ook zonder artiestanalyse. Totaalindicatoren komen uit de
+bezoekers volgens deze automatische rekenbasis, ook zonder artiestanalyse. Totaalindicatoren komen uit de
 bestaande brontellingen, niet uit de som van overlappende subcategorieën. De
 centrale `webReportKpis` wordt ook door de gewone showrapportage gebruikt; de
 bestaande PDF-rekenlaag is intact. Ambulance/uitzettingen/aanhoudingen behouden
@@ -38,6 +45,8 @@ begrensde operationele concertscores zijn ongewogen rekenkundige gemiddelden.
 De maxima zijn 25+25+20+15+15. Klassegrenzen zijn 55/75/90 zonder afronding.
 Afwijkingen worden exact met gehele aantallen vergeleken (BigInt-kruisproducten)
 voor 25%, 50% en 75%; 75% geeft het volledige categoriegewicht.
+Bezoekersnoemers worden exact als 1/40-eenheden bijgehouden: nieuwe verkoop ×39,
+historische bezoekers ×40. Zo blijft ook 2,5% van een oneven verkoopaantal exact.
 De bevestigde nulregel: nul/nul → 0; positief/nul → volledig categoriegewicht.
 Twee cijferdecimalen worden alleen voor de kaartpresentatie gebruikt; afgeronde
 segmentlabels tellen exact op tot de afgeronde totaalscore. Breedtes en klasse
@@ -51,8 +60,9 @@ worden via de bestaande canonieke rapportinventaris tot één concert herleid;
 dubbele geschikte concertidentiteiten worden geweigerd in plaats van opgeteld.
 Een nieuwere, ongeldige/onverwerkte export verdringt geen oude data als geldig
 resultaat. Een aangevulde of gecorrigeerde bron wordt automatisch herberekend bij
-de volgende paginalezing; open pagina's controleren iedere minuut. Dit is
-actualisatie bij gebruik, geen extra geplande bulkimport. Eén telling per verzoek
+de volgende paginalezing; open pagina's controleren iedere minuut. De bestaande webworkflow herberekent automatisch iedere vijf minuten. Na een
+publicatie wordt een begrensde herbouw tot gereed gestart, afzonderlijk van
+mail/import en zonder cijfers of broninhoud naar GitHub te sturen. Eén telling per verzoek
 wordt op de server verwerkt, met gedeeld lopend verzoek; de browser vraagt verder
 zolang er nog bronhashes ontbreken. Tijdens een onvolledige referentieherbouw
 geen gedeeltelijke artiestscore presenteren.
@@ -63,7 +73,7 @@ klik krijgt voorrang. Score en rapporten blijven afzonderlijke leesverzoeken.
 Bij verlaten: AbortController en paginaversiecontrole; geen oude resultaten op
 een andere artiest. De scorekaart reserveert ruimte om verschuiving te beperken.
 
-`incidents` GET/PATCH vereist actieve beheerder/MFA, plus dezelfde actuele
+`incidents` ondersteunt uitsluitend GET en vereist actieve beheerder/MFA, plus dezelfde actuele
 Drive-profielcontrole. `artist-risk` vereist Artiesten/MFA. De HTTP-laag accepteert
 geen actor, bronbestand, tellingen of score. Intern berekent Vercel de telling uit
 de hashgecontroleerde CSV; alleen de ondertekende serverbrug mag de tellingcache
@@ -73,10 +83,15 @@ schrijven. Incidentgegevens worden niet via de score-API teruggestuurd.
 
 `node --test server/incident-metrics.test.js` controleert gewichten, grenswaarden,
 nulreferenties, bezoekersweging, onvolledigheid, duplicate detectie, Drive-opslag,
-revisies, broncorrecties, rapportagepariteit, autorisatie en actuele voorbereiding.
-`node tools/ui/check-incident-registration.mjs` test ook revisies tijdens
-stille refresh en behoud van invoer na fouten in echte Chrome.
+automatische bronregels, broncorrecties, rapportagepariteit, autorisatie en actuele voorbereiding.
+`node tools/ui/check-incident-registration.mjs` test automatisch verversen van de rekenbasis en ontbreken van handmatige
+bevestiging in echte Chrome.
 Daarnaast bestaande rapportage-, account-, analyse-, wachtrij- en publicatietests.
 Browsercontroles gebruiken uitsluitend fictieve fixtures: volle/lege kaart,
 batterij/legenda, twaalf uitklappers en formules, desktop/mobiel en licht/donker.
 Echte aanwezigheid en volledigheid worden nooit voor tests ingevuld.
+
+De herberekenfase gebruikt de eigen vaste audience en alias
+`/api/incident-references-sync`, die pas met de bijbehorende Vercel-publicatie
+beschikbaar is. Dit voorkomt dat een gereedheidsprobe op een oude webworker
+onbedoeld de normale rapport-/mailroute aanroept. Geen extra serverfunctie.

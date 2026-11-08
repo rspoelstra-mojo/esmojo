@@ -8,7 +8,7 @@ const count=new Intl.NumberFormat('nl-NL'),rate=new Intl.NumberFormat('nl-NL',{m
 export function renderIncidentReferenceCards(data){
  const grid=node('div','incident-reference-grid'),overview=node('section','incident-admin-card incident-overview');overview.append(node('h2','','Overzicht'));
  const stats=node('dl','incident-overview-stats');for(const [label,value]of [['Concerten',data.references?.concerts],['Bezoekers totaal',data.references?.visitors]]){const row=node('div','');row.append(node('dt','',label),node('dd','',value===undefined?'—':count.format(value)));stats.append(row);}overview.append(stats);
- overview.append(node('p','incident-muted',data.updatedAt?'Laatste actualisatie: '+new Intl.DateTimeFormat('nl-NL',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Amsterdam'}).format(new Date(data.updatedAt)):'Nog geen bevestigde registraties.'));grid.append(overview);
+ overview.append(node('p','incident-muted',data.updatedAt?'Laatste actualisatie: '+new Intl.DateTimeFormat('nl-NL',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Amsterdam'}).format(new Date(data.updatedAt)):'Nog geen geschikte registraties.'));grid.append(overview);
  for(const [group,title]of [['security','Beveiliging'],['medical','Medisch']]){
   const card=node('section','incident-admin-card');card.append(node('h2','',title));
   for(const [key,label]of incidentIndicators[group]){
@@ -21,24 +21,23 @@ export function renderIncidentReferenceCards(data){
  return grid;
 }
 export function createIncidentAdminView(content,link,{request=access}={}){
- let disposed=false,data=null,busy=false,dirty=false,timer=null,formRevision=0;const controller=new AbortController(),loading=createSubmenuLoading(link,content),feedback=createPageFeedback({key:'incident-admin',label:'Incidenten',route:'/beheerder/incidenten'}),view=node('section','incident-admin-page');content.replaceChildren(view);
- const title=node('h1','','Incidenten'),cards=node('div',''),registration=node('details','incident-registration'),form=node('form','incident-registration-form'),select=node('select',''),visitors=node('input',''),checks={};
- registration.append(node('summary','','Concertregistraties beheren'),node('p','incident-muted','Bevestig het werkelijke bezoekersaantal en de volledigheid van beide disciplines. Verkochte kaarten worden niet overgenomen.'));
- function field(label,input){const wrap=node('label','incident-field');wrap.append(node('span','',label),input);form.append(wrap);}
- select.setAttribute('aria-label','Concert');field('Concert',select);visitors.type='number';visitors.min='0';visitors.max='10000000';visitors.step='1';field('Daadwerkelijk aanwezige bezoekers',visitors);
- for(const [key,label]of [['securityComplete','Beveiligingsregistratie volledig'],['medicalComplete','Medische registratie volledig'],['zeroIncidents','Bevestigde nulregistratie: geen incidenten in beide disciplines']]){const input=node('input','');input.type='checkbox';checks[key]=input;const wrap=node('label','incident-check');wrap.append(input,document.createTextNode(label));form.append(wrap);}
- const hint=node('p','incident-muted'),save=node('button','primary-button','Registratie opslaan');save.type='submit';form.append(hint,save);registration.append(form);view.append(title,cards);
- const selected=()=>data?.shows.find(row=>row.concertId===select.value);
- function updateForm(){const row=selected();formRevision=row?.revision||0;dirty=false;visitors.value=row?.visitors??'';for(const key of Object.keys(checks))checks[key].checked=row?.[key]===true&&(key!=='zeroIncidents'||!row.hasSource);checks.zeroIncidents.disabled=!row||row.hasSource;
-  hint.textContent=!row?'Kies een concert.':!row.hasSource?'Zonder rapportage tellen incidenten uitsluitend mee na expliciete bevestiging van een nulregistratie.':!row.sourceReady?'De rapportage is nog niet geldig verwerkt. Dit concert telt nog niet mee.':row.countsReady?'De bronregistratie is beschikbaar.':'De telling wordt na volledige bevestiging automatisch berekend.';save.disabled=!row||busy;}
- function populate(){const previous=select.value;select.replaceChildren();const empty=node('option','','Kies een concert');empty.value='';select.append(empty);for(const row of data.shows){const option=node('option','',row.name+' · '+row.date+' · '+row.venue+(row.performance?' · '+row.performance:''));option.value=row.concertId;select.append(option);}select.value=previous;updateForm();}
- select.onchange=updateForm;form.oninput=()=>{dirty=true;};
- function setSaving(value){for(const input of [select,visitors,...Object.values(checks)])input.disabled=value;checks.zeroIncidents.disabled=value||!selected()||selected().hasSource;}
- async function load(){if(disposed||busy)return;busy=true;const finish=loading.start();try{const result=await request('incidents',{signal:controller.signal});if(disposed)return;data=result;cards.replaceChildren(renderIncidentReferenceCards(data));cards.querySelector('.incident-overview').append(registration);if(!dirty)populate();feedback.resolved();timer=setTimeout(()=>void load(),result.pending?500:60000);}catch{if(!disposed)feedback.show('Incidentgegevens konden niet worden bijgewerkt. Je invoer blijft behouden.',async()=>{await load();return Boolean(data);},'Opnieuw laden');}finally{busy=false;finish();if(!disposed)save.disabled=!selected();}}
- form.onsubmit=async event=>{event.preventDefault();const row=selected();if(busy||!row||disposed||!form.reportValidity())return;const value=visitors.value.trim(),body={concertId:row.concertId,revision:formRevision,visitors:value===''?null:Number(value),...Object.fromEntries(Object.entries(checks).map(([key,input])=>[key,input.checked]))};busy=true;save.disabled=true;setSaving(true);const finish=loading.start();clearTimeout(timer);
-  try{await request('incidents',{method:'PATCH',body});if(disposed)return;dirty=false;busy=false;await load();}
-  catch{if(!disposed)feedback.show('Opslaan is niet bevestigd. Je invoer blijft behouden. Laad de actuele registratie voordat je opnieuw opslaat.',async()=>{dirty=false;await load();return Boolean(data);},'Actuele registratie laden');}
-  finally{busy=false;finish();if(!disposed){setSaving(false);save.disabled=!selected();}}
- };
+ let disposed=false,busy=false,timer=null;const controller=new AbortController(),loading=createSubmenuLoading(link,content),feedback=createPageFeedback({key:'incident-admin',label:'Incidenten',route:'/beheerder/incidenten'}),view=node('section','incident-admin-page');content.replaceChildren(view);
+ const title=node('h1','','Incidenten'),cards=node('div','');view.append(title,cards);
+ function registrations(shows){
+  const details=node('details','incident-registration'),select=node('select',''),facts=node('dl','incident-formula');
+  details.append(node('summary','','Concertgegevens bekijken'),node('p','incident-muted','Bezoekersaantallen en volledige CSV-registraties worden automatisch verwerkt.'));
+  select.setAttribute('aria-label','Concert');const empty=node('option','','Kies een concert');empty.value='';select.append(empty);
+  for(const row of shows){const option=node('option','',row.name+' · '+row.date+' · '+row.venue+(row.performance?' · '+row.performance:''));option.value=row.concertId;select.append(option);}
+  const field=node('label','incident-field');field.append(node('span','','Concert'),select);details.append(field,facts);
+  select.onchange=()=>{facts.replaceChildren();const row=shows.find(item=>item.concertId===select.value);if(!row)return;
+   const basis=row.visitorBasis==='historical-attendance'?'Historisch bezoekersaantal':'97,5% van verkochte tickets';
+   for(const [label,value]of [['Verkochte tickets',row.soldTickets==null?'Niet beschikbaar':count.format(row.soldTickets)],['Bezoekers',row.visitors==null?'Niet beschikbaar':count.format(row.visitors)],['Berekeningsbasis',basis],['Beveiligingsregistratie',row.securityComplete?'Volledig':'Geen CSV beschikbaar'],['Medische registratie',row.medicalComplete?'Volledig':'Geen CSV beschikbaar'],['Rapportage',!row.hasSource?'Niet beschikbaar':row.sourceReady?row.countsReady?'Verwerkt':'Wordt automatisch verwerkt':'Bron wordt gecontroleerd']]){const entry=node('div','');entry.append(node('dt','',label),node('dd','',value));facts.append(entry);}
+  };return details;
+ }
+ async function load(){if(disposed||busy)return;busy=true;const finish=loading.start();const previous=cards.querySelector('select')?.value,open=cards.querySelector('.incident-registration')?.open;
+  try{const data=await request('incidents',{signal:controller.signal});if(disposed)return;cards.replaceChildren(renderIncidentReferenceCards(data));const details=registrations(data.shows);cards.querySelector('.incident-overview').append(details);details.open=Boolean(open);const select=details.querySelector('select');select.value=previous||'';select.onchange();feedback.resolved();timer=setTimeout(()=>void load(),data.pending?500:60000);}
+  catch{if(!disposed)feedback.show('Incidentgegevens konden niet worden bijgewerkt.',async()=>{await load();return Boolean(cards.children.length);},'Opnieuw laden');}
+  finally{busy=false;finish();}
+ }
  void load();return()=>{disposed=true;controller.abort();clearTimeout(timer);loading.dispose();feedback.dispose();content.replaceChildren();};
 }

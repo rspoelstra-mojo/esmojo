@@ -14,10 +14,15 @@ De artiestkop vervangt Laatste keer in Nederland en Populariteit door deze tekst
 
 De gebruiker heeft afgeleide artiestenrisicoscores, historische incidentreferenties,
 totalen en actualisatiedatum expliciet Vertrouwelijk verklaard: verwerking via
-Vercel, opslag uitsluitend in Drive. Per concert zijn een daadwerkelijk
-bezoekersaantal en expliciete volledigheidsbevestigingen voor beveiliging en
-medisch toegestaan. Verkoop nooit als aanwezigheid overnemen. Bij referentie nul:
-artiestfrequentie nul geeft nul punten; positief geeft het categoriepuntenmaximum.
+Vercel, opslag uitsluitend in Drive. Zijn aanvullende opdracht vervangt de
+handmatige bezoekers-/volledigheidsbevestigingen: nieuwe concerten gebruiken exact
+97,5% van verkochte tickets als bezoekersrekenbasis; historische CSV-concerten vóór
+1 november 2026 gebruiken hun geïmporteerde ticket_sales als bezoekersaantal.
+Een geüploade CSV geldt als volledig voor beveiliging en medisch. Geen handmatige
+bevestiging meer; technische bronvalidatie blijft nodig. Verkoopbron niet
+overschrijven en ontbrekende verkoop/CSV niet als nul behandelen. Reken zonder
+tussentijdse afronding. Bij referentie nul: artiestfrequentie nul geeft nul punten;
+positief geeft het categoriepuntenmaximum.
 
 ## Uitvoering en publicatie
 
