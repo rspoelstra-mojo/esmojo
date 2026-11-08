@@ -52,3 +52,12 @@ test('Ongeldige nieuwe respons behoudt de laatst bevestigde lijst en opslag',asy
  const storage=memoryStorage(),cache=createReportCatalogueCache({storage});cache.bind(viewer);await cache.refresh(async()=>({reports:[item('known')]}));const raw=[...storage.values.values()][0];
  await assert.rejects(cache.refresh(async()=>({reports:[{...item('bad'),shows:[]}]}),{force:true}),/REPORT_MENU/);assert.equal(cache.current()[0].concertId,'known');assert.equal([...storage.values.values()][0],raw);
 });
+test('Bevestigde middag/avond-paar blijft na browserherstart beschikbaar zonder extra opgeslagen velden',async()=>{
+ const storage=memoryStorage(),cache=createReportCatalogueCache({storage});cache.bind(viewer);
+ const first='Synthetisch_Ziggo-Dome_18042026_S1',second='Synthetisch_Ziggo-Dome_18042026_S2',shows=[{concertId:first,date:'2026-04-18',venue:'Ziggo Dome',performance:'middag'},{concertId:second,date:'2026-04-18',venue:'Ziggo Dome',performance:'avond'}];
+ await cache.refresh(async()=>({reports:[{concertId:first,label:'Synthetisch',dates:['2026-04-18'],shows}]}));assert.equal(cache.current()[0].shows.length,2);assert.deepEqual(cache.current()[0].dates,['2026-04-18']);
+ const raw=[...storage.values.values()][0];assert.equal(raw.includes('performance'),false,'Alleen eerder toegestane menuvelden bewaren');
+ const restarted=createReportCatalogueCache({storage});restarted.bind(viewer);assert.equal(restarted.current()[0].shows[1].concertId,second);
+ for(const bad of [[shows[0],{...shows[1],concertId:'unlabelled'}],[shows[0],{...shows[1],performance:'middag'}],[shows[0],{...shows[1],venue:'AFAS Live'}],[shows[0],shows[1],{...shows[1],concertId:'third'}]])await assert.rejects(cache.refresh(async()=>({reports:[{concertId:first,label:'Synthetisch',shows:bad}]}),{force:true}),/REPORT_MENU/);
+ assert.equal(cache.current()[0].shows.length,2);
+});

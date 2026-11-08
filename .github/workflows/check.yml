@@ -57,6 +57,7 @@ jobs:
           node shared/report-security.test.js
           node shared/report-medical.test.js
           node src/lib/report-menu.test.js
+          node --test src/lib/report-direct-route.test.js
           node server/email-template.test.js
           node server/email-tests.test.js
           node server/email-deliverability.test.js
