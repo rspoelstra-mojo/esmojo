@@ -1,5 +1,15 @@
 # ESMOJO-projectafspraken
 
+## MOJO-artiestbeschrijving (8 november 2026)
+
+De gebruiker heeft algemene MOJO-artiesttekst, bronlink en ophaaldatum expliciet
+Openbaar verklaard. Bewaar de oorspronkelijke algemene tekst duurzaam in de
+bestaande Drive-root. Vanaf 45 Nederlandse kalenderdagen vóór de eerste show van
+een aaneengesloten reeks vernieuwen, één opname per reeks. Laat de laatste goede
+tekst na de show staan tot de volgende verschuldigde reeks. Een verdwenen pagina
+of parse-/netwerkfout wist niets. Gebruik alleen de zes bestaande MOJO-zalen.
+De artiestkop vervangt Laatste keer in Nederland en Populariteit door deze tekst.
+
 ## Uitvoering en publicatie
 
 Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende

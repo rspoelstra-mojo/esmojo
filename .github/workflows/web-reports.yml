@@ -41,8 +41,13 @@ jobs:
             const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
             const {value}=await identity.json();console.log(`::add-mask::${value}`);
             const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(310000)});
-            if(!response.ok)throw Error('Verwerking niet bevestigd; geen broninhoud in logs.');
-            const result=await response.json();if(result.ok!==true)throw Error('Verwerking niet bevestigd.');return result;
+            const result=await response.json().catch(()=>null);
+            if(!response.ok){
+              const code=/^(?:BUSY|DRIVE_TIMEOUT|DRIVE_CONNECTION|DRIVE_HTTP|DRIVE_RESPONSE|FORBIDDEN|VALIDATION|REPORT_CONFLICT|REPORT_CATALOG|SOURCE_MISSING|SOURCE_CHANGED|REPORT_UNAVAILABLE|NOT_FOUND|ONTRACK_REPORT_UNAVAILABLE)$/.test(result?.code||'')?result.code:'UNCONFIRMED';
+              const stage=/^(?:web-scan|web-source|web-commit|web-historical-status|historical-import-read|historical-import-commit|historical-import-verify)$/.test(result?.stage||'')?result.stage:'UNKNOWN';
+              throw Error(`Verwerking niet bevestigd: HTTP ${response.status}; ${code}; ${stage}. Geen broninhoud in logs.`);
+            }
+            if(result?.ok!==true)throw Error('Verwerking niet bevestigd.');return result;
           }
           const phase=process.env.HISTORICAL_IMPORT,importing=['sample','all'].includes(phase);
           if(importing){

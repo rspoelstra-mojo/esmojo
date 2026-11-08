@@ -33,12 +33,11 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
  const header=node('header','artist-page-heading');
  const intro=node('div','artist-profile-intro');
  intro.append(node('h1','artist-page-title',name));
- const facts=node('dl','artist-profile-facts');
- const visit=node('div');
- visit.append(node('dt','','Laatste keer in Nederland'),node('dd','',profile.latestDate?formatArtistDates([profile.latestDate]):unavailable));
- facts.append(visit,node('div','artist-profile-popularity'));
- facts.lastElementChild.append(node('dt','','Populariteit'),node('dd'));
- intro.append(facts);
+ if(typeof profile.biography?.text==='string'&&profile.biography.text.trim()){
+  const biography=node('div','artist-biography');
+  for(const paragraph of profile.biography.text.split(/\n\s*\n/).filter(part=>part.trim()))biography.append(node('p','',paragraph));
+  intro.append(biography);
+ }
  header.append(intro);
  if(typeof profile.photo==='string'&&/^https:\/\/www\.mojo\.nl\/media\//i.test(profile.photo)){
   const image=node('img','artist-profile-photo');

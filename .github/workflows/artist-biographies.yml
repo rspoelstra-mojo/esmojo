@@ -1,0 +1,40 @@
+name: Capture MOJO artist biographies
+on:
+  schedule:
+    - cron: '15 10,11 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/artist-biographies.yml'
+      - 'server/artist-biographies*'
+      - 'server/mojo-biography*'
+      - 'api/artist-biographies-sync.js'
+      - 'tools/artist-biographies/**'
+  workflow_run:
+    workflows: [Publish Apps Script]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: artist-biographies-production
+  cancel-in-progress: false
+jobs:
+  capture:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Capture due biographies without changing shows
+        env:
+          BIOGRAPHY_EVENT_NAME: ${{ github.event_name }}
+        run: node tools/artist-biographies/capture.mjs

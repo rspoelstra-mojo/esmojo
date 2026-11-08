@@ -10,12 +10,11 @@ main:has(> .artist-selection-empty) { display:flex; }
 .artist-profile-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:16px; align-items:start; }
 .artist-profile-main { display:grid; gap:16px; min-width:0; }
 .artist-page-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
-.artist-profile-intro { min-width:0; }
+.artist-profile-intro { min-width:0; flex:1 1 0; }
+.artist-biography { margin-top:20px; max-width:80ch; font-size:14px; line-height:1.65; }
+.artist-biography p { margin:0 0 12px; }
+.artist-biography p:last-child { margin-bottom:0; }
 .artist-profile-photo { width:46%; max-width:360px; aspect-ratio:750 / 338; object-fit:cover; border-radius:10px; }
-.artist-profile-facts { display:grid; gap:12px; margin:16px 0 0; font-size:14px; }
-.artist-profile-facts > div { display:flex; flex-wrap:wrap; gap:4px 10px; }
-.artist-profile-facts dt { font-weight:650; }
-.artist-profile-facts dd { margin:0; }
 .artist-audience-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:1fr; gap:16px; }
 .artist-profile-card { min-width:0; padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,#fff); overflow-wrap:anywhere; }
 .artist-profile-card h2 { margin:0; font-size:16px; }
