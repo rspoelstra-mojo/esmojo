@@ -25,7 +25,6 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     const known=[...(cache.current()?.artists||[]),{id:canonicalId,name:artist.name}],slug=data.canonicalArtistSlug||artistRouteMap(known).get(canonicalId);
     if(!validArtistSlug(slug))throw Error('ARTIST_CATALOGUE');
     showMemory?.dispose();showMemory=createArtistShowMemory({request,artistId:canonicalId,concerts:data.profile?.concerts||[]});
-    await showMemory.ready;if(cancelled)return;
     resolvedArtist={id:canonicalId,name:artist.name};selected=activeId=normalizeArtistSlug(slug);
     profileView?.dispose();profileView=renderArtistProfile(artist.name,data.profile,{
      loadShow:event=>showMemory.get(event),
@@ -33,11 +32,14 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
      onError:()=>error.show('Het showoverzicht kon niet worden geladen. Klik opnieuw op de concertdatum om het nogmaals te proberen.'),
      onReady:()=>error.resolved(),
     });
-    content.replaceChildren(profileView);document.title=artist.name+' · Artiesten · ESMOJO';
+    showMemory.subscribe((event,state)=>profileView?.updateShowStatus(event,state));
+    content.replaceChildren(profileView);
+    requestAnimationFrame(()=>setTimeout(()=>{if(!cancelled)showMemory?.start();},0));
+    document.title=artist.name+' · Artiesten · ESMOJO';
     const path='/artiest/'+encodeURIComponent(selected);if(location.pathname!==path)history.replaceState(null,'',path+location.search+location.hash);
     render(cache.current());error.resolved();
    }
-   catch{showMemory?.dispose();showMemory=null;if(!cancelled)error.show('De artiest en bijbehorende showoverzichten konden niet volledig worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
+   catch{showMemory?.dispose();showMemory=null;if(!cancelled)error.show('De artiest kon niet worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
    finally{busy=false;for(const loader of loaders.values())loader.finish();if(!cancelled)content.removeAttribute('aria-busy');}
   }
   setLinks(links);void load();return{setLinks,dispose(){cancelled=true;profileView?.dispose();showMemory?.dispose();showMemory=null;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};

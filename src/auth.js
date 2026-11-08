@@ -24,7 +24,7 @@ const panel = () => document.querySelector('#auth-panel');
 export function access(action,options={}) {
   const session=backgroundSaves.session;return isSaveRequest(action,options)?backgroundSaves.track(()=>retrySave(action,options,performAccess,{active:()=>session===backgroundSaves.session}),saveRequestInfo(action,options.body)):performAccess(action,options);
 }
-async function performAccess(action, { method = 'GET', body } = {}) {
+async function performAccess(action, { method = 'GET', body, signal } = {}) {
   const saveSession=backgroundSaves.session;
   if (expiresAt && Date.now() >= expiresAt) { await logout('Je bent na 72 uur automatisch uitgelogd. Log opnieuw in.'); throw new Error('Je sessie is verlopen.'); }
   if (activeSession && expiresAt && activeSession.expires_at * 1000 <= Date.now() + 30000) {
@@ -39,7 +39,7 @@ async function performAccess(action, { method = 'GET', body } = {}) {
   if (!data.session) throw new Error('Log opnieuw in.');
   activeSession = data.session;
   const homeContext=homeDashboardCache.context();
-  let response;try{response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store', ...(action==='artist-view'?{keepalive:true}:{}),
+  let response;try{response = await fetch(`/api/access?action=${action}`, { method, signal, cache: 'no-store', ...(action==='artist-view'?{keepalive:true}:{}),
     headers: { Authorization: `Bearer ${data.session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}), ...(action==='production-risks'?{'X-ESMOJO-Planning-Envelope':'1'}:{}) },
     ...(body ? { body: JSON.stringify(body) } : {}) });}catch{throw Object.assign(new Error('De dienst is tijdelijk niet bereikbaar.'),{retryable:true});}
   let result;

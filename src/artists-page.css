@@ -81,3 +81,12 @@ main:has(> .artist-selection-empty) { display:flex; }
  .artist-show-grid { grid-template-columns:minmax(0,1fr); }
  .artist-show-general { order:0; }.artist-show-timetable { order:1; }.artist-show-security { order:2; }.artist-show-production { order:3; }.artist-show-medical { order:4; }.artist-show-risks { order:6; }.artist-show-report-link { order:5; }.artist-show-open-link { order:7; }
 }
+
+.artist-concert-select[data-load-state="loading"] .artist-concert-arrow svg { opacity: .35; }
+.artist-concert-select[data-load-state="loading"] .artist-concert-arrow::after {
+ content: ''; position: absolute; width: 12px; height: 12px; border: 1.5px solid currentColor;
+ border-right-color: transparent; border-radius: 50%; animation: artist-report-spin 1s linear infinite;
+}
+.artist-concert-arrow { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+@keyframes artist-report-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .artist-concert-select[data-load-state="loading"] .artist-concert-arrow::after { animation: none; } }
