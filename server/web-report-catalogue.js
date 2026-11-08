@@ -7,8 +7,8 @@ export function validateReportDay(report,date){
  return report;
 }
 export function createWebCatalogueService({store,sourceLookup=async show=>({checked:true,sourceUrl:show.sourceUrl||null,photo:null}),onPublished=()=>{}}={}){
- async function synchronize(actor=null){
-  const scan=await store('web-scan',actor);let validated=0,invalid=0;
+ async function synchronize(actor=null,{historicalOnly=false}={}){
+  const scan=await store('web-scan',actor,...(historicalOnly?[{historicalOnly:true}]:[]));let validated=0,invalid=0;
   if(!Array.isArray(scan.jobs)||scan.jobs.length>5)throw Error('REPORT_UNAVAILABLE');
   for(const job of scan.jobs){
    const source=await store('web-source',actor,job);let state='valid',errorCode=null,sourceHash=null;
@@ -19,10 +19,10 @@ export function createWebCatalogueService({store,sourceLookup=async show=>({chec
     try{validateReportDay(calculateReport(bytes,{generatedAt:source.modifiedAt}),source.show.date);}
     catch(error){if(!/^CSV_/.test(error.code||error.message))throw error;state='invalid';errorCode=error.code||error.message;}
    }
-   const mojo=state==='valid'?(actor===null?await sourceLookup(source.show):{checked:false,sourceUrl:null,photo:null}):{checked:true,sourceUrl:null,photo:null};
-   try{await store('web-commit',actor,{...job,sourceHash,state,errorCode,mojo});if(state==='valid'){validated++;try{void Promise.resolve(onPublished()).catch(()=>{});}catch{/* De publicatie blijft geldig; de mailworker herneemt apart. */}}else invalid++;}catch(error){if(error.message!=='SOURCE_CHANGED'&&error.message!=='NOT_FOUND')throw error;}
+   const mojo=state==='valid'?(source.show.origin==='historical'?{checked:true,sourceUrl:null,photo:null}:actor===null?await sourceLookup(source.show):{checked:false,sourceUrl:null,photo:null}):{checked:true,sourceUrl:null,photo:null};
+   try{await store('web-commit',actor,{...job,sourceHash,state,errorCode,mojo});if(state==='valid'){validated++;try{if(source.show.origin!=='historical')void Promise.resolve(onPublished()).catch(()=>{});}catch{/* De publicatie blijft geldig; de mailworker herneemt apart. */}}else invalid++;}catch(error){if(error.message!=='SOURCE_CHANGED'&&error.message!=='NOT_FOUND')throw error;}
   }
   return{ok:true,validated,invalid};
  }
- return{synchronize,async menu(actor){const first=await store('web-menu',actor);if(!first.pending)return{reports:first.reports};try{await synchronize(actor);return{reports:(await store('web-menu',actor)).reports};}catch(error){if(!first.reports?.length)throw error;return{reports:first.reports};}}};
+ return{synchronize,async historicalStatus(){return store('web-historical-status',null);},async menu(actor){const first=await store('web-menu',actor);if(!first.pending)return{reports:first.reports};try{await synchronize(actor);return{reports:(await store('web-menu',actor)).reports};}catch(error){if(!first.reports?.length)throw error;return{reports:first.reports};}}};
 }

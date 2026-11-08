@@ -20,15 +20,19 @@ function esmojoWebInventory_(folder,knownCatalogue,artistNames,registeredShows){
   const source={id:file.getId(),name:file.getName(),modifiedAt:file.getLastUpdated().toISOString(),mime:file.getMimeType(),size:file.getSize(),show,validationVersion:'csv-web-v2'};
   source.context=esmojoOnTrackHash_(JSON.stringify(source));const entry=index.document.entries[source.id];source.entry=entry?.context===source.context?entry:null;sources.push(source);
  }
+ if(typeof esmojoHistoricalSources_==='function')for(const source of esmojoHistoricalSources_()){
+  if(sources.some(row=>row.id===source.id||row.show.key===source.show.key))throw Error('REPORT_CONFLICT');
+  source.context=esmojoOnTrackHash_(JSON.stringify(source));const entry=index.document.entries[source.id];source.entry=entry?.context===source.context?entry:null;sources.push(source);
+ }
  const valid=sources.filter(source=>source.entry?.state==='valid'),latest=new Map();
  for(const source of valid.sort((a,b)=>b.modifiedAt.localeCompare(a.modifiedAt)||a.id.localeCompare(b.id)))if(!latest.has(source.show.key))latest.set(source.show.key,source);
  const available=[...latest.values()],reports=reportCatalogue(available.map(source=>({concertId:source.show.key,name:source.show.name,date:source.show.date,venue:source.show.venue,revision:esmojoOnTrackHash_(source.entry.context+'\n'+source.entry.sourceHash+'\n'+JSON.stringify(source.entry.mojo))})),today);
  return{index,catalogue,sources,available,reports,unlinked,pending:sources.some(source=>!source.entry)};
 }
 function esmojoWebSource_(source){
- const file=esmojoOnTrackSourceFile_(source.id);if(file.getName()!==source.name||file.getLastUpdated().toISOString()!==source.modifiedAt)throw Error('SOURCE_CHANGED');
+ const file=source.show.origin==='historical'?esmojoHistoricalSourceFile_(source):esmojoOnTrackSourceFile_(source.id);if(file.getName()!==source.name||file.getLastUpdated().toISOString()!==source.modifiedAt)throw Error('SOURCE_CHANGED');
  if(!['text/csv','application/csv','text/plain','application/vnd.ms-excel'].includes(file.getMimeType())||file.getSize()>2*1024*1024)throw Error('REPORT_UNAVAILABLE');
- const bytes=file.getBlob().getBytes();if(bytes.length>2*1024*1024)throw Error('REPORT_UNAVAILABLE');return{bytes,hash:esmojoOnTrackHash_(bytes)};
+ const bytes=file.getBlob().getBytes();if(bytes.length>2*1024*1024)throw Error('REPORT_UNAVAILABLE');const hash=esmojoOnTrackHash_(bytes);if(source.expectedHash&&hash!==source.expectedHash)throw Error('SOURCE_CHANGED');return{bytes,hash};
 }
 function esmojoWebTimetable_(show){
  const folder=esmojoTimetableFolder_();if(!folder)return null;
@@ -46,12 +50,14 @@ function esmojoWebTimetable_(show){
  return esmojoTimetableRead_(folder,{concertId:matches[0],date:show.date})?.snapshot||null;
 }
 function esmojoWebReports_(request,preparedInventory){
- const operation=request.operation,allowed={ 'web-menu':['operation','actor'],'web-scan':['operation','actor'],'web-source':['operation','actor','sourceId','context'],'web-commit':['operation','actor','sourceId','context','sourceHash','state','errorCode','mojo'],'web-read':['operation','actor','concertId']}[operation];
+ const operation=request.operation,allowed={ 'web-menu':['operation','actor'],'web-scan':['operation','actor','historicalOnly'],'web-historical-status':['operation'],'web-source':['operation','actor','sourceId','context'],'web-commit':['operation','actor','sourceId','context','sourceHash','state','errorCode','mojo'],'web-read':['operation','actor','concertId']}[operation];
  if(!allowed||Object.keys(request).some(key=>!allowed.includes(key))||['web-menu','web-read'].includes(operation)&&typeof request.actor!=='string')throw Error('VALIDATION');
  if(operation==='web-read'&&(typeof request.concertId!=='string'||!request.concertId||request.concertId.length>240||/[\x00-\x1f/\\]/.test(request.concertId)))throw Error('VALIDATION');
  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');const inventory=preparedInventory||esmojoWebInventory_(folder);
+ if(operation==='web-historical-status'){const expected=inventory.sources.filter(row=>row.show.origin==='historical');return{registered:expected.length,validated:expected.filter(row=>row.entry?.state==='valid').length,invalid:expected.filter(row=>row.entry?.state==='invalid').length,available:inventory.available.filter(row=>row.show.origin==='historical').map(row=>row.show.key)};}
+ if(operation==='web-scan'&&request.historicalOnly!==undefined&&typeof request.historicalOnly!=='boolean')throw Error('VALIDATION');
  if(operation==='web-menu')return{reports:inventory.reports,pending:inventory.pending};
- if(operation==='web-scan')return{jobs:inventory.sources.filter(source=>!source.entry||request.actor===undefined&&source.entry.state==='valid'&&!source.entry.mojo?.checked).sort((a,b)=>Number(Boolean(a.entry))-Number(Boolean(b.entry))||(a.entry?.validatedAt||'').localeCompare(b.entry?.validatedAt||'')).slice(0,5).map(source=>({sourceId:source.id,context:source.context})),unlinked:inventory.unlinked};
+ if(operation==='web-scan')return{jobs:inventory.sources.filter(source=>(!request.historicalOnly||source.show.origin==='historical')&&(!source.entry||request.actor===undefined&&source.entry.state==='valid'&&!source.entry.mojo?.checked)).sort((a,b)=>Number(Boolean(a.entry))-Number(Boolean(b.entry))||(a.entry?.validatedAt||'').localeCompare(b.entry?.validatedAt||'')).slice(0,5).map(source=>({sourceId:source.id,context:source.context})),unlinked:inventory.unlinked};
  const source=operation==='web-read'?inventory.available.find(source=>source.show.key===request.concertId):inventory.sources.find(source=>source.id===request.sourceId&&source.context===request.context);
  if(!source)throw Error('NOT_FOUND');
  if(operation==='web-source'){

@@ -10,3 +10,14 @@ controleer bestaande concert-ID-opbouw en teruglezen. Middag/avond-ID-conventie
 _S1/_S2 behouden; deze twee concerten zitten niet in deze steekproef.
 Scope: noodzakelijke import-/register-/rapportagekoppeling, gerichte tests en docs.
 Geen nieuwe rapportageweergave. Productieclaims uitsluitend na live bewijs.
+
+Implementatie: alleen-lezen historisch Drive-register en broncontrole in bestaande
+WebReports-inventaris; normale rapportagecomponent/CSS ongemoeid. Historische
+bronnen blijven in hun eigen concertmap buiten de OnTrack/PDF-scan. Mailmarkering
+historical en publicatiehook voorkomen verzending. Bestaande OIDC-workflow krijgt
+een historical_only-stand voor veilige indexering zonder mailworker.
+
+Lokaal: historische regressies (weergave/rechten/no-mail/no-PDF/private parents/
+hash/ID/datums), bestaande catalogus-/mail-/artiesttests, syntaxcontrole en build
+slagen. Werkelijke bytes en private bestandsIDs uitsluitend in Drive/privéwerkmap.
+Google Drive-eigenaar en vaste private root zijn via metadata gecontroleerd.
