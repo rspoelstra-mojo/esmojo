@@ -79,6 +79,8 @@ jobs:
           node server/mojo-timetable.test.js
           node server/show-timetables.test.js
           node server/google-drive.test.js
+          node tools/apps-script/check-syntax.mjs
+          node --test tools/apps-script/check-syntax.test.mjs tools/apps-script/diagnostics.test.mjs
           node tools/apps-script/deploy.test.mjs
           node --test server/analysis-finalization.test.js server/ticket-data.test.js src/lib/research-view.test.js src/lib/show-photo-cache.test.js server/mojo-photo.test.js server/mojo-agenda.test.js server/github-identity.test.js server/shows-store.test.js server/shows-api.test.js
           node server/showprofile-pdf.test.js

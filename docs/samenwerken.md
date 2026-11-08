@@ -109,3 +109,13 @@ Bewaar ongepubliceerd werk eerst apart en bouw gewenste wijzigingen opnieuw op d
 nieuwe geschiedenis. Merge of push geen oude branches terug: daarmee kunnen juist
 verwijderde gegevens opnieuw bereikbaar worden. Een publieke herstelbranch met de
 oude geschiedenis is niet toegestaan. Oude PR-/cachekopieën beheert GitHub zelf.
+
+## Publicatie en beheer met beide accounts
+
+Lees voor Apps Script- of rechtenwerk ook docs/beheer-publicatie.md en
+tools/apps-script/README.md. Beide accounts gebruiken één gedeelde main-workflow,
+geen eigen Google-deployment of gekopieerde productiecredentials. Een geslaagde
+Vercel-uitrol bewijst geen geslaagde Apps Script-uitrol. De Google-workflow test
+actuele main, vergelijkt de vaste gedeployde bron terug en biedt verify_only voor
+een herhaalbare controle zonder schrijfacties. Controleer toegang per Codex-sessie;
+repository-admin is niet automatisch Actions-secret- of Vercel-connectorbeheer.

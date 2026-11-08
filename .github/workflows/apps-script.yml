@@ -7,8 +7,15 @@ on:
       - 'google-apps-script/**'
       - 'tools/apps-script/**'
       - 'server/apps-script.test.js'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/apps-script.yml'
   workflow_dispatch:
+    inputs:
+      verify_only:
+        description: 'Alleen gepubliceerde versie vergelijken met actuele main (geen writes)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,9 +33,13 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           persist-credentials: false
+          ref: main
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
+      - name: Record tested source
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Check script and publication safety
         # MCP-auth tests also import the existing Supabase/MFA verifier.
         # Install repository dependencies before running those offline tests.
@@ -36,6 +47,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run script and publication checks
         run: |
+          node tools/apps-script/check-syntax.mjs
+          node --test tools/apps-script/check-syntax.test.mjs tools/apps-script/diagnostics.test.mjs
           node server/apps-script.test.js
           node server/account-profiles.test.js
           node shared/artist-catalogue.test.js
@@ -67,8 +80,20 @@ jobs:
           node src/lib/home-cache.test.js
       - name: Install pinned publication tool
         run: npm ci --prefix tools/apps-script --no-audit --no-fund
+      - name: Require tested main still current
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          current_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$current_sha" != "$TESTED_SHA" ]; then
+            echo "Main is gewijzigd tijdens de tests. Herstart deze workflow voor de actuele main."
+            exit 1
+          fi
       - name: Update existing webapp
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GITHUB_SHA: ${{ steps.source.outputs.sha }}
+          APPS_SCRIPT_VERIFY_ONLY: ${{ inputs.verify_only == true && 'true' || 'false' }}
         run: node tools/apps-script/deploy.mjs
 
