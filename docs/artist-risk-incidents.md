@@ -107,3 +107,8 @@ veilig hervatbaar. READY/BATCH_CONFIRMED/COMPLETE-meldingen bevatten geen privé
 De beheerkaart toont tijdens verwerking het aantal geschikte concerten, hun
 bezoekersbasis en hoeveel rapportages verwerkt zijn. Onberekende gemiddelden
 heten expliciet Nog niet berekend; geen fictieve nul of gedeeltelijke score.
+
+V1.99: interactieve Incidenten- en artiestscore-reads voeren geen CSV-herbouw uit.
+Eén metadata-/cacheread geeft direct de stand en voortgang terug. Uitsluitend de
+achtergrondwerker leest en verwerkt de CSV-bronnen. Geen wachtrij van writes
+voor het weergeven van de beheerpagina.

@@ -19,8 +19,7 @@ export function createIncidentMetricsService({shows}={}){
   })().finally(()=>running.delete(key));running.set(key,job);return job;
  }
  async function snapshot(actor,artistIds=null){
-  const payload={actor,...(artistIds?{artistIds}:{})};let source=await invoke('incident-read',payload);
-  if(source.jobs?.length){await update(actor,source.jobs[0],false,source.jobSources?.[source.jobs[0]]);source=await invoke('incident-read',payload);}
+  const payload={actor,...(artistIds?{artistIds}:{})},source=await invoke('incident-read',payload);
   const pending=Boolean(source.jobs?.length),references=pending?null:incidentReferences(source.rows);
   const eligible=source.rows.filter(row=>row.sourceReady&&row.securityComplete&&row.medicalComplete&&incidentVisitorUnits(row)>0),progress={available:source.rows.filter(row=>row.sourceReady).length,eligible:eligible.length,processed:eligible.filter(suitableIncidents).length,visitors:eligible.reduce((sum,row)=>sum+incidentVisitorUnits(row),0)/40};
   const own=artistIds?source.rows.filter(row=>artistIds.includes('a_'+createHash('sha256').update(normalizeArtistName(row.name)).digest('hex'))):null;

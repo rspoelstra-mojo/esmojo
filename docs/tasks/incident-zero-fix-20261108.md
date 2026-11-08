@@ -21,3 +21,7 @@ Chrome controleert echte voortgang en geen fictieve nullen; productiebuild en
 Apps Script-syntax slagen. Cachevalidatie controleert nu ook alle twaalf tellers;
 onvolledige caches worden opnieuw opgebouwd. Gereedmelding valideert volledige
 referentiedataset en signaleert dubbelingen via een vaste technische foutcode.
+
+Aanvullend V1.99: paginalezing verwijdert CSV-update + tweede inventarisatie.
+De UI leest alleen metadata/cache; herbouw uitsluitend via de achtergrondwerker.
+Een regressietest bewaakt exact één incident-read en geen bron-/schrijfverzoek.

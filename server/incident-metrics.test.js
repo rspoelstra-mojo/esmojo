@@ -57,12 +57,12 @@ test('Bron naar telling gebruikt dezelfde rapportagerekenlaag, onafhankelijke to
  const {csvFixture}=await import('./test-support/web-reports-drive.js'),{calculateReport}=await import('./ontrack-report/data.js'),{webReportKpis}=await import('./report-web.js');
  const csv=csvFixture('2026-11-01',[{ID:'1',Division:'Medisch',Type:'Onwelwording','Resolved Status':'Ambulance','Affected Person':'2'},{ID:'2',Division:'Beveiliging',Type:'Verbale agressie','Resolved Status':'Eviction','Affected Person':'3'},{ID:'3',Division:'Medisch',Type:'Contusie / Distorsie'}]),hash=createHash('sha256').update(csv).digest('hex');let cache=null,commits=0,tampered=false;
  const service=createIncidentMetricsService({shows:async(op,payload)=>{
-  if(op==='incident-read')return{policyVersion:2,rows:[row('a',{kpis:cache})],jobs:cache?[]:['a'],updatedAt:null};
+  if(op==='incident-read')return{policyVersion:2,workerVersion:2,rows:[row('a',{kpis:cache,sourceReady:true,hasSource:true})],jobs:cache?[]:['a'],updatedAt:null};
   if(op==='incident-source')return{csvBase64:Buffer.from(tampered?csv+'tampered':csv).toString('base64'),sourceHash:hash,date:'2026-11-01',modifiedAt:'2026-11-02T00:00:00Z'};
-  assert.equal(op,'incident-counts');assert.equal(payload.actor,'actor');assert.equal(payload.sourceHash,hash);cache=payload.kpis;commits++;return{ok:true};
+  assert.equal(op,'incident-counts');assert.equal(payload.worker,true);assert.equal(payload.actor,undefined);assert.equal(payload.sourceHash,hash);cache=payload.kpis;commits++;return{ok:true};
  }});
- const result=await service.snapshot('actor');assert.equal(result.pending,false);assert.deepEqual(cache,webReportKpis(calculateReport(Buffer.from(csv),{generatedAt:'2026-11-02T00:00:00Z'})));assert.equal(cache.medical.total,2);assert.equal(cache.medical.ambulance,2);assert.equal(cache.security.total,1);assert.equal(cache.security.evictions,3);assert.equal(cache.security.verbal,1);assert.equal(commits,1);
- await service.snapshot('actor');assert.equal(commits,1);cache=null;tampered=true;await assert.rejects(service.snapshot('actor'),/SOURCE_CHANGED/);assert.equal(commits,1);
+ const refreshed=await service.refresh();assert.equal(refreshed.status,'complete');const result=await service.snapshot('actor');assert.equal(result.pending,false);assert.deepEqual(cache,webReportKpis(calculateReport(Buffer.from(csv),{generatedAt:'2026-11-02T00:00:00Z'})));assert.equal(cache.medical.total,2);assert.equal(cache.medical.ambulance,2);assert.equal(cache.security.total,1);assert.equal(cache.security.evictions,3);assert.equal(cache.security.verbal,1);assert.equal(commits,1);
+ await service.snapshot('actor');assert.equal(commits,1);cache=null;tampered=true;await assert.rejects(service.refresh(),/SOURCE_CHANGED/);assert.equal(commits,1);
 });
 test('Incidentbeheer vereist beheerder, MFA en actieve sessie; artiestscore wordt apart door Artiestenrechten beschermd',async()=>{
  const {makeAccountsHandler}=await import('./accounts-api.js');
@@ -110,15 +110,12 @@ test('Historische telling en cachecommit vermijden de volledige inventaris, maar
  f.advance(1000);file.setContent(csvFixture('2025-02-01',[{ID:'changed'}]));assert.throws(()=>f.ctx.esmojoIncidentMetrics_({operation:'incident-source',...request}),/SOURCE_CHANGED/);
  file.moveTo(f.outside);assert.throws(()=>f.ctx.esmojoIncidentMetrics_({operation:'incident-source',...request}),/SOURCE_MISSING/);
 });
-test('Onvoltooide herbouw rapporteert echte voortgang en bezoekersbasis, maar geen onvolledige referenties of score',async()=>{
- const {csvFixture}=await import('./test-support/web-reports-drive.js');const csv=csvFixture('2026-11-01'),hash=createHash('sha256').update(csv).digest('hex');let ready=false;
- const service=createIncidentMetricsService({shows:async(op,payload)=>{
-  if(op==='incident-read')return{policyVersion:2,rows:[row('a',{hasSource:true,sourceReady:true,kpis:ready?kpis():null}),row('b',{hasSource:true,sourceReady:true,kpis:null})],jobs:ready?['b']:['a','b'],jobSources:{a:'source-a',b:'source-b'}};
-  assert.equal(payload.sourceId,'source-a');
-  if(op==='incident-source')return{csvBase64:Buffer.from(csv).toString('base64'),sourceHash:hash,date:'2026-11-01',modifiedAt:'2026-11-02T00:00:00Z'};
-  assert.equal(op,'incident-counts');ready=true;return{ok:true};
+test('Interactieve reads wachten nooit op CSV-herbouw en rapporteren echte voortgang zonder onvolledige score',async()=>{
+ let calls=0;const service=createIncidentMetricsService({shows:async(op)=>{
+  calls++;assert.equal(op,'incident-read','Een paginaverzoek mag geen CSV ophalen of telling opslaan');
+  return{policyVersion:2,rows:[row('a',{hasSource:true,sourceReady:true,kpis:kpis()}),row('b',{hasSource:true,sourceReady:true,kpis:null})],jobs:['b'],jobSources:{b:'source-b'}};
  }});
- const data=await service.snapshot('actor');assert.equal(data.pending,true);assert.equal(data.references,null);assert.equal(data.score,null);assert.deepEqual(data.progress,{available:2,eligible:2,processed:1,visitors:2000});
+ const data=await service.snapshot('actor');assert.equal(calls,1);assert.equal(data.pending,true);assert.equal(data.references,null);assert.equal(data.score,null);assert.deepEqual(data.progress,{available:2,eligible:2,processed:1,visitors:2000});
 });
 test('Worker v2 verwerkt vijf per ronde, hergebruikt bronverwijzingen en controleert de complete referenties vóór gereedmelding',async()=>{
  const {csvFixture}=await import('./test-support/web-reports-drive.js');const csv=csvFixture('2026-11-01'),hash=createHash('sha256').update(csv).digest('hex'),rows=Array.from({length:6},(_,i)=>row('id-'+i,{kpis:null,sourceReady:true,hasSource:true}));let reads=0,writes=0;
