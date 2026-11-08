@@ -28,3 +28,18 @@ test('Leesbare URL-referenties openen de juiste artiest; tellen blijft op intern
  for(const [slug,name]of [['u2','U2'],['newwave','New Wave'],['yousukeyukimatsu','Yousuke Yukimatsu']]){const result=await service.detail('actor',{artistId:slug});assert.equal(result.artist.name,name);assert.equal(result.canonicalArtistSlug,slug);assert.equal(result.requestedReference,slug);}
  await assert.rejects(service.detail('actor',{artistId:'../u2'}),/VALIDATION/);await assert.rejects(service.record('actor',{artistId:'u2',eventId:randomUUID()}),/VALIDATION/);
 });
+
+test('Het artiestprofiel gebruikt canonieke aliassen en geeft alleen compacte bezoekersinformatie terug',async()=>{
+ const artists=buildArtistCatalogue(['U2','U2: World Tour'],v=>createHash('sha256').update(v).digest('hex'));
+ const service=createArtistService({shows:async(operation,payload)=>{
+  if(operation==='artist-catalogue')return {artists,profileSupported:true};
+  assert.equal(operation,'artist-profile');
+  assert.deepEqual(new Set(payload.artistIds),new Set(artists.map(artist=>artist.id)));
+  return {profileConcertId:'internal',concerts:[{venue:'Ziggo Dome',dates:['2026-11-06','2026-11-07']}],
+   latestDate:'2026-11-07',photo:null,audience:{1:{summary:'Bevestigde tekst',answer:'Niet tonen'},2:{answer:'### Samenvatting\n25–60 jaar\n### Volledige analyse\nNiet tonen'}}};
+ }});
+ const {profile}=await service.detail('actor',{artistId:'u2',includeProfile:true});
+ assert.deepEqual(profile.audience,['Bevestigde tekst','25–60 jaar',null,null]);
+ assert.equal(profile.profileConcertId,undefined);
+ assert.equal(profile.concerts[0].dates.length,2);
+});

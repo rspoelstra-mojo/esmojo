@@ -29,7 +29,7 @@ export function createArtistCatalogueCache({storage=null,now=Date.now}={}){
   if(result.mostViewed){rankRevision++;acceptRanking(result.mostViewed);}return true;
  }
  function trackDetail(reference,ids){const entry=details.get(reference);if(entry)for(const id of ids)if(validArtistId(id))entry.ids.add(id);}
- function detail(request,reference,ids=[]){const task=Promise.resolve().then(()=>request('artist-detail',{method:'POST',body:{artistId:reference}})),entry={promise:task,ids:new Set(validArtistId(reference)?[reference]:[])};details.set(reference,entry);trackDetail(reference,ids);return task.finally(()=>{if(details.get(reference)===entry)details.delete(reference);});}
+ function detail(request,reference,ids=[]){const task=Promise.resolve().then(()=>request('artist-detail',{method:'POST',body:{artistId:reference,includeProfile:true}})),entry={promise:task,ids:new Set(validArtistId(reference)?[reference]:[])};details.set(reference,entry);trackDetail(reference,ids);return task.finally(()=>{if(details.get(reference)===entry)details.delete(reference);});}
  return{bind,current,refreshMenu,refreshRanking,refresh(request,options){return Promise.all([refreshMenu(request,options),refreshRanking(request,options)]);},detail,trackDetail,record,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},clear(){bind(null);}};
 }
 let storage;try{storage=globalThis.localStorage;}catch{}

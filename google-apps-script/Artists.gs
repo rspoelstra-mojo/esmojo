@@ -1,14 +1,83 @@
 // Alleen namen/IDs: geen rapportinhoud, bronbestandsnamen, Drive-IDs of accountrelaties.
 function esmojoArtistCatalogue_(request){
  if(Object.keys(request).sort().join(',')!=='actor,operation'||request.operation!=='artist-catalogue'||typeof request.actor!=='string'||!request.actor||request.actor.length>100)throw Error('VALIDATION');
- const profiles=esmojoOnTrackProfiles_();
- if(profiles.filter(profile=>profile.id===request.actor&&profile.activated&&!profile.disabled&&hasModule(profile,'artists')).length!==1)throw Error('FORBIDDEN');
+ esmojoArtistActor_(request.actor);
  const cache=CacheService.getScriptCache(),cached=cache.get('artist-catalogue-v2');
- if(cached){try{return{artists:cleanArtistMenu(JSON.parse(cached))};}catch{/* Een ongeldige cache mag de catalogus niet blokkeren. */}}
+ if(cached){try{return{artists:cleanArtistMenu(JSON.parse(cached)),profileSupported:true};}catch{/* Een ongeldige cache mag de catalogus niet blokkeren. */}}
  const catalogue=esmojoTimetableCatalogue_({allVenues:true}),names=[...catalogue.values()].map(show=>show.artist);
  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),inventory=esmojoWebInventory_(folder,catalogue,names);
  names.push(...inventory.sources.map(source=>source.show.name));
  const artists=buildArtistCatalogue(names,esmojoOnTrackHash_),body=JSON.stringify(artists);
  if(Utilities.newBlob(body).getBytes().length<90000)cache.put('artist-catalogue-v2',body,30);
- return{artists};
+ return{artists,profileSupported:true};
+}
+
+function esmojoArtistActor_(actor){
+ if(typeof actor!=='string'||!actor||actor.length>100)throw Error('VALIDATION');
+ if(esmojoOnTrackProfiles_().filter(profile=>profile.id===actor&&profile.activated&&!profile.disabled&&hasModule(profile,'artists')).length!==1)throw Error('FORBIDDEN');
+}
+
+function esmojoArtistProfile_(request){
+ if(Object.keys(request).sort().join(',')!=='actor,artistIds,operation'||!Array.isArray(request.artistIds)||!request.artistIds.length||request.artistIds.length>1000||!request.artistIds.every(validArtistId))throw Error('VALIDATION');
+ esmojoArtistActor_(request.actor);
+ const ids=new Set(request.artistIds),matches=name=>ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(name)));
+ const catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true});
+ const registeredShows=[];
+ const inventory=esmojoWebInventory_(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue,null,registeredShows);
+ const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd');
+ const groups=new Map(),knownDates=new Set(),photos=new Map();
+ const identity=(venue,date)=>venue.normalize('NFKC').toLowerCase()+'|'+date;
+ const add=(key,venue,date)=>{
+  if(!groups.has(key))groups.set(key,{venue,dates:new Set()});
+  groups.get(key).dates.add(date);
+ };
+ const shows=[...catalogue.values()].filter(show=>matches(show.artist)).sort((a,b)=>b.date.localeCompare(a.date)||a.concertId.localeCompare(b.concertId));
+ const production=DriveApp.getFolderById(ESMOJO_FOLDER_ID).getFoldersByName('Productie');
+ if(production.hasNext()){
+  const folder=production.next();
+  for(const photo of Object.values(esmojoHomePhotosRead_(folder).data.photos))photos.set(photo.sourceUrl,photo.imageUrl);
+ }
+ let recent=null;
+ for(const show of shows){
+  if(show.date<=today)recent||=show;
+  knownDates.add(identity(show.venue,show.date));
+  add(show.seriesId||show.concertId,show.venue,show.date);
+ }
+ for(const show of registeredShows){
+  if(!matches(show.name)||typeof show.venue!=='string'||!Array.isArray(show.dates))continue;
+  const dates=show.dates.filter(validTimetableDate).sort();
+  if(!dates.length)continue;
+  const seriesKey='report:'+identity(show.venue,dates[0]);
+  for(const date of dates){
+   const key=identity(show.venue,date);
+   if(!knownDates.has(key)){add(seriesKey,show.venue,date);knownDates.add(key);}
+   if(date<=today&&(!recent||date>recent.date))recent={date};
+  }
+ }
+ for(const {show,entry} of inventory.sources){
+  if(!matches(show.name)||show.date>today)continue;
+  const key=identity(show.venue,show.date);
+  if(!knownDates.has(key)){add('report:'+key,show.venue,show.date);knownDates.add(key);}
+  if(!recent||show.date>recent.date)recent={date:show.date};
+  const photo=entry?.mojo?.photo;
+  if(photo&&esmojoHomeValidPhoto_(photo))photos.set(photo.sourceUrl,photo.imageUrl);
+ }
+ const concerts=[...groups.values()].map(group=>({venue:group.venue,dates:[...group.dates].sort()}))
+  .sort((a,b)=>b.dates.at(-1).localeCompare(a.dates.at(-1))||a.venue.localeCompare(b.venue));
+ const photo=shows.map(show=>photos.get(show.sourceUrl)).find(Boolean)
+  ||inventory.sources.find(source=>matches(source.show.name)&&esmojoHomeValidPhoto_(source.entry?.mojo?.photo))?.entry.mojo.photo.imageUrl||null;
+ const target=recent?.seriesId?esmojoResearchTarget_(recent.concertId):null;
+ return {concerts,photo,latestDate:recent?.date||null,profileConcertId:target?.primary.concertId||null,audience:target?esmojoArtistAudience_(target):{}};
+}
+
+function esmojoArtistAudience_(target){
+ const analyses=esmojoReadShowProfile_(esmojoShowFile_(target.folder,'showprofiel.json'),target.primary.concertId).analyses;
+ const audience={};
+ for(let number=1;number<=4;number++){
+  const saved=analyses[number];
+  const file=esmojoShowFile_(target.folder,esmojoResearchName_(number));
+  const answer=file?esmojoReadResearch_(file,target.primary.concertId,number).answer:null;
+  audience[number]={summary:saved?.status==='completed'?saved.summary:null,answer:typeof answer==='string'?answer:null};
+ }
+ return audience;
 }

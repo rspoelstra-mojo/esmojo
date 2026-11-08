@@ -1,4 +1,5 @@
 import './artists-page.css';
+import {renderArtistProfile} from './artist-profile.js';
 import {access} from './auth.js';
 import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
 import {validArtistId,normalizeArtistName} from '../shared/artist-catalogue.js';
@@ -23,7 +24,7 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     const known=[...(cache.current()?.artists||[]),{id:canonicalId,name:artist.name}],slug=data.canonicalArtistSlug||artistRouteMap(known).get(canonicalId);
     if(!validArtistSlug(slug))throw Error('ARTIST_CATALOGUE');
     resolvedArtist={id:canonicalId,name:artist.name};selected=activeId=normalizeArtistSlug(slug);
-    const section=node('section','artist-page'),header=node('header','artist-page-heading');header.append(node('h1','artist-page-title',artist.name));section.append(header);content.replaceChildren(section);document.title=artist.name+' · Artiesten · ESMOJO';
+    content.replaceChildren(renderArtistProfile(artist.name,data.profile));document.title=artist.name+' · Artiesten · ESMOJO';
     const path='/artiest/'+encodeURIComponent(selected);if(location.pathname!==path)history.replaceState(null,'',path+location.search+location.hash);
     render(cache.current());error.resolved();
    }
