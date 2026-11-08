@@ -60,8 +60,8 @@ export function renderArtistProfile(name,profile={}){
   const heading=node('div','artist-audience-heading'),glyph=node('span','artist-audience-icon');
   glyph.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${peopleIconPaths}</svg>`;
   const saved=profile.audienceStoredAt?.[index];
-  if(saved&&Number.isFinite(Date.parse(saved))){const time=node('time','artist-audience-date',storedDay.format(new Date(saved)).replace(/\./g,''));time.dateTime=saved;time.title='Informatie opgeslagen';card.append(time);}
   heading.append(glyph,node('h2','',title));
+  if(saved&&Number.isFinite(Date.parse(saved))){const time=node('time','artist-audience-date',storedDay.format(new Date(saved)).replace(/\./g,''));time.dateTime=saved;time.title='Informatie opgeslagen';heading.append(time);}
   card.append(heading,node('p','',profile.audience?.[index]||unavailable));
   cards.append(card);
  });
