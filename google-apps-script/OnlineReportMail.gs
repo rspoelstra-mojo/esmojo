@@ -29,7 +29,7 @@ function esmojoOnlineReportMail_(request,folder,state,profiles,save){
    const legacy=state.reports.find(row=>row.mailChannel!=='online'&&row.sourceHash===source.entry.sourceHash&&row.show?.key===source.show.key);
    // Bestaande afleveringen behouden hun sleutel, bytes en onzekere status.
    // Bij omschakeling geen oude, nooit voor mail gekoppelde archieven terugmailen.
-   const historical=bootstrap&&!legacy&&source.show.origin==='filename',recipients=legacy||historical?[]:[...new Set(state.recipientIds)].filter(id=>active.has(id));
+   const historical=source.show.origin==='historical'||bootstrap&&!legacy&&source.show.origin==='filename',recipients=legacy||historical?[]:[...new Set(state.recipientIds)].filter(id=>active.has(id));
    const report={id,sourceId:source.id,sourceHash:source.entry.sourceHash,show:{key:source.show.key,name:source.show.name,venue:source.show.venue,dates:[source.show.date]},publishedAt:source.entry.validatedAt,legacyReportId:legacy?.id||null,historical,deliveries:recipients.map(recipientId=>({recipientId,status:'pending',attempts:0}))};
    esmojoOnlineEmailStatus_(report);reports.push(report);queued+=recipients.length;
   }

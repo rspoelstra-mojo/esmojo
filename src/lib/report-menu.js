@@ -7,5 +7,5 @@ export function groupReportMenu(reports,now=new Date()){
   return dates.length?[{...report,date:dates.at(-1)}]:[];
  }).sort((a,b)=>b.date.localeCompare(a.date)||a.label.localeCompare(b.label,'nl'));
  return[{id:'week',title:'Afgelopen week',reports:available.filter(report=>day-calendarDay(report.date)<=7)},
-  {id:'period',title:'Afgelopen periode',reports:available.filter(report=>day-calendarDay(report.date)>=8)}];
+  {id:'period',title:'Afgelopen periode',reports:available.filter(report=>day-calendarDay(report.date)>=8&&day-calendarDay(report.date)<=45)}];
 }

@@ -21,14 +21,14 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
   async menu(actor){return{artists:(await catalogue(actor)).artists};},
   async ranking(actor){const [directory,counts]=await Promise.all([catalogue(actor),views.counts()]);return{mostViewed:top(directory,counts)};},
   async show(actor,body){
-   if(!body||Array.isArray(body)||Object.keys(body).sort().join(',')!=='artistId,date,venue'||!validArtistReference(body.artistId)||!validTimetableDate(body.date)||body.date>=timetableClock(now()).date||typeof body.venue!=='string'||!body.venue||body.venue.length>200)throw Error('VALIDATION');
+   if(!body||Array.isArray(body)||Object.keys(body).sort().join(',')!==(body.performance===undefined?'artistId,date,venue':'artistId,date,performance,venue')||body.performance!==undefined&&!['middag','avond'].includes(body.performance)||!validArtistReference(body.artistId)||!validTimetableDate(body.date)||body.date>=timetableClock(now()).date||typeof body.venue!=='string'||!body.venue||body.venue.length>200)throw Error('VALIDATION');
    const row=await artist(actor,body.artistId),directory=await catalogue(actor),artistIds=[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)];
-   const source=await shows('artist-show',{actor,artistIds,date:body.date,venue:body.venue});
-   if(source?.show?.date!==body.date||source.show.venue!==body.venue||readableArtistName(source.show.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
-   const general={name:row.name,venue:body.venue,date:body.date};
+   const source=await shows('artist-show',{actor,artistIds,date:body.date,venue:body.venue,...(body.performance?{performance:body.performance}:{})});
+   if(body.performance&&source?.show?.performance!==body.performance||source?.show?.date!==body.date||source.show.venue!==body.venue||readableArtistName(source.show.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
+   const general={name:row.name,venue:body.venue,date:body.date,...(body.performance?{performance:body.performance}:{})};
    const preparation=artistPreparation(source.preparation,general);
    if(!source.report)return{show:general,timetable:source.timetable||null,kpis:null,reportId:null,preparation};
-   if(source.report.show?.date!==body.date||source.report.show?.venue!==body.venue||readableArtistName(source.report.show?.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
+   if(body.performance&&source.report.show?.performance!==body.performance||source.report.show?.date!==body.date||source.report.show?.venue!==body.venue||readableArtistName(source.report.show?.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
    const data=await createWebReportService({store:async()=>source.report,photo:async()=>null})(actor,{concertId:source.report.show.key});
    return{show:general,timetable:data.report.timetable,kpis:data.report.kpis,reportId:data.show.key,preparation};
   },

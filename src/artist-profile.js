@@ -83,13 +83,13 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
    const item=node('li','artist-timeline-year');
    item.append(node('h3','artist-year-badge',year));
    const entries=node('ol','artist-year-events');
-   for(const {venue,date} of events){
-    const past=date<timetableClock(now()).date,item=node('li','artist-timeline-event '+(past?'artist-event-past':'artist-event-upcoming')),event=node('button','artist-concert-select'),time=node('time','',concertDay.format(new Date(date+'T12:00:00Z')));
+   for(const {venue,date,performance} of events){
+    const past=date<timetableClock(now()).date,item=node('li','artist-timeline-event '+(past?'artist-event-past':'artist-event-upcoming')),event=node('button','artist-concert-select'),time=node('time','',concertDay.format(new Date(date+'T12:00:00Z'))+(performance?' ('+performance+')':''));
     event.type='button';event.disabled=!past;event.dataset.concertDate=date;event.dataset.concertVenue=venue;
     event.title=past?'Toon showoverzicht':'Beschikbaar na de concertdag';
     const label=node('span','artist-concert-label');time.dateTime=date;label.append(time,document.createTextNode(', '+venue));event.append(label);
     if(past){const arrow=node('span','artist-concert-arrow');arrow.setAttribute('aria-hidden','true');arrow.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>';event.append(arrow);}
-    event.onclick=()=>openShow({date,venue},event);buttons.push(event);item.append(event);entries.append(item);
+    event.onclick=()=>openShow({date,venue,...(performance?{performance}:{})},event);buttons.push(event);item.append(event);entries.append(item);
    }
    item.append(entries);
    list.append(item);

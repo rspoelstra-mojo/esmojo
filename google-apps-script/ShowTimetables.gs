@@ -5,10 +5,12 @@ function esmojoTimetableCatalogue_({allVenues=false,includeSeries=false}={}){
  if(production){const file=esmojoOnTrackFile_(production,'_esmojo_shows_v1.json');if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw Error('REPORT_CATALOG');const active=new Set(index.active);rows.push(...index.concerts.filter(row=>allVenues||row.venue==='Gashouder'&&row.city==='Amsterdam').map(row=>({...row,active:active.has(row.concertId)})));}}
  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_concerts_v1.json');
  if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw Error('REPORT_CATALOG');const active=new Set(index.active);rows.push(...index.concerts.map(row=>({...row,active:active.has(row.concertId)})));}
+ if(typeof esmojoHistoricalCatalogue_==='function')rows.push(...esmojoHistoricalCatalogue_());
  const catalogue=new Map();for(const row of rows){
   if(typeof row.concertId!=='string'||!row.concertId||row.concertId.length>240||/[\x00-\x1f/\\]/.test(row.concertId)||typeof row.artist!=='string'||!row.artist||typeof row.venue!=='string'||typeof row.city!=='string'||!validTimetableDate(row.date))throw Error('REPORT_CATALOG');
   const item={concertId:row.concertId,artist:row.artist,venue:row.venue,city:row.city,date:row.date,sourceUrl:row.sourceUrl,active:row.active};
   if(includeSeries&&row.generalConcertId)item.seriesId=row.generalConcertId;
+  if(row.historical){item.historical=true;if(row.identityArtist)item.identityArtist=row.identityArtist;if(row.performance)item.performance=row.performance;if(includeSeries)item.historicalSeriesId=row.historicalSeriesId;}
   if(catalogue.has(item.concertId)&&JSON.stringify(catalogue.get(item.concertId))!==JSON.stringify(item))throw Error('REPORT_CATALOG');catalogue.set(item.concertId,item);
  }return catalogue;
 }

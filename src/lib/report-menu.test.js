@@ -7,3 +7,5 @@ assert.deepEqual(week.reports.map(r=>r.label),['Gister','Reeks','Zeven dagen']);
 [week,period]=groupReportMenu([item('Grens','2026-10-28')],new Date('2026-11-04T23:30:00Z'));assert.equal(week.reports.length,0);assert.equal(period.reports.length,1,'Nederlandse kalenderdag, ook na middernacht');
 assert.deepEqual(reports[0].dates,['2026-10-01']);
 console.log('PASS rapportmenu: echte datums, 7/8-daggrens, nieuwste eerst, reeks en Nederlandse tijd');
+[week,period]=groupReportMenu([item('45 dagen','2026-09-20'),item('46 dagen','2026-09-19')],new Date('2026-11-04T12:00:00Z'));
+assert.deepEqual(period.reports.map(row=>row.label),['45 dagen']);

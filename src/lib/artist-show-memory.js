@@ -4,7 +4,7 @@ import {artistTimeline} from './artist-timeline.js';
 // Alleen de huidige artiestpagina. Geen browseropslag of gedeelde privé-cache.
 export function createArtistShowMemory({request,artistId,concerts=[],now=Date.now}){
  const values=new Map(),events=artistTimeline(concerts).flatMap(group=>group.events);
- const key=event=>JSON.stringify([event.date,event.venue]);
+ const key=event=>JSON.stringify([event.date,event.venue,event.performance||null]);
  let disposed=false;
  const active=()=>{if(disposed)throw Error('ARTIST_SHOW_CANCELLED');};
  const ready=(async()=>{

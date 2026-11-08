@@ -45,3 +45,7 @@ test('Oasis LIVE met jaartal en de bevestigde Numidia-showtitel worden artiestna
  const ambiguous=createReadableArtistDirectory(buildArtistCatalogue(['Artist - Other','Artist Other'],hash),hash);
  assert.equal(resolveReadableArtist(ambiguous,'artistother'),null,'Ambigue oude naamroutes openen geen willekeurige artiest');
 });
+test('Bevestigde Bouke-formaties delen één leesbare artiest en oude routes blijven geldig',()=>{
+ for(const name of ['Bouke','Bouke & The Elvismatters','Bouke & The Elvismatters band','Bouke with symphonic orchestra'])assert.equal(readableArtistName(name),'Bouke');
+ assert.equal(readableArtistName('Another & The Band'),'Another & The Band');
+});

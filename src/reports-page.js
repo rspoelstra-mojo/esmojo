@@ -10,17 +10,20 @@ export function createReportsPage(content,submenu,{selected=null,heading=documen
  function showSelection(){content.classList.add('report-selection-empty');content.replaceChildren(node('p','report-selection-prompt','Kies eerst een rapportage'));}
  if(!selected)showSelection();
  function render(reports){
-  if(disposed||!reports)return;const links=new Map([...submenu.querySelectorAll('[data-report-key]')].map(link=>[link.dataset.reportKey,link]));submenu.replaceChildren();let found=null;
+  if(disposed||!reports)return;const links=new Map([...submenu.querySelectorAll('[data-report-key]')].map(link=>[link.dataset.reportKey,link]));submenu.replaceChildren();
+  // De menuperiode is alleen een weergavefilter, geen beperking op directe links.
+  const found=reports.find(report=>report.shows.some(show=>show.concertId===selected));let selectedLink=heading;
   for(const group of groupReportMenu(reports)){
    const title=node('h3','submenu-group-heading',group.title);title.dataset.submenuGroupHeading=group.id;submenu.append(title);
    if(!group.reports.length){const empty=node('p','submenu-group-empty','Geen rapportages');empty.dataset.submenuGroupEmpty=group.id;submenu.append(empty);}
    for(const report of group.reports){
     const link=links.get(report.concertId)||node('a','submenu-link',report.label);if(link.dataset.submenuTitle&&link.dataset.submenuTitle!==report.label)link.textContent=report.label;link.dataset.reportKey=report.concertId;link.removeAttribute('aria-current');link.href=reportHref(report);link.dataset.submenuTitle=report.label;link.dataset.submenuGroup=group.id;submenu.append(link);
-    if(report.shows.some(show=>show.concertId===selected)){
-     link.setAttribute('aria-current','page');found=report;const revision=JSON.stringify(report);
-     if(activeRevision!==revision){content.classList.remove('report-selection-empty');if(active&&cleanup.reload){cleanup.reload(selected,link);}else{cleanup();cleanup=createWebReportPage(content,link,{concertId:selected,request,onSelected:(date,concertId)=>{selected=concertId;replaceUrl(reportHref({concertId}));}});}active=report;activeRevision=revision;}
-    }
+    if(found&&report.concertId===found.concertId){link.setAttribute('aria-current','page');selectedLink=link;}
    }
+  }
+  if(found){
+   const revision=JSON.stringify(found);
+   if(activeRevision!==revision){content.classList.remove('report-selection-empty');if(active&&cleanup.reload){cleanup.reload(selected,selectedLink);}else{cleanup();cleanup=createWebReportPage(content,selectedLink,{concertId:selected,request,onSelected:(date,concertId)=>{selected=concertId;replaceUrl(reportHref({concertId}));}});}active=found;activeRevision=revision;}
   }
   if(!found){cleanup();cleanup=()=>{};active=activeRevision=null;if(!selected)showSelection();else{content.classList.remove('report-selection-empty');content.textContent=reports.length?'Rapportage niet gevonden.':'Er zijn nog geen rapportages beschikbaar.';}}
  }

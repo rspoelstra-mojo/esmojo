@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {visibleReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto} from './report-view.js';
+import {visibleReportIncidents,shortIncidentDate,highlightedReportIncident,reportPhoto,reportTabDates} from './report-view.js';
 test('Locatie/tijd gebruikt twaalf Nederlandse maandafkortingen zonder punt',()=>{
  const months=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
  for(let month=1;month<=12;month++)assert.equal(shortIncidentDate(`2026-${String(month).padStart(2,'0')}-03`),`3 ${months[month-1]} 2026`);
@@ -44,3 +44,4 @@ test('Datumtabs tonen maximaal vijf unieke shows van nieuw naar oud; minder besc
  assert.deepEqual(reportTabDates(['2002-06-01','2026-11-03']),['2026-11-03','2002-06-01']);
  assert.deepEqual(reportTabDates(['2026-11-03']),['2026-11-03']);assert.deepEqual(reportTabDates(['2026-11-03','2026-11-03']),['2026-11-03']);assert.deepEqual(reportTabDates([]),[]);
 });
+assert.deepEqual(reportTabDates(['2026-01-01','2026-02-01','2026-03-01','2026-04-01','2026-05-01','2026-06-01'],'2026-01-01'),['2026-06-01','2026-05-01','2026-04-01','2026-03-01','2026-01-01']);
