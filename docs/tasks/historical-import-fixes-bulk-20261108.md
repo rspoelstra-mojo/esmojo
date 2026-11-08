@@ -12,3 +12,10 @@ Scope: noodzakelijke lees-/import-/filterkoppelingen en tests. Vertrouwelijke
 inhoud, bestanden, ticketcijfers en bron-IDs uitsluitend Drive/Vercel/privéwerkmap;
 niet in Git, CI-inputs of logs. Veilige, hervatbare import via de bestaande main-
 OIDC-worker en ondertekende Drive-brug. Geen onbeveiligde tijdelijke route.
+
+Implementatie: filtering vóór Drive-opslag, canonieke Bouke-alias, menu op 45 dagen,
+bestaande ticketprojectie voor historische artiestshows, centrale CSV-opslag met
+hervatbare OIDC-batchworker. Middag/avond en rechtstreekse oude rapportselectie
+behouden eigen datasets. Geen CSS-wijziging, mail-, PDF- of voorbereidingstaak.
+Private bronbestanden en imports staan buiten Git. Publicatie eerst; daarna de
+bestaande tien corrigeren en teruglezen, vervolgens de geautoriseerde collectie.

@@ -10,7 +10,7 @@ function esmojoTimetableCatalogue_({allVenues=false,includeSeries=false}={}){
   if(typeof row.concertId!=='string'||!row.concertId||row.concertId.length>240||/[\x00-\x1f/\\]/.test(row.concertId)||typeof row.artist!=='string'||!row.artist||typeof row.venue!=='string'||typeof row.city!=='string'||!validTimetableDate(row.date))throw Error('REPORT_CATALOG');
   const item={concertId:row.concertId,artist:row.artist,venue:row.venue,city:row.city,date:row.date,sourceUrl:row.sourceUrl,active:row.active};
   if(includeSeries&&row.generalConcertId)item.seriesId=row.generalConcertId;
-  if(row.historical){item.historical=true;if(includeSeries)item.historicalSeriesId=row.historicalSeriesId;}
+  if(row.historical){item.historical=true;if(row.identityArtist)item.identityArtist=row.identityArtist;if(row.performance)item.performance=row.performance;if(includeSeries)item.historicalSeriesId=row.historicalSeriesId;}
   if(catalogue.has(item.concertId)&&JSON.stringify(catalogue.get(item.concertId))!==JSON.stringify(item))throw Error('REPORT_CATALOG');catalogue.set(item.concertId,item);
  }return catalogue;
 }

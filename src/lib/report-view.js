@@ -31,4 +31,7 @@ export function reportPriorityLabel(priority){
 }
 
 // Nieuwste echte showdatum eerst, zonder opvullen of archiefbediening.
-export const reportTabDates=dates=>[...new Set(dates)].sort((a,b)=>b.localeCompare(a)).slice(0,5);
+export const reportTabDates=(dates,selectedDate)=>{
+ const sorted=[...new Set(dates)].sort((a,b)=>b.localeCompare(a)),latest=sorted.slice(0,5);
+ return selectedDate&&sorted.includes(selectedDate)&&!latest.includes(selectedDate)?[...latest.slice(0,4),selectedDate].sort((a,b)=>b.localeCompare(a)):latest;
+};
