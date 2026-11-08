@@ -85,7 +85,7 @@ function esmojoOnTrackReports_(input){
   }
   if(operation==='reserve'){
    if(request.layoutVersion!==ESMOJO_ONTRACK_REPORT_LAYOUT||typeof request.jobId!=='string'||!/^[0-9a-f-]{36}$/i.test(request.jobId))throw Error('VALIDATION');
-   const choices=esmojoOnTrackReportChoices_(folder),historicalIds=new Set(esmojoHistoricalRegister_().entries.map(row=>row.source.id));let changed=false;
+   const choices=esmojoOnTrackReportChoices_(folder),historicalIds=new Set(typeof esmojoHistoricalRegister_==='function'?esmojoHistoricalRegister_().entries.map(row=>row.source.id):[]);let changed=false;
    for(const candidate of state.sources){
     if(historicalIds.has(candidate.id))continue;
     if(candidate.status==='ready'&&candidate.processedModifiedAt===candidate.modifiedAt&&candidate.processedLayout===request.layoutVersion)continue;
