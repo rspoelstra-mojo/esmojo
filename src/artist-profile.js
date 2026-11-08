@@ -1,6 +1,7 @@
 import {peopleIconPaths} from './lib/profile-icons.js';
 import {timetableClock} from '../shared/show-timetable.js';
 import {renderArtistShowOverview} from './artist-show-overview.js';
+import {artistTimeline} from './lib/artist-timeline.js';
 const unavailable='Informatie niet beschikbaar';
 const topics=['Man/ vrouw verhouding','Leeftijdsrange','Aankomstprofiel','Typische kenmerken'];
 const monthYear=new Intl.DateTimeFormat('nl-NL',{month:'long',year:'numeric',timeZone:'UTC'});
@@ -21,18 +22,6 @@ export function formatArtistDates(dates){
   months.get(month).push(Number(date.slice(8)));
  }
  return [...months].map(([month,days])=>days.join(', ')+' '+month).join(' / ');
-}
-
-export function artistTimeline(concerts=[]){
- const dates=new Map();
- for(const {venue,dates:days} of concerts)for(const date of days){
-  const key=date+'|'+venue;if(!dates.has(key))dates.set(key,{date,venue});
- }
- const years=new Map();
- for(const event of [...dates.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.venue.localeCompare(b.venue,'nl'))){
-  const year=event.date.slice(0,4);if(!years.has(year))years.set(year,[]);years.get(year).push(event);
- }
- return [...years].map(([year,events])=>({year,events}));
 }
 
 export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,onBusy=()=>()=>{},onError=()=>{},onReady=()=>{}}={}){
@@ -96,7 +85,9 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
     const past=date<timetableClock(now()).date,item=node('li','artist-timeline-event '+(past?'artist-event-past':'artist-event-upcoming')),event=node('button','artist-concert-select'),time=node('time','',concertDay.format(new Date(date+'T12:00:00Z')));
     event.type='button';event.disabled=!past;event.dataset.concertDate=date;event.dataset.concertVenue=venue;
     event.title=past?'Toon showoverzicht':'Beschikbaar na de concertdag';
-    time.dateTime=date;event.append(time,document.createTextNode(', '+venue));event.onclick=()=>openShow({date,venue},event);buttons.push(event);item.append(event);entries.append(item);
+    const label=node('span','artist-concert-label');time.dateTime=date;label.append(time,document.createTextNode(', '+venue));event.append(label);
+    if(past){const arrow=node('span','artist-concert-arrow');arrow.setAttribute('aria-hidden','true');arrow.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>';event.append(arrow);}
+    event.onclick=()=>openShow({date,venue},event);buttons.push(event);item.append(event);entries.append(item);
    }
    item.append(entries);
    list.append(item);

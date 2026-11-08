@@ -15,7 +15,7 @@ function service(source){return createArtistService({now:()=>Date.parse('2026-11
 test('Artiestshow gebruikt exact dezelfde rapportagetellingen, zonder bronbytes, incidenten, hashes of filters naar browser',async()=>{
  const result=await service({show,report}).show('actor',input),original=await createWebReportService({store:async()=>report,photo:async()=>null})('actor',{concertId:show.key});
  assert.deepEqual(result.kpis,original.report.kpis);assert.equal(result.kpis.medical.total,3);assert.equal(result.kpis.medical.selfcare,1);assert.equal(result.kpis.security.mischief,1);assert.equal(result.kpis.security.evictions,2);assert.equal(result.reportId,show.key);
- assert.deepEqual(Object.keys(result).sort(),['kpis','reportId','show','timetable']);assert.equal(JSON.stringify(result).includes('Private fixture'),false);assert.equal(JSON.stringify(result).includes(report.sourceHash),false);
+ assert.deepEqual(Object.keys(result).sort(),['kpis','preparation','reportId','show','timetable']);assert.equal(JSON.stringify(result).includes('Private fixture'),false);assert.equal(JSON.stringify(result).includes(report.sourceHash),false);
 });
 test('Geen rapportage geeft ontbrekende informatie, nooit nullen; andere artiest/datum/bron faalt gesloten',async()=>{
  const result=await service({show,report:null}).show('actor',input);assert.equal(result.kpis,null);assert.equal(result.reportId,null);

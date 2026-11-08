@@ -20,3 +20,7 @@ verzonnen gemiddelde. Risicoaantallen volgen actuele brongebonden beoordelingen;
 onbeoordeelde risico's blijven herkenbaar. Maatregelen volgen measureDefinitions.
 
 GitHub-API is geblokkeerd; de taakbranch dient als gedeelde registratie.
+
+Aanvullende verzoeken: dezelfde grijstint voor alle concertdatums, alleen bij
+historische datums een pijl rechtsboven; in de showkop het gedeelde terugicoon
+uit de analyse-editor met datum en locatie ernaast.

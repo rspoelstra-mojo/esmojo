@@ -72,6 +72,7 @@ jobs:
           node shared/artist-names.test.js
           node server/artist-service.test.js
           node server/artist-show.test.js
+          node server/artist-preparation.test.js
           node --test src/artist-profile.test.js
           node server/artist-views.test.js
           node src/lib/artist-catalogue-cache.test.js

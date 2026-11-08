@@ -3,6 +3,7 @@ import {createClient} from '@supabase/supabase-js';
 import {createHash,randomUUID} from 'node:crypto';
 import {archiveAfterShow,validateActiveSnapshot} from '../shared/active-show-storage.js';
 import {activeCompletion,activeRiskView,reduceActiveShow} from './active-show-model.js';
+import {barrierSignature} from '../shared/barrier-layout.js';
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export function publicActivePlanning(state,now=new Date().toISOString()){
@@ -66,6 +67,14 @@ export function createActiveShowService({drive,repository,now=Date.now,sleep=del
  }
  const service={
   async request(operation,payload={}){
+   if(operation==='artist-show'){
+    const data=await drive(operation,payload),preparation=data.preparation;
+    if(!preparation?.concertId||!await enabled())return data;
+    const row=await repository.get(preparation.concertId);if(!row)return data;
+    const snapshot=row.snapshot,barrier=snapshot.production.barrier;
+    const floor=preparation.production.floor?.barrierSignature===barrierSignature(barrier||{})?preparation.production.floor:null;
+    return{...data,preparation:{...preparation,hasProfile:true,production:{...preparation.production,barrierType:barrier?.barrierType||null,choices:snapshot.production.choices,floor},risks:activeRiskView(snapshot)}};
+   }
    if(operation==='artist-profile'){
     const profile=await drive(operation,payload);
     if(!profile.profileConcertId||!await enabled())return profile;

@@ -100,7 +100,20 @@ function esmojoArtistShow_(request){
  if(!sources.length&&!canonical&&!historical)throw Error('NOT_FOUND');
  const source=sources[0],show={name:source?source.show.name:canonical?canonical.artist:historical.name,venue:request.venue,date:request.date};
  let timetable=null;
- if(source){const report=esmojoWebReports_({operation:'web-read',actor:request.actor,concertId:source.show.key},inventory);return{show,report};}
+ const preparation=canonical?.seriesId?esmojoArtistPreparation_(canonical):null;
+ if(source){const report=esmojoWebReports_({operation:'web-read',actor:request.actor,concertId:source.show.key},inventory);return{show,report,preparation};}
  if(canonical){try{timetable=esmojoWebTimetable_({key:canonical.concertId,date:canonical.date,venue:canonical.venue});}catch{/* Geen tijden verzinnen. */}}
- return{show,report:null,timetable};
+ return{show,report:null,timetable,preparation};
+}
+
+function esmojoArtistPreparation_(show){
+ const target=esmojoResearchTarget_(show.concertId);
+ if(target.selected.date!==show.date||target.selected.venue!==show.venue||target.primary.concertId!==show.seriesId)throw Error('CONFLICT');
+ const profile=esmojoShowFile_(target.folder,'showprofiel.json'),storage=esmojoReadProductionRisks_(target),document=storage.document;
+ const tickets=esmojoReadTicketData_(esmojoShowFile_(target.folder,'bezoekersdata.json'),target.primary.concertId),fields=JSON.parse(tickets.workflow_json).visitors.fields;
+ const riskView=esmojoShowProfileRisks_({operation:'risk-view',concertId:show.concertId},target);
+ return{concertId:target.primary.concertId,hasProfile:Boolean(profile||storage.file),
+  contacts:{productionManager:null,eventSafetyManager:esmojoOnTrackManager_({key:show.concertId},esmojoOnTrackProfiles_()),tscProjectLead:null},
+  tickets:{sales:fields.ticket_sales?.completed_at?fields.ticket_sales.content:null,origins:fields.visitor_origins?.completed_at?fields.visitor_origins.content:null,shows:target.seriesShows},
+  production:{entrance:null,barrierType:document.barrier?.barrierType||null,floor:document.floorPressure||null,choices:document.choices},risks:riskView};
 }

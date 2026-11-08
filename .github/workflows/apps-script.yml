@@ -53,6 +53,7 @@ jobs:
           node server/account-profiles.test.js
           node shared/artist-catalogue.test.js
           node server/artist-show.test.js
+          node server/artist-preparation.test.js
           node shared/account-employment.test.js
           node server/mojo-timetable.test.js
           node server/show-timetables.test.js
