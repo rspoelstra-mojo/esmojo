@@ -1,5 +1,14 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';import {readFileSync} from 'node:fs';import vm from 'node:vm';
 import {buildArtistCatalogue,cleanArtistMenu,artistTopFive,normalizeArtistName} from './artist-catalogue.js';
+test('Artiestkaarten dateren de getoonde opgeslagen tekst, niet de concert- of onderzoeksdatum',()=>{
+ const created='2026-11-08T10:00:00.000Z',saved='2026-11-07T12:00:00Z';
+ const context=vm.createContext({esmojoShowFile_:(_folder,name)=>name==='onderzoek_4.json'?null:{getDateCreated:()=>new Date(created)},esmojoReadShowProfile_:()=>({analyses:{1:{status:'completed',summary:'Eigen tekst',updatedAt:saved},2:{status:'draft',summary:'Niet tonen',updatedAt:saved}}}),esmojoResearchName_:number=>'onderzoek_'+number+'.json',esmojoReadResearch_:()=>({answer:'Onderzoek',researchedAt:'2026-01-01T00:00:00Z'})});
+ vm.runInContext(readFileSync('google-apps-script/Artists.gs','utf8'),context);
+ const result=JSON.parse(JSON.stringify(context.esmojoArtistAudience_({folder:{},primary:{concertId:'fixture'}})));
+ assert.equal(result[1].storedAt,saved);assert.equal(result[1].summary,'Eigen tekst');
+ assert.equal(result[2].storedAt,created);assert.equal(result[2].summary,null);
+ assert.equal(result[3].storedAt,created);assert.equal(result[4].storedAt,null);
+});
 const hash=value=>createHash('sha256').update(value).digest('hex');
 test('Artiesten uit alle zalen/historie en rapportages worden uniek en alfabetisch opgebouwd zonder fuzzy samenvoegen',()=>{
  const rows=buildArtistCatalogue(['Don Toliver','BUNT.','DON TOLIVER','  Don   Toliver ','AC/DC','ACDC','Beyoncé','ＢＵＮＴ.'],hash);

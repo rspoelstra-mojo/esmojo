@@ -31,15 +31,25 @@ test('Leesbare URL-referenties openen de juiste artiest; tellen blijft op intern
 
 test('Het artiestprofiel gebruikt canonieke aliassen en geeft alleen compacte bezoekersinformatie terug',async()=>{
  const artists=buildArtistCatalogue(['U2','U2: World Tour'],v=>createHash('sha256').update(v).digest('hex'));
- const service=createArtistService({shows:async(operation,payload)=>{
+ const service=createArtistService({photo:async name=>{assert.equal(name,'U2');return{imageUrl:'https://www.mojo.nl/media/u2.jpg'};},shows:async(operation,payload)=>{
   if(operation==='artist-catalogue')return {artists,profileSupported:true};
   assert.equal(operation,'artist-profile');
   assert.deepEqual(new Set(payload.artistIds),new Set(artists.map(artist=>artist.id)));
   return {profileConcertId:'internal',concerts:[{venue:'Ziggo Dome',dates:['2026-11-06','2026-11-07']}],
-   latestDate:'2026-11-07',photo:null,audience:{1:{summary:'Bevestigde tekst',answer:'Niet tonen'},2:{answer:'### Samenvatting\n25–60 jaar\n### Volledige analyse\nNiet tonen'}}};
+   latestDate:'2026-11-07',photo:null,audience:{1:{summary:'Bevestigde tekst',answer:'Niet tonen',storedAt:'2026-11-08T10:00:00Z'},2:{answer:'### Samenvatting\n25–60 jaar\n### Volledige analyse\nNiet tonen',storedAt:'invalid'},3:{storedAt:'2026-11-08T10:00:00Z'}}};
  }});
  const {profile}=await service.detail('actor',{artistId:'u2',includeProfile:true});
  assert.deepEqual(profile.audience,['Bevestigde tekst','25–60 jaar',null,null]);
+ assert.deepEqual(profile.audienceStoredAt,['2026-11-08T10:00:00Z',null,null,null]);
  assert.equal(profile.profileConcertId,undefined);
  assert.equal(profile.concerts[0].dates.length,2);
+ assert.equal(profile.photo,'https://www.mojo.nl/media/u2.jpg');
+});
+
+test('Bestaande artiestfoto blijft behouden; alleen ontbrekende foto wordt bij MOJO opgehaald',async()=>{
+ let calls=0,saved='https://www.mojo.nl/media/existing.jpg';
+ const service=createArtistService({photo:async()=>{calls++;return null;},shows:async operation=>operation==='artist-catalogue'?{artists:rows,profileSupported:true}:{concerts:[],photo:saved,audience:{}}});
+ assert.equal((await service.detail('actor',{artistId:rows[0].id,includeProfile:true})).profile.photo,saved);assert.equal(calls,0);
+ saved=null;assert.equal((await service.detail('actor',{artistId:rows[0].id,includeProfile:true})).profile.photo,null);assert.equal(calls,1);
+ await service.menu('actor');await service.detail('actor',{artistId:rows[0].id});assert.equal(calls,1);
 });

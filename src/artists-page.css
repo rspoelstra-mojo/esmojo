@@ -5,7 +5,8 @@ main:has(> .artist-selection-empty) { display:flex; }
 .artist-page-heading { padding:20px 24px; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,#fff); }
 .artist-page-title { margin:0; font-size:32px; line-height:1.3; font-weight:700; overflow-wrap:anywhere; }
 
-.artist-page { container:artist-profile / inline-size; }
+.artist-page { container:artist-profile / inline-size; --artist-blue:#002ff4; --artist-tint:#edf2ff; }
+:root[data-theme="dark"] .artist-page { --artist-blue:#7296ff; --artist-tint:#101e3c; }
 .artist-profile-layout { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:16px; align-items:start; }
 .artist-profile-main { display:grid; gap:16px; min-width:0; }
 .artist-page-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
@@ -19,10 +20,21 @@ main:has(> .artist-selection-empty) { display:flex; }
 .artist-profile-card { min-width:0; padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,#fff); overflow-wrap:anywhere; }
 .artist-profile-card h2 { margin:0; font-size:16px; }
 .artist-profile-card p { margin:8px 0 0; font-size:14px; line-height:1.5; white-space:pre-line; }
-.artist-concert-timeline { list-style:none; padding:0; margin:14px 0 0 4px; }
-.artist-concert-timeline li { position:relative; display:grid; gap:3px; padding:0 0 16px 16px; border-left:1px solid var(--line); font-size:14px; }
-.artist-concert-timeline li:last-child { padding-bottom:0; border-color:transparent; }
-.artist-concert-timeline li::before { content:''; position:absolute; left:-4px; top:.45em; width:7px; height:7px; border-radius:50%; background:var(--accent); }
+.artist-audience-grid > .artist-profile-card { position:relative; padding-top:38px; }
+.artist-audience-heading { display:flex; align-items:center; gap:12px; min-width:0; }
+.artist-audience-icon { display:grid; place-items:center; width:40px; height:40px; flex:0 0 40px; border-radius:10px; color:var(--artist-blue); background:var(--artist-tint); }
+.artist-audience-icon svg { width:23px; height:23px; }
+.artist-audience-date { position:absolute; top:12px; right:16px; color:var(--muted); font-size:11px; line-height:1.4; white-space:nowrap; }
+.artist-audience-grid .artist-profile-card p { margin-top:14px; }
+.artist-concert-timeline,.artist-year-events { list-style:none; padding:0; }
+.artist-concert-timeline { margin:20px 0 0; }
+.artist-timeline-year { position:relative; padding:0 0 24px 20px; margin-left:8px; border-left:2px solid var(--artist-blue); }
+.artist-timeline-year:last-child { padding-bottom:0; }
+.artist-year-badge { display:inline-block; position:relative; margin:0 0 12px; padding:5px 12px; border-radius:8px; color:var(--artist-blue); background:var(--artist-tint); font-size:14px; line-height:1.5; }
+.artist-year-badge::before { content:''; position:absolute; left:-28px; top:11px; width:10px; height:10px; border:2px solid var(--artist-blue); border-radius:50%; background:var(--fluid-card,#fff); }
+.artist-year-events { display:grid; gap:8px; margin:0; }
+.artist-timeline-event { padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; line-height:1.5; }
+.artist-timeline-event time { font-weight:650; }
 @container artist-profile (max-width:780px) {
  .artist-profile-layout { grid-template-columns:minmax(0,1fr); }
 }

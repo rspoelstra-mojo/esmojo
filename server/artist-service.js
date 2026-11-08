@@ -3,7 +3,8 @@ import {createReadableArtistDirectory,resolveReadableArtist,foldArtistViews,vali
 import {artistTopFive,validArtistId} from '../shared/artist-catalogue.js';
 import {researchView} from '../src/lib/research-view.js';
 import {createArtistViews,validArtistViewEvent} from './artist-views.js';
-export function createArtistService({env=process.env,shows,views=createArtistViews({env}),now=Date.now}={}){
+import {getMojoArtistPhoto} from './mojo-photo.js';
+export function createArtistService({env=process.env,shows,views=createArtistViews({env}),photo=getMojoArtistPhoto,now=Date.now}={}){
  let value=null,checked=0;const pending=new Map();
  async function catalogue(actor,force=false){
   if(!force&&value&&now()-checked<30000)return value;
@@ -20,11 +21,13 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
    if(!body.includeProfile||!directory.profileSupported)return detail;
    const artistIds=[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)];
    const profile=await shows('artist-profile',{actor,artistIds});
+   const image=profile.photo||(await photo(row.name))?.imageUrl||null;
    const audience=Array.from({length:4},(_,index)=>{
     const entry=profile.audience?.[index+1];
     return entry?.summary?.trim()||researchView(entry).summaryText||null;
    });
-   return {...detail,profile:{concerts:profile.concerts,photo:profile.photo,latestDate:profile.latestDate,audience}};},
+   const audienceStoredAt=audience.map((text,index)=>{const date=profile.audience?.[index+1]?.storedAt;return text&&typeof date==='string'&&Number.isFinite(Date.parse(date))?date:null;});
+   return {...detail,profile:{concerts:profile.concerts,photo:image,latestDate:profile.latestDate,audience,audienceStoredAt}};},
   async record(actor,body){input(body,true);await artist(actor,body.artistId);const result=await views.record(body.artistId,body.eventId);try{return{...result,mostViewed:top(await catalogue(actor),await views.counts())};}catch{return result;}},
  };
 }

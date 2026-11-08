@@ -77,7 +77,9 @@ function esmojoArtistAudience_(target){
   const saved=analyses[number];
   const file=esmojoShowFile_(target.folder,esmojoResearchName_(number));
   const answer=file?esmojoReadResearch_(file,target.primary.concertId,number).answer:null;
-  audience[number]={summary:saved?.status==='completed'?saved.summary:null,answer:typeof answer==='string'?answer:null};
+  const summary=saved?.status==='completed'?saved.summary:null;
+  audience[number]={summary,answer:typeof answer==='string'?answer:null,
+   storedAt:summary?saved.updatedAt:answer&&file?file.getDateCreated().toISOString():null};
  }
  return audience;
 }

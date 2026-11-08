@@ -1,3 +1,4 @@
+import {peopleIconPaths} from './lib/profile-icons.js';
 import {createPageFeedback} from './lib/page-feedback.js';
 import {detailBackButton} from './detail-back.js';
 import {backgroundSaves,saveRequestInfo} from './lib/background-saves.js';
@@ -17,7 +18,7 @@ export const analysisCategories = [
   { title: 'Artiestanalyse', description: 'Analyse van de artiest en show.', icon: 'music', questions: ['Artiest', 'Routing', 'Show karakter', 'Curfew', 'Populariteit', 'Maatschappelijke gevoeligheid', 'Bijzonderheden'] },
 ];
 const paths = {
-  people: '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 11v-3a6 6 0 0 0-3-5"/>',
+  people: peopleIconPaths,
   music: '<path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/>',
   chevron: '<path d="m9 6 6 6-6 6"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
