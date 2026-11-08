@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {calendarDay,dutchToday,showPlanning,showMeasures} from './show-planning.js';
 const show={dates:['2026-11-05'],venue:'Gashouder'},now=new Date('2026-11-03T12:00:00Z');
 const snapshot=()=>({pdf:{state:'ready'},profile:{finalization:{categories:{visitors:{completedAt:'2026-10-23T12:00:00Z'},artist:{completedAt:'2026-10-24T12:00:00Z'}}}},risks:{production:{choices:{escape_routes:false,fireworks:false,open_fire:false,lasers:false,drones:false}},assessments:{barrier:{completed:true},floor:{completed:true}}}});
-test('De vijf kalenderdeadlines gebruiken de vroegste reeksdatum; vandaag wordt correct tussen mijlpalen geplaatst',()=>{
+test('Voorbereiding gebruikt de eerste reeksdatum; vóór de reeks staat Showdag op de eerste datum',()=>{
  const model=showPlanning({...show,dates:['2026-11-07','2026-11-05','2026-11-06']},{},now);
  assert.deepEqual(model.steps.map(step=>step.date),['2026-10-05','2026-10-22','2026-10-29','2026-11-04','2026-11-05']);assert.equal(model.today,'2026-11-03');assert.ok(model.todayPosition>50&&model.todayPosition<70);assert.equal(model.steps[3].badge,'Morgen');assert.equal(model.next.id,'profile');
 });
@@ -50,4 +50,24 @@ test('Midden/Hoog leveren losse maatregelen uit productie en actuele operationel
 });
 test('Historische afgeronde Midden/Hoog zonder expliciete maatregel niet stilzwijgend als maatregelenvrij afronden',()=>{
  const snapshot=completeMeasureSnapshot();snapshot.risks.assessments.barrier={completed:true,riskLevel:'medium',riskNote:null};assert.equal(showMeasures(show,snapshot).complete,false);
+});
+
+test('Showdag schuift door de reeks; voorbereiding blijft op de eerste dag en afronding volgt pas na de laatste dag',()=>{
+ const series={...show,dates:['2026-11-08','2026-11-06','2026-11-07','2026-11-07']},completion={profile:true,operational:true,production:true,measures:true,show:true};
+ for(const date of ['2026-11-05','2026-11-06','2026-11-07','2026-11-08']){
+  const model=showPlanning(series,{completion},new Date(date+'T12:00:00Z')),step=model.steps[4];
+  assert.equal(step.date,date<'2026-11-06'?'2026-11-06':date);assert.equal(step.completed,false);assert.equal(step.badge,'Showdag');assert.equal(step.current,true);
+  assert.deepEqual(model.steps.slice(0,4).map(step=>step.date),['2026-10-06','2026-10-23','2026-10-30','2026-11-05']);
+ }
+ const last=showPlanning(series,{completion},new Date('2026-11-08T22:59:59Z'));assert.equal(last.steps[4].completed,false);
+ const ended=showPlanning(series,{completion},new Date('2026-11-08T23:00:00Z'));assert.equal(ended.today,'2026-11-09');assert.equal(ended.steps[4].date,'2026-11-08');assert.equal(ended.steps[4].completed,true);assert.equal(ended.steps[4].badge,'Afgerond');assert.equal(ended.steps[4].current,false);
+});
+test('Showdag volgt echte datums en Nederlandse daggrenzen, inclusief jaarwisseling en zomertijd',()=>{
+ for(const [dates,before,after]of [
+  [['2026-12-31','2027-01-01'],'2027-01-01T22:59:59Z','2027-01-01T23:00:00Z'],
+  [['2026-03-28','2026-03-29'],'2026-03-29T21:59:59Z','2026-03-29T22:00:00Z'],
+  [['2026-10-24','2026-10-25'],'2026-10-25T22:59:59Z','2026-10-25T23:00:00Z'],
+ ]){assert.equal(showPlanning({...show,dates},{},new Date(before)).steps[4].completed,false);assert.equal(showPlanning({...show,dates},{},new Date(after)).steps[4].completed,true);}
+ assert.equal(showPlanning({...show,dates:['2026-11-06','2026-11-08']},{},new Date('2026-11-07T12:00:00Z')).steps[4].date,'2026-11-08');
+ assert.equal(showPlanning({...show,dates:['2026-11-06','2026-11-07','2026-11-08'],activeDates:['2026-11-08']},{},new Date('2026-11-07T12:00:00Z')).steps[4].date,'2026-11-08');
 });

@@ -24,9 +24,15 @@ export function homePlanning(data,now=new Date()){
  }
  const yearlyShows=[...annual.values()];
  const planningShows=shows.filter(show=>show.assigned&&(future(show)||show.dates.some(date=>date<today)));
- const calendarTasks=planningShows.flatMap(show=>show.planning?show.planning.steps.map(step=>({...step,id:show.key+':'+step.id,kind:step.id,showKey:show.key,showName:show.name,venue:show.venue,href:showHref(show)+'?tab='+deadlineTab(step.id),lastShowDate:show.dates.at(-1),activeFuture:future(show)})):[]).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
- const tasks=calendarTasks.filter(task=>!task.completed&&task.activeFuture);
- const groups=[{id:'overdue',title:'Verlopen',tasks:tasks.filter(task=>task.date<today)},{id:'today',title:'Vandaag',tasks:tasks.filter(task=>task.date===today)},{id:'week',title:'Deze week',tasks:tasks.filter(task=>task.date>today&&task.date<=sunday)}].filter(group=>group.tasks.length);
+ const calendarTasks=planningShows.flatMap(show=>show.planning?show.planning.steps.flatMap(step=>{
+  const task={...step,id:show.key+':'+step.id,kind:step.id,showKey:show.key,showName:show.name,venue:show.venue,href:showHref(show)+'?tab='+deadlineTab(step.id),lastShowDate:show.dates.at(-1),activeFuture:future(show)};
+  if(step.id!=='show')return[task];
+  // De kalender bewaart iedere echte showdag; de lijst toont één volgende dag per reeks.
+  return [...new Set(show.dates)].filter(date=>date<today||!show.activeDates||show.activeDates.includes(date)).map(date=>({...task,id:task.id+':'+date,date,days:Math.round((calendarDay(date)-calendarDay(today))/86400000),completed:date<today,badge:date<today?'Afgerond':'Showdag',current:date===step.date&&!step.completed,nextShowDate:step.date}));
+ }):[]).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+ const tasks=calendarTasks.filter(task=>!task.completed&&task.activeFuture&&(task.kind!=='show'||task.date===task.nextShowDate));
+ const nextSunday=addDays(sunday,7);
+ const groups=[{id:'overdue',title:'Verlopen',tasks:tasks.filter(task=>task.date<today)},{id:'today',title:'Vandaag',tasks:tasks.filter(task=>task.date===today)},{id:'week',title:'Deze week',tasks:tasks.filter(task=>task.date>today&&task.date<=sunday)},{id:'next-week',title:'Volgende week',tasks:tasks.filter(task=>task.date>sunday&&task.date<=nextSunday)}].filter(group=>group.tasks.length);
  const weekCount=tasks.filter(task=>task.date>=monday&&task.date<=sunday).length;
  return{today,monday,sunday,year,yearStart,yearEnd,yearCount:yearlyShows.length,shows,upcoming,assigned,myShows:assigned.slice(0,6),calendarTasks,tasks,groups,openCount:tasks.length,weekCount,completedCount:yearlyShows.filter(show=>show.completed).length,unavailableCount:assigned.filter(show=>!show.planning).length};
 }
