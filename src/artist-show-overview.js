@@ -1,7 +1,6 @@
 import {medicalReportFilters} from '../shared/report-medical.js';
 import {securityReportFilters} from '../shared/report-security.js';
 import {reportHref} from '../shared/report-routes.js';
-import {timetableEntryLabel} from '../shared/show-timetable.js';
 import {detailBackButton} from './detail-back.js';
 const missing='Geen informatie beschikbaar';
 const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;};
@@ -19,7 +18,7 @@ export function renderArtistShowOverview(data,{onBack=()=>{}}={}){
  const general=card('Algemene informatie','general');
  fields(general,[['Productie manager',generalData?.productionManager],['Event Safety manager',generalData?.eventSafetyManager],['Projectleider TSC',generalData?.tscProjectLead],['Verkochte kaarten',generalData?.soldTickets==null?null:numbers.format(generalData.soldTickets)],['Percentage buitenlands',generalData?.foreignPercentage==null?null:numbers.format(generalData.foreignPercentage)+'%']]);
  const timetable=card('Tijdschema','timetable');
- if(data.timetable?.status==='available'&&data.timetable.entries?.length){const list=node('dl','artist-show-facts');for(const entry of data.timetable.entries){const row=node('div');row.append(node('dt','',timetableEntryLabel(entry)),node('dd','',entry.time));list.append(row);}timetable.append(list);}else timetable.append(node('p','',missing));
+ if(data.timetable?.status==='available'&&data.timetable.entries?.length){const list=node('dl','artist-show-facts');for(const entry of data.timetable.entries){const row=node('div');row.append(node('dt','',entry.publishedLabel),node('dd','',entry.time));list.append(row);}timetable.append(list);}else timetable.append(node('p','',missing));
  const statistic=(label,kind,fields)=>{const el=card(label,kind),values=data.kpis?.[kind];if(!values){el.append(node('p','',missing));return;}
   const header=node('div','artist-show-stat-heading');header.append(el.firstChild,node('strong','artist-show-total',String(values.total)));el.append(header);
   const list=node('dl','artist-show-stat-list');for(const {id,label}of fields){const row=node('div');row.append(node('dt','',label),node('dd','',String(values[id])));list.append(row);}el.append(list);
