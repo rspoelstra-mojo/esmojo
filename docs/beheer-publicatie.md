@@ -25,9 +25,9 @@ Controle van 8 november 2026 in de huidige Codex-sessie. Geen tokenwaarden gelez
 
 | Dienst | Gewenste toegang voor beide accounts | Hier vastgesteld |
 | --- | --- | --- |
-| GitHub ESMOJO Zakelijk | Repository lezen/schrijven, branches/PR’s/merge, CI lezen/starten, deploymentstatus; projectinstellingen alleen waar nodig | Zakelijke GitHub-identiteit rspoelstra-mojo; repository geeft admin/push/pull. Code/PR/CI-reads en taakbranch/draft PR werken. Secretmetadata en Actions-instellingen geven via CLI-integratie 403 ondanks repositoryrol. Een gebruikerrol is dus niet hetzelfde als connectorscope. |
+| GitHub ESMOJO Zakelijk | Repository lezen/schrijven, branches/PR’s/merge, CI lezen/starten, deploymentstatus; projectinstellingen alleen waar nodig | Zakelijke GitHub-identiteit rspoelstra-mojo; repository geeft admin/push/pull. Code/PR/CI-reads, taakbranch/draft PR, merge en workflow_dispatch werken. Secretmetadata en Actions-instellingen geven via CLI-integratie 403 ondanks repositoryrol. Een gebruikerrol is dus niet hetzelfde als connectorscope. |
 | Vercel ESMOJO Zakelijk | ESMOJO-project, builds/logs/deployments en gevraagde projectinstellingen; geen toegang tot andere projecten nodig | Vercel-plugin is DISABLED_BY_ADMIN en niet geïnstalleerd in deze workspace. Geen Vercel-token in runtime. Automatische GitHub-uitrol en via GitHub geregistreerde deploystatus zijn beschikbaar; rechtstreeks projectbeheer niet. |
-| Google Apps Script | Publiceren/verifiëren via gedeelde Actions-workflow, zonder Codex-tokenkopie | Laatste goede run 42457754755; mislukte run 42461478364 kwam bij clasp push. Dezelfde workflow/identiteit leest project/deployment. Actuele herstelrun wordt in taaknotitie vastgelegd. |
+| Google Apps Script | Publiceren/verifiëren via gedeelde Actions-workflow, zonder Codex-tokenkopie | Laatste goede run 42457754755; mislukte run 42461478364 kwam bij clasp push. Dezelfde workflow/identiteit leest project/deployment. Herstelrun en alleen-lezen hercontrole slagen; zie de bewijssectie hieronder. |
 | Google Drive | Alleen afgesproken ondertekende Vercel→Apps Script-routes met actuele actor/modulecontrole | Geen directe publicatiecredentials of gebruikerssessie in deze runtime. De research-token heeft uitsluitend de bestaande onderzoekscope; geen vervanging voor profiel-/accounttoegang. |
 | Supabase | Bestaande app-/MFA-/opslagfuncties; operationele checks via toegestane OIDC-workflows. Schemawijzigingen via eigenaar/voorbereide migratie | Geen directe Supabase-beheerverbinding in deze runtime. Geen extra servicekey aan Codex toegevoegd. De bestaande schema-/gezondheidscontroles blijven de aangewezen route. |
 
@@ -35,6 +35,33 @@ Deze sessie kan **niet** namens het andere ChatGPT-account de koppeling of sessi
 controleren. PR #133 toont publicatieactiviteit onder dezelfde zakelijke GitHub-
 identiteit, maar bewijst niet welke connectorrechten in die andere sessie actief
 zijn. Laat dat account onderstaande niet-destructieve controle zelfstandig doen.
+
+## Vastgelegde productiecontrole na herstel
+
+- PR #134, productiecommit 467173b1025cb4a3da99506625e206755596da5e.
+  Automatische push-run [42462765878](https://github.com/rspoelstra-mojo/esmojo/actions/runs/42462765878)
+  slaagt: Google-versie 65 op dezelfde deployment. Alle 48 bronbestanden zijn
+  uit de vaste gedeployde versie teruggelezen en gelijk aan de geteste bron.
+- Dezelfde ongewijzigde Google-grant en project-/deploymentconfig werken weer na
+  het vervangen van de enige nieuwe logische toewijzing op Artists.gs:42.
+  Een nieuwe Google-login of verruiming van publicatierechten was niet nodig.
+- Read-only workflow_dispatch [42462865438](https://github.com/rspoelstra-mojo/esmojo/actions/runs/42462865438)
+  slaagt met verify_only=true; opnieuw dezelfde versie en bron bevestigd zonder writes.
+  Hiermee zijn workflow starten én uitlezen in deze Codex-sessie aangetoond.
+- Vercel Production-deployment 7633469364 voor commit 467173b is success.
+  `/artiest/freyaskye` serveert V1.80; anonieme artist-detail/includeProfile-read
+  geeft HTTP 401. Productiecheck MFA [42462551805](https://github.com/rspoelstra-mojo/esmojo/actions/runs/42462551805)
+  bevestigt enabled/redisReady/secretKeyReady=true, zonder geheimen uit te lezen.
+- De gebruiker toont vanuit de echte website de artiestfoto, concertdatum en vier
+  bezoekerskaarten. Foto/historie zijn daarmee zichtbaar bevestigd. De kaarten
+  melden geen beschikbare informatie; die screenshot bevestigt nog geen gevuld
+  bezoekersprofiel. De huidige projectie zoekt bezoekersinformatie bij een reeds
+  gespeelde show. Een artiest met opgeslagen analyses moet nog ingelogd worden
+  gecontroleerd; brongegevens zijn voor deze test niet gewijzigd.
+- Volledig instellingenbeheer vanuit beide accounts is nog NIET aangetoond:
+  Vercel blijft door workspacebeheer uitgeschakeld; de tweede Codex-sessie moet
+  zelfstandig haar koppelingen controleren. Actions-secret-/settingsbeheer is
+  via de huidige integratie beperkt. Onderstaande eigenaarstappen blijven nodig.
 
 ## Instellingen beheren: benodigde handelingen door de eigenaar
 
