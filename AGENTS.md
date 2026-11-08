@@ -1370,3 +1370,15 @@ op iedere specifieke documentregel blijven staan (Vercel-overschrijfgedrag).
 Geen force-push of historieherschrijving als normale publicatiestap. Historische
 publieke kopieën vragen een afzonderlijk concreet opschoningsvoorstel, inclusief
 oude branches/PR-referenties, samenwerking en eventuele GitHub-supportactie.
+
+## Artiestenmodule: catalogus en klikregistratie (8 november 2026)
+
+De gebruiker staat expliciet toe uitsluitend openbare artiestnamen en stabiele
+artiest-ID's lokaal in de browser te bewaren voor het directe Artiesten-submenu.
+Toon pas na actuele sessie-/Artiestenrechtencontrole. Geen profiel, rechten,
+rapportinhoud, top 5 of klikstatistiek in persistente browseropslag.
+De gebruiker classificeert anonieme klikregistratie (artiest-ID, tijdstip,
+willekeurig gebeurtenis-ID) als Vertrouwelijk, via beveiligde Vercel en bestaande
+Redis, met 31-daagse bewaartermijn. Geen accountnamen/IDs, IP's of zoektermen.
+Eén gezamenlijke top 5 van echte openkliks in Artiesten, aflopend; alleen typen,
+menu laden/verversen en een directe URL openen leveren geen punt op.

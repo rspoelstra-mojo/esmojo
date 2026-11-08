@@ -18,6 +18,7 @@ function esmojoShows_(input) {
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if(request.operation==='artist-catalogue')return esmojoReply_({ok:true,data:esmojoArtistCatalogue_(request)});
     if(['reference-read','reference-install'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return esmojoReply_({ok:true,data:esmojoBarrierReference_(request)});}
     const finish=data=>esmojoReply_({ok:true,data:typeof esmojoHomeResult_==='function'?esmojoHomeResult_(request,data):data});
     if(request.operation.startsWith('active-')){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return esmojoReply_({ok:true,data:esmojoActiveStorage_(request)});}
