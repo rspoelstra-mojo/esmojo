@@ -106,3 +106,12 @@ test('Native Drive-catalogus en artiestshow houden middag/avond en eigen kaartve
  f.ctx.esmojoHomePhotosRead_=()=>({data:{photos:{}}});f.ctx.esmojoHomeValidPhoto_=()=>false;
  const profile=f.ctx.esmojoArtistProfile_({operation:'artist-profile',actor:'reader',artistIds});assert.equal(profile.concerts.length,1);assert.equal(profile.concerts[0].performances.length,2);
 });
+test('Alleen geauthenticeerde historische workerresponses tonen vaste diagnosecodes, nooit ruwe fouten of vrije operaties',async()=>{
+ const output=()=>({setHeader(){},status(code){this.statusCode=code;return this;},json(body){this.body=body;return this;}});
+ for(const historical of [true,false])for(const known of [true,false]){
+  const error=Object.assign(Error('PRIVATE_PROVIDER_SENTINEL'),{workerCode:known?'BUSY':'PRIVATE_PROVIDER_SENTINEL',workerOperation:known?'web-commit':'PRIVATE_PROVIDER_SENTINEL'}),handler=makeWebReportsSync({identify:async()=>{},service:{synchronize:async()=>{throw error;}}}),res=output();
+  await handler({method:'POST',headers:{authorization:'Bearer synthetic'},body:historical?{historicalOnly:true}:{}},res);assert.equal(res.statusCode,503);assert.equal(JSON.stringify(res.body).includes('PRIVATE_PROVIDER_SENTINEL'),false);
+  if(historical){assert.equal(res.body.code,known?'BUSY':'UNCONFIRMED');assert.equal(res.body.stage,known?'web-commit':'UNKNOWN');}else assert.deepEqual(Object.keys(res.body),['error']);
+ }
+ const denied=makeWebReportsSync({identify:async()=>{throw Error('PRIVATE_PROVIDER_SENTINEL');},service:{synchronize:()=>assert.fail('Geen toegang')}}),res=output();await denied({method:'POST',headers:{},body:{historicalOnly:true}},res);assert.equal(res.statusCode,403);assert.equal(Object.hasOwn(res.body,'stage'),false);
+});
