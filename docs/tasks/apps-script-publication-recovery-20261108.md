@@ -32,3 +32,13 @@ docs/beheer-publicatie.md. Geen bredere tokens of verborgen beheerroutes toegevo
 Lokaal: build, syntaxgate, publicatie-/diagnose-/grammaticatests en bestaande
 Apps Script-, artist-service-, show-timetable- en Drive-tests slagen. Productie-
 publicatie en een ingelogde controle worden na de CI/uitrol afzonderlijk vastgelegd.
+
+
+Live resultaat: PR #134 → main 467173b. Automatische publicatie 42462765878
+slaagt met Google-versie 65 en terugleesvergelijking van alle 48 bronbestanden.
+verify_only-dispatch 42462865438 slaagt zonder writes. Geen Google-grant vernieuwd.
+Vercel-productie success; V1.80 op echte artiestroute; anonieme profielread 401.
+MFA/Redis-productiecheck 42462551805 slaagt. Gebruikerscreenshot bevestigt foto en
+historie op de echte artiestpagina. De gebruiker bevestigt vervolgens met een
+tweede screenshot ook een gevuld bezoekersprofiel met alle vier kaarten. Rechten
+vanuit het tweede Codex-account zijn nog niet onafhankelijk geverifieerd. Vercel-plugin is nog door workspacebeheer geblokkeerd.
