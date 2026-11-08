@@ -31,7 +31,7 @@ test('Historische-only indexering laat gewone pending bronnen ongemoeid en loopt
  const f=setup(),normal=f.addShow();f.addCsv(normal);const web=createWebCatalogueService({store:f.store});await web.synchronize(null,{historicalOnly:true});
  assert.equal((await f.store('web-scan',null)).jobs.length,1);assert.equal((await web.historicalStatus()).available.length,1);
  let rounds=0;const handler=makeWebReportsSync({identify:async()=>{},service:{synchronize:async(actor,options)=>{assert.equal(actor,null);assert.deepEqual(options,{historicalOnly:true});rounds++;return{validated:rounds===1?1:0,invalid:0};},historicalStatus:async()=>({registered:1,validated:1,invalid:0,available:['public-id']})},online:{run:()=>assert.fail('Geen mailworker')}}),res={setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;}};
- await handler({method:'POST',headers:{authorization:'Bearer test'},body:{historicalOnly:true}},res);assert.equal(res.code,200);assert.equal(res.data.validated,1);assert.equal(rounds,2);
+ await handler({method:'POST',headers:{authorization:'Bearer test'},body:{historicalOnly:true}},res);assert.equal(res.code,200);assert.equal(res.data.validated,1);assert.equal(rounds,1);
 });
 test('Register en bron worden begrensd: private parentketen, unieke IDs, hash en uitsluitend historische datum',async()=>{
  for(const mode of ['move','hash','duplicate','future','forgedId']){

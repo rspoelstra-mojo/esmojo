@@ -14,7 +14,8 @@ export function makeWebReportsSync({identify=token=>verifyImportIdentity(token,{
     if(Object.keys(req.body).some(key=>!['historicalImport','batch','phase'].includes(key)))throw Error('VALIDATION');
     return res.status(200).json(await importer({batch:req.body.batch,phase:req.body.phase}));
    }if(req.body?.historicalOnly===true){
-    let result;for(let i=0;i<3;i++){result=await service.synchronize(null,{historicalOnly:true});if(!result.validated&&!result.invalid)break;}
+    // Eén bestaande batch houdt de Drive-rondreizen ruim binnen de verzoeklimiet.
+    await service.synchronize(null,{historicalOnly:true});
     const status=await service.historicalStatus();return res.status(200).json({ok:status.invalid===0,...status});
    }await service.synchronize();if(online)await online.run();return res.status(200).json({ok:true});}catch{return res.status(503).json({error:'Webrapportage-inventarisatie niet bevestigd.'});}};
 }
