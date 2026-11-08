@@ -21,7 +21,7 @@ permissions:
   contents: read
   id-token: write
 concurrency:
-  group: ${{ inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || 'web-reports-production' }}
+  group: ${{ inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || inputs.historical_only == true && 'web-reports-historical-index' || 'web-reports-production' }}
   cancel-in-progress: false
 jobs:
   index:
