@@ -97,7 +97,8 @@ test('Native Drive-catalogus en artiestshow houden middag/avond en eigen kaartve
  b.file.setContent(JSON.stringify({managedBy:'ESMOJO/HistoricalImport-v1',classification:'vertrouwelijk',version:1,entries:rows}));
  assert.equal((await b.run({batch:'historical-synthetic.json',phase:'all'})).pending,0);
  await createWebCatalogueService({store:f.store}).synchronize(null,{historicalOnly:true});
- for(const name of ['ArtistCatalogue.gs','Artists.gs'])vm.runInContext(readFileSync('google-apps-script/'+name,'utf8'),f.ctx);
+ f.ctx.esmojoShowFile_=f.ctx.esmojoOnTrackFile_;
+ for(const name of ['ArtistCatalogue.gs','ArtistBiographies.gs','Artists.gs'])vm.runInContext(readFileSync('google-apps-script/'+name,'utf8'),f.ctx);
  f.profiles[0].modules.push('artists');f.updateProfiles();
  const artistIds=['a_'+sha(b.row.artist.toLowerCase())],request={operation:'artist-show',actor:'reader',artistIds,date:b.row.date,venue:b.row.venue};
  assert.throws(()=>f.ctx.esmojoArtistShow_(request),/REPORT_CONFLICT/);
