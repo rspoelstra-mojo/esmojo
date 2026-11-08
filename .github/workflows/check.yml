@@ -76,6 +76,7 @@ jobs:
           node --test src/artist-profile.test.js
           node server/artist-views.test.js
           node src/lib/artist-catalogue-cache.test.js
+          node --test src/lib/artist-show-memory.test.js
           node shared/account-employment.test.js
           node server/drive-write-diagnostic.test.js
           node server/apps-script.test.js

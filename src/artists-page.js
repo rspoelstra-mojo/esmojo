@@ -2,6 +2,7 @@ import './artists-page.css';
 import {renderArtistProfile} from './artist-profile.js';
 import {access} from './auth.js';
 import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
+import {createArtistShowMemory} from './lib/artist-show-memory.js';
 import {validArtistId,normalizeArtistName} from '../shared/artist-catalogue.js';
 import {cleanReadableArtistMenu as cleanArtistMenu,artistRouteMap,validArtistReference,validArtistSlug,normalizeArtistSlug} from '../shared/artist-names.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
@@ -13,7 +14,7 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
  function selection(){content.classList.add('artist-selection-empty');content.replaceChildren(node('p','artist-selection-prompt','Kies eerst een artiest'));}
  if(!selected)selection();
  function openArtist(id,links){
-  let cancelled=false,busy=false,profileView=null;const loaders=new Map(),error=createPageFeedback({key:'artist-page:'+id,label:'Artiest laden',route:'/artiest/'+id});
+  let cancelled=false,busy=false,profileView=null,showMemory=null;const loaders=new Map(),error=createPageFeedback({key:'artist-page:'+id,label:'Artiest laden',route:'/artiest/'+id});
   function setLinks(next){const elements=next.length?next:[heading];for(const [el,loader]of loaders)if(!elements.includes(el)){loader.ui.dispose();loaders.delete(el);}for(const el of elements)if(!loaders.has(el)){const ui=createSubmenuLoading(el,content);loaders.set(el,{ui,finish:busy?ui.start():()=>{}});}cache.trackDetail(id,next.map(el=>el.dataset.artistId));if(busy)content.setAttribute('aria-busy','true');}
   async function load(){if(cancelled||busy)return;busy=true;content.classList.remove('artist-selection-empty');content.replaceChildren();for(const loader of loaders.values())loader.finish=loader.ui.start();
    try{
@@ -23,9 +24,11 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     const canonicalId=data.canonicalArtistId||artist.id;if(!validArtistId(canonicalId))throw Error('ARTIST_CATALOGUE');
     const known=[...(cache.current()?.artists||[]),{id:canonicalId,name:artist.name}],slug=data.canonicalArtistSlug||artistRouteMap(known).get(canonicalId);
     if(!validArtistSlug(slug))throw Error('ARTIST_CATALOGUE');
+    showMemory?.dispose();showMemory=createArtistShowMemory({request,artistId:canonicalId,concerts:data.profile?.concerts||[]});
+    await showMemory.ready;if(cancelled)return;
     resolvedArtist={id:canonicalId,name:artist.name};selected=activeId=normalizeArtistSlug(slug);
     profileView?.dispose();profileView=renderArtistProfile(artist.name,data.profile,{
-     loadShow:event=>request('artist-show',{method:'POST',body:{artistId:canonicalId,...event}}),
+     loadShow:event=>showMemory.get(event),
      onBusy:()=>{const finishes=[...loaders.values()].map(loader=>loader.ui.start());return()=>finishes.forEach(finish=>finish());},
      onError:()=>error.show('Het showoverzicht kon niet worden geladen. Klik opnieuw op de concertdatum om het nogmaals te proberen.'),
      onReady:()=>error.resolved(),
@@ -34,10 +37,10 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     const path='/artiest/'+encodeURIComponent(selected);if(location.pathname!==path)history.replaceState(null,'',path+location.search+location.hash);
     render(cache.current());error.resolved();
    }
-   catch{if(!cancelled)error.show('De artiest kon niet worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
+   catch{showMemory?.dispose();showMemory=null;if(!cancelled)error.show('De artiest en bijbehorende showoverzichten konden niet volledig worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
    finally{busy=false;for(const loader of loaders.values())loader.finish();if(!cancelled)content.removeAttribute('aria-busy');}
   }
-  setLinks(links);void load();return{setLinks,dispose(){cancelled=true;profileView?.dispose();for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
+  setLinks(links);void load();return{setLinks,dispose(){cancelled=true;profileView?.dispose();showMemory?.dispose();showMemory=null;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
  }
  function render(state){if(disposed||!state)return;const known=new Map([...submenu.querySelectorAll('[data-artist-link]')].map(el=>[el.dataset.artistLink,el])),selectedLinks=[],routes=artistRouteMap([...(state.artists||[]),...state.mostViewed]);submenu.replaceChildren();
   for(const [group,title,rows]of [['most','Meest bekeken',state.mostViewed],['all','Alle artiesten',state.artists||[]]]){

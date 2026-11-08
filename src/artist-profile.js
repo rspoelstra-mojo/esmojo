@@ -61,9 +61,12 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
  const detail=node('div','artist-detail-panel');detail.append(cards);
  function reset(){selection++;detail.replaceChildren(cards);for(const button of buttons)button.removeAttribute('aria-pressed');}
  async function openShow(event,button){
-  if(!loadShow||event.date>=timetableClock(now()).date)return;
-  const ticket=++selection,finish=onBusy();button.setAttribute('aria-busy','true');
-  try{const data=await loadShow(event);if(disposed||ticket!==selection)return;
+  if(disposed||!loadShow||event.date>=timetableClock(now()).date)return;
+  const ticket=++selection;let finish=()=>{};
+  try{
+   let data=loadShow(event);
+   if(data&&typeof data.then==='function'){finish=onBusy();button.setAttribute('aria-busy','true');data=await data;}
+   if(disposed||ticket!==selection)return;
    detail.replaceChildren(renderArtistShowOverview(data,{onBack:()=>{reset();button.focus();}}));
    for(const other of buttons)other.setAttribute('aria-pressed',String(other===button));
    onReady();
