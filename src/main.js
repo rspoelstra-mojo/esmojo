@@ -1,3 +1,5 @@
+import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
+import {createArtistsPage} from './artists-page.js';
 import {barrierReferenceCache} from './barrier-images.js';
 import {createMobileNavigation} from './mobile-navigation.js';
 import {loadShowStorageAlerts} from './lib/show-storage-alerts.js';
@@ -63,7 +65,7 @@ const reportsOnly=current=>hasModule(current,'reports')&&!hasModule(current,'sho
 function updateModuleProfile(current){
   const changed=profile?.id!==current.id||profile?.role!==current.role||moduleFingerprint(profile)!==moduleFingerprint(current);
   if(changed){clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();}
-  homeDashboardCache.bind(current);reportCatalogueCache.bind(current);barrierReferenceCache.bind(current);
+  homeDashboardCache.bind(current);reportCatalogueCache.bind(current);artistCatalogueCache.bind(current);barrierReferenceCache.bind(current);
   profile=current;
   document.querySelectorAll('#navigation [data-page]').forEach(link=>{const module=moduleForPage(link.dataset.page);link.hidden=link.dataset.page===''?reportsOnly(profile):Boolean(module&&!hasModule(profile,module));});
   document.querySelector('[data-page="beheerder"]').hidden=!isAdministrator(profile);
@@ -76,6 +78,7 @@ async function refreshModuleAccess(){
     if(updateModuleProfile(data.profile)){renderAvatar(document.querySelector('.avatar'),profile);renderPage();}
     if(hasModule(profile,'shows'))void refreshShowsMenu();
     if(hasModule(profile,'reports'))void reportCatalogueCache.refresh(access).catch(()=>{});
+    if(hasModule(profile,'artists'))void artistCatalogueCache.refresh(access).catch(()=>{});
   }catch{/* Serverweigeringen blijven leidend; geen oude rechten aan de server aanbieden. */}
   finally{refreshingModules=false;}
 }
@@ -123,6 +126,10 @@ function renderPage() {
     let selected;try{selected=decodeURIComponent(route.split('/')[1]||'')||null;}catch{selected='invalid';}
     disposePage=createReportsPage(content,submenu,{selected});
   }
+  if(root==='artiest'){
+    let selected;try{selected=decodeURIComponent(route.split('/')[1]||'')||null;}catch{selected='invalid';}
+    disposePage=createArtistsPage(content,submenu,{selected});
+  }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
     const link = document.createElement('a'); link.href = '/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
@@ -161,6 +168,7 @@ startAuth({
     clearInterval(menuRefreshTimer);
     if(hasModule(profile,'shows'))void refreshShowsMenu();
     if(hasModule(profile,'reports'))void reportCatalogueCache.refresh(access).catch(()=>{});
+    if(hasModule(profile,'artists'))void artistCatalogueCache.refresh(access).catch(()=>{});
     menuRefreshTimer=setInterval(()=>{if(!document.hidden)void refreshModuleAccess();},60000);
     document.querySelector('.rail').hidden = false;
     document.querySelector('.workspace').hidden = false;
@@ -174,7 +182,7 @@ startAuth({
     mobileNavigation.setEnabled(false);
     clearProfileSaves();clearAssessmentSaves();showMemory.clear();backgroundSaves.clear();clearInterval(menuRefreshTimer);menuRefreshTimer=null;
     submenuSearch.reset();
-    homeDashboardCache.clear();reportCatalogueCache.clear();barrierReferenceCache.clear();
+    homeDashboardCache.clear();reportCatalogueCache.clear();artistCatalogueCache.clear();barrierReferenceCache.clear();
     profile = null; disposePage(); disposeLayout(); disposePage = () => {}; disposeLayout = () => {};
     document.querySelector('.content-box').replaceChildren();
     document.querySelector('.avatar').replaceChildren();

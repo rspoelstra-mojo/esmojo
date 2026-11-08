@@ -6,7 +6,7 @@ function esmojoArtistCatalogue_(request){
  const cache=CacheService.getScriptCache(),cached=cache.get('artist-catalogue-v1');
  if(cached){try{return{artists:cleanArtistMenu(JSON.parse(cached))};}catch{/* Een ongeldige cache mag de catalogus niet blokkeren. */}}
  const catalogue=esmojoTimetableCatalogue_(),names=[...catalogue.values()].map(show=>show.artist);
- const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),inventory=esmojoWebInventory_(folder,catalogue);
+ const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),inventory=esmojoWebInventory_(folder,catalogue,names);
  names.push(...inventory.sources.map(source=>source.show.name));
  const artists=buildArtistCatalogue(names,esmojoOnTrackHash_),body=JSON.stringify(artists);
  if(Utilities.newBlob(body).getBytes().length<90000)cache.put('artist-catalogue-v1',body,30);

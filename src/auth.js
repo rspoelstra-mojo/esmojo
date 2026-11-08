@@ -39,7 +39,7 @@ async function performAccess(action, { method = 'GET', body } = {}) {
   if (!data.session) throw new Error('Log opnieuw in.');
   activeSession = data.session;
   const homeContext=homeDashboardCache.context();
-  let response;try{response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store',
+  let response;try{response = await fetch(`/api/access?action=${action}`, { method, cache: 'no-store', ...(action==='artist-view'?{keepalive:true}:{}),
     headers: { Authorization: `Bearer ${data.session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}), ...(action==='production-risks'?{'X-ESMOJO-Planning-Envelope':'1'}:{}) },
     ...(body ? { body: JSON.stringify(body) } : {}) });}catch{throw Object.assign(new Error('De dienst is tijdelijk niet bereikbaar.'),{retryable:true});}
   let result;

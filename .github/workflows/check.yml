@@ -9,6 +9,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      artistredis:
+        image: redis:7.2.7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -17,7 +25,18 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run build
+      - name: Prepare isolated Redis test client
+        run: |
+          cat > "$RUNNER_TEMP/esmojo-redis-cli" <<'EOF'
+          #!/bin/sh
+          exec docker exec "$ESMOJO_TEST_REDIS_CONTAINER" redis-cli "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/esmojo-redis-cli"
       - name: Authentication, authorization and existing server tests
+        env:
+          ESMOJO_TEST_REDIS_CLI: ${{ runner.temp }}/esmojo-redis-cli
+          ESMOJO_TEST_REDIS_CONTAINER: ${{ job.services.artistredis.id }}
+          ESMOJO_TEST_REDIS_PORT: '6379'
         run: |
           node server/accounts-api.test.js
           node server/account-modules.test.js
@@ -50,6 +69,9 @@ jobs:
           node server/session-cookie.test.js
           node server/account-profiles.test.js
           node shared/artist-catalogue.test.js
+          node server/artist-service.test.js
+          node server/artist-views.test.js
+          node src/lib/artist-catalogue-cache.test.js
           node shared/account-employment.test.js
           node server/drive-write-diagnostic.test.js
           node server/apps-script.test.js

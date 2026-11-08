@@ -1,0 +1,19 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {createHash,randomUUID} from 'node:crypto';
+import {buildArtistCatalogue} from '../shared/artist-catalogue.js';import {createArtistService} from './artist-service.js';import {makeAccountsHandler} from './accounts-api.js';
+const rows=buildArtistCatalogue(['Artist A','Artist B','Historical report only'],v=>createHash('sha256').update(v).digest('hex'));
+test('Catalogus coalescet reads, bewaart alleen metadata en telt geen menu/detailreads als klik',async()=>{
+ let calls=0,recorded=0,clock=1000;const service=createArtistService({now:()=>clock,shows:async(op,payload)=>{calls++;assert.equal(op,'artist-catalogue');assert.equal(payload.actor,'actor');return{artists:rows.map(row=>({...row,private:'no'}))};},views:{counts:async()=>[{id:rows[1].id,views:7},{id:rows[0].id,views:2}],record:async()=>{recorded++;return{recorded:true};}}});
+ const [a,b]=await Promise.all([service.menu('actor'),service.menu('actor')]);assert.equal(calls,1);assert.deepEqual(a,b);assert.deepEqual(a.artists,rows);await service.detail('actor',{artistId:rows[0].id});assert.equal(recorded,0);assert.equal(calls,1);assert.deepEqual((await service.ranking('actor')).mostViewed.map(row=>row.views),[7,2]);
+ await service.record('actor',{artistId:rows[0].id,eventId:randomUUID()});assert.equal(recorded,1);await assert.rejects(service.record('actor',{artistId:rows[0].id,eventId:randomUUID(),userId:'injected'}),/VALIDATION/);await assert.rejects(service.record('actor',{artistId:'a_'+'f'.repeat(64),eventId:randomUUID()}),/NOT_FOUND/);assert.equal(recorded,1);clock+=31000;await service.menu('actor');assert.equal(calls,3);
+});
+test('Een defecte ranking blokkeert het artiestenmenu of de detailpagina niet',async()=>{
+ const service=createArtistService({shows:async()=>({artists:rows}),views:{counts:async()=>{throw Error('ARTIST_VIEWS_UNAVAILABLE');}}});assert.deepEqual((await service.menu('actor')).artists,rows);await assert.rejects(service.ranking('actor'),/ARTIST_VIEWS_UNAVAILABLE/);assert.equal((await service.detail('actor',{artistId:rows[0].id})).artist.id,rows[0].id);
+});
+test('Alle artiestacties vereisen actuele MFA, activering, sessie en Artiestenmodule; geen impliciete Shows-/Rapportagesrechten',async()=>{
+ const actor='actor',actions={'artist-menu':'GET','artist-ranking':'GET','artist-detail':'POST','artist-view':'POST'};
+ for(const [action,method]of Object.entries(actions))for(const input of [{token:false},{aal:'aal1'},{activated:false},{expired:true},{disabled:true},{modules:['shows']},{modules:['reports']},{role:'beheerder',modules:[]},{}]){
+  let calls=0;const claims={sub:actor,aal:input.aal||'aal2',amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)-(input.expired?73*3600:0)},{method:'totp'}]},token='h.'+Buffer.from(JSON.stringify(claims)).toString('base64url')+'.s';
+  const run=async()=>{calls++;return{ok:true};},handler=makeAccountsHandler({env:{VITE_SUPABASE_URL:'url',VITE_SUPABASE_PUBLISHABLE_KEY:'key',SUPABASE_SECRET_KEY:'secret'},clientFactory:()=>({auth:{getUser:async()=>({data:{user:{id:actor,factors:[{factor_type:'totp',status:'verified'}]}}})}}),profiles:async()=>({id:actor,activated:input.activated!==false,disabled:input.disabled===true,role:input.role||'gebruiker',modules:input.modules||['artists']}),artistService:{menu:run,ranking:run,detail:run,record:run},shows:async()=>{throw Error('Other modules must not be read');}}),res={setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};
+  await handler({method,query:{action},body:method==='POST'?{artistId:rows[0].id}:undefined,headers:{authorization:input.token===false?undefined:'Bearer '+token}},res);const allowed=Object.keys(input).length===0;assert.equal(calls,allowed?1:0,action+' '+JSON.stringify(input));assert.equal(res.code,allowed?200:input.token===false||input.expired?401:403,JSON.stringify(input));
+ }
+});
