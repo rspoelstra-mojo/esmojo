@@ -150,3 +150,5 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: node tools/email/check-live-logo.mjs
 
+      - name: Artist empty battery, biography preview and show switching
+        run: node tools/ui/check-artist-display.mjs

@@ -16,3 +16,10 @@ nieuwe concert-/risicogegevens. Bestaande MOJO-teksten niet overschrijven. Norma
 45-dagenopname heeft voorrang op de aanvulling. Bij showselectie risicokaart
 verbergen, bij terugkeren herstellen. Websiteversie blijft V1.99 wegens bestaand
 verbod op automatisch verhogen naar V2.0. Geen extra toestemmingsstap nodig.
+
+Eenmalige productie-inventarisatie: 223 ontbrekende artiestvermeldingen. Voor elk
+een Nederlandse redactionele introductie van 60–70 woorden; alleen bekende feiten,
+geen showbeloften, broncitaten of verzonnen incident-/publieksgegevens. De vaste
+Openbare teksten staan als gecontroleerde aanvulset in de worker; opslag in het
+bestaande Drive-register met editorial-ai-nl-v1, zonder bestaande tekst te wijzigen.
+Nieuwe artiesten buiten deze vaste set krijgen geen automatische verzonnen tekst.

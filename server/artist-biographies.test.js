@@ -77,3 +77,14 @@ test('Initiële aanvulling is begrensd en stuurt uitsluitend bekende ontbrekende
  const fill=createInitialBiographyFill({store:async(op,payload)=>{calls.push([op,payload]);return op==='biography-initial-list'?{artists}:{saved:true};},descriptions:Object.fromEntries(artists.slice(0,7).map(x=>[x.name,'Nederlandse tekst']))});
  const result=await fill();assert.equal(result.saved,6);assert.equal(result.more,true);assert.deepEqual(result.missing,['Artist 7']);assert.equal(calls.length,7);
 });
+
+test('Eenmalige redactionele catalogus bevat complete Nederlandse teksten binnen het Drive-woordlimiet',async()=>{
+ const {initialDescriptions}=await import('./artist-initial-descriptions.js');
+ assert.equal(Object.keys(initialDescriptions).length,223);
+ for(const [name,text]of Object.entries(initialDescriptions)){
+  assert.ok(name.trim());assert.equal(typeof text,'string');
+  assert.ok(text.split(/\s+/).length>=60&&text.split(/\s+/).length<=70,name);
+  assert.ok(!/[\x00-\x1f<>]/.test(text),name);assert.ok(/[.!?]$/.test(text),name);
+ }
+ assert.ok(initialDescriptions['Numidia - Muziekfeest van het Jaar'].includes('Numidia'));
+});
