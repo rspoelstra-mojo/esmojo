@@ -73,9 +73,9 @@ test('Eenmalige Nederlandse aanvulling bewaart herkomst en oorspronkelijke MOJO-
  assert.equal(d.save({operation:'biography-initial-save',artistId:id,name:'Fixture act',text}).unchanged,true);
 });
 test('Initiële aanvulling is begrensd en stuurt uitsluitend bekende ontbrekende artiesten naar Drive',async()=>{
- const artists=Array.from({length:8},(_,i)=>({id:'a_'+hash('artist'+i),name:'Artist '+i})),calls=[];
- const fill=createInitialBiographyFill({store:async(op,payload)=>{calls.push([op,payload]);return op==='biography-initial-list'?{artists}:{saved:payload.entries.length,unchanged:0};},descriptions:Object.fromEntries(artists.slice(0,7).map(x=>[x.name,'Nederlandse tekst']))});
- const result=await fill();assert.equal(result.saved,6);assert.equal(result.more,true);assert.deepEqual(result.missing,['Artist 7']);assert.equal(calls.length,2);assert.equal(calls[1][1].entries.length,6);
+ const artists=Array.from({length:28},(_,i)=>({id:'a_'+hash('artist'+i),name:'Artist '+i})),calls=[];
+ const fill=createInitialBiographyFill({store:async(op,payload)=>{calls.push([op,payload]);return op==='biography-initial-list'?{artists}:{saved:payload.entries.length,unchanged:0};},descriptions:Object.fromEntries(artists.slice(0,27).map(x=>[x.name,'Nederlandse tekst']))});
+ const result=await fill();assert.equal(result.saved,25);assert.equal(result.more,true);assert.deepEqual(result.missing,['Artist 27']);assert.equal(calls.length,2);assert.equal(calls[1][1].entries.length,25);
 });
 
 test('Eenmalige redactionele catalogus bevat complete Nederlandse teksten binnen het Drive-woordlimiet',async()=>{

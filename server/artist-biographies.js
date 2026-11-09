@@ -46,7 +46,7 @@ export function createBiographyCapture({store,fetchBiography=fetchMojoBiography,
 
 export function createInitialBiographyFill({store,descriptions=initialDescriptions}={}){
  return async()=>{
-  const {artists}=await store('biography-initial-list'),known=artists.filter(artist=>Object.hasOwn(descriptions,artist.name)),batch=known.slice(0,6),missing=artists.filter(artist=>!Object.hasOwn(descriptions,artist.name)).map(artist=>artist.name);
+  const {artists}=await store('biography-initial-list'),known=artists.filter(artist=>Object.hasOwn(descriptions,artist.name)),batch=known.slice(0,25),missing=artists.filter(artist=>!Object.hasOwn(descriptions,artist.name)).map(artist=>artist.name);
   let saved=0;
   if(batch.length){const result=await store('biography-initial-batch',{entries:batch.map(artist=>({artistId:artist.id,name:artist.name,text:descriptions[artist.name]}))});
    if(!Number.isInteger(result.saved)||result.saved<0||result.saved>batch.length||result.saved+result.unchanged!==batch.length)throw Error('BIOGRAPHY_VERIFY');saved=result.saved;

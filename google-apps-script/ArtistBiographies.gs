@@ -52,7 +52,7 @@ function esmojoInitialBiographySave_(request){
  return result.saved?{saved:true}:{unchanged:true};
 }
 function esmojoInitialBiographyBatch_(request){
- if(Object.keys(request).sort().join(',')!=='entries,operation'||!Array.isArray(request.entries)||request.entries.length<1||request.entries.length>6)throw Error('VALIDATION');
+ if(Object.keys(request).sort().join(',')!=='entries,operation'||!Array.isArray(request.entries)||request.entries.length<1||request.entries.length>25)throw Error('VALIDATION');
  const catalogue=esmojoPublicArtistCatalogue_().artists,seen=new Set();
  for(const entry of request.entries){
   if(!entry||Object.keys(entry).sort().join(',')!=='artistId,name,text'||!validArtistId(entry.artistId)||typeof entry.name!=='string'||entry.artistId!=='a_'+esmojoOnTrackHash_(normalizeArtistName(entry.name))||typeof entry.text!=='string'||entry.text!==entry.text.trim()||entry.text.length>3000||/[\x00-\x1f<>]/.test(entry.text)||entry.text.split(/\s+/).length<60||entry.text.split(/\s+/).length>70||seen.has(entry.artistId))throw Error('VALIDATION');
