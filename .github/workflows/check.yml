@@ -73,6 +73,7 @@ jobs:
           node server/account-profiles.test.js
           node shared/artist-catalogue.test.js
           node shared/artist-names.test.js
+          node shared/mojo-artist.test.js
           node server/artist-service.test.js
           node server/artist-show.test.js
           node server/artist-preparation.test.js

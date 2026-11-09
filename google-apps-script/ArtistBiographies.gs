@@ -4,14 +4,21 @@ function esmojoBiographyRegister_(){
  const document=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{managedBy:'ESMOJO/ArtistBiographies-v1',classification:'openbaar',version:1,biographies:{}};
  if(document.managedBy!=='ESMOJO/ArtistBiographies-v1'||document.classification!=='openbaar'||document.version!==1||!document.biographies||typeof document.biographies!=='object'||Array.isArray(document.biographies))throw Error('BIOGRAPHY_INVALID');
  for(const [id,row]of Object.entries(document.biographies))if(!validArtistId(id)||row.artistId!==id||typeof row.name!=='string'||!row.name||typeof row.text!=='string'||row.text.length<120||row.text.length>20000||!validTimetableDate(row.firstDate)||!validTimetableDate(row.lastDate)||typeof row.sourceUrl!=='string'||!/^https:\/\/(?:www\.)?mojo\.nl\/(?:[a-z0-9-]+\/?|concerten\/[\w%/-]+)$/.test(row.sourceUrl)||!Number.isFinite(Date.parse(row.capturedAt))||!/^[a-f0-9]{64}$/.test(row.seriesKey||''))throw Error('BIOGRAPHY_INVALID');
+ if(document.initialBiographies!==undefined&&(!document.initialBiographies||typeof document.initialBiographies!=='object'||Array.isArray(document.initialBiographies)))throw Error('BIOGRAPHY_INVALID');
+ for(const [id,row]of Object.entries(document.initialBiographies||{}))if(!validArtistId(id)||row.artistId!==id||typeof row.name!=='string'||typeof row.text!=='string'||row.text.trim().split(/\s+/).length<60||row.text.trim().split(/\s+/).length>70||row.origin!=='editorial-ai-nl-v1'||!Number.isFinite(Date.parse(row.capturedAt)))throw Error('BIOGRAPHY_INVALID');
  return{root,file,document};
 }
 function esmojoArtistBiography_(artistIds){
- const biographies=esmojoBiographyRegister_().document.biographies;
+ const document=esmojoBiographyRegister_().document,biographies=document.biographies;
  const rows=artistIds.map(id=>biographies[id]).filter(Boolean).sort((a,b)=>b.firstDate.localeCompare(a.firstDate)||b.capturedAt.localeCompare(a.capturedAt));
- if(!rows.length)return null;const row=rows[0];return{text:row.text,sourceUrl:row.sourceUrl,capturedAt:row.capturedAt,firstDate:row.firstDate};
+ if(!rows.length){const initial=artistIds.map(id=>(document.initialBiographies||{})[id]).find(Boolean);return initial?{text:initial.text,sourceUrl:null,capturedAt:initial.capturedAt,origin:initial.origin}:null;}const row=rows[0];return{text:row.text,sourceUrl:row.sourceUrl,capturedAt:row.capturedAt,firstDate:row.firstDate};
 }
 function esmojoArtistBiographies_(request){
+ if(request.operation==='biography-initial-list'){
+  if(Object.keys(request).join(',')!=='operation')throw Error('VALIDATION');
+  const d=esmojoBiographyRegister_().document;return{artists:esmojoPublicArtistCatalogue_().artists.filter(row=>!d.biographies[row.id]&&!(d.initialBiographies||{})[row.id])};
+ }
+ if(request.operation==='biography-initial-save')return esmojoInitialBiographySave_(request);
  if(request.operation==='biography-candidates'){
   if(Object.keys(request).join(',')!=='operation')throw Error('VALIDATION');
   const concerts=[...esmojoTimetableCatalogue_({allVenues:true}).values()].map(row=>({artist:row.artist,date:row.date,venue:row.venue,sourceUrl:row.sourceUrl||null}));
@@ -32,6 +39,19 @@ function esmojoArtistBiographies_(request){
  const storage=esmojoBiographyRegister_(),previous=storage.document.biographies[s.artistId];
  if(previous&&previous.firstDate>=s.firstDate)return{unchanged:true};
  storage.document.biographies[s.artistId]={artistId:s.artistId,name:s.name,venue:s.venue,firstDate:s.firstDate,lastDate:s.lastDate,seriesKey:s.seriesKey,text:b.text,sourceUrl:b.sourceUrl,capturedAt:b.capturedAt};
+ const body=JSON.stringify(storage.document);if(Utilities.newBlob(body).getBytes().length>8*1024*1024)throw Error('BIOGRAPHY_CAPACITY');
+ const saved=storage.file?(storage.file.setContent(body),storage.file):storage.root.createFile(Utilities.newBlob(body,'application/json','_esmojo_artist_biographies_v1.json'));
+ if(saved.getBlob().getDataAsString('UTF-8')!==body)throw Error('VERIFY');return{saved:true};
+}
+
+// Eenmalige, Nederlandstalige redactionele aanvulling; geen MOJO-brontekst suggereren.
+function esmojoInitialBiographySave_(request){
+ if(Object.keys(request).sort().join(',')!=='artistId,name,operation,text'||!validArtistId(request.artistId)||typeof request.name!=='string'||request.artistId!=='a_'+esmojoOnTrackHash_(normalizeArtistName(request.name))||typeof request.text!=='string'||request.text!==request.text.trim()||request.text.length>3000||/[\x00-\x1f<>]/.test(request.text)||request.text.split(/\s+/).length<60||request.text.split(/\s+/).length>70)throw Error('VALIDATION');
+ if(!esmojoPublicArtistCatalogue_().artists.some(row=>row.id===request.artistId&&row.name===request.name))throw Error('VALIDATION');
+ const storage=esmojoBiographyRegister_();
+ if(storage.document.biographies[request.artistId]||(storage.document.initialBiographies||{})[request.artistId])return{unchanged:true};
+ if(!storage.document.initialBiographies)storage.document.initialBiographies={};
+ storage.document.initialBiographies[request.artistId]={artistId:request.artistId,name:request.name,text:request.text,origin:'editorial-ai-nl-v1',capturedAt:new Date().toISOString()};
  const body=JSON.stringify(storage.document);if(Utilities.newBlob(body).getBytes().length>8*1024*1024)throw Error('BIOGRAPHY_CAPACITY');
  const saved=storage.file?(storage.file.setContent(body),storage.file):storage.root.createFile(Utilities.newBlob(body,'application/json','_esmojo_artist_biographies_v1.json'));
  if(saved.getBlob().getDataAsString('UTF-8')!==body)throw Error('VERIFY');return{saved:true};

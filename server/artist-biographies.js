@@ -1,3 +1,4 @@
+import {initialDescriptions} from './artist-initial-descriptions.js';
 import {createHash} from 'node:crypto';
 import {readableArtistName} from '../shared/artist-names.js';
 import {normalizeArtistName} from '../shared/artist-catalogue.js';
@@ -40,5 +41,18 @@ export function createBiographyCapture({store,fetchBiography=fetchMojoBiography,
   }catch(error){failed.push({name:series.name,stage,code:/^(?:MOJO_BIOGRAPHY_[A-Z_]+|BIOGRAPHY_VERIFY|VALIDATION|BUSY|SHOWS_UNAVAILABLE)$/.test(error.message||'')?error.message:'BIOGRAPHY_UNAVAILABLE',...(typeof error.location==='string'?{location:error.location.slice(0,250)}:{})});}}}
   await Promise.all(Array.from({length:Math.min(2,batch.length)},worker));
   return{ok:true,checked:batch.length,captured,failed,samples,nextAfter:candidates.length>batch.length?batch.at(-1).artistId:null};
+ };
+}
+
+export function createInitialBiographyFill({store,descriptions=initialDescriptions}={}){
+ return async()=>{
+  const {artists}=await store('biography-initial-list');let saved=0,processed=0;const missing=[];
+  for(const artist of artists){
+   const text=descriptions[artist.name];if(!text){missing.push(artist.name);continue;}
+   if(processed>=6)continue;processed++;
+   const result=await store('biography-initial-save',{artistId:artist.id,name:artist.name,text});
+   if(!result.saved&&!result.unchanged)throw Error('BIOGRAPHY_VERIFY');saved+=Number(Boolean(result.saved));
+  }
+  return{ok:true,saved,missing,more:artists.filter(artist=>Boolean(descriptions[artist.name])).length>processed};
  };
 }

@@ -2,14 +2,15 @@ const hour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-
 if(process.env.BIOGRAPHY_EVENT_NAME==='schedule'&&hour!=='12')process.exit(0);
 const endpoint='https://esmojo.nl/api/artist-biographies-sync';
 const wait=ms=>new Promise(done=>setTimeout(done,ms));
-let after=null,retries=0,total=0,checked=0,failed=[],ready=false;
+let after=null,retries=0,total=0,checked=0,failed=[],ready=false,initialDone=false,initialBatches=0;
 for(let page=0;page<60;page++){
  const identityUrl=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);identityUrl.searchParams.set('audience',endpoint);
  const identity=await fetch(identityUrl,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}});
  if(!identity.ok)throw Error('BIOGRAPHY_IDENTITY_UNAVAILABLE');const {value}=await identity.json();console.log('::add-mask::'+value);
  let data;
  try{
-  if(!ready){const probe=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({checkOnly:true}),signal:AbortSignal.timeout(30000)});const status=await probe.json();if(!probe.ok||status.workerVersion!==2)throw Error('BIOGRAPHY_NOT_READY');ready=true;}
+  if(!ready){const probe=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({checkOnly:true}),signal:AbortSignal.timeout(30000)});const status=await probe.json();if(!probe.ok||status.workerVersion!==3)throw Error('BIOGRAPHY_NOT_READY');ready=true;}
+  if(!initialDone){if(++initialBatches>2000)throw Error('BIOGRAPHY_INITIAL_LIMIT');const fill=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({initialFill:true}),signal:AbortSignal.timeout(290000)});const initial=await fill.json();if(!fill.ok||!initial.ok)throw Error('BIOGRAPHY_NOT_READY');console.log('::notice::ARTIST_INITIAL_FILL '+JSON.stringify(initial).replace(/%/g,'%25').replace(/\r/g,'%0D').replace(/\n/g,'%0A'));if(initial.more){page--;continue;}initialDone=true;}
   const response=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({after}),signal:AbortSignal.timeout(310000)});
   data=await response.json();if(!response.ok||data.ok!==true)throw Error('BIOGRAPHY_NOT_READY');
  }catch{

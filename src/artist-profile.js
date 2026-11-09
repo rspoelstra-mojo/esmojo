@@ -1,3 +1,4 @@
+import {artistBiographyPreview,mojoArtistUrl} from '../shared/mojo-artist.js';
 import {renderArtistRiskCard} from './artist-risk-card.js';
 import {peopleIconPaths} from './lib/profile-icons.js';
 import {timetableClock} from '../shared/show-timetable.js';
@@ -38,7 +39,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
  intro.append(node('h1','artist-page-title',name));
  if(typeof profile.biography?.text==='string'&&profile.biography.text.trim()){
   const biography=node('div','artist-biography');
-  for(const paragraph of profile.biography.text.split(/\n\s*\n/).filter(part=>part.trim()))biography.append(node('p','',paragraph));
+  biography.append(node('p','',artistBiographyPreview(profile.biography.text)));
   intro.append(biography);
  }
  header.append(intro);
@@ -46,8 +47,9 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
   const image=node('img','artist-profile-photo');
   image.alt='';
   image.src=profile.photo;
-  image.addEventListener('error',()=>image.remove(),{once:true});
-  header.append(image);
+  const link=node('a','artist-profile-photo-link');link.href=mojoArtistUrl(name);link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Meer over '+name+' op MOJO');link.append(image);
+  image.addEventListener('error',()=>link.remove(),{once:true});
+  header.append(link);
  }
  const cards=node('div','artist-audience-grid');
  topics.forEach((title,index)=>{
@@ -61,7 +63,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
   cards.append(card);
  });
  const detail=node('div','artist-detail-panel');detail.append(cards);
- function reset(){selection++;detail.replaceChildren(cards);for(const button of buttons)button.removeAttribute('aria-pressed');}
+ function reset(){selection++;scoreCard.hidden=false;detail.replaceChildren(cards);for(const button of buttons)button.removeAttribute('aria-pressed');}
  async function openShow(event,button){
   if(disposed||!loadShow||event.date>=timetableClock(now()).date)return;
   const ticket=++selection;let finish=()=>{};
@@ -69,6 +71,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
    let data=loadShow(event);
    if(data&&typeof data.then==='function'){finish=onBusy();button.setAttribute('aria-busy','true');data=await data;}
    if(disposed||ticket!==selection)return;
+   scoreCard.hidden=true;
    detail.replaceChildren(renderArtistShowOverview(data,{onBack:()=>{reset();button.focus();}}));
    for(const other of buttons)other.setAttribute('aria-pressed',String(other===button));
    onReady();

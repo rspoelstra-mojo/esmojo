@@ -10,6 +10,14 @@ tekst na de show staan tot de volgende verschuldigde reeks. Een verdwenen pagina
 of parse-/netwerkfout wist niets. Gebruik alleen de zes bestaande MOJO-zalen.
 De artiestkop vervangt Laatste keer in Nederland en Populariteit door deze tekst.
 
+De gebruiker staat op 9 november ook een eenmalige Nederlandse redactionele
+AI-beschrijving van 60–70 woorden toe voor bestaande artiesten zonder tekst.
+Dit hergebruikt de openbare artiestbeschrijving; registreer de redactionele
+herkomst, suggereer geen MOJO-bron. Bewaar bestaande MOJO-teksten en laat de normale
+45-dagenopname later voorgaan. Toon maximaal 65 woorden met ...; volledige tekst
+blijft in Drive. Foto verwijst naar MOJO. Bij showselectie verdwijnen risicokaart
+en artiestinformatie tijdelijk; artiestkop en concerthistorie blijven staan.
+
 ## Artiestenrisicoscore en incidentreferenties (8 november 2026)
 
 De gebruiker heeft afgeleide artiestenrisicoscores, historische incidentreferenties,

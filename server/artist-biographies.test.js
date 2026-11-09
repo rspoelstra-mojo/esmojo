@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {biographyCandidates,createBiographyCapture} from './artist-biographies.js';
+import {biographyCandidates,createBiographyCapture,createInitialBiographyFill} from './artist-biographies.js';
 import {parseMojoBiography,fetchMojoBiography} from './mojo-biography.js';
 import {validArtistId,normalizeArtistName} from '../shared/artist-catalogue.js';
 import {validTimetableDate,nextTimetableDate} from '../shared/show-timetable.js';
@@ -39,7 +39,7 @@ function drive(){
  let contents=null,writes=0;const file={getBlob:()=>({getDataAsString:()=>contents}),setContent:body=>{contents=body;writes++;}};
  const root={createFile:blob=>{contents=blob.body;writes++;return file;}};
  class FixedDate extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now.getTime();}}
- const context=vm.createContext({Date:FixedDate,Set,Map,validArtistId,normalizeArtistName,validTimetableDate,nextTimetableDate,ESMOJO_FOLDER_ID:'fixed-root',DriveApp:{getFolderById:id=>{assert.equal(id,'fixed-root');return root;}},esmojoShowFile_:()=>contents?file:null,esmojoOnTrackHash_:hash,esmojoTimetableCatalogue_:()=>new Map([['one',row('2026-11-20')],['two',row('2026-11-21')]]),Utilities:{formatDate:()=> '2026-11-08',newBlob:(body,type,name)=>({body,type,name,getBytes:()=>Buffer.from(body)})}});
+ const context=vm.createContext({Date:FixedDate,Set,Map,validArtistId,normalizeArtistName,validTimetableDate,nextTimetableDate,ESMOJO_FOLDER_ID:'fixed-root',DriveApp:{getFolderById:id=>{assert.equal(id,'fixed-root');return root;}},esmojoShowFile_:()=>contents?file:null,esmojoOnTrackHash_:hash,esmojoPublicArtistCatalogue_:()=>({artists:[{id:'a_'+hash(normalizeArtistName('Fixture act')),name:'Fixture act'}]}),esmojoTimetableCatalogue_:()=>new Map([['one',row('2026-11-20')],['two',row('2026-11-21')]]),Utilities:{formatDate:()=> '2026-11-08',newBlob:(body,type,name)=>({body,type,name,getBytes:()=>Buffer.from(body)})}});
  vm.runInContext(readFileSync('google-apps-script/ArtistBiographies.gs','utf8'),context);
  const series=biographyCandidates([row('2026-11-20'),row('2026-11-21')],{},now)[0],{sourceUrl,...identity}=series;
  const request={operation:'biography-save',series:identity,biography:{text,sourceUrl:'https://www.mojo.nl/fixtureact',capturedAt:now.toISOString()}};
@@ -60,5 +60,20 @@ test('Worker vereist eigen main-identiteit en weigert vrije URLs/velden; browser
  let calls=0;const handler=makeArtistBiographiesHandler({identify:async token=>{if(token!=='trusted')throw Error();},capture:async()=>{calls++;return{ok:true};}}),response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});
  for(const req of [{method:'GET',headers:{}},{method:'POST',headers:{}},{method:'POST',headers:{authorization:'Bearer trusted'},body:{url:'https://evil.invalid'}}]){const res=response();await handler(req,res);assert.ok([400,403,405].includes(res.code));}assert.equal(calls,0);
  const res=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{}},res);assert.equal(res.code,200);assert.equal(calls,1);
- const probe=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{checkOnly:true}},probe);assert.equal(probe.data.workerVersion,2);assert.equal(calls,1);
+ const probe=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{checkOnly:true}},probe);assert.equal(probe.data.workerVersion,3);assert.equal(calls,1);
+});
+
+test('Eenmalige Nederlandse aanvulling bewaart herkomst en oorspronkelijke MOJO-tekst blijft leidend',()=>{
+ const d=drive(),text=Array.from({length:65},(_,i)=>'woord'+i).join(' '),id='a_'+hash(normalizeArtistName('Fixture act'));
+ assert.throws(()=>d.save({operation:'biography-initial-save',artistId:id,name:'Fixture act',text:'te kort'}),/VALIDATION/);
+ assert.equal(d.save({operation:'biography-initial-save',artistId:id,name:'Fixture act',text}).saved,true);
+ assert.equal(d.read().origin,'editorial-ai-nl-v1');assert.equal(d.read().sourceUrl,null);
+ assert.equal(d.save({operation:'biography-initial-save',artistId:id,name:'Fixture act',text}).unchanged,true);assert.equal(d.writes(),1);
+ assert.equal(d.save().saved,true);assert.equal(d.read().sourceUrl,'https://www.mojo.nl/fixtureact');assert.notEqual(d.read().text,text);
+ assert.equal(d.save({operation:'biography-initial-save',artistId:id,name:'Fixture act',text}).unchanged,true);
+});
+test('Initiële aanvulling is begrensd en stuurt uitsluitend bekende ontbrekende artiesten naar Drive',async()=>{
+ const artists=Array.from({length:8},(_,i)=>({id:'a_'+hash('artist'+i),name:'Artist '+i})),calls=[];
+ const fill=createInitialBiographyFill({store:async(op,payload)=>{calls.push([op,payload]);return op==='biography-initial-list'?{artists}:{saved:true};},descriptions:Object.fromEntries(artists.slice(0,7).map(x=>[x.name,'Nederlandse tekst']))});
+ const result=await fill();assert.equal(result.saved,6);assert.equal(result.more,true);assert.deepEqual(result.missing,['Artist 7']);assert.equal(calls.length,7);
 });

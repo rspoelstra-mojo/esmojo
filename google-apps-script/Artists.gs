@@ -2,6 +2,9 @@
 function esmojoArtistCatalogue_(request){
  if(Object.keys(request).sort().join(',')!=='actor,operation'||request.operation!=='artist-catalogue'||typeof request.actor!=='string'||!request.actor||request.actor.length>100)throw Error('VALIDATION');
  esmojoArtistActor_(request.actor);
+ return esmojoPublicArtistCatalogue_();
+}
+function esmojoPublicArtistCatalogue_(){
  const cache=CacheService.getScriptCache(),cached=cache.get('artist-catalogue-v2');
  if(cached){try{return{artists:cleanArtistMenu(JSON.parse(cached)),profileSupported:true};}catch{/* Een ongeldige cache mag de catalogus niet blokkeren. */}}
  const catalogue=esmojoTimetableCatalogue_({allVenues:true}),names=[...catalogue.values()].flatMap(show=>[show.artist,...(show.identityArtist?[show.identityArtist]:[])]);
