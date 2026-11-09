@@ -60,7 +60,7 @@ test('Worker vereist eigen main-identiteit en weigert vrije URLs/velden; browser
  let calls=0;const handler=makeArtistBiographiesHandler({identify:async token=>{if(token!=='trusted')throw Error();},capture:async()=>{calls++;return{ok:true};}}),response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});
  for(const req of [{method:'GET',headers:{}},{method:'POST',headers:{}},{method:'POST',headers:{authorization:'Bearer trusted'},body:{url:'https://evil.invalid'}}]){const res=response();await handler(req,res);assert.ok([400,403,405].includes(res.code));}assert.equal(calls,0);
  const res=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{}},res);assert.equal(res.code,200);assert.equal(calls,1);
- const probe=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{checkOnly:true}},probe);assert.equal(probe.data.workerVersion,3);assert.equal(calls,1);
+ const probe=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{checkOnly:true}},probe);assert.equal(probe.data.workerVersion,4);assert.equal(calls,1);
 });
 
 test('Eenmalige Nederlandse aanvulling bewaart herkomst en oorspronkelijke MOJO-tekst blijft leidend',()=>{
