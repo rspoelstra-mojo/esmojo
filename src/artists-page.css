@@ -92,7 +92,7 @@ main:has(> .artist-selection-empty) { display:flex; }
 @keyframes artist-report-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .artist-concert-select[data-load-state="loading"] .artist-concert-arrow::after { animation: none; } }
 
-.artist-score-card { margin-bottom:16px; min-height:150px; }
+.artist-score-card { min-height:150px; }
 .artist-score-body { margin-top:18px; }
 .artist-score-summary { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
 .artist-score-total { font-size:24px; }
