@@ -14,7 +14,7 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save','biography-initial-save','incident-counts','incident-daily-start','incident-daily-publish'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save','biography-initial-save','biography-initial-batch','incident-counts','incident-daily-start','incident-daily-publish'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
@@ -22,8 +22,8 @@ function esmojoShows_(input) {
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
       return esmojoReply_({ok:true,data:esmojoIncidentMetrics_(request)});
     }
-    if(['biography-candidates','biography-save','biography-initial-list','biography-initial-save'].includes(request.operation)){
-      if(['biography-save','biography-initial-save'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);}
+    if(['biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch'].includes(request.operation)){
+      if(['biography-save','biography-initial-save','biography-initial-batch'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);}
       return esmojoReply_({ok:true,data:esmojoArtistBiographies_(request)});
     }
     if(request.operation==='artist-show')return esmojoReply_({ok:true,data:esmojoArtistShow_(request)});

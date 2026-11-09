@@ -19,6 +19,7 @@ function esmojoArtistBiographies_(request){
   const d=esmojoBiographyRegister_().document;return{artists:esmojoPublicArtistCatalogue_().artists.filter(row=>!d.biographies[row.id]&&!(d.initialBiographies||{})[row.id])};
  }
  if(request.operation==='biography-initial-save')return esmojoInitialBiographySave_(request);
+ if(request.operation==='biography-initial-batch')return esmojoInitialBiographyBatch_(request);
  if(request.operation==='biography-candidates'){
   if(Object.keys(request).join(',')!=='operation')throw Error('VALIDATION');
   const concerts=[...esmojoTimetableCatalogue_({allVenues:true}).values()].map(row=>({artist:row.artist,date:row.date,venue:row.venue,sourceUrl:row.sourceUrl||null}));
@@ -46,13 +47,25 @@ function esmojoArtistBiographies_(request){
 
 // Eenmalige, Nederlandstalige redactionele aanvulling; geen MOJO-brontekst suggereren.
 function esmojoInitialBiographySave_(request){
- if(Object.keys(request).sort().join(',')!=='artistId,name,operation,text'||!validArtistId(request.artistId)||typeof request.name!=='string'||request.artistId!=='a_'+esmojoOnTrackHash_(normalizeArtistName(request.name))||typeof request.text!=='string'||request.text!==request.text.trim()||request.text.length>3000||/[\x00-\x1f<>]/.test(request.text)||request.text.split(/\s+/).length<60||request.text.split(/\s+/).length>70)throw Error('VALIDATION');
- if(!esmojoPublicArtistCatalogue_().artists.some(row=>row.id===request.artistId&&row.name===request.name))throw Error('VALIDATION');
- const storage=esmojoBiographyRegister_();
- if(storage.document.biographies[request.artistId]||(storage.document.initialBiographies||{})[request.artistId])return{unchanged:true};
+ if(Object.keys(request).sort().join(',')!=='artistId,name,operation,text')throw Error('VALIDATION');
+ const result=esmojoInitialBiographyBatch_({operation:'biography-initial-batch',entries:[{artistId:request.artistId,name:request.name,text:request.text}]});
+ return result.saved?{saved:true}:{unchanged:true};
+}
+function esmojoInitialBiographyBatch_(request){
+ if(Object.keys(request).sort().join(',')!=='entries,operation'||!Array.isArray(request.entries)||request.entries.length<1||request.entries.length>6)throw Error('VALIDATION');
+ const catalogue=esmojoPublicArtistCatalogue_().artists,seen=new Set();
+ for(const entry of request.entries){
+  if(!entry||Object.keys(entry).sort().join(',')!=='artistId,name,text'||!validArtistId(entry.artistId)||typeof entry.name!=='string'||entry.artistId!=='a_'+esmojoOnTrackHash_(normalizeArtistName(entry.name))||typeof entry.text!=='string'||entry.text!==entry.text.trim()||entry.text.length>3000||/[\x00-\x1f<>]/.test(entry.text)||entry.text.split(/\s+/).length<60||entry.text.split(/\s+/).length>70||seen.has(entry.artistId))throw Error('VALIDATION');
+  if(!catalogue.some(row=>row.id===entry.artistId&&row.name===entry.name))throw Error('VALIDATION');seen.add(entry.artistId);
+ }
+ const storage=esmojoBiographyRegister_();let count=0;
  if(!storage.document.initialBiographies)storage.document.initialBiographies={};
- storage.document.initialBiographies[request.artistId]={artistId:request.artistId,name:request.name,text:request.text,origin:'editorial-ai-nl-v1',capturedAt:new Date().toISOString()};
+ for(const entry of request.entries){
+  if(storage.document.biographies[entry.artistId]||storage.document.initialBiographies[entry.artistId])continue;
+  storage.document.initialBiographies[entry.artistId]={...entry,origin:'editorial-ai-nl-v1',capturedAt:new Date().toISOString()};count++;
+ }
+ if(!count)return{saved:0,unchanged:request.entries.length};
  const body=JSON.stringify(storage.document);if(Utilities.newBlob(body).getBytes().length>8*1024*1024)throw Error('BIOGRAPHY_CAPACITY');
  const saved=storage.file?(storage.file.setContent(body),storage.file):storage.root.createFile(Utilities.newBlob(body,'application/json','_esmojo_artist_biographies_v1.json'));
- if(saved.getBlob().getDataAsString('UTF-8')!==body)throw Error('VERIFY');return{saved:true};
+ if(saved.getBlob().getDataAsString('UTF-8')!==body)throw Error('VERIFY');return{saved:count,unchanged:request.entries.length-count};
 }

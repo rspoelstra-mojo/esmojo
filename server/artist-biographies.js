@@ -46,13 +46,11 @@ export function createBiographyCapture({store,fetchBiography=fetchMojoBiography,
 
 export function createInitialBiographyFill({store,descriptions=initialDescriptions}={}){
  return async()=>{
-  const {artists}=await store('biography-initial-list');let saved=0,processed=0;const missing=[];
-  for(const artist of artists){
-   const text=descriptions[artist.name];if(!text){missing.push(artist.name);continue;}
-   if(processed>=6)continue;processed++;
-   const result=await store('biography-initial-save',{artistId:artist.id,name:artist.name,text});
-   if(!result.saved&&!result.unchanged)throw Error('BIOGRAPHY_VERIFY');saved+=Number(Boolean(result.saved));
+  const {artists}=await store('biography-initial-list'),known=artists.filter(artist=>Object.hasOwn(descriptions,artist.name)),batch=known.slice(0,6),missing=artists.filter(artist=>!Object.hasOwn(descriptions,artist.name)).map(artist=>artist.name);
+  let saved=0;
+  if(batch.length){const result=await store('biography-initial-batch',{entries:batch.map(artist=>({artistId:artist.id,name:artist.name,text:descriptions[artist.name]}))});
+   if(!Number.isInteger(result.saved)||result.saved<0||result.saved>batch.length||result.saved+result.unchanged!==batch.length)throw Error('BIOGRAPHY_VERIFY');saved=result.saved;
   }
-  return{ok:true,saved,missing,more:artists.filter(artist=>Boolean(descriptions[artist.name])).length>processed};
+  return{ok:true,saved,missing,more:known.length>batch.length};
  };
 }

@@ -23,3 +23,8 @@ geen showbeloften, broncitaten of verzonnen incident-/publieksgegevens. De vaste
 Openbare teksten staan als gecontroleerde aanvulset in de worker; opslag in het
 bestaande Drive-register met editorial-ai-nl-v1, zonder bestaande tekst te wijzigen.
 Nieuwe artiesten buiten deze vaste set krijgen geen automatische verzonnen tekst.
+
+De eenmalige opslag is versneld: maximaal zes gevalideerde beschrijvingen per
+atomaire Drive-schrijfactie, één cataloguscontrole en één register-readback.
+Validatie van de hele batch vóór schrijven; herhaling slaat bestaande teksten
+over. Zelfde HMAC, noncecontrole en UserLock als de afzonderlijke schrijfactie.
