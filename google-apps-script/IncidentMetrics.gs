@@ -23,6 +23,7 @@ function esmojoIncidentInventory_(){
 }
 function esmojoIncidentAttendance_(show,historical,targets){
  const imported=historical.get(show.concertId);let sold=null;
+ if(imported?.sourceType==='tsc-historical'){if(!esmojoTscShowDataValid_(imported.showData))throw Error('REPORT_CATALOG');const visitors=imported.showData.visitors;return{soldTickets:null,visitors,visitorUnits:visitors===null?null:visitors*40,visitorBasis:'tsc-attendance'};}
  if(imported&&validSaleCount(imported.ticket_sales))sold=Number(imported.ticket_sales);
  else if(show.seriesId){
   if(!targets.has(show.seriesId)){
@@ -81,9 +82,10 @@ function esmojoIncidentMetrics_(request){
   const source=esmojoIncidentSource_(request.concertId,request.sourceId);
   if(op==='incident-source'){
    const result=esmojoWebSource_(source);if(result.hash!==source.entry.sourceHash)throw Error('SOURCE_CHANGED');
-   return{csvBase64:Utilities.base64Encode(result.bytes),sourceHash:result.hash,modifiedAt:source.modifiedAt,date:source.show.date};
+   return{csvBase64:Utilities.base64Encode(result.bytes),sourceHash:result.hash,modifiedAt:source.modifiedAt,date:source.show.date,...(source.show.sourceType==='tsc-historical'?{sourceType:source.show.sourceType,showData:source.show.showData}:{})};
   }
   if(source.entry.sourceHash!==request.sourceHash)throw Error('SOURCE_CHANGED');
+  if(source.show.sourceType==='tsc-historical'){if(!esmojoTscShowDataValid_(source.show.showData)||!request.kpis?.security)throw Error('VALIDATION');request.kpis.security.evictions=source.show.showData.evictions;request.kpis.security.arrests=source.show.showData.arrests;}
   if(!esmojoIncidentCountsValid_(request.kpis))throw Error('VALIDATION');
   const storage=esmojoIncidentRegister_(),document=storage.document,previous=document.counts[request.concertId];
   if(previous?.definitionVersion===1&&previous.sourceHash===request.sourceHash&&esmojoIncidentCountsValid_(previous.kpis))return{ok:true};
@@ -96,7 +98,8 @@ function esmojoIncidentMetrics_(request){
   const source=available.get(show.concertId),hasSource=inventory.sources.some(row=>row.show.key===show.concertId),cache=document.counts[show.concertId];
   const kpis=source&&cache?.definitionVersion===1&&cache.sourceHash===source.entry.sourceHash&&esmojoIncidentCountsValid_(cache.kpis)?cache.kpis:null;
   const canonical=catalogue.get(show.concertId)||show,attendance=esmojoIncidentAttendance_(canonical,historical,targets);
-  const row=Object.assign({},show,attendance,{securityComplete:hasSource,medicalComplete:hasSource,kpis,hasSource,sourceReady:Boolean(source)});
+  const tsc=historical.get(show.concertId);if(kpis&&tsc?.sourceType==='tsc-historical'){kpis.security.evictions=tsc.showData.evictions;kpis.security.arrests=tsc.showData.arrests;}
+  const row=Object.assign({},show,attendance,{securityComplete:hasSource&&(tsc?.sourceType!=='tsc-historical'||tsc.showData.evictions!==null&&tsc.showData.arrests!==null),medicalComplete:hasSource,kpis,hasSource,sourceReady:Boolean(source)});
   const suitable=row.visitors>0&&row.securityComplete&&row.medicalComplete;
   if(suitable&&source&&!kpis){jobs.push(show.concertId);jobSources[show.concertId]=source.id;}
   if(ids&&suitable&&kpis&&ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(show.name))))Object.assign(row,esmojoIncidentAnalysis_(catalogue.get(show.concertId)));

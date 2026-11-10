@@ -35,6 +35,7 @@ function esmojoWebSource_(source){
  const bytes=file.getBlob().getBytes();if(bytes.length>2*1024*1024)throw Error('REPORT_UNAVAILABLE');const hash=esmojoOnTrackHash_(bytes);if(source.expectedHash&&hash!==source.expectedHash)throw Error('SOURCE_CHANGED');return{bytes,hash};
 }
 function esmojoWebTimetable_(show){
+ if(show.sourceType==='tsc-historical')return esmojoTscTimetable_(show);
  const folder=esmojoTimetableFolder_();if(!folder)return null;
  const exact=esmojoTimetableRead_(folder,{concertId:show.key,date:show.date});if(exact)return exact.snapshot;
  const expected=reportFilenameShow('incidents_'+show.key+'.csv',ESMOJO_WEB_REPORT_VENUES,show.date),venue=ESMOJO_WEB_REPORT_VENUES.find(venue=>venue.name===show.venue||reportVenueName(venue)===show.venue);

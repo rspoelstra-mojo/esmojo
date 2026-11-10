@@ -43,6 +43,7 @@ jobs:
           node server/home-dashboard.test.js
           node server/web-report-catalogue.test.js
           node server/historical-reports.test.js
+          node --test server/tsc-historical.test.js
           node --test tools/reports/web-import-workflow.test.mjs
           node server/web-report-timetables.test.js
           node shared/report-catalogue.test.js

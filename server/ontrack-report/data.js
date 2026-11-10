@@ -9,7 +9,7 @@ const missing=value=>!value?.trim()||/^n\/a$/i.test(value.trim());
 export const displayValue=value=>missing(value)?'Niet opgegeven':value.trim();
 const contains=(value,keyword)=>(value||'').toLocaleLowerCase('nl').includes(keyword);
 
-export function parseCsv(input){
+export function parseCsv(input,{headers:expectedHeaders=ONTRACK_HEADERS}={}){
   let text;
   try{text=typeof input==='string'?input:new TextDecoder('utf-8',{fatal:true}).decode(input);}catch{fail('CSV_ENCODING');}
   if(Buffer.byteLength(text,'utf8')>2*1024*1024)fail('CSV_TOO_LARGE');
@@ -28,7 +28,7 @@ export function parseCsv(input){
   }
   if(quoted)fail('CSV_QUOTES',rows.length+1);if(cell||afterQuote||row.length)finishRow();
   const headers=rows.shift();
-  if(!headers||headers.length!==ONTRACK_HEADERS.length||headers.some((value,index)=>value!==ONTRACK_HEADERS[index]))fail('CSV_HEADERS');
+  if(!headers||headers.length!==expectedHeaders.length||headers.some((value,index)=>value!==expectedHeaders[index]))fail('CSV_HEADERS');
   const result=rows.map((cells,index)=>{if(cells.length!==headers.length)fail('CSV_COLUMNS',index+2);return Object.fromEntries(headers.map((name,i)=>[name,cells[i]]));});
   if(!result.length)fail('CSV_EMPTY');return result;
 }

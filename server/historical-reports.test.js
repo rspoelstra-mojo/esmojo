@@ -115,3 +115,27 @@ test('Alleen geauthenticeerde historische workerresponses tonen vaste diagnoseco
  }
  const denied=makeWebReportsSync({identify:async()=>{throw Error('PRIVATE_PROVIDER_SENTINEL');},service:{synchronize:()=>assert.fail('Geen toegang')}}),res=output();await denied({method:'POST',headers:{},body:{historicalOnly:true}},res);assert.equal(res.statusCode,403);assert.equal(Object.hasOwn(res.body,'stage'),false);
 });
+
+import {convertTscHistorical} from './tsc-historical.js';
+test('TSC slaat zes showgegevens vóór CSV op; voorraad blijft privé, broncijfers zijn leidend en readback controleert alles',async()=>{
+ const f=setup(),b=batchFixture(f),original='789,0,7,Deuren open 18:00,Aanvang show 20:00,Einde show 23:00\nDate and Time,Discipline,Type,Priority,Description,Resolution Note\n2025-02-01 - 8:30 PM,EHBO,Zelfzorg,Laag,Fixture,\n2025-02-01 - 9:00 PM,Beveiliging,Uitzetting,Laag,Fixture,';
+ Object.assign(b.row,convertTscHistorical(original,b.row),{ticket_sales:null});b.file.setContent(JSON.stringify({managedBy:'ESMOJO/HistoricalImport-v1',classification:'vertrouwelijk',version:1,entries:[b.row]}));
+ const ontrackCreate=f.folder.createFile.bind(f.folder);let checked=false;
+ f.folder.createFile=blob=>{const folder=f.ctx.DriveApp.getFolderById(f.concertFolder.id),metadata=f.ctx.esmojoOnTrackFile_(folder,'showgegevens-tsc.json');assert.ok(metadata);assert.deepEqual(JSON.parse(metadata.content).showData,b.row.showData);checked=true;return ontrackCreate(blob);};
+ assert.equal((await b.run({batch:'historical-synthetic.json',phase:'all'})).pending,0);assert.equal(checked,true);
+ const saved=JSON.parse(f.registry.content).entries[0];assert.equal(saved.ticket_sales,null);assert.equal(saved.sourceType,'tsc-historical');
+ const prep=f.ctx.esmojoHistoricalPreparation_({concertId:saved.concertId});assert.equal(artistPreparation(prep,{date:saved.date,venue:saved.venue}).general.soldTickets,null);assert.equal(prep.showData.visitors,789);
+ const web=createWebCatalogueService({store:f.store});assert.equal((await web.synchronize(null,{historicalOnly:true})).validated,1);
+ const report=await createWebReportService({store:f.store,photo:async()=>null})('reader',{concertId:saved.concertId});assert.equal(report.report.kpis.security.evictions,0);assert.equal(report.report.kpis.security.arrests,7);assert.equal(report.report.kpis.medical.total,1);
+ assert.equal(report.report.timetable.entries[0].time,'18:00');assert.equal(report.report.timetable.entries[1].publishedLabel,'Aanvang show');
+ assert.equal((await createHistoricalImportVerifier({store:f.store})({batch:'historical-synthetic.json',phase:'all',offset:0})).verified,1);
+ assert.equal((await b.run({batch:'historical-synthetic.json',phase:'all'})).pending,0);
+});
+
+test('Niet bevestigde TSC-showgegevens blokkeren de CSV-publicatie; metadata-conflict overschrijft niets',async()=>{
+ const f=setup(),b=batchFixture(f),converted=convertTscHistorical('100,0,0,Deuren open 18:00,Aanvang show 20:00,Einde show 23:00\nDate and Time,Discipline,Type,Priority,Description,Resolution Note\n2025-02-01 - 8:30 PM,EHBO,Zelfzorg,Laag,Fixture,',b.row);
+ Object.assign(b.row,converted,{ticket_sales:null});b.file.setContent(JSON.stringify({managedBy:'ESMOJO/HistoricalImport-v1',classification:'vertrouwelijk',version:1,entries:[b.row]}));
+ const create=f.concertFolder.createFile.bind(f.concertFolder);f.concertFolder.createFile=blob=>{const file=create(blob);if(blob.name==='showgegevens-tsc.json')file.setContent('{}');return file;};
+ await assert.rejects(b.run({batch:'historical-synthetic.json',phase:'all'}));assert.equal(f.folder.files.some(file=>file.name.startsWith('incidents_')),false);assert.equal(JSON.parse(f.registry.content).entries.length,0);
+ await assert.rejects(b.run({batch:'historical-synthetic.json',phase:'all'}));assert.equal(f.folder.files.some(file=>file.name.startsWith('incidents_')),false);
+});

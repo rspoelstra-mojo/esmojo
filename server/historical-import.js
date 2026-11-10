@@ -1,3 +1,5 @@
+import {convertTscHistorical} from './tsc-historical.js';
+import {validTscShowData} from '../shared/report-source.js';
 import {artistPreparation} from './artist-preparation.js';
 import {createHash} from 'node:crypto';
 import {calculateReport,parseCsv} from './ontrack-report/data.js';
@@ -7,6 +9,7 @@ import {validateReportDay} from './web-report-catalogue.js';
 export function validateHistoricalEntry(row){
  if(!row||typeof row.csvBase64!=='string'||row.csvBase64.length>2800000||!/^[a-f0-9]{64}$/.test(row.sha256||'')||!/^\d{4}-\d{2}-\d{2}$/.test(row.date))throw Error('IMPORT_INVALID');
  const bytes=Buffer.from(row.csvBase64,'base64');if(createHash('sha256').update(bytes).digest('hex')!==row.sha256)throw Error('SOURCE_CHANGED');
+ if(row.sourceType==='tsc-historical'){if(!validTscShowData(row.showData)||typeof row.originalCsvBase64!=='string'||row.originalCsvBase64.length>2800000)throw Error('IMPORT_INVALID');const converted=convertTscHistorical(Buffer.from(row.originalCsvBase64,'base64'),row);if(converted.sha256!==row.sha256||JSON.stringify(converted.showData)!==JSON.stringify(row.showData))throw Error('SOURCE_CHANGED');}
  const rows=parseCsv(bytes);if(rows.length!==row.incidentCount||rows.some(incident=>/schoonmaak/iu.test(incident.Division)))throw Error('IMPORT_INVALID');
  validateReportDay(calculateReport(bytes),row.date);return row.sha256;
 }
@@ -25,7 +28,7 @@ export function createHistoricalImportVerifier({store}){
   if(typeof batch!=='string'||!/^historical-[a-z0-9-]{1,70}\.json$/.test(batch)||!['sample','all'].includes(phase)||!Number.isSafeInteger(offset)||offset<0||offset>1000)throw Error('VALIDATION');
   const result=await store('historical-import-verify',null,{batch,phase,offset});
   if(!Array.isArray(result.entries)||result.entries.length>5||result.nextOffset!==offset+result.entries.length||!Number.isSafeInteger(result.total))throw Error('IMPORT_INVALID');
-  for(const row of result.entries){validateHistoricalEntry(row);const prep=artistPreparation(row.preparation,row);if(prep?.general.soldTickets!==Number(row.ticket_sales))throw Error('TICKET_CONFLICT');}
+  for(const row of result.entries){validateHistoricalEntry(row);const prep=artistPreparation(row.preparation,row);if(row.sourceType==='tsc-historical'){if(JSON.stringify(row.preparation?.showData)!==JSON.stringify(row.showData))throw Error('IMPORT_UNCONFIRMED');}else if(prep?.general.soldTickets!==Number(row.ticket_sales))throw Error('TICKET_CONFLICT');}
   return{ok:true,total:result.total,verified:result.entries.length,nextOffset:result.nextOffset};
  };
 }

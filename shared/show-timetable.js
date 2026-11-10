@@ -20,7 +20,7 @@ export function validateTimetable(snapshot,show,{now=null}={}){
  }
  if(snapshot.unresolved.some(value=>!safe(value)))fail();return snapshot;
 }
-export function timetableEntryLabel(entry){return entry.kind==='doors'?'Geplande tijd deuren open':entry.kind==='pause'?'Geplande starttijd pauze':entry.kind==='end'?'Geplande eindtijd show':'Geplande aanvang '+entry.label;}
+export function timetableEntryLabel(entry){if(entry.sourceType==='tsc-historical')return entry.publishedLabel;return entry.kind==='doors'?'Geplande tijd deuren open':entry.kind==='pause'?'Geplande starttijd pauze':entry.kind==='end'?'Geplande eindtijd show':'Geplande aanvang '+entry.label;}
 export function reportChronology(incidents,timetable){
  const markers=timetable?.status==='available'?timetable.entries:[];
  return[...incidents.map((incident,index)=>({type:'incident',value:incident,index})),...markers.map((entry,index)=>({type:'timetable',value:entry,index}))].sort((a,b)=>(a.value.localDate+a.value.time).localeCompare(b.value.localDate+b.value.time)||(a.type===b.type?a.index-b.index:a.type==='timetable'?-1:1));

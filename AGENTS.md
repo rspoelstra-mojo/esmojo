@@ -1429,6 +1429,22 @@ Redis, met 31-daagse bewaartermijn. Geen accountnamen/IDs, IP's of zoektermen.
 Eén gezamenlijke top 5 van echte openkliks in Artiesten, aflopend; alleen typen,
 menu laden/verversen en een directe URL openen leveren geen punt op.
 
+## TSC historische rapportages (10 november 2026)
+
+De gebruiker onderscheidt drie brontypen: OnTrack geautomatiseerd, OnTrack historisch
+(de eerdere massa-import), TSC historisch (CSV met zes velden vóór de kop).
+TSC: aanwezige bezoekers, uitzettingen, aanhoudingen, deuren open, aanvang, einde.
+Deze bestaande vertrouwelijke show-/incidentgegevens blijven uitsluitend in Drive.
+Bewaar TSC bezoekers als werkelijke bezoekers, niet als verkochte tickets. Sla de zes
+waarden eerst op bij de show en lees terug; publiceer daarna pas de incidentenbron.
+TSC uitzettingen/aanhoudingen zijn uitsluitend eerste-rijwaarden, nooit berekend
+uit incidentregels; null is ontbrekend, expliciete nul blijft nul. Discipline→Division,
+EHBO→Medisch bevestigd; overige oorspronkelijke kolommen behouden, ontbrekend leeg,
+stabiele technische incident-ID's. Identieke Stereophonics-S2 uit de februari-2020-ZIP
+mag vervallen, S1 verliest suffix. Barney-Dome-AFAS is Barney Dome, AFAS Live.
+Bij iedere nieuwe inhoudelijke twijfel vraagt de gebruiker eerst te stoppen en
+het antwoord af te wachten. Bestaande bronconflicten nooit automatisch overschrijven.
+
 ## Historische rapportages (8 november 2026, V1.91)
 
 De gebruiker heeft na de steekproef de gecontroleerde historische collectie

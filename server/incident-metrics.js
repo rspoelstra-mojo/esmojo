@@ -13,7 +13,7 @@ export function createIncidentMetricsService({shows}={}){
   const job=(async()=>{const source=await invoke('incident-source',{...authority,concertId});
    if(typeof source.csvBase64!=='string'||source.csvBase64.length>2800000)throw Error('REPORT_UNAVAILABLE');
    const bytes=Buffer.from(source.csvBase64,'base64');if(createHash('sha256').update(bytes).digest('hex')!==source.sourceHash)throw Error('SOURCE_CHANGED');
-   const report=validateReportDay(calculateReport(bytes,{generatedAt:source.modifiedAt}),source.date),kpis=webReportKpis(report);
+   const report=validateReportDay(calculateReport(bytes,{generatedAt:source.modifiedAt}),source.date),kpis=webReportKpis(report,source);
    if(!validIncidentCounts(kpis))throw Error('REPORT_UNAVAILABLE');
    await invoke('incident-counts',{...authority,concertId,sourceHash:source.sourceHash,kpis});return kpis;
   })().finally(()=>running.delete(key));running.set(key,job);return job;

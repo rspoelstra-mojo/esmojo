@@ -11,3 +11,11 @@ beveiligde historische batchroute, geen nieuwe publieke upload of mail/PDF.
 Huidige omgeving heeft geen bruikbare Drive-uploadidentiteit/connector; controleer
 live overdracht afzonderlijk en rapporteer geen import zonder terugleesbewijs.
 Versie blijft V1.99. Scope converter, bestaand import/register, KPI/tijdprojecties.
+
+Voorbereiding voltooid: 15 bestanden native gevalideerd, één goedgekeurd identiek
+bronbestand overgeslagen; oorspronkelijke ZIP intact. Private importset en status
+per bestand staan buiten Git. Alle bestaande Node-regressies, nieuwe TSC/Drive-
+volgorde-/terugleescontroles, browsercontrole, build en Apps Script-syntax slagen.
+Nog nul live imports: bruikbare Drive-uploadidentiteit/connector ontbreekt in deze
+omgeving. Publicatie betreft alleen geteste bronondersteuning; feitelijke import
+vereist private overdracht en bevestigde OIDC-import plus terugleesverificatie.

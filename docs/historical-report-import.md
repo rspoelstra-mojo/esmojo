@@ -67,3 +67,37 @@ met behoud van een eigen rapportage en kaartverkoop per voorstelling.
 Controles: server/historical-reports.test.js, shared/report-catalogue.test.js,
 shared/artist-names.test.js, src/lib/report-menu.test.js, artiestshow-/browsercontroles
 en de gewone CI/publicatiecontroles. Gebruik uitsluitend synthetische CI-fixtures.
+
+
+## TSC historisch: afwijkende bronregels (10 november 2026)
+
+Drie bronvarianten: OnTrack geautomatiseerd, OnTrack historisch (bestaande import),
+TSC historisch (`sourceType: tsc-historical`). Oudere bronnen blijven compatibel;
+geen herclassificatie of herbouw van bestaande broncontexten.
+
+TSC begint met zes velden: werkelijke bezoekers, uitzettingen, aanhoudingen,
+Deuren open HH:MM, Aanvang show HH:MM, Einde show HH:MM. Leeg/label zonder tijd
+wordt null; nul is een geldige telling. Incidentkop: Date and Time, Discipline,
+Type, Priority, Description, Resolution Note. Discipline→Division en EHBO→Medisch;
+overige bronwaarden blijven gelijk. Ontbrekende native kolommen blijven leeg,
+incident-ID's zijn deterministisch per concert en oorspronkelijke rijpositie.
+Schoonmaak wordt volgens de bestaande regel verwijderd. Originele bytes blijven
+in de private batch; native parser/rapportdagcontrole valideren de conversie.
+
+TSC `ticket_sales` blijft null: aanwezigen worden niet als verkoop voorgesteld.
+De zes bronwaarden staan in `showgegevens-tsc.json` in de concertmap en het
+bestaande register. Import schrijft/controleert showgegevens vóór de CSV wordt
+opgeslagen/gepubliceerd. Uitzettingen en aanhoudingen uit de bronrij zijn leidend
+in web-/artiest-KPI's en incidentreferenties. Geen berekende terugval wanneer ze
+ontbreken; zo'n registratie telt niet mee als volledige beveiligingsregistratie.
+De aanwezigen worden exact gebruikt, zonder 2,5%-correctie. De oorspronkelijke
+OnTrack-berekeningen blijven gelijk. Tijden krijgen historische bronlabels.
+
+Voorbereiding: pak de ZIP privé uit in `<privéwerkmap>/originals`, zonder bestanden
+te overschrijven. `node tools/tsc-historical/prepare.mjs <privéwerkmap>` maakt de
+gecontroleerde private batch en een status per bestand. De expliciet goedgekeurde
+identieke Stereophonics-S2 wordt alleen bij exacte bytegelijkheid overgeslagen.
+Bestaande bestanden/bronhashes worden niet blind vervangen. Plaats de gecontroleerde
+batch uitsluitend via een bevoegde private verbinding in Productie en gebruik
+vervolgens de bestaande OIDC-import en terugleesverificatie. Voorbereid is niet
+geïmporteerd: zonder bevestigde opslag blijft de bestandsstatus niet-geïmporteerd.

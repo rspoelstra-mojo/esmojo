@@ -22,7 +22,7 @@ export function renderArtistShowOverview(data,{onBack=()=>{}}={}){
  if(data.timetable?.status==='available'&&data.timetable.entries?.length){const list=node('dl','artist-show-facts');for(const entry of data.timetable.entries){const row=node('div');row.append(node('dt','',entry.publishedLabel),node('dd','',entry.time));list.append(row);}timetable.append(list);}else timetable.append(node('p','',missing));
  const statistic=(label,kind,fields)=>{const el=card(label,kind),values=data.kpis?.[kind];if(!values){el.append(node('p','',missing));return;}
   const header=node('div','artist-show-stat-heading');header.append(el.firstChild,node('strong','artist-show-total',String(values.total)));el.append(header);
-  const list=node('dl','artist-show-stat-list');for(const {id,label}of fields){const row=node('div');row.append(node('dt','',label),node('dd','',String(values[id])));list.append(row);}el.append(list);
+  const list=node('dl','artist-show-stat-list');for(const {id,label}of fields){const row=node('div');row.append(node('dt','',label),node('dd','',values[id]===null?'Niet beschikbaar':String(values[id])));list.append(row);}el.append(list);
  };
  statistic('Beveiliging','security',securityReportFilters);
  const production=card('Productioneel','production');

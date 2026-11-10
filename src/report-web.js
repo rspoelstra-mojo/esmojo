@@ -18,9 +18,9 @@ function statCard(title,statistics,labels,className,onFilter){
  for(const [field,label]of labels){
   if(onFilter){
    const item=node('li',''),button=node('button','report-stat-filter');button.type='button';button.dataset.reportFilter=field;button.setAttribute('aria-pressed','false');button.setAttribute('aria-controls','report-incident-list');button.title='Filter incidenten: '+label;
-   const amount=node('span','report-filter-amount',String(statistics[field])),glyph=node('span','report-filter-glyph');glyph.setAttribute('aria-hidden','true');glyph.innerHTML='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14l-5 6v5l-4 2v-7L3 4Z"/></svg>';
+   const amount=node('span','report-filter-amount',statistics[field]===null?'Niet beschikbaar':String(statistics[field])),glyph=node('span','report-filter-glyph');glyph.setAttribute('aria-hidden','true');glyph.innerHTML='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14l-5 6v5l-4 2v-7L3 4Z"/></svg>';
    amount.append(glyph);button.append(node('span','',label),amount);button.onclick=()=>onFilter(field);item.append(button);rows.append(item);
-  }else{const row=node('div','report-stat-row');row.append(node('dt','',label),node('dd','',String(statistics[field])));rows.append(row);}
+  }else{const row=node('div','report-stat-row');row.append(node('dt','',label),node('dd','',statistics[field]===null?'Niet beschikbaar':String(statistics[field])));rows.append(row);}
  }
  element.append(rows);return element;
 }
