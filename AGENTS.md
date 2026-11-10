@@ -51,6 +51,16 @@ Ontbreken ook betrouwbare incidentregistraties, toon:
 geen schatting/volledige punten en geen totaalscore. Centrale configuratie in
 shared/artist-risk-model.js; bezoekersbasis en vaste dagreferenties blijven gelijk.
 
+## Activeringslink kopiëren (10 november 2026)
+
+Op verzoek staat bij ongeactiveerde, niet-geblokkeerde accounts een kopieericoon.
+De bestaande beveiligde account-API maakt met Supabase een nieuwe eenmalige link
+(invite of recovery), zonder e-mail. Alleen actuele beheerder met MFA; nooit voor
+actieve/geblokkeerde accounts. Het geheim blijft in het URL-fragment en tijdelijk
+browsergeheugen; uitsluitend na expliciete gebruikersklik naar het klembord.
+Geen link/token in Drive, Redis, browseropslag of logs. Bij klembordweigering kan
+de beheerder dezelfde link tijdelijk handmatig kopiëren. Mailuitnodigen blijft apart.
+
 ## Uitvoering en publicatie
 
 Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende

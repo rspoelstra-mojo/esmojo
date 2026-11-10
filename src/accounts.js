@@ -1,3 +1,4 @@
+import {copyActivationLink} from './lib/copy-activation-link.js';
 import {accountCompanies,companyJobs,validateAccountEmployment} from '../shared/account-employment.js';
 import {singleSubmission} from './lib/single-submission.js';
 import {detailBackButton} from './detail-back.js';
@@ -11,6 +12,7 @@ import { createSubmenuLoading } from './lib/submenu-loading.js';
 const glyphs = {
   edit: '<path d="m14 4 6 6M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15Z"/>',
   remove: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
+  copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
   invite: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
 };
 
@@ -69,6 +71,10 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
         actions.append(remove);
         if (!account.activated && !account.disabled) actions.append(action('invite', `Nodig ${account.firstName} opnieuw uit`, async () => {
           await access('accounts', { method: 'PATCH', body: { id: account.id, operation: 'invite' } }); report('Uitnodiging opnieuw verzonden.');
+        }));
+        if(!account.activated&&!account.disabled)actions.append(action('copy',`Nieuwe activeringslink voor ${account.firstName} kopiëren`,async()=>{
+          const copied=await copyActivationLink(()=>access('accounts',{method:'PATCH',body:{id:account.id,operation:'activation-link'}}),{active:()=>!disposed});
+          if(!disposed&&copied)report('Activeringslink gekopieerd.');
         }));
         if (account.disabled) actions.append(element('span', 'Geblokkeerd; verwijder opnieuw om de opruiming te voltooien.', 'account-notice'));
         else if (!account.activated) actions.append(element('span', 'Uitgenodigd', 'account-notice'));

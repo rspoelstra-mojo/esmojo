@@ -39,6 +39,7 @@ jobs:
           ESMOJO_TEST_REDIS_PORT: '6379'
         run: |
           node server/accounts-api.test.js
+          node --test src/lib/copy-activation-link.test.js
           node server/account-modules.test.js
           node server/home-dashboard.test.js
           node server/web-report-catalogue.test.js

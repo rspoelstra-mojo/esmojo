@@ -9,3 +9,8 @@ opnieuw-uitnodigenmail blijft apart. Clipboardfallback biedt tijdelijk handmatig
 kopiëren zonder geheim op te slaan. Bestaande accountaanmaak/activering behouden.
 Versie blijft V1.99. Controles: autorisatie, doelvalidatie, geen mail, invite/recovery,
 clipboard en foutafhandeling plus bestaande accountregressies/build.
+
+Controles geslaagd: bestaande 42 account-API-tests inclusief nieuwe kopieeractie,
+MFA/rollen/actief/geblokkeerd, invite/recovery, strikte doelvelden, cache/no-mail;
+drie clipboardcontroles (succes, handmatige fallback, navigatie/ongeldige response).
+Build en diff-check slagen. Eerdere risicoscoreherstel-CI is bevestigd geslaagd.

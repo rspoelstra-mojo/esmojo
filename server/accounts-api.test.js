@@ -268,3 +268,19 @@ test('Private testmailconfiguratie verlaat de server niet via het accountprofiel
  const catalog=await run({action:'email',own});assert.equal(catalog.response.code,200);assert.deepEqual(catalog.response.data.recipients,[own.email,'test-copy@example.invalid']);
  const ordinary=await run({action:'email',own:{...own,role:'beheerder'}});assert.equal(ordinary.response.code,200);assert.deepEqual(ordinary.response.data.recipients,[own.email]);
 });
+
+test('Beheerder kopieert eenmalige activeringslink zonder mail, opslag of profielwijziging',async()=>{
+ for(const confirmedAt of [null,'2026-10-31']){
+  const {response,calls}=await run({method:'PATCH',body:{id:other,operation:'activation-link'},confirmedAt,configuration:{...env,RESEND_API_KEY:undefined}});
+  assert.equal(response.code,200);assert.equal(calls.find(c=>c[0]==='invite')[1].type,confirmedAt?'recovery':'invite');
+  const url=new URL(response.data.activationUrl);assert.equal(url.origin,'https://esmojo.nl');assert.equal(url.search,'');assert.ok(url.hash.startsWith('#/activeren?token='));
+  assert.equal(calls.some(c=>['mail','create','update','deleteAuth','createAuth','password'].includes(c[0])),false);
+  assert.match(response.headers['Cache-Control'],/no-store/);
+ }
+});
+test('Kopieerlink blijft afgeschermd voor gewone gebruikers, MFA-fouten, actieve/geblokkeerde of onbekende accounts',async()=>{
+ for(const options of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{targetProfile:{...profile,id:other,activated:true}},{targetProfile:{...profile,id:other,activated:false,disabled:true}}]){
+  const {response,calls}=await run({method:'PATCH',body:{id:other,operation:'activation-link'},...options});assert.ok([401,403,409].includes(response.code));assert.equal(calls.some(c=>c[0]==='invite'),false);
+ }
+ for(const body of [{id:'invalid',operation:'activation-link'},{id:other,operation:'activation-link',email:'elsewhere@example.invalid'}]){const {response,calls}=await run({method:'PATCH',body});assert.equal(response.code,400);assert.equal(calls.some(c=>c[0]==='invite'),false);}
+});

@@ -305,7 +305,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const input = req.body;
       if (!input || typeof input !== 'object' || JSON.stringify(input).length > 110000) throw new Error('VALIDATION');
       const admin = clientFactory(url, env.SUPABASE_SECRET_KEY, options).auth.admin;
-      if (req.method === 'PATCH' && input.operation === 'invite') {
+      if (req.method === 'PATCH' && ['invite','activation-link'].includes(input.operation)) {
+        if(Object.keys(input).sort().join(',')!=='id,operation'||typeof input.id!=='string'||!/^[0-9a-f-]{36}$/i.test(input.id))throw new Error('VALIDATION');
         const accounts = await profiles('list', actor);
         const target = accounts.find(item => item.id === input.id && !item.activated && !item.disabled);
         if (!target) return reply(409, { error: 'Dit account kan niet opnieuw worden uitgenodigd.' });
@@ -315,6 +316,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         const generated = await admin.generateLink({ type, email: target.email });
         if (generated.error || generated.data?.user?.id !== target.id || !generated.data?.properties?.hashed_token) return reply(503, { error: 'Uitnodiging kon niet worden vernieuwd.' });
         const link = `https://esmojo.nl/#/activeren?token=${encodeURIComponent(generated.data.properties.hashed_token)}&type=${type}`;
+        if(input.operation==='activation-link')return reply(200,{activationUrl:link});
         await mail(accountActivationEmail({to:target.email,firstName:target.firstName,activationUrl:link,reissued:true}));
         return reply(200, { ok: true });
       }
