@@ -12,3 +12,8 @@ Geen verruiming van authenticatie: tijdelijke aparte cron op 10 november, met
 extra jaar-/Nederlandse-datumgrens en bestaande importconcurrency. Gewone
 planning blijft gelijk. Vaste technische batchnaam; verwijder cron na bevestigde
 start. Push blijft alleen de bestaande incidentworker activeren.
+
+Gebruiker heeft workflow handmatig gestart: run 42771820752 (workflow_dispatch).
+Tijdelijke cron, datumguard en bijbehorende tijdelijke test worden direct
+verwijderd; de lopende handmatige run behoudt zijn workflowversie. Veilige
+opslag-/terugleesnotices blijven beschikbaar voor bewijs zonder broninhoud.

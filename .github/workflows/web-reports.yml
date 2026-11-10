@@ -15,7 +15,6 @@ on:
     branches: [main]
   schedule:
     - cron: '*/5 * * * *'
-    - cron: '*/5 * 10 11 *' # Eenmalige geautoriseerde TSC-import; verwijderen na start
     - cron: '0 22,23 * * *'
   workflow_dispatch:
     inputs:
@@ -36,25 +35,23 @@ permissions:
   contents: read
   id-token: write
 concurrency:
-  group: ${{ (github.event_name == 'schedule' && github.event.schedule == '*/5 * 10 11 *') && 'web-reports-historical-import' || (github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *') && 'incident-reference-rebuild' || inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || inputs.historical_only == true && 'web-reports-historical-index' || 'web-reports-production' }}
+  group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *') && 'incident-reference-rebuild' || inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || inputs.historical_only == true && 'web-reports-historical-index' || 'web-reports-production' }}
   cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' }}
 jobs:
   index:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ ((github.event_name == 'schedule' && github.event.schedule == '*/5 * 10 11 *') || github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *' || inputs.historical_import == 'sample' || inputs.historical_import == 'all' || inputs.historical_only == true) && 180 || 7 }}
+    timeout-minutes: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *' || inputs.historical_import == 'sample' || inputs.historical_import == 'all' || inputs.historical_only == true) && 180 || 7 }}
     steps:
       - name: Publish web reports and deliver online mail independently of PDF generation
         env:
           METRICS_ONLY: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *' }}
           MIDNIGHT_ONLY: ${{ github.event.schedule == '0 22,23 * * *' }}
-          HISTORICAL_IMPORT: ${{ (github.event_name == 'schedule' && github.event.schedule == '*/5 * 10 11 *') && 'all' || inputs.historical_import }}
-          HISTORICAL_BATCH: ${{ (github.event_name == 'schedule' && github.event.schedule == '*/5 * 10 11 *') && 'historical-tsc-february-2020-20261110.json' || inputs.historical_batch }}
-          TSC_ONCE: ${{ (github.event_name == 'schedule' && github.event.schedule == '*/5 * 10 11 *') }}
+          HISTORICAL_IMPORT: ${{ inputs.historical_import }}
+          HISTORICAL_BATCH: ${{ inputs.historical_batch }}
           HISTORICAL_ONLY: ${{ inputs.historical_only }}
         run: |
           node --input-type=module <<'JS'
-          if(process.env.TSC_ONCE==='true'&&new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())!=='2026-11-10')process.exit(0);
           const midnightHour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date());
           if(process.env.MIDNIGHT_ONLY==='true'&&midnightHour!=='00')process.exit(0);
           const endpoint='https://esmojo.nl/api/web-reports-sync';
