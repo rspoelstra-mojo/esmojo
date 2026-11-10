@@ -43,7 +43,10 @@ uitschieterscore), begrensd25. Vijf specifieke categorieën gelijkwaardig:
 19 × min(1, procentuele afwijking/300) × min(1, aantal/7). Alleen hoogste bijdrage
 plus overige specifieke reguliere punten, nooit totaal als bonus; gelijke bijdragen
 volgen vaste categorievolgorde. Medisch blijft proportioneel10/15 zonder uitschieter.
-Alleen volledig beoordeelde concerten leveren een totaalscore. Ontbrekende data:
+De gebruiker heeft daarna expliciet de gedeeltelijke score hersteld: ontbreken
+volledige analyses, toon betrouwbare incidentpunten als incomplete (max35 van100),
+geel label, geen risicoklasse en ontbrekende onderdelen null. Volledig: groen label.
+Ontbreken ook betrouwbare incidentregistraties, toon:
 ‘Nog geen risicoscore beschikbaar’. Nul/nul=0; positief/nul is expliciet onbetrouwbaar,
 geen schatting/volledige punten en geen totaalscore. Centrale configuratie in
 shared/artist-risk-model.js; bezoekersbasis en vaste dagreferenties blijven gelijk.

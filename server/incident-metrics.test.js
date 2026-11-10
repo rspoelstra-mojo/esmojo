@@ -52,7 +52,7 @@ test('Historische CSV vóór 1 november gebruikt ingevoerde tickets 1:1; grensda
 });
 test('Artiestscore gebruikt dezelfde gepubliceerde dagreferenties en geeft geen beheerregistraties door',async()=>{
  const rows=[row('a')],references=incidentReferences(rows);let reads=0;
- const service=createIncidentMetricsService({shows:async(op,body)=>{reads++;if(op==='incident-daily-read'){assert.equal(body.referencesOnly,true);return{references,updatedAt:'2026-11-08T00:00:00Z'};}assert.equal(op,'incident-read');return{policyVersion:2,rows,jobs:[]};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references,references);assert.equal(reads,2);rows[0].visitorsFinal=false;const partial=await service.snapshot('actor',[id]);assert.equal(partial.score,null);assert.equal(partial.assessment.reason,'INCOMPLETE_DATA');
+ const service=createIncidentMetricsService({shows:async(op,body)=>{reads++;if(op==='incident-daily-read'){assert.equal(body.referencesOnly,true);return{references,updatedAt:'2026-11-08T00:00:00Z'};}assert.equal(op,'incident-read');return{policyVersion:2,rows,jobs:[]};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references,references);assert.equal(reads,2);rows[0].visitorsFinal=false;const partial=await service.snapshot('actor',[id]);assert.equal(partial.score.status,'incomplete');assert.equal(partial.score.parts.incidents,0);assert.equal(partial.score.parts.visitors,null);
 });
 test('Nachtwerker behoudt rapportagerekenlaag en vorige dagstand bij gewijzigde bytes; overdag alleen snapshot-read',async()=>{
  const {csvFixture}=await import('./test-support/web-reports-drive.js'),{calculateReport}=await import('./ontrack-report/data.js'),{webReportKpis}=await import('./report-web.js');
@@ -161,8 +161,8 @@ test('Nachtelijke verwerking mag na 00:59 afronden; verlopen herbouw publiceert 
  }
 });
 
-test('Onvolledige beoordelingen geven volgens scenario H geen gedeeltelijke score',()=>{
+test('Onvolledige beoordelingen tonen beschikbare incidentpunten zonder geschatte analysepunten',()=>{
  const refs=incidentReferences([row('reference',{kpis:kpis(1)})]);
- for(const patch of [{visitorsRating:null},{artistRating:0},{visitorsFinal:false},{artistFinal:false},{operationalLevels:null},{operationalLevels:['missing']}])assert.equal(calculateArtistRisk([row('partial',patch)],refs),null);
+ for(const patch of [{visitorsRating:null},{artistRating:0},{visitorsFinal:false},{artistFinal:false},{operationalLevels:null},{operationalLevels:['missing']}])assert.equal(calculateArtistRisk([row('partial',patch)],refs).status,'incomplete');
  assert.equal(calculateArtistRisk([row('full')],null),null);
 });

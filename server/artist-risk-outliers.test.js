@@ -41,8 +41,9 @@ test('G: medisch gebruikt uitsluitend de bestaande staffel met exacte verhouding
  const own=show('own',counts(10)),score=calculateArtistRisk([own],references());assert.equal(score.incidents.medical,10);assert.equal(score.incidents.security,25);assert.equal(score.parts.incidents,35);assert.equal(score.total,100);
  assert.equal(Math.round(Object.values(displayedRiskParts(score)).reduce((s,n)=>s+n,0)*100),Math.round(score.total*100));
 });
-test('H en nulreferenties: onvolledig blijft zonder score; positieve telling tegenover nul is onbetrouwbaar',()=>{
- for(const extra of [{visitorsFinal:false},{artistFinal:false},{visitorsRating:null},{artistRating:0},{operationalLevels:null},{medicalComplete:false},{securityComplete:false},{visitors:0}])assert.equal(calculateArtistRisk([securityCase({physical:11},extra)],references()),null);
+test('Gedeeltelijke score behoudt nieuw model; ontbrekende incidentdata en nulreferenties blijven beschermd',()=>{
+ for(const extra of [{visitorsFinal:false},{artistFinal:false},{visitorsRating:null},{artistRating:0},{operationalLevels:null}]){const partial=calculateArtistRisk([securityCase({physical:11},extra)],references());assert.equal(partial.status,'incomplete');assert.equal(partial.availableMaximum,35);assert.equal(partial.total,19);assert.equal(partial.level,null);assert.deepEqual(partial.parts,{visitors:null,artist:null,operational:null,incidents:19});assert.equal(partial.incidents.security,19);assert.equal(partial.incidents.medical,0);}
+ for(const extra of [{medicalComplete:false},{securityComplete:false},{visitors:0}])assert.equal(calculateArtistRisk([securityCase({physical:11},extra)],references()),null);
  const zeroRefs=incidentReferences([show('base')]);assert.equal(calculateArtistRisk([show('own')],zeroRefs).total,65);
  const assessment=assessArtistRisk([securityCase({physical:11})],zeroRefs);assert.equal(assessment.score,null);assert.equal(assessment.reliability,'unreliable');assert.ok(assessment.issues.some(row=>row.key==='physical'&&row.reason==='ZERO_REFERENCE'));
  assert.equal(incidentRateFraction({incidents:1,visitors:2000},{incidents:0,visitors:2000}),null);assert.equal(securityOutlierContribution({incidents:1,visitors:2000},{incidents:0,visitors:2000}),null);
@@ -57,5 +58,6 @@ test('De beveiligde artiest-API projecteert dezelfde centrale uitschieter en bet
  const refs=references(),rows=[securityCase({evictions:9})],id='a_'+createHash('sha256').update('fixture').digest('hex');
  const service=createIncidentMetricsService({shows:async op=>op==='incident-daily-read'?{references:refs,updatedAt:'2026-11-10T00:00:00Z'}:{policyVersion:2,rows}});
  const data=await service.snapshot('actor',[id]);assert.equal(data.score.incidents.security,19);assert.equal(data.assessment.reliability,'reliable');assert.equal(data.score.modelVersion,artistRiskModel.version);assert.equal('shows' in data,false);
+ rows[0].artistFinal=false;const partial=await service.snapshot('actor',[id]);assert.equal(partial.score.status,'incomplete');assert.equal(partial.score.incidents.security,19);assert.equal(partial.score.level,null);
  refs.indicators.security.evictions={incidents:0,visitors:2000,visitorUnits:80000,rate:0};const missing=await service.snapshot('actor',[id]);assert.equal(missing.score,null);assert.equal(missing.assessment.reliability,'unreliable');
 });

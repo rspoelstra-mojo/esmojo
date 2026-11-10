@@ -139,9 +139,12 @@ volledige analyses blijven apart leesbaar. Alle opslag blijft vertrouwelijk in
 Drive. Geen nieuwe browseropslag, Supabase-tabel of openbare leesroute.
 
 
-De nieuwste rekenopdracht vervangt de eerdere incident-only fallback. Alleen
-volledige beoordelingen krijgen een score. Status complete en groen label blijven;
-onvolledige of onbetrouwbare gegevens tonen de lege kaart zonder gedeeltelijke som.
+De gebruiker heeft na de vernieuwde rekenopdracht de incident-only fallback
+expliciet hersteld: complete/groen bij volledige beoordelingen; incomplete/geel
+wanneer alleen betrouwbare incidentpunten beschikbaar zijn. De nieuwe 25/10-
+verdeling en uitschieterberekening gelden ook voor de gedeeltelijke score.
+Ontbrekende beoordelingen blijven null, geen risicoklasse bij incomplete.
+Zonder betrouwbare incidenten/vergelijking blijft de batterij leeg.
 
 ## Incidentmodel met uitschieters (10 november 2026)
 
@@ -159,7 +162,8 @@ TSC-brontellingen of dagactualisatie.
 De centrale assessArtistRisk rapporteert score plus betrouwbaarheid. Positief
 tegenover nulreferentie krijgt ZERO_REFERENCE en geen totaalscore; nul/nul=0.
 De beveiligde API geeft de beoordeling door, de kaart markeert zo'n vergelijking
-als niet betrouwbaar. Ontbrekende analyses leveren INCOMPLETE_DATA. Geen extra
+als niet betrouwbaar. Ontbrekende analyses met wel betrouwbare incidentdata leveren een gedeeltelijke
+score; ontbreken ook geschikte incidenten, dan INCOMPLETE_DATA. Geen extra
 opslag. calculateArtistRisk blijft voor bestaande afnemers score/null retourneren.
 Rekenbreuken vergelijken bezoekersunits met BigInt, zonder afgeronde schermcijfers.
 De vier batterijsegmenten blijven25/25/15/35; labels tellen op tot het totaal.

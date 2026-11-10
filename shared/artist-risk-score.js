@@ -73,15 +73,16 @@ export function calculateIncidentRisk(own,references){
 }
 export function assessArtistRisk(rows,references){
  const unavailable=(reason,issues=[])=>({score:null,reliability:issues.length?'unreliable':'unavailable',reason,issues});
- const eligible=deduplicateIncidentRows(rows).filter(row=>suitableIncidents(row)&&row.visitorsFinal===true&&row.artistFinal===true&&[row.visitorsRating,row.artistRating].every(n=>Number.isFinite(n)&&n>=1&&n<=10)&&operationalPoints(row.operationalLevels)!==null);
- if(!eligible.length)return unavailable('INCOMPLETE_DATA');
+ const unique=deduplicateIncidentRows(rows),eligible=unique.filter(row=>suitableIncidents(row)&&row.visitorsFinal===true&&row.artistFinal===true&&[row.visitorsRating,row.artistRating].every(n=>Number.isFinite(n)&&n>=1&&n<=10)&&operationalPoints(row.operationalLevels)!==null);
+ const complete=eligible.length>0,selected=complete?eligible:unique.filter(suitableIncidents);
+ if(!selected.length)return unavailable('INCOMPLETE_DATA');
  if(!references?.concerts||!references.visitors)return unavailable('MISSING_REFERENCE');
- const own=incidentReferences(eligible),n=eligible.length,calculation=calculateIncidentRisk(own,references);
+ const own=incidentReferences(selected),n=selected.length,calculation=calculateIncidentRisk(own,references);
  if(!calculation.reliable)return unavailable('UNRELIABLE_REFERENCE',calculation.issues);
- const parts={visitors:eligible.reduce((sum,row)=>sum+row.visitorsRating*2.5,0)/n,artist:eligible.reduce((sum,row)=>sum+row.artistRating*2.5,0)/n,operational:eligible.reduce((sum,row)=>sum+operationalPoints(row.operationalLevels),0)/n,incidents:calculation.security+calculation.medical};
+ const parts={visitors:complete?eligible.reduce((sum,row)=>sum+row.visitorsRating*2.5,0)/n:null,artist:complete?eligible.reduce((sum,row)=>sum+row.artistRating*2.5,0)/n:null,operational:complete?eligible.reduce((sum,row)=>sum+operationalPoints(row.operationalLevels),0)/n:null,incidents:calculation.security+calculation.medical};
  const total=Object.values(parts).reduce((sum,value)=>sum+value,0);
- if(!Number.isFinite(total)||total<1||total>100)throw Error('INVALID_SCORE');
- return{score:{status:'complete',availableMaximum:100,modelVersion:artistRiskModel.version,total,level:riskClass(total),parts,incidents:{security:calculation.security,medical:calculation.medical},incidentCalculation:calculation.details,concerts:n},reliability:'reliable',reason:null,issues:[]};
+ if(!Number.isFinite(total)||total<(complete?1:0)||total>100)throw Error('INVALID_SCORE');
+ return{score:{status:complete?'complete':'incomplete',availableMaximum:complete?100:35,modelVersion:artistRiskModel.version,total,level:complete?riskClass(total):null,parts,incidents:{security:calculation.security,medical:calculation.medical},incidentCalculation:calculation.details,concerts:n},reliability:'reliable',reason:null,issues:[]};
 }
 export function calculateArtistRisk(rows,references){return assessArtistRisk(rows,references).score;}
 // Afgeronde segmentlabels tellen exact op tot de afgeronde totaalscore.
