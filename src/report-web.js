@@ -1,3 +1,4 @@
+import {reportTimetableCaption} from './lib/report-timetable-caption.js';
 import {createMailOpenReceipt} from './lib/mail-open-receipt.js';
 import {reportChronology,timetableEntryLabel} from '../shared/show-timetable.js';
 import {medicalReportFilters} from '../shared/report-medical.js';
@@ -90,8 +91,7 @@ function renderDailyReport(parent,report){
  const counter=node('span','report-incident-count');counter.setAttribute('role','status');counter.setAttribute('aria-live','polite');counter.setAttribute('aria-atomic','true');
  incidentHeader.append(title,filterControls,counter);incidents.append(incidentHeader);
  const timetableInfo=node('p','report-timetable-caption');
- if(report.timetable?.status==='available'){const captured=new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Amsterdam'}).format(new Date(report.timetable.capturedAt));timetableInfo.textContent='Geplande tijden volgens MOJO · vastgelegd '+captured;}
- else timetableInfo.textContent='Geen op de showdag opgeslagen MOJO-tijdschema beschikbaar.';
+ timetableInfo.textContent=reportTimetableCaption(report.timetable);
  incidents.append(timetableInfo);
  const explanation=node('p','report-filter-explanation'),list=node('div','report-incident-list');list.id='report-incident-list';incidents.append(explanation,list);view.append(incidents);parent.replaceChildren(view);
  function updateIncidents(){

@@ -153,3 +153,6 @@ jobs:
 
       - name: Artist empty battery, biography preview and show switching
         run: node tools/ui/check-artist-display.mjs
+
+      - name: TSC and MOJO report rendering with source-specific times
+        run: node tools/ui/check-tsc-report.mjs

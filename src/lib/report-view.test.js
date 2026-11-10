@@ -45,3 +45,13 @@ test('Datumtabs tonen maximaal vijf unieke shows van nieuw naar oud; minder besc
  assert.deepEqual(reportTabDates(['2026-11-03']),['2026-11-03']);assert.deepEqual(reportTabDates(['2026-11-03','2026-11-03']),['2026-11-03']);assert.deepEqual(reportTabDates([]),[]);
 });
 assert.deepEqual(reportTabDates(['2026-01-01','2026-02-01','2026-03-01','2026-04-01','2026-05-01','2026-06-01'],'2026-01-01'),['2026-06-01','2026-05-01','2026-04-01','2026-03-01','2026-01-01']);
+
+import {reportTimetableCaption} from './report-timetable-caption.js';
+test('TSC-tijden zonder MOJO-opnamedatum blokkeren rapport niet en suggereren geen MOJO-bron',()=>{
+ const tsc={status:'available',sourceType:'tsc-historical',entries:[]};
+ assert.match(reportTimetableCaption(tsc),/Werkelijke tijden.*TSC/);assert.doesNotMatch(reportTimetableCaption(tsc),/MOJO/);
+ assert.match(reportTimetableCaption({...tsc,status:'missing'}),/Geen tijden.*TSC/);
+ assert.match(reportTimetableCaption({status:'available',capturedAt:'2020-02-01T11:00:00.000Z'}),/MOJO.*2020/);
+ for(const capturedAt of [undefined,null,'invalid',''])assert.equal(reportTimetableCaption({status:'available',capturedAt}),'Geplande tijden volgens MOJO.');
+ assert.match(reportTimetableCaption(null),/Geen.*MOJO/);
+});
