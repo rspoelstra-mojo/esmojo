@@ -108,6 +108,15 @@ main:has(> .artist-selection-empty) { display:flex; }
 :root[data-theme="dark"] .artist-score-battery { background:#303742; }
 @container artist-profile (max-width:460px) { .artist-score-legend { grid-template-columns:minmax(0,1fr); } }
 
-.artist-score-heading { display:flex; align-items:center; gap:12px; }
 .artist-score-body { min-height:190px; }
 @container artist-profile (max-width:460px) { .artist-score-body { min-height:290px; } }
+
+.artist-score-heading { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:start; gap:12px; }
+.artist-score-heading h2 { align-self:center; }
+.artist-score-status { display:inline-flex; justify-content:center; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:600; line-height:1.4; white-space:nowrap; }
+.artist-score-status[hidden] { display:none; }
+.artist-score-status-incomplete { background:#fff3cc; color:#805c00; }
+.artist-score-status-complete { background:#e4f3e9; color:#207246; }
+:root[data-theme="dark"] .artist-score-status-incomplete { background:#3b3017; color:#f6cf65; }
+:root[data-theme="dark"] .artist-score-status-complete { background:#153c2c; color:#86d5aa; }
+@container artist-profile (max-width:640px) { .artist-score-heading { grid-template-columns:40px minmax(0,1fr); } .artist-score-status { grid-column:2; justify-self:start; } }

@@ -38,6 +38,14 @@ Beheerpagina leest uitsluitend de vertrouwelijke opgeslagen Drive-dagstand, zond
 inventarisatie of berekening bij openen. Eenmalige eerste initialisatie mag direct.
 Behoud vorige complete dagstand bij fouten; geen herbouw iedere vijf minuten.
 
+Op 10 november vraagt de gebruiker ook een onvolledige artiestscore wanneer alleen
+betrouwbare historische incidentgegevens beschikbaar zijn. Gebruik dan uitsluitend
+de bestaande incidentpunten (maximaal 35 op de schaal 100); ontbrekende analyses
+blijven null. Markeer scorestatus expliciet complete/incomplete voor toekomstige
+overzichten. Geef onvolledige scores geen risicoklasse. Toon rechtsboven een gele
+statusbadge Onvolledige risicoscore of groene Volledige risicoscore. Volledige
+scores blijven uitsluitend op volledig beoordeelde concerten gebaseerd.
+
 ## Uitvoering en publicatie
 
 Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende

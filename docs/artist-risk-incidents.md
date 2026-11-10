@@ -137,3 +137,15 @@ vorige complete cijfers staan. Fouten of onvolledige bronnen publiceren niets.
 Artiestenscores gebruiken dezelfde gepubliceerde referenties; de eigen actuele
 volledige analyses blijven apart leesbaar. Alle opslag blijft vertrouwelijk in
 Drive. Geen nieuwe browseropslag, Supabase-tabel of openbare leesroute.
+
+
+Op 10 november is een incident-only fallback toegevoegd. `status: incomplete`
+heeft maximaal 35 beschikbare punten, analyses blijven `null`, geen risicoklasse.
+`status: complete` gebruikt ongewijzigd uitsluitend volledig beoordeelde concerten
+en heeft maximaal 100 beschikbare punten. `availableMaximum` maakt dit ook voor
+latere overzichten expliciet. Geen opschaling naar 100: bijvoorbeeld 12 incidentpunten
+blijven een batterijvulling van 12% en 12/35 in de legenda. Nul incidentpunten zijn
+beschikbaar, geen ontbrekende score. Zonder betrouwbare incidenten blijft de kaart leeg.
+Labels rechtsboven: geel onvolledig, groen volledig; donkere variant en mobiele
+regelomloop behouden dezelfde vaste lettergrootte. Statusgegevens zijn onderdeel
+van de reeds vertrouwelijke score, zonder nieuwe opslagbron.

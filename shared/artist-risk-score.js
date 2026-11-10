@@ -36,20 +36,22 @@ export function incidentReferences(rows){
 }
 export function calculateArtistRisk(rows,references){
  const eligible=rows.filter(row=>suitableIncidents(row)&&row.visitorsFinal===true&&row.artistFinal===true&&[row.visitorsRating,row.artistRating].every(n=>Number.isFinite(n)&&n>=1&&n<=10)&&operationalPoints(row.operationalLevels)!==null);
- if(!eligible.length||!references?.concerts||!references.visitors)return null;
+ if(!references?.concerts||!references.visitors)return null;
+ const complete=eligible.length>0,selected=complete?eligible:rows.filter(suitableIncidents);
+ if(!selected.length)return null;
  // Ook hier één concert slechts eenmaal. Referenties gebruiken ruimere dataset.
- const own=incidentReferences(eligible),n=eligible.length;
- const parts={visitors:eligible.reduce((sum,row)=>sum+row.visitorsRating*2.5,0)/n,artist:eligible.reduce((sum,row)=>sum+row.artistRating*2.5,0)/n,operational:eligible.reduce((sum,row)=>sum+operationalPoints(row.operationalLevels),0)/n,incidents:0};
+ const own=incidentReferences(selected),n=selected.length;
+ const parts={visitors:complete?eligible.reduce((sum,row)=>sum+row.visitorsRating*2.5,0)/n:null,artist:complete?eligible.reduce((sum,row)=>sum+row.artistRating*2.5,0)/n:null,operational:complete?eligible.reduce((sum,row)=>sum+operationalPoints(row.operationalLevels),0)/n:null,incidents:0};
  const incidents={security:0,medical:0};
  for(const [group,definitions]of Object.entries(incidentIndicators))for(const [key,,maximum]of definitions){const ref=references.indicators[group][key].rate;if(ref===null)return null;incidents[group]+=maximum*incidentRateFraction(own.indicators[group][key],references.indicators[group][key]);}
  parts.incidents=incidents.security+incidents.medical;
  const total=Object.values(parts).reduce((sum,value)=>sum+value,0);
- if(!Number.isFinite(total)||total<1||total>100)throw Error('INVALID_SCORE');
- return{total,level:riskClass(total),parts,incidents,concerts:n};
+ if(!Number.isFinite(total)||total<(complete?1:0)||total>100)throw Error('INVALID_SCORE');
+ return{status:complete?'complete':'incomplete',availableMaximum:complete?100:35,total,level:complete?riskClass(total):null,parts,incidents,concerts:n};
 }
 // Afgeronde segmentlabels tellen exact op tot de afgeronde totaalscore.
 export function displayedRiskParts(score){
- const entries=Object.entries(score.parts).map(([key,value])=>({key,value:value*100,units:Math.floor(value*100)})),target=Math.round(score.total*100);
+ const entries=Object.entries(score.parts).filter(([,value])=>Number.isFinite(value)).map(([key,value])=>({key,value:value*100,units:Math.floor(value*100)})),target=Math.round(score.total*100);
  let remaining=target-entries.reduce((n,row)=>n+row.units,0);
  for(const row of [...entries].sort((a,b)=>(b.value-b.units)-(a.value-a.units)))if(remaining-->0)row.units++;
  return Object.fromEntries(entries.map(row=>[row.key,row.units/100]));

@@ -21,7 +21,7 @@ test('Operationele score per concert begrensd en daarna gemiddeld; ontbrekende b
 });
 test('Alleen complete concerten in score; ruimere referentiedataset bezoekersgewogen en nul geldig',()=>{
  const rows=[row('a',{visitors:100,kpis:kpis(1)}),row('b',{visitors:900,kpis:kpis(0),visitorsFinal:false})],refs=incidentReferences(rows);assert.equal(refs.concerts,2);assert.equal(refs.visitors,1000);assert.equal(refs.indicators.security.total.rate,1);assert.equal(calculateArtistRisk(rows,refs).concerts,1);
- for(const patch of [{visitors:null},{visitors:0},{visitors:-1},{securityComplete:false},{medicalComplete:false},{kpis:null},{visitorsRating:null},{artistRating:0},{visitorsFinal:false},{artistFinal:false},{operationalLevels:null},{operationalLevels:['missing']}])assert.equal(calculateArtistRisk([row('a',patch)],refs),null,JSON.stringify(patch));
+ for(const patch of [{visitors:null},{visitors:0},{visitors:-1},{securityComplete:false},{medicalComplete:false},{kpis:null}])assert.equal(calculateArtistRisk([row('a',patch)],refs),null,JSON.stringify(patch));
  assert.throws(()=>incidentReferences([row('first',{date:'2026-11-01',venue:'Gashouder'}),row('alias',{date:'2026-11-01',venue:'Gashouder'})]),/DUPLICATE/);
  assert.throws(()=>incidentReferences([row('same'),row('same')]),/DUPLICATE/);assert.equal(incidentReferences([row('zero')]).indicators.medical.ambulance.rate,0);
  assert.equal(incidentReferences([row('missing',{kpis:null})]).indicators.medical.total.rate,null);
@@ -52,7 +52,7 @@ test('Historische CSV vóór 1 november gebruikt ingevoerde tickets 1:1; grensda
 });
 test('Artiestscore gebruikt dezelfde gepubliceerde dagreferenties en geeft geen beheerregistraties door',async()=>{
  const rows=[row('a')],references=incidentReferences(rows);let reads=0;
- const service=createIncidentMetricsService({shows:async(op,body)=>{reads++;if(op==='incident-daily-read'){assert.equal(body.referencesOnly,true);return{references,updatedAt:'2026-11-08T00:00:00Z'};}assert.equal(op,'incident-read');return{policyVersion:2,rows,jobs:[]};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references,references);assert.equal(reads,2);
+ const service=createIncidentMetricsService({shows:async(op,body)=>{reads++;if(op==='incident-daily-read'){assert.equal(body.referencesOnly,true);return{references,updatedAt:'2026-11-08T00:00:00Z'};}assert.equal(op,'incident-read');return{policyVersion:2,rows,jobs:[]};}}),id='a_'+createHash('sha256').update('fixture').digest('hex');const data=await service.snapshot('actor',[id]);assert.equal(data.score.total,65);assert.equal('shows' in data,false);assert.equal(data.references,references);assert.equal(reads,2);rows[0].visitorsFinal=false;const partial=await service.snapshot('actor',[id]);assert.equal(partial.score.status,'incomplete');assert.equal(partial.score.parts.incidents,0);assert.equal(partial.score.parts.visitors,null);
 });
 test('Nachtwerker behoudt rapportagerekenlaag en vorige dagstand bij gewijzigde bytes; overdag alleen snapshot-read',async()=>{
  const {csvFixture}=await import('./test-support/web-reports-drive.js'),{calculateReport}=await import('./ontrack-report/data.js'),{webReportKpis}=await import('./report-web.js');
@@ -159,4 +159,15 @@ test('Nachtelijke verwerking mag na 00:59 afronden; verlopen herbouw publiceert 
  for(const [at,allowed]of [['2026-11-09T01:00:00Z',true],['2026-11-09T04:00:00Z',false]]){
   const d=dailyDrive(),initial=d.call('incident-daily-start');d.call('incident-daily-publish',{day:initial.day,payload:d.payload()});d.time('2026-11-08T23:00:00Z');d.call('incident-daily-start');d.time(at);assert.equal(d.call('incident-daily-state').needsUpdate,allowed,at);
  }
+});
+
+test('Onvolledige score toont alleen bezoekersgewogen incidentpunten zonder risicoklasse of vervangende beoordelingen',()=>{
+ const own=[row('small',{visitors:100,kpis:kpis(5),visitorsFinal:false}),row('large',{visitors:900,kpis:kpis(5),artistFinal:false}),row('invalid',{medicalComplete:false,kpis:kpis(100)})],refs=incidentReferences([row('reference',{visitors:100000,kpis:kpis(1)})]);
+ const score=calculateArtistRisk(own,refs);assert.equal(score.status,'incomplete');assert.equal(score.availableMaximum,35);assert.equal(score.total,35);assert.equal(score.concerts,2);assert.equal(score.level,null);
+ assert.deepEqual(score.parts,{visitors:null,artist:null,operational:null,incidents:35});assert.deepEqual(displayedRiskParts(score),{incidents:35});
+ for(const patch of [{visitorsRating:null},{artistRating:0},{visitorsFinal:false},{artistFinal:false},{operationalLevels:null},{operationalLevels:['missing']}])assert.equal(calculateArtistRisk([row('partial',patch)],refs).status,'incomplete');
+ const zero=calculateArtistRisk([row('zero',{visitorsFinal:false})],refs);assert.equal(zero.total,0);assert.equal(zero.status,'incomplete');assert.deepEqual(displayedRiskParts(zero),{incidents:0});
+ assert.equal(calculateArtistRisk(own,incidentReferences([])),null);assert.throws(()=>calculateArtistRisk([own[0],own[0]],refs),/DUPLICATE/);
+ const complete=calculateArtistRisk([row('complete'),...own],refs);assert.equal(complete.status,'complete');assert.equal(complete.availableMaximum,100);assert.equal(complete.concerts,1);assert.equal(complete.total,65);
+ const low=row('low',{visitors:900,kpis:kpis(0),visitorsFinal:false}),high=row('high',{visitors:100,kpis:kpis(10),visitorsFinal:false}),weightedRefs=incidentReferences([row('baseline',{visitors:1000,kpis:kpis(10)})]);assert.equal(calculateArtistRisk([low,high],weightedRefs).total,0);
 });
