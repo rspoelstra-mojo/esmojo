@@ -39,6 +39,7 @@ jobs:
           ESMOJO_TEST_REDIS_PORT: '6379'
         run: |
           node server/accounts-api.test.js
+          node --test server/show-management.test.js
           node --test src/lib/copy-activation-link.test.js
           node --test src/lib/activation-verification.test.js
           node server/account-modules.test.js
@@ -165,3 +166,5 @@ jobs:
 
       - name: Artist profile and risk together, silent report preloading
         run: node tools/ui/check-artist-landing.mjs
+      - name: Showbeheer PIN and layout browser checks
+        run: node tools/ui/check-show-management.mjs

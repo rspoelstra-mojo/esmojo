@@ -6,12 +6,12 @@ function fixture(options={}){
   append(...items){for(const item of items){item.parent=this;this.children.push(item);}}
   replaceChildren(...items){this.children=[];this.append(...items);}setAttribute(k,v){this.attributes[k]=v;}removeAttribute(k){delete this.attributes[k];}addEventListener(){}focus(){}remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this);}
  }
- const content=new Element('main'),menu=new Element('a'),network=deferred(),profile=deferred(),risks=deferred();let cleaned=0,calls=0;const view={tab:options.rememberedTab??0};
- const context=vm.createContext({document:{createElement:tag=>new Element(tag),querySelector:()=>menu},Intl,Date,URL,URLSearchParams,Promise,setTimeout,clearTimeout,requestAnimationFrame:()=>1,cancelAnimationFrame(){},ResizeObserver:class{observe(){}disconnect(){}},access(){},createShowPlanning:()=>()=>{},createShowMeasures:()=>()=>{},loadShowPhoto(){},createShowData:()=>({request(){},version:()=>0,dispose(){cleaned++;}}),createShowProfile:()=>{const dispose=()=>{cleaned++;};dispose.ready=profile.promise;return dispose;},createRiskAnalysis:()=>({prepare:()=>risks.promise,activate(){},dispose(){cleaned++;}})});
+ const content=new Element('main'),menu=new Element('a'),network=deferred(),profile=deferred(),risks=deferred();let cleaned=0,calls=0,managed=0;const view={tab:options.rememberedTab??0};
+ const context=vm.createContext({document:{createElement:tag=>new Element(tag),querySelector:()=>menu},Intl,Date,URL,URLSearchParams,Promise,setTimeout,clearTimeout,requestAnimationFrame:()=>1,cancelAnimationFrame(){},ResizeObserver:class{observe(){}disconnect(){}},access(){},createShowManagement:()=>{managed++;return()=>{};},createShowPlanning:()=>()=>{},createShowMeasures:()=>()=>{},loadShowPhoto(){},createShowData:()=>({request(){},version:()=>0,dispose(){cleaned++;}}),createShowProfile:()=>{const dispose=()=>{cleaned++;};dispose.ready=profile.promise;return dispose;},createRiskAnalysis:()=>({prepare:()=>risks.promise,activate(){},dispose(){cleaned++;}})});
  for(const name of ['src/lib/submenu-loading.js','shared/show-navigation.js','src/show-page.js'])vm.runInContext(readFileSync(new URL('../'+name,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
  const memory={acquire(){calls++;let released=false;return{view,ready:network.promise.then(()=>({request(){},version:()=>0})),release(){if(!released){released=true;cleaned++;}}};}};
-  const dispose=context.createShowPage(content,{key:'Fixture',name:'Testshow',dates:['2026-11-06'],venue:'Gashouder',city:'Amsterdam'},{initialTab:options.initialTab,memory,request:()=>network.promise,loadPhoto:async()=>null});
- return{content,menu,network,profile,risks,dispose,calls:()=>calls,cleaned:()=>cleaned};
+  const dispose=context.createShowPage(content,{key:'Fixture',name:'Testshow',dates:['2026-11-06'],venue:options.venue||'Gashouder',city:'Amsterdam'},{initialTab:options.initialTab,memory,request:()=>network.promise,loadPhoto:async()=>null});
+ return{content,menu,network,profile,risks,dispose,calls:()=>calls,cleaned:()=>cleaned,managed:()=>managed};
 }
 test('Show verschijnt één keer, pas na bundel én beide gereedmeldingen; submenu blijft tot dan bezig',async()=>{
  const h=fixture();assert.equal(h.calls(),1);assert.equal(h.content.children.length,0);assert.equal(h.menu.attributes['aria-busy'],'true');h.network.resolve({});await tick();assert.equal(h.content.children.length,0);h.profile.resolve();await tick();assert.equal(h.content.children.length,0);h.risks.resolve();await tick();assert.equal(h.content.children.length,1);assert.equal(h.content.children[0].className,'show-page');assert.equal(h.menu.attributes['aria-busy'],undefined);h.dispose();assert.equal(h.cleaned(),3);assert.equal(h.menu.children.length,0);
@@ -30,4 +30,8 @@ test('Expliciet deadline-tabblad is geselecteerd bij de eerste zichtbare showwee
   const replace=h.content.replaceChildren.bind(h.content);h.content.replaceChildren=(...items)=>{if(items[0]?.className==='show-page')first=items[0].children[0].children[2].children.slice(0,5).map(button=>button.attributes['aria-selected']);replace(...items);};
   h.network.resolve({});h.profile.resolve();h.risks.resolve();await tick();assert.equal(first.filter(value=>value==='true').length,1);assert.equal(first[initialTab],'true');const panels=h.content.children[0].children[1].children;assert.equal(panels[initialTab].hidden,false);assert.ok(panels.every((panel,index)=>index===initialTab||panel.hidden));h.dispose();
  }
+});
+
+test('Projectteam is hernoemd; optioneel Showbeheer bestaat uitsluitend bij Gashouder',async()=>{
+ for(const venue of ['Gashouder','Ziggo Dome']){const h=fixture({venue});h.network.resolve({});h.profile.resolve();h.risks.resolve();await tick();assert.equal(h.managed(),venue==='Gashouder'?1:0);const all=[];const collect=node=>{all.push(node);for(const child of node.children||[])collect(child);};collect(h.content);assert.ok(all.some(node=>node.textContent==='Projectteam'));assert.ok(!all.some(node=>node.textContent==='Show team'));h.dispose();}
 });

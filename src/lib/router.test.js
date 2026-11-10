@@ -16,7 +16,7 @@ test('Interne klik gebruikt History; terug/vooruit en legacywijziging renderen; 
  location=new URL('https://esmojo.nl/#/shows');events.hashchange();assert.equal(location.hash,'');assert.equal(rendered,3);dispose();assert.equal(Object.keys(handlers).length,0);
 });
 test('Hostingfallbacks omvatten alleen applicatiepaden en laten API/discovery/assets ongemoeid',()=>{
- const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));assert.deepEqual(config.rewrites.find(rule=>rule.source==='/api/mfa'),{source:'/api/mfa',destination:'/api/access?action=mfa'});for(const rule of config.rewrites.filter(rule=>!['/test/fluid-layout','/api/mfa','/api/incident-references-sync'].includes(rule.source))){assert.equal(rule.destination,'/index.html');assert.ok(isAppPath(rule.source.replace('/:path*','')));assert.ok(!rule.source.startsWith('/api'));}assert.deepEqual(config.rewrites.find(rule=>rule.source==='/api/incident-references-sync'),{source:'/api/incident-references-sync',destination:'/api/web-reports-sync?incidentMetrics=1'});assert.equal(config.rewrites.length,9);assert.deepEqual(config.rewrites.at(-1),{source:'/test/fluid-layout',destination:'/index.html'});assert.equal(isAppPath('/test/fluid-layout'),true);assert.equal(isAppPath('/test/other'),false);
+ const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));assert.deepEqual(config.rewrites.find(rule=>rule.source==='/api/mfa'),{source:'/api/mfa',destination:'/api/access?action=mfa'});for(const rule of config.rewrites.filter(rule=>!['/test/fluid-layout','/api/mfa','/api/incident-references-sync','/showbeheer/:path*'].includes(rule.source))){assert.equal(rule.destination,'/index.html');assert.ok(isAppPath(rule.source.replace('/:path*','')));assert.ok(!rule.source.startsWith('/api'));}assert.deepEqual(config.rewrites.find(rule=>rule.source==='/api/incident-references-sync'),{source:'/api/incident-references-sync',destination:'/api/web-reports-sync?incidentMetrics=1'});assert.equal(config.rewrites.length,10);assert.deepEqual(config.rewrites.at(-1),{source:'/test/fluid-layout',destination:'/index.html'});assert.equal(isAppPath('/test/fluid-layout'),true);assert.equal(isAppPath('/test/other'),false);
 });
 test('Rapportages gebruikt het opgeslagen concert-ID en normaliseert oude URL’s, root, query’s en hashbladwijzers',()=>{
  const canonical='/rapportages/Jungle_Ziggo-Dome_03112026';
@@ -37,4 +37,12 @@ test('Showtab-query is expliciet gewhitelist en blijft beschikbaar bij schone en
  const {requestedShowTab}=await import('../../shared/show-navigation.js');
  for(const [tab,index]of [['overzicht',0],['showprofiel',1],['risicoanalyse',2],['maatregelen',3],['documenten',4]]){assert.equal(requestedShowTab('?tab='+tab),index);assert.equal(legacyPageUrl(new URL('https://esmojo.nl/#/shows/BUNT._Gashouder_01122026?tab='+tab)),'/shows/BUNT._Gashouder_01122026?tab='+tab);}
  for(const query of ['', '?tab=onbekend','?tab=https://example.invalid','?tab=showprofiel&tab=maatregelen'])assert.equal(requestedShowTab(query),null);
+});
+
+test('Showbeheer is een afzonderlijk document en wordt niet door de account-SPA onderschept',()=>{
+ const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));
+ assert.deepEqual(config.rewrites.find(row=>row.source==='/showbeheer/:path*'),{source:'/showbeheer/:path*',destination:'/showbeheer.html'});
+ assert.equal(isAppPath('/showbeheer/'),false);
+ for(const source of ['/showbeheer/:path*','/showbeheer.html']){const headers=config.headers.find(row=>row.source===source).headers;assert.ok(headers.some(row=>row.key==='Referrer-Policy'&&row.value==='no-referrer'));assert.ok(headers.some(row=>row.key==='Cache-Control'&&row.value==='no-store'));assert.ok(headers.some(row=>row.key==='Content-Security-Policy'&&row.value.includes("frame-ancestors 'none'")));}
+ const html=readFileSync(new URL('../../showbeheer.html',import.meta.url),'utf8');assert.ok(html.includes('/src/show-management-entry.js'));assert.ok(!html.includes('/src/main.js'));
 });

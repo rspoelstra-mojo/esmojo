@@ -1,3 +1,4 @@
+import {createShowManagement} from './show-management.js';
 import './show-tabs.css';
 import {requestedShowTab} from '../shared/show-navigation.js';
 import './show-page.css';
@@ -20,8 +21,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
   async function open(){
     if(disposed||opening)return;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
-    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeMeasures=()=>{},risks=null,observer=null,frame=null;
-    const cleanup=()=>{disposePlanning();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
+    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},risks=null,observer=null,frame=null;
+    const cleanup=()=>{disposeManagement();disposePlanning();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
       const [context,photoData]=await Promise.all([lease.ready,lease.view.photo?Promise.resolve(lease.view.photo):loadPhoto(show.key).catch(()=>null)]);
       if(disposed)return;
@@ -55,9 +56,9 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
         if(label==='Overzicht'){
           const layout=document.createElement('div');layout.className='show-overview';
           const team=document.createElement('section');team.className='show-team';
-          const teamTitle=document.createElement('h2');teamTitle.textContent='Show team';team.append(teamTitle);
+          const teamTitle=document.createElement('h2');teamTitle.textContent='Projectteam';team.append(teamTitle);
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          layout.append(team,planning);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
+          layout.append(team,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,readOnly});panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
         }
         if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
         if(label==='Maatregelen')disposeMeasures=createShowMeasures(panel,{show,data,readOnly});

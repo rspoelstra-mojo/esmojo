@@ -1,3 +1,19 @@
+## Showbeheer Gashouder (10 november 2026)
+
+De gebruiker classificeert Showbeheer (link, pincode en invulstatus) als Openbaar
+en staat Supabase-opslag en Vercel-verwerking toe. Alleen Showbeheer krijgt op
+expliciet verzoek toegang zonder account, via een geheime showlink plus zescijferige
+pincode. Andere modules behouden account/MFA/actuele modulerechten. Geen gegevens
+van bestaande rapporten, analyses of accounts via deze externe route vrijgeven.
+Aanmaak en uitlezen van de toegang blijven achter de bestaande Shows-autorisatie.
+Gebruik een aparte Supabase-tabel met RLS en uitsluitend service-role-toegang;
+Openbaar is geen toestemming om pincodes/tokens publiek uit te lezen. Credentials
+versleutelen, PIN-verificatie server-side, atomaire pogingslimiet per showlink,
+HttpOnly/Secure scoped sessie. Geen secrets in logs of browseropslag; linksecret
+in URL-fragment. De knop Verzenden blijft uitgeschakeld, geen e-mails versturen.
+Showbeheer blijft optioneel en telt nergens mee voor afronding. Alleen Gashouder,
+onder Projectteam; vijf externe lege kaarten A–E en vier Gashouder-statusvakken.
+
 # ESMOJO-projectafspraken
 
 ## MOJO-artiestbeschrijving (8 november 2026)

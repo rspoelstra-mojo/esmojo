@@ -12,7 +12,7 @@ const profile = { id, firstName: 'Test', lastName: 'Account', company:'MOJO Conc
 const env = { VITE_SUPABASE_URL: 'https://project.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SECRET_KEY: 'server-test', RESEND_API_KEY: 'mail-test' };
 const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31' } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -24,7 +24,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
       updateUserById: async (...args) => { calls.push(['password', ...args]); return {}; },
     },
   } });
-  const handler = makeAccountsHandler({ env: configuration, clientFactory, photoService:async()=>null,
+  const handler = makeAccountsHandler({ env: configuration, clientFactory, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
@@ -283,4 +283,13 @@ test('Kopieerlink blijft afgeschermd voor gewone gebruikers, MFA-fouten, actieve
   const {response,calls}=await run({method:'PATCH',body:{id:other,operation:'activation-link'},...options});assert.ok([401,403,409].includes(response.code));assert.equal(calls.some(c=>c[0]==='invite'),false);
  }
  for(const body of [{id:'invalid',operation:'activation-link'},{id:other,operation:'activation-link',email:'elsewhere@example.invalid'}]){const {response,calls}=await run({method:'PATCH',body});assert.equal(response.code,400);assert.equal(calls.some(c=>c[0]==='invite'),false);}
+});
+
+
+test('Showbeheer aanmaken en status blijven achter account, MFA, activering en Shows-rechten',async()=>{
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,activated:false}},{own:{...profile,role:'gebruiker',modules:['artists']}}]){
+  const {response,calls}=await run({...input,action:'show-management',method:'POST',body:{operation:'create',concertId:'Fixture'}});assert.ok([401,403].includes(response.code));assert.ok(!calls.some(call=>call[0]==='showManagement'));
+ }
+ for(const operation of ['status','create']){const body={operation,concertId:'Fixture'},result=await run({action:'show-management',method:'POST',body});assert.equal(result.response.code,200);assert.deepEqual(result.calls.find(call=>call[0]==='showManagement'),['showManagement',body]);}
+ const result=await run({action:'show-management',method:'GET'});assert.equal(result.response.code,405);assert.ok(!result.calls.some(call=>call[0]==='showManagement'));
 });

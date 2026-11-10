@@ -33,3 +33,6 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611060001_active_show_storage.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611060001_active_show_storage.sql
           psql -v ON_ERROR_STOP=1 -f tools/storage/check.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611100001_show_management.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611100001_show_management.sql
+          psql -v ON_ERROR_STOP=1 -f tools/storage/check-show-management.sql

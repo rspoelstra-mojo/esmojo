@@ -1,0 +1,54 @@
+/* Showoverzicht: optionele kaarten, buiten de bestaande afrondingslogica. */
+.show-management-overview { grid-column:1 / -1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:stretch; }
+.show-management-card { min-width:0; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,#fff); }
+.show-management-card h2 { margin:0 0 16px; font-size:16px; line-height:1.5; font-weight:600; }
+.show-management-card-body { display:grid; gap:16px; justify-items:start; }
+.show-management-card-body > * { max-width:100%; }
+.show-management-quadrants { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:4px; }
+.show-management-quadrant { min-width:0; padding:16px; border-top:1px solid var(--line); }
+.show-management-quadrant:nth-child(odd) { padding-left:0; border-right:1px solid var(--line); }
+.show-management-quadrant h3 { margin:0 0 8px; font-size:14px; line-height:1.5; font-weight:600; overflow-wrap:anywhere; }
+.show-management-quadrant p { margin:0; font-size:12px; color:var(--muted); }
+@container (max-width:740px) { .show-management-overview { grid-template-columns:minmax(0,1fr); } }
+/* Zelfstandige zaalpagina: dezelfde foto als de login, met een rustige overgang. */
+.show-management-page { position:relative; isolation:isolate; padding:0; min-height:100dvh; color:var(--text,#242424); }
+.show-management-background { position:fixed; inset:-32px; z-index:-2; background:#080b12 url('./assets/login-background.webp') center / cover no-repeat; transition:filter 1.2s ease,transform 1.2s ease; }
+.show-management-page::before { content:''; position:fixed; inset:0; z-index:-1; background:#050b1660; transition:background 1.2s ease; pointer-events:none; }
+.show-management-page.is-open .show-management-background { filter:blur(22px); transform:scale(1.03); }
+.show-management-page.is-open::before { background:#050b1699; }
+.show-management-brand { position:fixed; top:24px; left:13.5px; z-index:2; height:48px; width:48px; display:flex; justify-content:center; opacity:.5; }
+.show-management-brand svg { display:block; height:48px; width:auto; max-width:100%; }
+.show-management-brand svg path { fill:#fff; }
+.show-management-gate { min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:96px 24px; }
+.show-management-pin-card { width:448px; max-width:100%; padding:40px 32px; border:1px solid var(--line,#ededed); border-radius:12px; background:var(--canvas,#fafafa); box-shadow:0 16px 64px #00000014; }
+.show-management-pin-card h1 { margin:0 0 16px; font-size:24px; font-weight:600; letter-spacing:-.5px; }
+.show-management-intro { margin:0 0 24px; font-size:14px; line-height:1.6; color:var(--muted,#8c8c8c); }
+.show-management-pin-form { display:grid; gap:20px; }
+.show-management-pin { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
+.show-management-pin input { min-width:0; width:100%; height:56px; padding:0; border:1px solid var(--line,#ededed); border-radius:8px; background:var(--canvas,#fafafa); color:var(--text,#242424); font:inherit; font-size:24px; font-variant-numeric:tabular-nums; text-align:center; }
+.show-management-pin input:focus-visible { outline:2px solid #002ff4; outline-offset:2px; }
+.show-management-message { margin:0; font-size:14px; line-height:1.5; color:#bd3434; }
+.show-management-message:empty { display:none; }
+.show-management-primary { min-height:46px; padding:12px 18px; border:1px solid #002ff4; border-radius:8px; background:#002ff4; color:#fff; font:inherit; font-size:14px; cursor:pointer; }
+.show-management-primary:disabled { opacity:.55; cursor:wait; }
+.show-management-workspace { padding:96px clamp(24px,6vw,120px) 40px; }
+.show-management-heading { margin:0 0 24px; color:#fff; font-size:24px; line-height:1.3; font-weight:600; }
+.show-management-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(220px,1fr)); gap:24px; min-height:calc(100dvh - 192px); }
+.show-management-block { min-width:0; padding:24px; border:1px solid var(--line,#ededed); border-radius:12px; background:var(--fluid-card,var(--canvas,#fff)); }
+.show-management-block h2 { margin:0; font-size:18px; line-height:1.5; font-weight:600; }
+.show-management-block[data-block="A"] { grid-column:1; grid-row:1; }
+.show-management-block[data-block="B"] { grid-column:1; grid-row:2; }
+.show-management-block[data-block="C"] { grid-column:2; grid-row:1; }
+.show-management-block[data-block="D"] { grid-column:2; grid-row:2; }
+.show-management-block[data-block="E"] { grid-column:3; grid-row:1 / span 2; }
+@media(max-width:900px) { .show-management-grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:auto; } .show-management-block[data-block="E"] { grid-column:1 / -1; grid-row:3; min-height:220px; } }
+@media(max-width:560px) { .show-management-pin-card { padding:32px 20px; } .show-management-pin { gap:6px; } .show-management-grid { display:flex; flex-direction:column; gap:20px; } .show-management-block { min-height:200px; } }
+@media(prefers-reduced-motion:reduce) { .show-management-background,.show-management-page::before { transition:none; } }
+.show-management-link-row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; width:100%; }
+.show-management-url { min-width:0; flex:1 1 180px; overflow-wrap:anywhere; font-size:14px; line-height:1.5; color:var(--blue,#002ff4); }
+.show-management-code { margin:0; font-size:14px; }
+.show-management-code strong { margin-left:8px; letter-spacing:3px; font-variant-numeric:tabular-nums; }
+.show-management-state,.show-management-progress p { margin:0; color:var(--muted); font-size:14px; line-height:1.5; }
+.show-management-progress { width:100%; display:grid; gap:12px; }
+.show-management-progress progress { width:100%; height:6px; accent-color:#002ff4; }
+.show-management-step-pending { opacity:.6; }

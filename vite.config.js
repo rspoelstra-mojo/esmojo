@@ -10,6 +10,7 @@ export function checkPublicEnv(env){
 }
 const enabled=process.env.VERCEL_ENV==='preview'||(process.env.VERCEL_ENV!=='production'&&process.env.ESMOJO_FLUID_PREVIEW==='1');
 export default defineConfig(({mode})=>({
+  build:{rollupOptions:{input:{main:'index.html',showManagement:'showbeheer.html'}}},
   envPrefix:[],
   define:{...checkPublicEnv({...loadEnv(mode,process.cwd(),'VITE_'),...process.env}),__ESMOJO_FLUID_PREVIEW__:JSON.stringify(enabled)},
   plugins:[{
