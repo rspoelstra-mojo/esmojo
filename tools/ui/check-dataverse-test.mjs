@@ -37,6 +37,8 @@ try{
  await evaluate("window.finish({configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'})");await pause(20);
  assert.equal(await evaluate("document.querySelector('button').disabled"),false);assert.equal(await evaluate("document.querySelector('code').textContent"),'DATAVERSE_FORBIDDEN');assert.equal(await evaluate("document.querySelectorAll('li').length"),3);
  await evaluate("document.querySelector('button').click();window.finish({configuration:true,token:true,dataverse:true,code:'CONNECTION_OK'})");await pause(20);assert.equal(await evaluate("document.querySelector('code').textContent"),'CONNECTION_OK');
+ await evaluate("document.querySelectorAll('button')[1].click();document.querySelector('button').click()");assert.equal(await evaluate('window.calls'),3);assert.equal(await evaluate("document.querySelectorAll('button')[1].disabled"),true);
+ await evaluate("window.finish({configuration:true,token:true,dataverse:true,tableFound:true,tableRead:false,code:'TEST_TABLE_READ_FORBIDDEN'})");await pause(20);assert.equal(await evaluate("document.querySelectorAll('li').length"),5);assert.equal(await evaluate("document.querySelector('code').textContent"),'TEST_TABLE_READ_FORBIDDEN');
  await evaluate("document.querySelector('button').click();window.cleanup();document.querySelector('main').replaceChildren();window.finish({code:'STALE'})");await pause(20);assert.equal(await evaluate("document.querySelector('main').children.length"),0);
  console.log('Dataverse-testpagina: uitsluitend klik, één lopende test, afzonderlijke stappen/diagnose, herstel en geen late resultaten na navigatie.');
 }finally{

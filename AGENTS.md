@@ -4,8 +4,10 @@ De gebruiker vraagt een stapsgewijze, afzonderlijke proef; geen migratie.
 Vier DATAVERSE_TEST_* variabelen door gebruiker in Vercel Production gezet.
 Alleen op bewuste beheerderklik achter actuele account/MFA/admin-controles:
 client_credentials naar Microsoft en GET WhoAmI op de bevestigde Dataverse-host.
-Geen tabellen of bedrijfsgegevens lezen/schrijven, geen wijziging aan bestaande
-opslag. Alleen vaste diagnosecodes/booleans teruggeven. Providerantwoorden,
+Volgende expliciet gevraagde stap: uitsluitend de door gebruiker aangemaakte
+lege testtabel crf9f_tabel1: metadata plus GET $top=1 met alleen primary-ID.
+Geen record-ID teruggeven/bewaren, geen records schrijven en geen wijziging aan
+bestaande opslag of rollen. Geen andere tabellen of bedrijfsgegevens lezen. Alleen vaste diagnosecodes/booleans teruggeven. Providerantwoorden,
 identiteitsvelden, clientgeheim en toegangstoken niet loggen, opslaan of tonen.
 De eerste proef bewijst geen lees-/schrijfrechten op toekomstige eigen tabellen.
 Een werkende proef is geen toestemming voor migratie of productiegebruik.

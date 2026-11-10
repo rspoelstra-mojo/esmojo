@@ -24,7 +24,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
       updateUserById: async (...args) => { calls.push(['password', ...args]); return {}; },
     },
   } });
-  const handler = makeAccountsHandler({ env: configuration, clientFactory, dataverseTest:async()=>{calls.push(['dataverseTest']);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
+  const handler = makeAccountsHandler({ env: configuration, clientFactory, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
@@ -298,4 +298,10 @@ test('Dataverse-proef vereist account, MFA en actuele beheerder; geen providerve
  for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,activated:false}},{own:{...profile,role:'gebruiker'}}]){const result=await run({...input,action:'dataverse-test',method:'POST',body:{operation:'status'}});assert.ok([401,403].includes(result.response.code));assert.ok(!result.calls.some(call=>call[0]==='dataverseTest'));}
  const good=await run({action:'dataverse-test',method:'POST',body:{operation:'status'}});assert.equal(good.response.code,200);assert.equal(good.response.data.code,'DATAVERSE_FORBIDDEN');assert.equal(good.calls.filter(call=>call[0]==='dataverseTest').length,1);
  for(const input of [{method:'GET'},{method:'POST',body:{operation:'create'}},{method:'POST',body:{operation:'status',url:'https://evil.invalid'}}]){const result=await run({action:'dataverse-test',...input});assert.ok([400,405].includes(result.response.code));assert.ok(!result.calls.some(call=>call[0]==='dataverseTest'));}
+});
+
+test('Dataverse table-read accepteert alleen vaste operatie achter dezelfde beheerderbeveiliging',async()=>{
+ const result=await run({action:'dataverse-test',method:'POST',body:{operation:'table-read'}});assert.equal(result.response.code,200);assert.deepEqual(result.calls.find(call=>call[0]==='dataverseTest'),['dataverseTest',{table:true}]);
+ const denied=await run({own:{...profile,role:'gebruiker'},action:'dataverse-test',method:'POST',body:{operation:'table-read'}});assert.equal(denied.response.code,403);assert.ok(!denied.calls.some(call=>call[0]==='dataverseTest'));
+ const extra=await run({action:'dataverse-test',method:'POST',body:{operation:'table-read',table:'other'}});assert.equal(extra.response.code,400);assert.ok(!extra.calls.some(call=>call[0]==='dataverseTest'));
 });

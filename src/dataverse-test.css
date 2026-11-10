@@ -4,3 +4,5 @@
 .dataverse-test p { max-width:72ch; }
 .dataverse-test button { margin:8px 0; }
 .dataverse-test code { font-size:12px; overflow-wrap:anywhere; }
+
+.dataverse-test-actions { display:flex; flex-wrap:wrap; gap:12px; }
