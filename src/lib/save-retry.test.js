@@ -27,3 +27,18 @@ test('De centrale foutmelding blijft weg tot ook de tweede poging is mislukt',as
  const activity=createSaveActivity();let release,calls=0;const gate=new Promise(done=>release=done);const work=activity.track(()=>retrySave('floor-pressure',{method:'POST',body:{operation:'complete'}},async()=>{if(++calls===1)throw transient();await gate;throw transient();}),{key:'floor'});
  await new Promise(done=>setImmediate(done));assert.equal(calls,2);assert.equal(activity.pending,true);assert.equal(activity.messages.length,0);release();await assert.rejects(work);assert.equal(activity.messages.length,1);assert.equal(activity.pending,false);
 });
+
+
+test('Showbeheer behoudt hetzelfde live AbortSignal en kopieert alleen verzoekgegevens',async()=>{
+ const controller=new AbortController(),body={operation:'create',concertId:'Fixture'},options={method:'POST',body,signal:controller.signal};let seen;
+ const work=retrySave('show-management',options,async(action,input)=>{assert.equal(action,'show-management');seen=input;await new Promise(done=>setImmediate(done));return{available:true};});
+ body.concertId='Changed';assert.deepEqual(await work,{available:true});assert.notEqual(seen,options);assert.notEqual(seen.body,body);assert.equal(seen.body.concertId,'Fixture');assert.equal(seen.signal,controller.signal);controller.abort();assert.equal(seen.signal.aborted,true);
+});
+test('Een geannuleerde opslag krijgt geen nieuwe schrijf- of bevestigingspoging',async()=>{
+ const controller=new AbortController();let calls=0;
+ await assert.rejects(retrySave('production-risks',{method:'POST',signal:controller.signal,body:{concertId:'Fixture'}},async()=>{calls++;controller.abort();throw transient();}));assert.equal(calls,1);
+});
+test('Annuleren tijdens bevestigingsread voorkomt de tweede mutatie',async()=>{
+ const controller=new AbortController(),calls=[];
+ await assert.rejects(retrySave('production-risks',{method:'POST',signal:controller.signal,body:{concertId:'Fixture'}},async action=>{calls.push(action);if(action==='show-risks')controller.abort();throw transient();}));assert.deepEqual(calls,['production-risks','show-risks']);
+});
