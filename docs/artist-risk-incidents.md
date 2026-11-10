@@ -42,12 +42,12 @@ nul risico; een ontbrekende analyse of beoordeling is geen nul.
 `shared/artist-risk-score.js` is de enige score-/referentierekenbron. Referenties
 en artiestfrequenties zijn bezoekersgewogen; gemiddelden van eindcijfers en
 begrensde operationele concertscores zijn ongewogen rekenkundige gemiddelden.
-De maxima zijn 25+25+20+15+15. Klassegrenzen zijn 55/75/90 zonder afronding.
+De maxima zijn 25+25+25+10+15. Klassegrenzen zijn 55/75/90 zonder afronding.
 Afwijkingen worden exact met gehele aantallen vergeleken (BigInt-kruisproducten)
 voor 25%, 50% en 75%; 75% geeft het volledige categoriegewicht.
 Bezoekersnoemers worden exact als 1/40-eenheden bijgehouden: nieuwe verkoop ×39,
 historische bezoekers ×40. Zo blijft ook 2,5% van een oneven verkoopaantal exact.
-De bevestigde nulregel: nul/nul → 0; positief/nul → volledig categoriegewicht.
+De nulregel: nul/nul → 0; positief/nul → onbetrouwbaar, geen totaalscore.
 Twee cijferdecimalen worden alleen voor de kaartpresentatie gebruikt; afgeronde
 segmentlabels tellen exact op tot de afgeronde totaalscore. Breedtes en klasse
 gebruiken de ongeronde score. De batterij blijft afwezig zonder volledige score.
@@ -139,13 +139,32 @@ volledige analyses blijven apart leesbaar. Alle opslag blijft vertrouwelijk in
 Drive. Geen nieuwe browseropslag, Supabase-tabel of openbare leesroute.
 
 
-Op 10 november is een incident-only fallback toegevoegd. `status: incomplete`
-heeft maximaal 35 beschikbare punten, analyses blijven `null`, geen risicoklasse.
-`status: complete` gebruikt ongewijzigd uitsluitend volledig beoordeelde concerten
-en heeft maximaal 100 beschikbare punten. `availableMaximum` maakt dit ook voor
-latere overzichten expliciet. Geen opschaling naar 100: bijvoorbeeld 12 incidentpunten
-blijven een batterijvulling van 12% en 12/35 in de legenda. Nul incidentpunten zijn
-beschikbaar, geen ontbrekende score. Zonder betrouwbare incidenten blijft de kaart leeg.
-Labels rechtsboven: geel onvolledig, groen volledig; donkere variant en mobiele
-regelomloop behouden dezelfde vaste lettergrootte. Statusgegevens zijn onderdeel
-van de reeds vertrouwelijke score, zonder nieuwe opslagbron.
+De nieuwste rekenopdracht vervangt de eerdere incident-only fallback. Alleen
+volledige beoordelingen krijgen een score. Status complete en groen label blijven;
+onvolledige of onbetrouwbare gegevens tonen de lege kaart zonder gedeeltelijke som.
+
+## Incidentmodel met uitschieters (10 november 2026)
+
+Centrale configuratie shared/artist-risk-model.js: beveiliging25, medisch10,
+uitschietermaximum19, volledige afwijkingsfactor bij +300%, aantalfactor vanaf7.
+Reguliere beveiligingsmaxima: 3,75 / 2,50 / 6,25 / 3,75 / 3,75 / 5,00.
+De vijf specifieke categorieën gebruiken dezelfde uitschieterformule. De hoogste
+bijdrage telt eenmaal; overige specifieke categorieën leveren hun reguliere punten.
+Totaal beveiligingsmeldingen levert uitsluitend reguliere basispunten. Definitief:
+min(25,max(A,B)). Bij gelijke uitschieters geldt vaste categorievolgorde. Medische
+categorieverhoudingen blijven gelijk met exact factor10/15 en maximum10, zonder
+uitschieterberekening. Geen wijziging van bezoekersgewogen referentiewaarden,
+TSC-brontellingen of dagactualisatie.
+
+De centrale assessArtistRisk rapporteert score plus betrouwbaarheid. Positief
+tegenover nulreferentie krijgt ZERO_REFERENCE en geen totaalscore; nul/nul=0.
+De beveiligde API geeft de beoordeling door, de kaart markeert zo'n vergelijking
+als niet betrouwbaar. Ontbrekende analyses leveren INCOMPLETE_DATA. Geen extra
+opslag. calculateArtistRisk blijft voor bestaande afnemers score/null retourneren.
+Rekenbreuken vergelijken bezoekersunits met BigInt, zonder afgeronde schermcijfers.
+De vier batterijsegmenten blijven25/25/15/35; labels tellen op tot het totaal.
+
+Gelijke dubbele rekenregistraties worden vóór aggregatie en beoordelingen verwijderd
+(op concert-ID of dezelfde genormaliseerde artiest/datum/zaal/voorstelling). Bij
+afwijkende tellingen/beoordelingen voor dezelfde registratie stopt de berekening
+met DUPLICATE_CONCERT; geen willekeurige keuze of mutatie van Drive-bronnen.

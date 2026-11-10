@@ -33,7 +33,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
  page.updateShowStatus=(event,state)=>{if(disposed)return;for(const button of buttons){if(button.dataset.concertDate!==event.date||button.dataset.concertVenue!==event.venue||(button.dataset.concertPerformance||null)!==(event.performance||null))continue;button.dataset.loadState=state;button.title=state==='error'?'Showoverzicht opnieuw laden':state==='loading'?'Showoverzicht wordt geladen':'Toon showoverzicht';}};
  const layout=node('div','artist-profile-layout');
  const main=node('div','artist-profile-main');
- const scoreCard=renderArtistRiskCard();main.append(scoreCard);page.updateRisk=score=>{if(!disposed)scoreCard.update(score);};
+ const scoreCard=renderArtistRiskCard();main.append(scoreCard);page.updateRisk=(score,assessment)=>{if(!disposed)scoreCard.update(score,assessment);};
  const header=node('header','artist-page-heading');
  const intro=node('div','artist-profile-intro');
  intro.append(node('h1','artist-page-title',name));

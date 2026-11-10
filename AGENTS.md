@@ -29,8 +29,7 @@ handmatige bezoekers-/volledigheidsbevestigingen: nieuwe concerten gebruiken exa
 Een geüploade CSV geldt als volledig voor beveiliging en medisch. Geen handmatige
 bevestiging meer; technische bronvalidatie blijft nodig. Verkoopbron niet
 overschrijven en ontbrekende verkoop/CSV niet als nul behandelen. Reken zonder
-tussentijdse afronding. Bij referentie nul: artiestfrequentie nul geeft nul punten;
-positief geeft het categoriepuntenmaximum.
+tussentijdse afronding. Nulreferenties volgen de nieuwste rekenafspraak hieronder.
 
 De gebruiker vraagt aanvullend een vaste incidentdagstand: dagelijks rond 00.00
 Nederlandse tijd atomair publiceren en de rest van die kalenderdag niet wijzigen.
@@ -38,13 +37,16 @@ Beheerpagina leest uitsluitend de vertrouwelijke opgeslagen Drive-dagstand, zond
 inventarisatie of berekening bij openen. Eenmalige eerste initialisatie mag direct.
 Behoud vorige complete dagstand bij fouten; geen herbouw iedere vijf minuten.
 
-Op 10 november vraagt de gebruiker ook een onvolledige artiestscore wanneer alleen
-betrouwbare historische incidentgegevens beschikbaar zijn. Gebruik dan uitsluitend
-de bestaande incidentpunten (maximaal 35 op de schaal 100); ontbrekende analyses
-blijven null. Markeer scorestatus expliciet complete/incomplete voor toekomstige
-overzichten. Geef onvolledige scores geen risicoklasse. Toon rechtsboven een gele
-statusbadge Onvolledige risicoscore of groene Volledige risicoscore. Volledige
-scores blijven uitsluitend op volledig beoordeelde concerten gebaseerd.
+Nieuwste opdracht 10 november vervangt de eerdere gedeeltelijke score en nulregel:
+25 beveiligingspunten / 10 medische punten, samen35. Beveiliging=max(basisscore,
+uitschieterscore), begrensd25. Vijf specifieke categorieën gelijkwaardig:
+19 × min(1, procentuele afwijking/300) × min(1, aantal/7). Alleen hoogste bijdrage
+plus overige specifieke reguliere punten, nooit totaal als bonus; gelijke bijdragen
+volgen vaste categorievolgorde. Medisch blijft proportioneel10/15 zonder uitschieter.
+Alleen volledig beoordeelde concerten leveren een totaalscore. Ontbrekende data:
+‘Nog geen risicoscore beschikbaar’. Nul/nul=0; positief/nul is expliciet onbetrouwbaar,
+geen schatting/volledige punten en geen totaalscore. Centrale configuratie in
+shared/artist-risk-model.js; bezoekersbasis en vaste dagreferenties blijven gelijk.
 
 ## Uitvoering en publicatie
 

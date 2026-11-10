@@ -1,6 +1,6 @@
 import {normalizeArtistName} from '../shared/artist-catalogue.js';
 import {createHash} from 'node:crypto';
-import {incidentReferences,calculateArtistRisk,validIncidentCounts,suitableIncidents,incidentVisitorUnits} from '../shared/artist-risk-score.js';
+import {incidentReferences,assessArtistRisk,validIncidentCounts,suitableIncidents,incidentVisitorUnits} from '../shared/artist-risk-score.js';
 import {calculateReport} from './ontrack-report/data.js';
 import {validateReportDay} from './web-report-catalogue.js';
 import {webReportKpis} from './report-web.js';
@@ -28,7 +28,8 @@ export function createIncidentMetricsService({shows}={}){
   const published=await invoke('incident-daily-read',{actor,...(artistIds?{referencesOnly:true}:{})});
   if(!artistIds)return published;
   const source=await invoke('incident-read',{actor,artistIds}),own=source.rows.filter(row=>artistIds.includes('a_'+createHash('sha256').update(normalizeArtistName(row.name)).digest('hex')));
-  return{pending:false,references:published.references,updatedAt:published.updatedAt,score:calculateArtistRisk(own,published.references)};
+  const {score,...assessment}=assessArtistRisk(own,published.references);
+  return{pending:false,references:published.references,updatedAt:published.updatedAt,score,assessment};
  }
  return{snapshot,async refresh({checkOnly=false}={}){
   const state=await invoke(checkOnly?'incident-daily-state':'incident-daily-start',{worker:true});

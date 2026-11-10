@@ -35,7 +35,7 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     showMemory.subscribe((event,state)=>profileView?.updateShowStatus(event,state));
     content.replaceChildren(profileView);
     async function refreshRisk(){if(cancelled)return;if(document.hidden){riskTimer=setTimeout(refreshRisk,60000);return;}
-     try{const data=await request('artist-risk',{method:'POST',body:{artistId:canonicalId},signal:riskAbort.signal});if(cancelled)return;profileView.updateRisk(data.score);riskTimer=setTimeout(refreshRisk,data.pending?500:60000);}
+     try{const data=await request('artist-risk',{method:'POST',body:{artistId:canonicalId},signal:riskAbort.signal});if(cancelled)return;profileView.updateRisk(data.score,data.assessment);riskTimer=setTimeout(refreshRisk,data.pending?500:60000);}
      catch{if(!cancelled){profileView.updateRisk(null);riskTimer=setTimeout(refreshRisk,60000);}}
     }
     requestAnimationFrame(()=>setTimeout(()=>{if(!cancelled){showMemory?.start();void refreshRisk();}},0));
