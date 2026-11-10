@@ -1,3 +1,4 @@
+import {createActivationVerification} from './lib/activation-verification.js';
 import {createMfaVerifier} from './lib/mfa-verification.js';
 import {retrySave} from './lib/save-retry.js';
 import {backgroundSaves,isSaveRequest,saveRequestInfo,SAVE_EXIT_MESSAGE} from './lib/background-saves.js';
@@ -7,6 +8,9 @@ import { getSupabase } from './lib/supabase.js';
 import './accounts.css';
 import logo from './assets/ESMOJO-logo.svg?raw';
 import { singleSubmission } from './lib/single-submission.js';
+
+// Een geplakte fragmentlink kan in hetzelfde document landen; start dan schoon.
+window.addEventListener('hashchange',()=>{if(/^#\/activeren\?token=([^&]+)(?:&type=(invite|recovery))?$/.test(location.hash))location.reload();});
 
 let client;
 const mfaVerifier=createMfaVerifier();
@@ -261,9 +265,10 @@ export async function startAuth(callbacks) {
     if (match) {
       const token = decodeURIComponent(match[1]);
       history.replaceState(null, '', location.pathname + location.search);
-      const result = await client.auth.verifyOtp({ token_hash: token, type: match[2] || 'invite' });
-      if (result.error) { signIn('De uitnodiging is ongeldig of verlopen. Vraag je beheerder om een nieuwe uitnodiging.'); return; }
-      await continueLogin();
+      const verify=createActivationVerification(input=>client.auth.verifyOtp(input),token);
+      const form=screen('Account activeren','Start de activering van je ESMOJO-account. Daarna stel je je authenticator en wachtwoord in.',[],'Activering starten',async()=>{
+        await verify();if(form.isConnected)await continueLogin();
+      });
     } else {
       const restored = await restoreRemembered();
       if (!restored) { signIn(); return; }

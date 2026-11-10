@@ -58,7 +58,13 @@ De bestaande beveiligde account-API maakt met Supabase een nieuwe eenmalige link
 (invite of recovery), zonder e-mail. Alleen actuele beheerder met MFA; nooit voor
 actieve/geblokkeerde accounts. Het geheim blijft in het URL-fragment en tijdelijk
 browsergeheugen; uitsluitend na expliciete gebruikersklik naar het klembord.
-Geen link/token in Drive, Redis, browseropslag of logs. Bij klembordweigering kan
+Geen link/token in Drive, Redis, browseropslag of logs. Activeringslanding
+verbruikt geen link vóór expliciete klik. Verifieer token_hash via type=email
+(Supabase kiest confirmation/recovery op de hash); één lopende verificatie,
+geaccepteerde sessie tijdelijk hergebruiken als vervolgstap mislukt. Houd
+netwerkfouten apart van otp_expired. Vergrendel linkuitgifte per account buiten
+herbouwde knoppen om, voor zowel mail als kopiëren. Een nieuw activeringsfragment
+in hetzelfde tabblad start de authpagina opnieuw; MFA blijft verplicht. Bij klembordweigering kan
 de beheerder dezelfde link tijdelijk handmatig kopiëren. Mailuitnodigen blijft apart.
 
 ## Uitvoering en publicatie

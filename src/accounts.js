@@ -1,3 +1,4 @@
+import {createActivationRequests} from './lib/activation-requests.js';
 import {copyActivationLink} from './lib/copy-activation-link.js';
 import {accountCompanies,companyJobs,validateAccountEmployment} from '../shared/account-employment.js';
 import {singleSubmission} from './lib/single-submission.js';
@@ -25,6 +26,7 @@ function element(tag, text, className) {
 
 export function createAccountsView(container, currentUser, submenuLink,{onSaved=()=>{}}={}) {
   let disposed = false,accountsCache=null,mode='list',viewRevision=0;
+  const activationRequests=createActivationRequests(()=>{if(!disposed&&mode==='list'&&accountsCache)renderAccounts(accountsCache);});
   const feedbacks=new Map();const feedback=info=>{if(!feedbacks.has(info.key))feedbacks.set(info.key,createPageFeedback(info));return feedbacks.get(info.key);};
   const general=feedback({key:'accounts-feedback',label:'Accountactie',route:'/beheerder/accounts'});
   const loading = createSubmenuLoading(submenuLink, container);
@@ -69,10 +71,10 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
         });
         remove.disabled = account.id === currentUser.id;
         actions.append(remove);
-        if (!account.activated && !account.disabled) actions.append(action('invite', `Nodig ${account.firstName} opnieuw uit`, async () => {
+        if (!account.activated && !account.disabled) actions.append(activationAction('invite', `Nodig ${account.firstName} opnieuw uit`,account, async () => {
           await access('accounts', { method: 'PATCH', body: { id: account.id, operation: 'invite' } }); report('Uitnodiging opnieuw verzonden.');
         }));
-        if(!account.activated&&!account.disabled)actions.append(action('copy',`Nieuwe activeringslink voor ${account.firstName} kopiëren`,async()=>{
+        if(!account.activated&&!account.disabled)actions.append(activationAction('copy',`Nieuwe activeringslink voor ${account.firstName} kopiëren`,account,async()=>{
           const copied=await copyActivationLink(()=>access('accounts',{method:'PATCH',body:{id:account.id,operation:'activation-link'}}),{active:()=>!disposed});
           if(!disposed&&copied)report('Activeringslink gekopieerd.');
         }));
@@ -82,6 +84,10 @@ export function createAccountsView(container, currentUser, submenuLink,{onSaved=
       }
       view.append(table);
     for(const account of [null,...accounts]){const draft=backgroundSaves.form('account:'+(account?.id||'new'));if(draft.error)feedback(saveRequestInfo('accounts',{id:account?.id})).show('Account opslaan is niet bevestigd. Je invoer is behouden.',()=>{if(disposed)return false;edit(account);return false;},'Invoer bekijken');}
+  }
+  function activationAction(glyph,label,account,callback){
+    const button=action(glyph,label,()=>{if(!disposed)return activationRequests.run(account.id,callback);});
+    button.disabled=activationRequests.has(account.id);return button;
   }
   function action(glyph, label, callback) {
     const button = element('button', '', 'icon-button'); button.type = 'button'; button.title = label; button.setAttribute('aria-label', label);

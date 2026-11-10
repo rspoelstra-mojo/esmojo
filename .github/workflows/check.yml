@@ -40,6 +40,7 @@ jobs:
         run: |
           node server/accounts-api.test.js
           node --test src/lib/copy-activation-link.test.js
+          node --test src/lib/activation-verification.test.js
           node server/account-modules.test.js
           node server/home-dashboard.test.js
           node server/web-report-catalogue.test.js
@@ -158,3 +159,6 @@ jobs:
 
       - name: TSC and MOJO report rendering with source-specific times
         run: node tools/ui/check-tsc-report.mjs
+
+      - name: Activation click, MFA boundary and account-link single flight
+        run: node tools/ui/check-account-activation.mjs

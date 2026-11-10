@@ -10,3 +10,12 @@ account ondanks herbouw, beide uitgifteknoppen vergrendeld tijdens verwerking.
 Geen TTL-verruiming, mailverzending, profielwijziging, MFA-omzeiling of geheimopslag.
 Bestaande fragmentlinks blijven ondersteund. Tests gebruiken uitsluitend mocks.
 Versie blijft V1.99.
+
+Browserreproducties: oorspronkelijke accountcode maakt een lopende kopieerknop
+opnieuw actief na achtergrondherbouw; oorspronkelijke authstart herstart niet
+bij een nieuw activeringsfragment in hetzelfde document. Beide regressies zijn
+nu afgevangen. Browsercontrole slaagt voor expliciete klik, invite/recovery via
+email-tokenhash, één verificatie, verplicht MFA-scherm, zelfde tabblad en één
+linkuitgifte tijdens herbouw. Zeven gerichte unit-/clipboardcontroles, 42 account-
+API-tests, volledige bestaande CI-Node-set, build en diff-check slagen. Uitsluitend
+synthetische testgegevens; geen echte gebruikerslink verbruikt of mail verstuurd.
