@@ -17,3 +17,11 @@ Gebruiker heeft workflow handmatig gestart: run 42771820752 (workflow_dispatch).
 Tijdelijke cron, datumguard en bijbehorende tijdelijke test worden direct
 verwijderd; de lopende handmatige run behoudt zijn workflowversie. Veilige
 opslag-/terugleesnotices blijven beschikbaar voor bewijs zonder broninhoud.
+
+Afgerond: run 42771820752 is Success (10m21s), met expliciete bevestigingen
+HISTORICAL_IMPORT_STORED total=15 complete=15 pending=0 en
+HISTORICAL_IMPORT_VERIFIED verified=15 total=15. Native indexering en de bestaande
+bron-/showgegevens-terugleescontrole zijn geslaagd. Privéstatus per bestand is
+bijgewerkt: 15 geslaagd; goedgekeurde identieke S2 overgeslagen. Tijdelijke start
+is verwijderd in 2f91627; daarbij horende CI/opslagcontroles zijn geslaagd.
+Geen CSV-inhoud of broncijfers in Git. Geen historische mail/PDF gestart.
