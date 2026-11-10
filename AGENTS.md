@@ -1,3 +1,15 @@
+## Dataverse verbindingstest (10 november 2026)
+
+De gebruiker vraagt een stapsgewijze, afzonderlijke proef; geen migratie.
+Vier DATAVERSE_TEST_* variabelen door gebruiker in Vercel Production gezet.
+Alleen op bewuste beheerderklik achter actuele account/MFA/admin-controles:
+client_credentials naar Microsoft en GET WhoAmI op de bevestigde Dataverse-host.
+Geen tabellen of bedrijfsgegevens lezen/schrijven, geen wijziging aan bestaande
+opslag. Alleen vaste diagnosecodes/booleans teruggeven. Providerantwoorden,
+identiteitsvelden, clientgeheim en toegangstoken niet loggen, opslaan of tonen.
+De eerste proef bewijst geen lees-/schrijfrechten op toekomstige eigen tabellen.
+Een werkende proef is geen toestemming voor migratie of productiegebruik.
+
 ## Showbeheer Gashouder (10 november 2026)
 
 De gebruiker classificeert Showbeheer (link, pincode en invulstatus) als Openbaar

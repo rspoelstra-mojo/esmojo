@@ -1,3 +1,4 @@
+import {createDataverseTestView} from './dataverse-test.js';
 import {createIncidentAdminView} from './incident-admin.js';
 import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
 import {createArtistsPage} from './artists-page.js';
@@ -135,6 +136,7 @@ function renderPage() {
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
+    if(route==='beheerder/dataverse-test')disposePage=createDataverseTestView(content);
     const link = document.createElement('a'); link.href = '/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
     if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');
     submenu.append(link);

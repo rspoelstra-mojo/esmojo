@@ -1,3 +1,4 @@
+import {createDataverseTest} from './dataverse-test.js';
 import {createShowManagementService} from './show-management.js';
 import {createIncidentMetricsService} from './incident-metrics.js';
 import {createArtistService} from './artist-service.js';
@@ -34,7 +35,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=createBarrierReferenceService({shows}), artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=createShowManagementService({env,shows}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=createBarrierReferenceService({shows}), artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=createShowManagementService({env,shows}), dataverseTest=createDataverseTest({env}) } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -273,6 +274,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='dataverse-test'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        if(!req.body||Object.keys(req.body).length!==1||req.body.operation!=='status')return reply(400,{error:'Ongeldig testverzoek.'});
+        try{return reply(200,await dataverseTest());}catch{return reply(503,{error:'De verbindingstest kon niet worden uitgevoerd.'});}
+      }
       if(action==='incidents'){
         if(own.disabled)return reply(403,{error:'Geen toegang.'});
         try{

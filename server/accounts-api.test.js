@@ -12,7 +12,7 @@ const profile = { id, firstName: 'Test', lastName: 'Account', company:'MOJO Conc
 const env = { VITE_SUPABASE_URL: 'https://project.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SECRET_KEY: 'server-test', RESEND_API_KEY: 'mail-test' };
 const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false} } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false}, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -24,7 +24,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
       updateUserById: async (...args) => { calls.push(['password', ...args]); return {}; },
     },
   } });
-  const handler = makeAccountsHandler({ env: configuration, clientFactory, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
+  const handler = makeAccountsHandler({ env: configuration, clientFactory, dataverseTest:async()=>{calls.push(['dataverseTest']);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
@@ -292,4 +292,10 @@ test('Showbeheer aanmaken en status blijven achter account, MFA, activering en S
  }
  for(const operation of ['status','create']){const body={operation,concertId:'Fixture'},result=await run({action:'show-management',method:'POST',body});assert.equal(result.response.code,200);assert.deepEqual(result.calls.find(call=>call[0]==='showManagement'),['showManagement',body]);}
  const result=await run({action:'show-management',method:'GET'});assert.equal(result.response.code,405);assert.ok(!result.calls.some(call=>call[0]==='showManagement'));
+});
+
+test('Dataverse-proef vereist account, MFA en actuele beheerder; geen providerverzoek bij weigering',async()=>{
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,activated:false}},{own:{...profile,role:'gebruiker'}}]){const result=await run({...input,action:'dataverse-test',method:'POST',body:{operation:'status'}});assert.ok([401,403].includes(result.response.code));assert.ok(!result.calls.some(call=>call[0]==='dataverseTest'));}
+ const good=await run({action:'dataverse-test',method:'POST',body:{operation:'status'}});assert.equal(good.response.code,200);assert.equal(good.response.data.code,'DATAVERSE_FORBIDDEN');assert.equal(good.calls.filter(call=>call[0]==='dataverseTest').length,1);
+ for(const input of [{method:'GET'},{method:'POST',body:{operation:'create'}},{method:'POST',body:{operation:'status',url:'https://evil.invalid'}}]){const result=await run({action:'dataverse-test',...input});assert.ok([400,405].includes(result.response.code));assert.ok(!result.calls.some(call=>call[0]==='dataverseTest'));}
 });
