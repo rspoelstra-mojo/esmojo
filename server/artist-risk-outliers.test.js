@@ -61,3 +61,10 @@ test('De beveiligde artiest-API projecteert dezelfde centrale uitschieter en bet
  rows[0].artistFinal=false;const partial=await service.snapshot('actor',[id]);assert.equal(partial.score.status,'incomplete');assert.equal(partial.score.incidents.security,19);assert.equal(partial.score.level,null);
  refs.indicators.security.evictions={incidents:0,visitors:2000,visitorUnits:80000,rate:0};const missing=await service.snapshot('actor',[id]);assert.equal(missing.score,null);assert.equal(missing.assessment.reliability,'unreliable');
 });
+
+test('Weergave rondt ieder onderdeel zelfstandig af, maar wijzigt geen berekening of classificatie',async()=>{
+ const {displayedRiskTotal,riskClass}=await import('../shared/artist-risk-score.js');
+ for(const [actual,expected]of [[29.33,29],[29.49,29],[29.5,30],[29.51,30],[0,0],[35,35]])assert.equal(displayedRiskParts({parts:{incidents:actual}}).incidents,expected);
+ const score={parts:{visitors:25,artist:25,operational:5.5,incidents:19},total:74.5};const before=structuredClone(score),display=displayedRiskParts(score);
+ assert.equal(displayedRiskTotal(score),75);assert.equal(Object.values(display).reduce((s,n)=>s+n),75);assert.deepEqual(score,before);assert.equal(riskClass(score.total),'Midden risico');
+});

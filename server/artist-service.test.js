@@ -53,3 +53,9 @@ test('Bestaande artiestfoto blijft behouden; alleen ontbrekende foto wordt bij M
  saved=null;assert.equal((await service.detail('actor',{artistId:rows[0].id,includeProfile:true})).profile.photo,null);assert.equal(calls,1);
  await service.menu('actor');await service.detail('actor',{artistId:rows[0].id});assert.equal(calls,1);
 });
+
+test('Risico kan parallel met profiel via leesbare URL worden geladen en behoudt betrouwbaarheidsinformatie',async()=>{
+ const service=createArtistService({shows:async()=>({artists:rows})}),assessment={reliability:'unreliable',reason:'UNRELIABLE_REFERENCE',issues:[{group:'security',key:'physical',reason:'ZERO_REFERENCE'}]};
+ const data=await service.risk('actor',{artistId:'artista'},{snapshot:async(actor,ids)=>{assert.equal(actor,'actor');assert.ok(ids.includes(rows.find(row=>row.name==='Artist A').id));return{score:null,pending:false,updatedAt:'2026-11-10T00:00:00Z',assessment};}});
+ assert.equal(data.assessment,assessment);assert.equal(data.score,null);
+});

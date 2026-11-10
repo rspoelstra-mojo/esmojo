@@ -85,10 +85,6 @@ export function assessArtistRisk(rows,references){
  return{score:{status:complete?'complete':'incomplete',availableMaximum:complete?100:35,modelVersion:artistRiskModel.version,total,level:complete?riskClass(total):null,parts,incidents:{security:calculation.security,medical:calculation.medical},incidentCalculation:calculation.details,concerts:n},reliability:'reliable',reason:null,issues:[]};
 }
 export function calculateArtistRisk(rows,references){return assessArtistRisk(rows,references).score;}
-// Afgeronde segmentlabels tellen exact op tot de afgeronde totaalscore.
-export function displayedRiskParts(score){
- const entries=Object.entries(score.parts).filter(([,value])=>Number.isFinite(value)).map(([key,value])=>({key,value:value*100,units:Math.floor(value*100)})),target=Math.round(score.total*100);
- let remaining=target-entries.reduce((n,row)=>n+row.units,0);
- for(const row of [...entries].sort((a,b)=>(b.value-b.units)-(a.value-a.units)))if(remaining-->0)row.units++;
- return Object.fromEntries(entries.map(row=>[row.key,row.units/100]));
-}
+// Alleen presentatie: elk onderdeel rondt zelfstandig af; som en batterij volgen die punten.
+export function displayedRiskParts(score){return Object.fromEntries(Object.entries(score.parts).filter(([,value])=>Number.isFinite(value)).map(([key,value])=>[key,Math.round(value)]));}
+export function displayedRiskTotal(score){return Object.values(displayedRiskParts(score)).reduce((sum,value)=>sum+value,0);}

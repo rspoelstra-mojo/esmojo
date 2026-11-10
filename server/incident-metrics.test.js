@@ -25,7 +25,7 @@ test('Alleen complete concerten in score; ruimere referentiedataset bezoekersgew
  assert.equal(incidentReferences([row('first',{date:'2026-11-01',venue:'Gashouder'}),row('alias',{date:'2026-11-01',venue:'Gashouder'})]).concerts,1);
  assert.equal(incidentReferences([row('same'),row('same')]).concerts,1);assert.throws(()=>incidentReferences([row('conflict'),row('conflict',{visitors:2000})]),/DUPLICATE/);assert.equal(incidentReferences([row('zero')]).indicators.medical.ambulance.rate,0);
  assert.equal(incidentReferences([row('missing',{kpis:null})]).indicators.medical.total.rate,null);
- const score={parts:{visitors:1/3,artist:1/3,operational:1/3,incidents:1/3},total:4/3};assert.equal(Math.round(Object.values(displayedRiskParts(score)).reduce((a,b)=>a+b)*100),Math.round(score.total*100));
+ const score={parts:{visitors:1/3,artist:1/3,operational:1/3,incidents:1/3},total:4/3};assert.deepEqual(displayedRiskParts(score),{visitors:0,artist:0,operational:0,incidents:0});assert.equal(score.total,4/3);
 });
 function drive({date='2026-11-02',historical=false}={}){
  let text=null,writes=0,profiles=[{id:'admin',role:'beheerder',activated:true},{id:'user',role:'gebruiker',activated:true,modules:['artists']}];

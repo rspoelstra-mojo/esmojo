@@ -172,3 +172,12 @@ Gelijke dubbele rekenregistraties worden vóór aggregatie en beoordelingen verw
 (op concert-ID of dezelfde genormaliseerde artiest/datum/zaal/voorstelling). Bij
 afwijkende tellingen/beoordelingen voor dezelfde registratie stopt de berekening
 met DUPLICATE_CONCERT; geen willekeurige keuze of mutatie van Drive-bronnen.
+
+
+Nieuwe presentatieafspraak 10 november: ieder getoond onderdeel Math.round,
+zonder decimalen. Het zichtbare totaal is de som van de afgeronde onderdelen;
+segmentbreedtes en resterend grijs gebruiken hetzelfde totaal. De onderliggende
+score en classificatie blijven ongerond. Profiel en risico starten parallel en
+worden samen zichtbaar. Pas daarna rapportqueue, stil; aangeklikt niet-gereed
+rapport gebruikt uitsluitend het actieve artiest-submenurondje. Bron-/berekenfout
+bij initiële score krijgt een herlaadactie, geen misleidende lege scorekaart.

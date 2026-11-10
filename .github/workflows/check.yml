@@ -162,3 +162,6 @@ jobs:
 
       - name: Activation click, MFA boundary and account-link single flight
         run: node tools/ui/check-account-activation.mjs
+
+      - name: Artist profile and risk together, silent report preloading
+        run: node tools/ui/check-artist-landing.mjs

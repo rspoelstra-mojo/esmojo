@@ -67,6 +67,17 @@ herbouwde knoppen om, voor zowel mail als kopiëren. Een nieuw activeringsfragme
 in hetzelfde tabblad start de authpagina opnieuw; MFA blijft verplicht. Bij klembordweigering kan
 de beheerder dezelfde link tijdelijk handmatig kopiëren. Mailuitnodigen blijft apart.
 
+## Artiestpagina: gezamenlijke landing en stille rapporten (10 november 2026)
+
+Nieuwste laadopdracht: profiel en risicoscore parallel ophalen en samen tonen;
+de aanvankelijke submenu-laadstatus eindigt pas daarna. Vervolgens rapporten
+stil op de achtergrond nieuwste-eerst, zonder laadstatus bij concertdatums.
+Alleen bij expliciet openen van een niet geladen show het bestaande submenu-
+rondje naast de actieve artiest. Klikprioriteit, cache, annulering en errors behouden.
+Getoonde risicocomponenten ronden elk naar hele punten (.5 naar boven); batterij
+plus zichtbaar totaal gebruiken die getoonde punten. Rekenwaarden en risicoklasse
+blijven ongerond; referenties op Beheerder/Incidenten houden drie decimalen.
+
 ## Uitvoering en publicatie
 
 Werk in het Nederlands. Voer gevraagde wijzigingen zelfstandig uit met passende

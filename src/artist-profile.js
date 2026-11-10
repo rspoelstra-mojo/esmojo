@@ -27,10 +27,11 @@ export function formatArtistDates(dates){
 }
 
 export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,onBusy=()=>()=>{},onError=()=>{},onReady=()=>{}}={}){
- let disposed=false,selection=0;const buttons=[];
+ let disposed=false,selection=0,finishSelection=()=>{};const buttons=[];
+ const finishActive=()=>{const stop=finishSelection;finishSelection=()=>{};stop();};
  const page=node('section','artist-page');
- page.dispose=()=>{disposed=true;selection++;};
- page.updateShowStatus=(event,state)=>{if(disposed)return;for(const button of buttons){if(button.dataset.concertDate!==event.date||button.dataset.concertVenue!==event.venue||(button.dataset.concertPerformance||null)!==(event.performance||null))continue;button.dataset.loadState=state;button.title=state==='error'?'Showoverzicht opnieuw laden':state==='loading'?'Showoverzicht wordt geladen':'Toon showoverzicht';}};
+ page.dispose=()=>{disposed=true;selection++;finishActive();};
+
  const layout=node('div','artist-profile-layout');
  const main=node('div','artist-profile-main');
  const scoreCard=renderArtistRiskCard();main.append(scoreCard);page.updateRisk=(score,assessment)=>{if(!disposed)scoreCard.update(score,assessment);};
@@ -63,13 +64,13 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
   cards.append(card);
  });
  const detail=node('div','artist-detail-panel');detail.append(cards);
- function reset(){selection++;scoreCard.hidden=false;detail.replaceChildren(cards);for(const button of buttons)button.removeAttribute('aria-pressed');}
+ function reset(){selection++;finishActive();scoreCard.hidden=false;detail.replaceChildren(cards);for(const button of buttons)button.removeAttribute('aria-pressed');}
  async function openShow(event,button){
   if(disposed||!loadShow||event.date>=timetableClock(now()).date)return;
-  const ticket=++selection;let finish=()=>{};
+  const ticket=++selection;finishActive();let finish=()=>{};
   try{
    let data=loadShow(event);
-   if(data&&typeof data.then==='function'){finish=onBusy();button.setAttribute('aria-busy','true');data=await data;}
+   if(data&&typeof data.then==='function'){const stop=onBusy();let finished=false;finish=()=>{if(finished)return;finished=true;stop();};finishSelection=finish;data=await data;}
    if(disposed||ticket!==selection)return;
    scoreCard.hidden=true;
    detail.replaceChildren(renderArtistShowOverview(data,{onBack:()=>{reset();button.focus();}}));
@@ -77,7 +78,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
    onReady();
    detail.querySelector('.artist-show-title')?.focus({preventScroll:true});
   }catch{if(!disposed&&ticket===selection)onError();}
-  finally{button.removeAttribute('aria-busy');finish();}
+  finally{finish();if(finishSelection===finish)finishSelection=()=>{};}
  }
  main.append(detail);
 
