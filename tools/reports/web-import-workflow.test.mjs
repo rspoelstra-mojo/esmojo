@@ -4,10 +4,10 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const workflow=readFileSync('.github/workflows/web-reports.yml','utf8');
 const code=workflow.split("node --input-type=module <<'JS'\n")[1].split('\n          JS')[0];
-async function run(results,phase='sample',metricsOnly=false,{midnightOnly=false,at=Date.now()}={}){
+async function run(results,phase='sample',metricsOnly=false,{midnightOnly=false,once=false,at=Date.now()}={}){
  const calls=[];
  let skipped=false;class Clock extends Date{constructor(...args){super(...(args.length?args:[at]));}}
- const env={MIDNIGHT_ONLY:String(midnightOnly),METRICS_ONLY:String(metricsOnly),ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example/oidc',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic',HISTORICAL_IMPORT:phase,HISTORICAL_BATCH:'historical-synthetic.json'};
+ const env={TSC_ONCE:String(once),MIDNIGHT_ONLY:String(midnightOnly),METRICS_ONLY:String(metricsOnly),ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example/oidc',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic',HISTORICAL_IMPORT:phase,HISTORICAL_BATCH:'historical-synthetic.json'};
  const task=vm.runInNewContext('(async()=>{'+code+'})()',{URL,Date:Clock,setTimeout:fn=>fn(),process:{env,exit:()=>{skipped=true;throw Error('SKIP');}},AbortSignal,console:{log(){}},fetch:async(url,options)=>{
   if(String(url).startsWith('https://identity.example'))return{ok:true,json:async()=>({value:'synthetic'})};
   calls.push(options.body?JSON.parse(options.body):null);const result=results.shift();if(!result)throw Error('Unexpected extra request');return{ok:true,json:async()=>result};
@@ -39,4 +39,10 @@ test('Oude worker zonder versiebevestiging start geen herberekeningen',async()=>
 test('Nederlandse middernacht volgt wintertijd, zomertijd en omschakeldagen; andere UTC-ronde doet geen verzoek',async()=>{
  for(const at of ['2026-11-08T23:00:00Z','2026-06-08T22:00:00Z','2026-03-28T23:00:00Z','2026-10-24T22:00:00Z'])assert.equal((await run([{ok:true,workerVersion:3,pending:false,status:'complete'},{ok:true,workerVersion:3,pending:false,status:'complete'}],'none',true,{midnightOnly:true,at:Date.parse(at)})).length,2,at);
  for(const at of ['2026-11-08T22:00:00Z','2026-06-08T23:00:00Z'])assert.deepEqual(await run([],'none',true,{midnightOnly:true,at:Date.parse(at)}),[],at);
+});
+
+test('Tijdelijke TSC-start werkt alleen op de bevestigde Nederlandse kalenderdag, zonder normale mailroute',async()=>{
+ assert.deepEqual(await run([],'all',false,{once:true,at:Date.parse('2027-11-10T10:00:00Z')}),[]);
+ const calls=await run([{ok:true,total:15,complete:15,pending:0},{ok:true,registered:214,validated:214,invalid:0},...Array.from({length:3},(_,i)=>({ok:true,total:15,verified:5,nextOffset:(i+1)*5}))],'all',false,{once:true,at:Date.parse('2026-11-10T10:00:00Z')});
+ assert.equal(calls.length,5);assert.equal(calls[0].historicalImport,true);assert.equal(calls[1].historicalOnly,true);assert.ok(calls.slice(2).every(row=>row.historicalVerify));
 });
