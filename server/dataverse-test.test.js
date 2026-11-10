@@ -28,3 +28,15 @@ test('Eventuele primaire record-ID wordt nooit teruggegeven; onjuist antwoord te
  const f=tableFixture({rows:{value:[{crf9f_tabel1id:id}]}}),result=await f.run({table:true});assert.equal(result.code,'TEST_TABLE_READ_OK');assert.ok(!JSON.stringify(result).includes(id));
  const bad=tableFixture({rows:{value:[{crf9f_tabel1id:'invalid'}]}});assert.equal((await bad.run({table:true})).code,'TEST_TABLE_RESPONSE_INVALID');
 });
+
+test('Schrijfproef stopt vóór iedere mutatie wanneer metadata of leesrecht ontbreekt',async()=>{
+ const f=tableFixture({metadataStatus:403});assert.equal((await f.run({write:true})).code,'TEST_TABLE_METADATA_FORBIDDEN');assert.ok(f.calls.slice(1).every(call=>call.options.method==='GET'));
+ const invalid=tableFixture();assert.equal((await invalid.run({write:true})).code,'TEST_TABLE_METADATA_INVALID');assert.equal(invalid.calls.length,3);
+});
+
+test('Volledige schrijfproef loopt door vaste testtabelmetadata en uitsluitend de bedoelde mutaties',async()=>{
+ const recordId='e590f990-bc11-4bb9-a13e-5c6ef0bf2026',calls=[];
+ const responses=[response(200,{access_token:token,token_type:'Bearer'}),response(200,{UserId:id,OrganizationId:id,BusinessUnitId:id}),response(200,{...metadata,PrimaryNameAttribute:'crf9f_name'}),response(200,{value:[]}),response(204,{}),response(200,{crf9f_tabel1id:recordId,crf9f_name:'ESMOJO verbindingstest - aangemaakt','@odata.etag':'W/"1"'}),response(204,{}),response(200,{crf9f_tabel1id:recordId,crf9f_name:'ESMOJO verbindingstest - gewijzigd','@odata.etag':'W/"2"'})];
+ const result=await createDataverseTest({env,request:async(url,options)=>{calls.push({url,options});return responses.shift();}})({write:true});
+ assert.equal(result.code,'TEST_TABLE_WRITE_OK');assert.equal(result.recordVerified,true);assert.deepEqual(calls.map(call=>call.options.method),['POST','GET','GET','GET','PATCH','GET','PATCH','GET']);assert.ok(calls[2].url.endsWith(',PrimaryNameAttribute'));assert.ok(calls.filter(call=>call.options.method==='PATCH').every(call=>call.url===env.DATAVERSE_TEST_URL+'/api/data/v9.2/crf9f_tabel1s('+recordId+')'));for(const value of [recordId,id,secret,token])assert.ok(!JSON.stringify(result).includes(value));
+});

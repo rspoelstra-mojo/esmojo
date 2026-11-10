@@ -276,8 +276,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
       if(action==='dataverse-test'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-        if(!req.body||Object.keys(req.body).length!==1||!['status','table-read'].includes(req.body.operation))return reply(400,{error:'Ongeldig testverzoek.'});
-        try{return reply(200,await dataverseTest({table:req.body.operation==='table-read'}));}catch{return reply(503,{error:'De verbindingstest kon niet worden uitgevoerd.'});}
+        if(!req.body||Object.keys(req.body).length!==1||!['status','table-read','table-write'].includes(req.body.operation))return reply(400,{error:'Ongeldig testverzoek.'});
+        try{return reply(200,await dataverseTest({table:req.body.operation!=='status',...(req.body.operation==='table-write'?{write:true}:{})}));}catch{return reply(503,{error:'De verbindingstest kon niet worden uitgevoerd.'});}
       }
       if(action==='incidents'){
         if(own.disabled)return reply(403,{error:'Geen toegang.'});

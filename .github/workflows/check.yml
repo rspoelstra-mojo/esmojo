@@ -41,6 +41,7 @@ jobs:
           node server/accounts-api.test.js
           node --test server/show-management.test.js
           node --test server/dataverse-test.test.js
+          node --test server/dataverse-write-probe.test.js
           node --test src/lib/copy-activation-link.test.js
           node --test src/lib/activation-verification.test.js
           node server/account-modules.test.js

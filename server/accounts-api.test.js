@@ -305,3 +305,8 @@ test('Dataverse table-read accepteert alleen vaste operatie achter dezelfde behe
  const denied=await run({own:{...profile,role:'gebruiker'},action:'dataverse-test',method:'POST',body:{operation:'table-read'}});assert.equal(denied.response.code,403);assert.ok(!denied.calls.some(call=>call[0]==='dataverseTest'));
  const extra=await run({action:'dataverse-test',method:'POST',body:{operation:'table-read',table:'other'}});assert.equal(extra.response.code,400);assert.ok(!extra.calls.some(call=>call[0]==='dataverseTest'));
 });
+
+test('Dataverse-schrijfproef vereist expliciete vaste actie en beheerder/MFA, zonder vrije recordwaarden',async()=>{
+ const body={operation:'table-write'},result=await run({action:'dataverse-test',method:'POST',body});assert.equal(result.response.code,200);assert.deepEqual(result.calls.find(call=>call[0]==='dataverseTest'),['dataverseTest',{table:true,write:true}]);
+ for(const input of [{own:{...profile,role:'gebruiker'}},{auth:false},{aal:'aal1'},{body:{operation:'table-write',recordId:'other'}}]){const denied=await run({action:'dataverse-test',method:'POST',body,...input});assert.ok([400,401,403].includes(denied.response.code));assert.ok(!denied.calls.some(call=>call[0]==='dataverseTest'));}
+});

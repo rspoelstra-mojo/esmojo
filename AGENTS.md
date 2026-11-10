@@ -6,8 +6,11 @@ Alleen op bewuste beheerderklik achter actuele account/MFA/admin-controles:
 client_credentials naar Microsoft en GET WhoAmI op de bevestigde Dataverse-host.
 Volgende expliciet gevraagde stap: uitsluitend de door gebruiker aangemaakte
 lege testtabel crf9f_tabel1: metadata plus GET $top=1 met alleen primary-ID.
-Geen record-ID teruggeven/bewaren, geen records schrijven en geen wijziging aan
-bestaande opslag of rollen. Geen andere tabellen of bedrijfsgegevens lezen. Alleen vaste diagnosecodes/booleans teruggeven. Providerantwoorden,
+Gebruiker geeft daarna expliciet opdracht één fictief testrecord aan te maken,
+terug te lezen, te wijzigen en te controleren. Alleen vaste test-ID en vaste
+herkenbare testtekst, create-only en ETag; herhalen maakt geen duplicaat. Geen
+verwijderen, migratie, bestaande gegevens of rollen wijzigen. Geen record-ID
+teruggeven/loggen; alleen de fictieve test-ID staat in de testtabel. Geen andere tabellen of bedrijfsgegevens lezen. Alleen vaste diagnosecodes/booleans teruggeven. Providerantwoorden,
 identiteitsvelden, clientgeheim en toegangstoken niet loggen, opslaan of tonen.
 De eerste proef bewijst geen lees-/schrijfrechten op toekomstige eigen tabellen.
 Een werkende proef is geen toestemming voor migratie of productiegebruik.
