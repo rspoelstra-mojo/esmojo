@@ -63,6 +63,13 @@ export function researchView(research) {
   const summary = sections.get('samenvatting') ?? firstParagraph?.text ?? '';
   return { summary, summaryText: plain(summary), analysis: sections.get('volledige analyse') ?? answer, sourcesMarkdown: sections.get('bronnen') || '', sources: Array.isArray(research?.sources) ? research.sources.filter(source => typeof source?.title === 'string' && safeResearchUrl(source.url)) : [] };
 }
+export function researchSourceMarkdown(markdown) {
+  // Eén alinea per [n]-bron. Gewone verwijzingen midden in toelichtingen
+  // blijven staan; op één regel splitsen we alleen vóór een nieuwe bronlink.
+  return markdown.replace(/\r\n?/g,'\n')
+    .replace(/(^|\n)[\t ]*(?=\[\d+\][\t ]+)/g,'\n\n')
+    .replace(/[\t ]+(?=\[\d+\][\t ]+\[[^\]\n]+\]\(https:\/\/)/g,'\n\n').trim();
+}
 export function renderResearch(target, markdown) {
   const doc = target.ownerDocument;
   const inline = (parent, text) => {

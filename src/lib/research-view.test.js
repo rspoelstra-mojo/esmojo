@@ -1,7 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { researchView, researchInline, researchBlocks, safeResearchUrl } from './research-view.js';
+import { researchView, researchInline, researchBlocks, researchSourceMarkdown, safeResearchUrl } from './research-view.js';
 const research = number => ({ answer: `### Samenvatting\n\nAntwoord **${number}** met een [bron](https://example.org).\n\n### Volledige analyse\n\n- **Bevestigd:** bevinding ${number}.<sup>1, 2</sup>\n- Onbekend: beperking.\n\n### Bronnen\n\n1. [Bron](https://example.org) — geraadpleegd op peildatum.`, sources: [{ title: 'Bron', url: 'https://example.org' }] });
+test('Genummerde bronnen staan afzonderlijk met behoud van link, datum en toelichting',()=>{
+ const a='[1] [Eerste](https://example.org/1) — geraadpleegd op datum.',b='[2] [Tweede](https://example.org/2) — datum onbekend.';
+ for(const separator of ['\n','\r\n',' ','\n\n']){
+  const blocks=researchBlocks(researchSourceMarkdown(a+separator+b));assert.equal(blocks.length,2);assert.equal(blocks[0].text,a);assert.equal(blocks[1].text,b);
+ }
+ const citation='[1] [Eerste](https://example.org/1) — zie ook [2] voor uitleg.';assert.equal(researchSourceMarkdown(citation),citation);
+ const ordered='1. [Eerste](https://example.org/1)\n2. [Tweede](https://example.org/2)';assert.equal(researchSourceMarkdown(ordered),ordered);
+});
 test('alle elf onderwerpen krijgen de echte samenvatting, analyse en bronnen afzonderlijk', () => {
   for (let number = 1; number <= 11; number++) {
     const view = researchView(research(number));

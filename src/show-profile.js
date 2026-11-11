@@ -8,7 +8,7 @@ import { createShowProfilePdfWidget } from './showprofile-pdf.js';
 import { openAnalysisFinalization } from './analysis-finalization.js';
 import { createTicketDataPage } from './ticket-data-page.js';
 import { access } from './auth.js';
-import { researchView, renderResearch, safeResearchUrl } from './lib/research-view.js';
+import { researchView, renderResearch, researchSourceMarkdown, safeResearchUrl } from './lib/research-view.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 
 // Alleen bevestigde Drive-opslag wordt als opgeslagen/afgerond getoond.
@@ -157,7 +157,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
         researchDate.textContent = research.source === 'dataverse'
           ? `AI-concept · Dataverse · bronversie ${research.sourceVersion} · geïmporteerd op ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(research.importedAt))} · Beoordeling door Event Safety Manager vereist`
           : `Onderzocht op ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(research.researchedAt))}`;
-        if (view.sourcesMarkdown) renderResearch(sourceList, view.sourcesMarkdown);
+        if (view.sourcesMarkdown) renderResearch(sourceList, researchSourceMarkdown(view.sourcesMarkdown));
         else {
           const list = node('ol', '');
           for (const source of view.sources) { const li = node('li', ''), link = node('a', '', source.title); link.href = safeResearchUrl(source.url); link.target = '_blank'; link.rel = 'noopener noreferrer'; li.append(link); list.append(li); }
