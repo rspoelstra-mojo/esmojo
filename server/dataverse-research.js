@@ -64,6 +64,25 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
  }
  return{
   applies:isDataversePilot,
+  async diagnose(){
+   const result={environment:origin,table,configuration:false,tableRead:false,sampleRows:0,showMatches:0,libraryMatches:0,combinedMatches:0,normalizedMatches:0};
+   try{
+    // Een nieuwe aanmelding/schema-read voor de bewuste diagnoseklik.
+    session=null;const {headers,entity}=await connect();result.configuration=true;
+    const params=new URLSearchParams({'$select':'esmojo_showsleutel,esmojo_bronbibliotheekid','$top':'50'});
+    const data=await get(base+entity+'?'+params,headers);
+    if(!Array.isArray(data.value)||data.value.length>50)throw Error('DATAVERSE_RESPONSE');
+    result.tableRead=true;result.sampleRows=data.value.length;result.moreRows=Boolean(data['@odata.nextLink']);
+    for(const row of data.value){
+     const show=row.esmojo_showsleutel,library=row.esmojo_bronbibliotheekid;
+     if(show===pilot.sourceKey)result.showMatches++;
+     if(library===pilot.libraryId)result.libraryMatches++;
+     if(show===pilot.sourceKey&&library===pilot.libraryId)result.combinedMatches++;
+     if(typeof show==='string'&&typeof library==='string'&&show.trim()===pilot.sourceKey&&library.trim().toLowerCase()===pilot.libraryId)result.normalizedMatches++;
+    }
+    return{...result,code:result.combinedMatches?'RESEARCH_MATCH_FOUND':result.normalizedMatches?'RESEARCH_WHITESPACE':result.sampleRows?'RESEARCH_KEYS_DIFFER':'RESEARCH_NO_VISIBLE_ROWS'};
+   }catch(error){return{...result,code:['DATAVERSE_CONFIG','DATAVERSE_AUTH','DATAVERSE_SCHEMA','DATAVERSE_READ','DATAVERSE_RESPONSE'].includes(error.message)?error.message:'RESEARCH_UNAVAILABLE'};}
+  },
   async load(concertId){
    if(!isDataversePilot(concertId))return null;
    try{return await read();}catch{

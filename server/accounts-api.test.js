@@ -28,6 +28,15 @@ test('Dataverse-concepten blijven achter account/MFA/Shows en behouden eigen sam
  const detail=await run({action:'show-profile',method:'POST',body:{...body,operation:'read',questionNumber:1},researchService,showResult:ownProfile});assert.equal(detail.response.data.research.answer,'Synthetisch AI-concept');
  const save=await run({action:'show-profile',method:'POST',body:{...body,operation:'save',questionNumber:1,summary:'Eigen tekst',status:'draft',revision:4},researchService,showResult:ownProfile});assert.equal(save.response.code,200);assert.equal(calls.length,2,'Geen Dataverse-write of extra read bij opslaan');
 });
+test('Onderzoeksdiagnose vereist beheerder en accepteert geen vrije tabel/filter',async()=>{
+ let calls=0;const researchService={diagnose:async()=>{calls++;return{code:'RESEARCH_NO_VISIBLE_ROWS'};}};
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}}]){
+  const {response}=await run({...input,method:'POST',action:'dataverse-test',body:{operation:'research-read'},researchService});assert.ok([401,403].includes(response.code));
+ }
+ assert.equal(calls,0);
+ assert.equal((await run({method:'POST',action:'dataverse-test',body:{operation:'research-read',table:'vrij'},researchService})).response.code,400);
+ assert.equal((await run({method:'POST',action:'dataverse-test',body:{operation:'research-read'},researchService})).response.data.code,'RESEARCH_NO_VISIBLE_ROWS');assert.equal(calls,1);
+});
 
 async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false}, researchService, showResult, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];

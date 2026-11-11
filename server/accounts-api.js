@@ -281,7 +281,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
       if(action==='dataverse-test'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-        if(!req.body||Object.keys(req.body).length!==1||!['status','table-read','table-write'].includes(req.body.operation))return reply(400,{error:'Ongeldig testverzoek.'});
+        if(!req.body||Object.keys(req.body).length!==1||!['status','table-read','table-write','research-read'].includes(req.body.operation))return reply(400,{error:'Ongeldig testverzoek.'});
+        if(req.body.operation==='research-read'){try{return reply(200,await dataverseResearch.diagnose());}catch{return reply(503,{error:'Onderzoekscontrole kon niet worden uitgevoerd.'});}}
         try{return reply(200,await dataverseTest({table:req.body.operation!=='status',...(req.body.operation==='table-write'?{write:true}:{})}));}catch{return reply(503,{error:'De verbindingstest kon niet worden uitgevoerd.'});}
       }
       if(action==='incidents'){

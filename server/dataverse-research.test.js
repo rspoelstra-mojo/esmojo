@@ -50,3 +50,10 @@ test('Menu toont alleen de exacte AFAS Live-uitzondering naast bestaande Gashoud
  const shows=upcomingShows([pilot,{...pilot,concertId:'Andere_AFAS-Live_15112026',artist:'Andere'}],new Date('2026-11-11T12:00:00Z'));assert.equal(shows.length,1);assert.equal(shows[0].venue,'AFAS Live');assert.equal(cleanMenu(shows).length,1);
  assert.throws(()=>cleanMenu([{...pilotShow(),key:'Ander'}]),/MENU_FORMAT/);
 });
+test('Bewuste diagnose onderscheidt lege tabel, bronverschil en randspaties zonder bronwaarden terug te geven',async()=>{
+ for(const [rows,code]of [[[],'RESEARCH_NO_VISIBLE_ROWS'],[[row(1)],'RESEARCH_MATCH_FOUND'],[[{...row(1),esmojo_showsleutel:'ander'}],'RESEARCH_KEYS_DIFFER'],[[{...row(1),esmojo_showsleutel:'\t'+pilot.sourceKey}],'RESEARCH_WHITESPACE']]){
+  const {service,calls}=setup(rows);const result=await service.diagnose();assert.equal(result.code,code);assert.equal(result.tableRead,true);
+  assert.doesNotMatch(JSON.stringify(result),/Synthetische tekst|synthetic-secret|synthetic-access|ander/);
+  assert.equal(new URL(calls.at(-1).url).searchParams.get('$select'),'esmojo_showsleutel,esmojo_bronbibliotheekid');
+ }
+});
