@@ -12,7 +12,24 @@ const profile = { id, firstName: 'Test', lastName: 'Account', company:'MOJO Conc
 const env = { VITE_SUPABASE_URL: 'https://project.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-test', SUPABASE_SECRET_KEY: 'server-test', RESEND_API_KEY: 'mail-test' };
 const token = (aal = 'aal2', sub = id) => `header.${Buffer.from(JSON.stringify({ aal, sub, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }, ...(aal === 'aal2' ? [{ method: 'totp' }] : [])] })).toString('base64url')}.signature`;
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false}, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+test('Dataverse-concepten blijven achter account/MFA/Shows en behouden eigen samenvattingen',async()=>{
+ const {createDataverseResearch}=await import('./dataverse-research.js');
+ const {dataversePilot:pilot}=await import('../shared/dataverse-pilot.js');
+ const calls=[],result={researchByNumber:{1:{answer:'Synthetisch AI-concept',source:'dataverse'}},researchErrors:{}};
+ const researchService={...createDataverseResearch({env:{}}),load:async key=>{calls.push(key);return result;}};
+ const body={concertId:pilot.concertId};
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker',modules:['artists']}}]){
+  const {response}=await run({...input,action:'show-open',method:'POST',body,researchService});assert.ok([401,403].includes(response.code));
+ }
+ assert.equal(calls.length,0);
+ const ownProfile={revision:4,analyses:{1:{summary:'Eigen tekst',status:'completed'}},finalization:{unchanged:true},researchByNumber:{1:{answer:'Oud'}}};
+ const opened=await run({action:'show-open',method:'POST',body,researchService,showResult:{profile:ownProfile,tickets:{untouched:true}}});
+ assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Synthetisch AI-concept');assert.deepEqual(opened.response.data.profile.analyses,ownProfile.analyses);assert.deepEqual(opened.response.data.tickets,{untouched:true});
+ const detail=await run({action:'show-profile',method:'POST',body:{...body,operation:'read',questionNumber:1},researchService,showResult:ownProfile});assert.equal(detail.response.data.research.answer,'Synthetisch AI-concept');
+ const save=await run({action:'show-profile',method:'POST',body:{...body,operation:'save',questionNumber:1,summary:'Eigen tekst',status:'draft',revision:4},researchService,showResult:ownProfile});assert.equal(save.response.code,200);assert.equal(calls.length,2,'Geen Dataverse-write of extra read bij opslaan');
+});
+
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false}, researchService, showResult, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -24,11 +41,11 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
       updateUserById: async (...args) => { calls.push(['password', ...args]); return {}; },
     },
   } });
-  const handler = makeAccountsHandler({ env: configuration, clientFactory, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
+  const handler = makeAccountsHandler({ env: configuration, clientFactory, dataverseResearch:researchService, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
-    shows:async(operation,input)=>{calls.push(['shows',operation,input]);return operation==='list'?{shows:[]}:{record:{revision:0}};},
+    shows:async(operation,input)=>{calls.push(['shows',operation,input]);return showResult??(operation==='list'?{shows:[]}:{record:{revision:0}});},
     profiles: async (operation, actor, input) => {
       calls.push([operation, actor, input]);
       if (operation === failOperation) throw new Error('FORBIDDEN');

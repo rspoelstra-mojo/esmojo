@@ -1,3 +1,23 @@
+## Dataverse onderzoeksproef (11 november 2026)
+
+Op expliciet verzoek gebruikt Hatsune Miku, AFAS Live, 15 november 2026 dezelfde
+showpagina als Gashouder. Alleen deze exacte uitzondering; geen andere zaalshows.
+De bestaande Shows-account/MFA/modulecontrole blijft verplicht. Bij expliciet
+openen wordt eenmalig de gewone showmap/indexkoppeling aangemaakt; overige
+showvelden en functionaliteit blijven de bestaande opslagroute gebruiken.
+De AFAS-proef gaat rechtstreeks naar Drive en wordt niet in het bestaande
+uitsluitend-Gashouder actieve Supabase-model gezet.
+
+De elf Markdown-resultaten uit esmojo_onderzoeksresultaat worden server-side uit
+de bestaande Dataverse-omgeving gelezen, met de bestaande DATAVERSE_TEST_*
+credentials. Alleen de exact gekoppelde show-sleutel en bronbibliotheek.
+Dit vervangt de AI-inhoud in de weergave, zonder Drive-onderzoeksbestanden,
+zelfgeschreven analyses of beoordelingen te overschrijven. Toon AI-concept,
+bronversie en importdatum; importdatum is geen onderzoeksdatum. Geen automatische
+goedkeuring, Dataverse-writes, Graph-toegang of geplande imports. Geen inhoud,
+providerantwoorden of tokens in logs/persistente caches. Bestaande Power Automate
+handmatige import blijft los staan. Dit is geen algemene datamigratie.
+
 ## Dataverse verbindingstest (10 november 2026)
 
 De gebruiker vraagt een stapsgewijze, afzonderlijke proef; geen migratie.

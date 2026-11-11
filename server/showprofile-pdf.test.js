@@ -10,6 +10,14 @@ const original=new URL('./report-original/',import.meta.url),read=path=>readFile
 const assets=Object.fromEntries(await Promise.all(Object.entries({cover:'cover.pdf',watermark:'watermark.png',body:'body-font.ttf',heading:'heading-font.otf'}).map(async([key,name])=>[key,(await read('assets/'+name)).toString('base64')])));
 const input=JSON.parse(await read('example-input.json'));
 function context(){const record=structuredClone(input.record);for(const factor of ['visitors','artist'])for(const row of Object.values(record.workflow[factor].fields))row.completed_at=record.updated_at;return{state:'reserved',layoutVersion:PDF_LAYOUT_VERSION,sourceCommit:'eb2fa1a532267d7963f3d2358308c04b3bf8cfe6',concertId:record.concert_id,selectedConcertId:record.concert_id,version:1,revision:'a'.repeat(64),fileName:'SP_Voorbeeldartiest_Gashouder_14112026.pdf',show:input.show,record};}
+test('Exacte AFAS Live-testshow krijgt dezelfde PDF-opmaak met de juiste zaal',async()=>{
+ const c=context(),id='Hatsune-Miku_AFAS-Live_15112026';c.concertId=id;c.selectedConcertId=id;c.record.concert_id=id;
+ c.show={artist:'Hatsune Miku',venue:'AFAS Live',date:'2026-11-15'};Object.assign(c.record.concert,{id,artist:c.show.artist,venue:c.show.venue,date:c.show.date,shows:[{date:c.show.date,time:'20:00',id}]});
+ assert.equal(userReportRecord(c).concert.venue,'AFAS Live');
+ let generated;const service=createShowProfilePdfService({shows:async op=>op==='report-reserve'?c:{state:'ready'},assets:async()=>assets,render:async(...args)=>{generated=await createReportPdf(...args);return generated;}});
+ assert.equal((await service.ensure(id,'Synthetische manager')).state,'ready');assert.equal((await PDFDocument.load(generated)).getPageCount(),2);
+ assert.throws(()=>userReportRecord({...c,concertId:'Ander_AFAS-Live_15112026',record:{...c.record,concert_id:'Ander_AFAS-Live_15112026'}}),/GENERATION_FAILED/);
+});
 test('Adapter en generator gebruiken uitsluitend gebruikersvelden; AI-zijbalk en provenance veranderen geen byte',async()=>{
  const c=context();c.record.research={cards:[{answer:'VERBODEN_AI_ANTWOORD'}]};c.record.summary_points=['VERBODEN_AI_ANTWOORD'];c.record.provenance='VERBODEN_AI_ANTWOORD';
  const record=userReportRecord(c);assert.equal(JSON.stringify(record).includes('VERBODEN_AI_ANTWOORD'),false);

@@ -1,3 +1,4 @@
+import {dataversePilot,isDataversePilot} from '../../shared/dataverse-pilot.js';
 // Uitsluitend openbare menunamen/dagen/locaties. Nooit profiel, token of analyse.
 const KEY='esmojo-public-show-menu-v1';
 const day=date=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
@@ -9,7 +10,7 @@ export function menuWindow(now=new Date()){
 export function cleanMenu(value){
  if(!Array.isArray(value)||value.length>1000)throw Error('MENU_FORMAT');
  const seen=new Set();return value.map(row=>{
-  if(!row||typeof row.key!=='string'||!row.key||row.key.length>240||/[\x00-\x1f/\\]/.test(row.key)||seen.has(row.key)||typeof row.name!=='string'||!row.name.trim()||row.name.length>160||row.venue!=='Gashouder'||row.city!=='Amsterdam'||!Array.isArray(row.dates)||!row.dates.length||row.dates.length>365||row.dates.some(date=>typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date))throw Error('MENU_FORMAT');
+  if(!row||typeof row.key!=='string'||!row.key||row.key.length>240||/[\x00-\x1f/\\]/.test(row.key)||seen.has(row.key)||typeof row.name!=='string'||!row.name.trim()||row.name.length>160||(row.venue!=='Gashouder'&&!(isDataversePilot(row.key)&&row.venue===dataversePilot.venue&&row.name===dataversePilot.artist&&row.dates?.length===1&&row.dates[0]===dataversePilot.date))||row.city!=='Amsterdam'||!Array.isArray(row.dates)||!row.dates.length||row.dates.length>365||row.dates.some(date=>typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date))throw Error('MENU_FORMAT');
   seen.add(row.key);return{key:row.key,name:row.name,dates:[...new Set(row.dates)].sort(),venue:row.venue,city:row.city};
  });
 }

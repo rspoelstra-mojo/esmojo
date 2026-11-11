@@ -1,4 +1,5 @@
 import {createActiveRepository,createActiveShowService} from './active-show-store.js';
+import {isDataversePilot,pilotShow} from '../shared/dataverse-pilot.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 export function createShowsStore({ env = process.env, request = fetch, active = true, repository = null } = {}) {
@@ -16,11 +17,17 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
     if (!result.ok) throw new Error(['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT','STORAGE_ACTIVE'].includes(result.code) ? result.code : 'SHOWS_UNAVAILABLE');
     return result.data;
   };
-  if(!active||!env.VITE_SUPABASE_URL||!env.SUPABASE_SECRET_KEY)return drive;
-  const service=createActiveShowService({drive,repository:repository||createActiveRepository({env})});
+  const service=active&&env.VITE_SUPABASE_URL&&env.SUPABASE_SECRET_KEY?createActiveShowService({drive,repository:repository||createActiveRepository({env})}):null;
+  let pilotReady=null;
   const shows=async(operation,payload={})=>{
-    const data=await service.request(operation,payload);
-    return operation==='home-dashboard'?service.planning(data):data;
+    if(isDataversePilot(payload.concertId)){
+      if(operation==='home-metadata')return{show:pilotShow()};
+      // Alleen de expliciet geopende testshow aanmaken; geen writes bij menulezen.
+      pilotReady ||= drive('pilot-ensure',{concertId:payload.concertId}).catch(error=>{pilotReady=null;throw error;});
+      await pilotReady;
+    }
+    const data=await (service&&!isDataversePilot(payload.concertId)?service.request(operation,payload):drive(operation,payload));
+    return operation==='home-dashboard'&&service?service.planning(data):data;
   };
   shows.activeStorage=service;
   return shows;

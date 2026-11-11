@@ -1,3 +1,5 @@
+import {createDataverseResearch} from './dataverse-research.js';
+import {dataversePilot} from '../shared/dataverse-pilot.js';
 import {createDataverseTest} from './dataverse-test.js';
 import {createShowManagementService} from './show-management.js';
 import {createIncidentMetricsService} from './incident-metrics.js';
@@ -35,7 +37,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=createBarrierReferenceService({shows}), artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=createShowManagementService({env,shows}), dataverseTest=createDataverseTest({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=createBarrierReferenceService({shows}), artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=createShowManagementService({env,shows}), dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}) } = {}) {
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -195,7 +197,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
       const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
       if(action==='show-open'&&req.method==='POST'){
-        try{return reply(200,await shows('show-open',{...validateRiskViewRequest(req.body),actor}));}
+        try{const input=validateRiskViewRequest(req.body);const [bundle,research]=await Promise.all([shows('show-open',{...input,actor}),dataverseResearch.load(input.concertId)]);return reply(200,{...bundle,profile:dataverseResearch.merge(bundle.profile,research)});}
         catch(error){return reply(error.message==='VALIDATION'?400:503,{error:error.message==='VALIDATION'?'Ongeldige show.':'De show kon niet volledig worden geladen. Probeer opnieuw.'});}
       }
       if(['barrier-layout','floor-pressure'].includes(action)&&req.method==='POST'){
@@ -253,7 +255,9 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (action === 'show-profile' && req.method === 'POST') {
         try {
           const input = validateShowProfile(req.body);
-          return reply(200, await shows(input.operation, input.payload));
+          if(input.operation!=='profile-read')return reply(200,await shows(input.operation,input.payload));
+          const [profile,research]=await Promise.all([shows(input.operation,input.payload),dataverseResearch.load(input.payload.concertId)]);
+          return reply(200,dataverseResearch.merge(profile,research,input.payload.questionNumber));
         } catch (error) {
           const code = error.message;
           return reply(code === 'VALIDATION' ? 400 : code === 'PROFILE_CONFLICT' ? 409 : 503, { error: code === 'PROFILE_CONFLICT'
@@ -264,7 +268,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (action === 'shows' && req.method === 'GET') {
         const data = await shows('list');
         if (!data.checkedAt) return reply(503, { error: 'De concertagenda is nog niet geïmporteerd.' });
-        return reply(200, { artists: upcomingArtists(data.concerts), shows: upcomingShows(data.concerts), checkedAt: data.checkedAt });
+        const concerts=data.concerts.some(row=>row.concertId===dataversePilot.concertId)?data.concerts:[...data.concerts,dataversePilot];
+        return reply(200, { artists: upcomingArtists(data.concerts), shows: upcomingShows(concerts), checkedAt: data.checkedAt });
       }
       if (action === 'photo' && req.method === 'PATCH') {
         const input = req.body;

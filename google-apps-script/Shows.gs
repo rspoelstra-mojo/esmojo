@@ -14,10 +14,14 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save','biography-initial-save','biography-initial-batch','incident-counts','incident-daily-start','incident-daily-publish'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['pilot-ensure','sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save','biography-initial-save','biography-initial-batch','incident-counts','incident-daily-start','incident-daily-publish'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if(request.operation==='pilot-ensure'){
+      const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
+      return esmojoReply_({ok:true,data:esmojoEnsureDataversePilot_(request)});
+    }
     if(String(request.operation).startsWith('incident-')){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
       return esmojoReply_({ok:true,data:esmojoIncidentMetrics_(request)});
@@ -120,7 +124,7 @@ function esmojoShows_(input) {
     const groups = [];
     for (const row of rows) {
       const group = groups[groups.length - 1], last = group && group[group.length - 1];
-      if (last && esmojoArtistKey_(last.artist) === esmojoArtistKey_(row.artist) && Date.parse(row.date) - Date.parse(last.date) === 86400000) group.push(row);
+      if (last && esmojoArtistKey_(last.artist) === esmojoArtistKey_(row.artist) && last.venue === row.venue && Date.parse(row.date) - Date.parse(last.date) === 86400000) group.push(row);
       else groups.push([row]);
     }
     // Twee al bestaande reeksen niet stilzwijgend samenvoegen: hun latere
@@ -192,6 +196,26 @@ function esmojoShows_(input) {
   finally { if (lock) lock.releaseLock(); }
 }
 
+// Eenmalige, idempotente showaanmaak op expliciet openen; overige zalen blijven gesloten.
+function esmojoEnsureDataversePilot_(request){
+  if(Object.keys(request).sort().join(',')!=='concertId,operation'||request.concertId!=='Hatsune-Miku_AFAS-Live_15112026')throw Error('VALIDATION');
+  const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID);if(root.isTrashed())throw Error('NOT_FOUND');
+  const folders=root.getFoldersByName('Productie');let production=folders.hasNext()?folders.next():null;if(folders.hasNext())throw Error('CONFLICT');
+  if(!production)production=root.createFolder('Productie');
+  const file=esmojoShowFile_(production,'_esmojo_shows_v1.json');
+  const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,concerts:[],active:[],checkedAt:null};
+  if(state.version!==1||!Array.isArray(state.concerts)||!Array.isArray(state.active))throw Error('CONFLICT');
+  const existing=state.concerts.filter(row=>row.concertId===request.concertId);
+  if(existing.length){if(existing.length!==1||existing[0].artist!=='Hatsune Miku'||existing[0].venue!=='AFAS Live'||existing[0].date!=='2026-11-15')throw Error('CONFLICT');return{ready:true};}
+  const artists=production.getFoldersByName('Hatsune Miku');let artist=artists.hasNext()?artists.next():null;if(artists.hasNext())throw Error('CONFLICT');if(!artist)artist=production.createFolder('Hatsune Miku');
+  const concerts=artist.getFoldersByName(request.concertId);let folder=concerts.hasNext()?concerts.next():null;if(concerts.hasNext())throw Error('CONFLICT');if(!folder)folder=artist.createFolder(request.concertId);
+  const row={concertId:request.concertId,artist:'Hatsune Miku',date:'2026-11-15',venue:'AFAS Live',city:'Amsterdam',sourceUrl:'https://www.mojo.nl/agenda',folderId:folder.getId(),generalConcertId:request.concertId,generalFolderId:folder.getId()};
+  const general=esmojoWriteShowJson_(folder,esmojoShowFile_(folder,'algemeen.json'),'algemeen.json',{version:1,concertId:row.concertId,artist:row.artist,venue:row.venue,city:row.city,dates:[row.date],sources:[]});
+  esmojoWriteShowJson_(folder,esmojoShowFile_(folder,'concert.json'),'concert.json',{version:1,concertId:row.concertId,date:row.date,generalConcertId:row.concertId,generalFolderId:row.folderId});
+  row.generalFileId=general.getId();state.concerts.push(row);
+  esmojoWriteShowJson_(production,file,'_esmojo_shows_v1.json',state);
+  return{ready:true};
+}
 function esmojoArtistKey_(name) { return name.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function esmojoConcertId_(artist, date) { return artist.normalize('NFC').trim().replace(/[\s_/\\]+/g, '-') + '_Gashouder_' + date.slice(8, 10) + date.slice(5, 7) + date.slice(0, 4); }
 function esmojoShowFile_(folder, name) {

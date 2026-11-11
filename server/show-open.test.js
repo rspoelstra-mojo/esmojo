@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import {harness} from './test-support/production-drive.js';
 import {createShowData} from '../src/lib/show-data.js';
 const actor='show-open-local-fixture';
+test('AFAS Live-proef opent dezelfde volledige showbundel en bewaart eigen analyse',async()=>{
+ const h=harness(),id='Hatsune-Miku_AFAS-Live_15112026';
+ h.indexFile.content=JSON.stringify({...h.index,active:[]});
+ h.indexFile.setContent=function(value){this.content=value;};
+ Object.getPrototypeOf(h.folder).createFolder=function(name){return new this.constructor(name,this);};
+ const opened=await h.shows('show-open',{concertId:id,actor});
+ assert.equal(opened.profile.revision,0);assert.equal(opened.tickets.shows.length,1);assert.equal(opened.barrier.record.completed,false);assert.ok(opened.risks);assert.ok(opened.floor);
+ const target=h.ctx.esmojoResearchTarget_(id);assert.equal(target.primary.venue,'AFAS Live');assert.equal(target.primary.artist,'Hatsune Miku');
+ const saved=await h.shows('profile-save',{concertId:id,questionNumber:1,summary:'Eigen concept voor AFAS Live',status:'draft',revision:0});assert.equal(saved.revision,1);
+ const reopened=await h.shows('show-open',{concertId:id,actor});assert.equal(reopened.profile.analyses[1].summary,'Eigen concept voor AFAS Live');
+ assert.equal((await h.shows('show-open',{concertId:h.concertId,actor})).profile.revision,0,'Andere shows blijven ongewijzigd');
+});
 async function openFixture(h=harness()){
  h.ctx.esmojoPdfSnapshot_=h.realSnapshot;
  return h.shows('show-open',{concertId:h.laterId,actor});

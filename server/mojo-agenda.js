@@ -1,4 +1,5 @@
 import {mojoVenue,matchesMojoVenue} from './mojo-venues.js';
+import {isDataversePilot} from '../shared/dataverse-pilot.js';
 // Alleen openbare MOJO-agendagegevens. Geen afbeeldingen, tickets of bezoekersdata.
 const DAY = 86400000;
 const MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
@@ -90,7 +91,7 @@ export function upcomingShows(concerts, now = new Date()) {
   const from = calendarDate(now), until = addDays(from, 90), weekUntil = addDays(from, 7);
   const artists = new Map();
   for (const row of concerts) {
-    if (row.venue !== 'Gashouder' || row.city !== 'Amsterdam') continue;
+    if ((row.venue !== 'Gashouder' || row.city !== 'Amsterdam') && !isDataversePilot(row.concertId)) continue;
     const key = artistKey(row.artist);
     if (!artists.has(key)) artists.set(key, new Map());
     artists.get(key).set(row.date, row);

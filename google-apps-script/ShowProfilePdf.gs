@@ -5,14 +5,14 @@ function esmojoPdfHash_(value){const bytes=typeof value==='string'?Utilities.com
 function esmojoPdfFileName_(show){const part=value=>value.replace(/[<>:"/\\|?*]/g,'_').replace(/\s+/g,'_').replace(/_+/g,'_').replace(/^_+|_+$/g,'');const [y,m,d]=show.date.split('-');return 'SP_'+part(show.artist)+'_'+part(show.venue)+'_'+d+m+y+'.pdf';}
 function esmojoPdfSnapshot_(concertId,target=esmojoResearchTarget_(concertId)){
   const profile=esmojoReadShowProfile_(esmojoShowFile_(target.folder,'showprofiel.json'),target.primary.concertId),state=esmojoAnalysisFinalState_(target,profile);
-  if(!state.categories.visitors.completedAt||!state.categories.artist.completedAt||(target.primary.venue&&target.primary.venue!=='Gashouder'))throw Error('REPORT_NOT_READY');
+  if(!state.categories.visitors.completedAt||!state.categories.artist.completedAt||(target.primary.venue&&target.primary.venue!=='Gashouder'&&!(target.primary.concertId==='Hatsune-Miku_AFAS-Live_15112026'&&target.primary.venue==='AFAS Live')))throw Error('REPORT_NOT_READY');
   const final=esmojoReadAnalysisFinal_(esmojoShowFile_(target.folder,'analyseafronding.json'),target.primary.concertId),ticketData=esmojoReadTicketData_(esmojoShowFile_(target.folder,'bezoekersdata.json'),target.primary.concertId),tickets=JSON.parse(ticketData.workflow_json).visitors.fields;
   const visitorIds=['gender_ratio','age_range','arrival','typical_traits'],artistIds=['artist_description','tour_route','movement','punctuality','popularity','social_sensitivity','special_notes'];
   const workflow={visitors:{fields:{}},artist:{fields:{}}},times=[];
   for(let number=1;number<=11;number++){const row=profile.analyses[number];if(row?.status!=='completed'||typeof row.summary!=='string'||!row.summary.trim())throw Error('REPORT_NOT_READY');const factor=number<=4?'visitors':'artist',id=number<=4?visitorIds[number-1]:artistIds[number-5];workflow[factor].fields[id]={content:row.summary,completed_at:row.updatedAt};times.push(row.updatedAt);}
   for(const field of ticketFields){const row=tickets[field];workflow.visitors.fields[field]={content:row.content,completed_at:row.completed_at};times.push(row.completed_at);}
   for(const factor of ['visitors','artist']){const row=final.categories[factor];workflow[factor].score_review={score:row.score,reason:row.note,completed_at:row.completedAt};times.push(row.completedAt);}
-  const shows=saleShows({shows:target.seriesShows}),show={artist:target.primary.artist,venue:'Gashouder',date:target.primary.date};
+  const shows=saleShows({shows:target.seriesShows}),show={artist:target.primary.artist,venue:target.primary.venue||'Gashouder',date:target.primary.date};
   const updatedAt=new Date(Math.max(...times.map(value=>Date.parse(value)))).toISOString();
   const record={concert_id:target.primary.concertId,status:'pending',updated_at:updatedAt,workflow,concert:{id:target.primary.concertId,artist:show.artist,venue:show.venue,city:'Amsterdam',date:show.date,time:shows[0]?.time||'Niet vermeld',genre:'',shows:shows.map(row=>({...row,id:row.date+'|'+row.time}))}};
   const revision=esmojoPdfHash_(JSON.stringify({layout:ESMOJO_PDF_LAYOUT,source:ESMOJO_PDF_SOURCE,record,basis:state.basis}));

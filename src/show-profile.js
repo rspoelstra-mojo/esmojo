@@ -154,14 +154,16 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
       else if (research) {
         const view = researchView(research);
         availableText = view.summaryText; renderResearch(aiText, view.summary); renderResearch(answer, view.analysis); adopt.disabled = !availableText;
-        researchDate.textContent = `Onderzocht op ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(research.researchedAt))}`;
+        researchDate.textContent = research.source === 'dataverse'
+          ? `AI-concept · Dataverse · bronversie ${research.sourceVersion} · geïmporteerd op ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(research.importedAt))} · Beoordeling door Event Safety Manager vereist`
+          : `Onderzocht op ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(research.researchedAt))}`;
         if (view.sourcesMarkdown) renderResearch(sourceList, view.sourcesMarkdown);
         else {
           const list = node('ol', '');
           for (const source of view.sources) { const li = node('li', ''), link = node('a', '', source.title); link.href = safeResearchUrl(source.url); link.target = '_blank'; link.rel = 'noopener noreferrer'; li.append(link); list.append(li); }
           sourceList.append(list);
         }
-        sourcesTitle.textContent = `Bronnen (${view.sources.length})`;
+        sourcesTitle.textContent = research.source === 'dataverse' ? 'Bronnen zoals vermeld in de onderzoekstekst' : `Bronnen (${view.sources.length})`;
       } else answer.textContent = 'Nog geen AI-analyse beschikbaar.';
     } catch { if (!disposed && editorNumber === number) feedback({key:'profile-editor:'+show.key+':'+number,label:'Analyse laden',route:'/shows/'+encodeURIComponent(show.key)+'?tab=showprofiel'}).show('De analyse kon niet worden geladen.',()=>openEditor(number),'Opnieuw laden'); }
     finally { finish?.(); aiCard.removeAttribute('aria-busy'); }

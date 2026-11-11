@@ -47,6 +47,20 @@ const date = calendarDate(), row = (artist, offset) => { const day = addDays(dat
 const snapshot = concerts => ({ from: date, until: addDays(date, 365), checkedAt: new Date().toISOString(), concerts });
 const jsonFile = (folder, name) => JSON.parse(folder.files.find(file => file.name === name).content);
 
+test('Exacte AFAS Live-proef krijgt eigen concertmap, idempotent en gescheiden van Gashouder',async()=>{
+ const h=harness(),id='Hatsune-Miku_AFAS-Live_15112026';
+ await h.store('sync',{snapshot:snapshot([row('Test Band',4)])});
+ const before=(await h.store('list')).concerts;
+ const result=await h.context.esmojoEnsureDataversePilot_({operation:'pilot-ensure',concertId:id});assert.equal(result.ready,true);
+ const production=h.root.folders[0],index=jsonFile(production,'_esmojo_shows_v1.json'),pilot=index.concerts.find(row=>row.concertId===id);
+ assert.equal(pilot.venue,'AFAS Live');assert.equal(pilot.generalConcertId,id);assert.deepEqual((await h.store('list')).concerts,before,'Bestaande actieve agenda niet wijzigen');
+ const writes=h.writes();h.context.esmojoEnsureDataversePilot_({operation:'pilot-ensure',concertId:id});assert.equal(h.writes(),writes);
+ assert.throws(()=>h.context.esmojoEnsureDataversePilot_({operation:'pilot-ensure',concertId:'Andere_AFAS-Live_15112026'}),/VALIDATION/);
+ const metadata=await h.store('home-metadata',{concertId:id});assert.equal(metadata.show.venue,'AFAS Live');assert.equal(h.writes(),writes);
+ // De normale dagelijkse import bewaart de uitzonderingsshow en haar documenten.
+ await h.store('sync',{snapshot:snapshot([row('Test Band',4)])});assert.ok(jsonFile(production,'_esmojo_shows_v1.json').concerts.some(row=>row.concertId===id&&row.venue==='AFAS Live'));
+});
+
 test('eerste import maakt Productie/artiest/concert en zet algemene informatie alleen bij eerste opeenvolgende datum', async () => {
   const h = harness(); const data = await h.store('sync', { snapshot: snapshot([row('Test Band', 4), row('Test Band', 5), row('Test Band', 6), row('Andere artiest', 8)]) });
   assert.equal(data.createdArtists, 2); assert.equal(data.createdConcerts, 4);
