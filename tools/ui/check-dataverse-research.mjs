@@ -13,7 +13,7 @@ const root=fileURLToPath(new URL('../../',import.meta.url)).replace(/\/$/,'');
 const html=`<!doctype html><html lang="nl"><head><link rel="stylesheet" href="/src/style.css"><link rel="stylesheet" href="/src/show-profile.css"></head><body><nav id="submenu-navigation"><a aria-current="page">Hatsune Miku</a></nav><main id="content"></main><script type="module">
 import {createShowProfile} from '/src/show-profile.js';
 window.calls=[];const finalization={ticketsReady:false,basis:{profileRevision:0,finalRevision:0,ticketVersions:{ticket_sales:0,visitor_origins:0,domestic_origins:0}},categories:{visitors:{ready:false,completedAt:null},artist:{ready:false,completedAt:null}}};
-const researchByNumber=Object.fromEntries(Array.from({length:11},(_,i)=>[i+1,{questionNumber:i+1,answer:'# Samenvatting\\n\\nConcept '+(i+1)+'\\n\\n# Volledige analyse\\n\\nOnderzoek '+(i+1)+' <img src=x onerror=alert(1)>\\n\\n# Bronnen\\n\\n[Voorbeeld](https://example.invalid/)',sources:[],source:'dataverse',status:'ai-concept',sourceVersion:'1.0',importedAt:'2026-11-11T10:00:00Z'}]));
+const researchByNumber=Object.fromEntries(Array.from({length:11},(_,i)=>[i+1,{questionNumber:i+1,answer:'Samenvatting\\n\\nConcept '+(i+1)+'\\n\\nVolledige analyse\\n\\nOnderzoek '+(i+1)+' <img src=x onerror=alert(1)>\\n\\nBronnen\\n\\n[Voorbeeld](https://example.invalid/)',sources:[],source:'dataverse',status:'ai-concept',sourceVersion:'1.0',importedAt:'2026-11-11T10:00:00Z'}]));
 const data={revision:0,analyses:{1:{summary:'Eigen tekst',status:'draft',updatedAt:'2026-11-11T09:00:00Z'}},researchByNumber,researchErrors:{},finalization};
 window.dispose=createShowProfile(document.querySelector('main'),{show:{key:'Hatsune-Miku_AFAS-Live_15112026'},readOnly:true,requestAccess:async(action)=>{window.calls.push(action);if(action==='show-profile'||action==='analysis-finalization')return data;throw Error('Unexpected API '+action);}});await window.dispose.ready;window.ready=true;
 </script></body></html>`;
@@ -48,6 +48,10 @@ try{
   assert.equal(await evaluate("document.querySelector('.analysis-researched').textContent.includes('bronversie 1.0')"),true);
   assert.equal(await evaluate("document.querySelector('.analysis-researched').textContent.includes('Onderzocht op')"),false);
   assert.equal(await evaluate("document.querySelectorAll('main img').length"),0,'Markdown HTML nooit uitvoeren');
+  assert.equal(await evaluate("document.querySelector('.analysis-ai-text').textContent"),'Concept '+n);
+  assert.equal(await evaluate("document.querySelector('.analysis-research-answer').textContent.startsWith('Onderzoek ')"),true);
+  assert.equal(await evaluate("document.querySelector('.analysis-research-answer').textContent.includes('Voorbeeld')"),false);
+  assert.equal(await evaluate("document.querySelector('.analysis-research-sources a').textContent"),'Voorbeeld');
   if(n===1)assert.equal(await evaluate("document.querySelector('textarea').value"),'Eigen tekst');
   else assert.equal(await evaluate("document.querySelector('textarea').value"),'','Geen automatische overname AI-concept');
   await evaluate("document.querySelector('.profile-back').click()");await pause(10);

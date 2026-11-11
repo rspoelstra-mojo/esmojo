@@ -27,3 +27,13 @@ test('inline-opmaak en bronverwijzingen worden beperkte tokens; HTML en onveilig
   assert.equal(researchView({ ...research(1), sources: [{ title: 'X', url: 'javascript:alert(1)' }] }).sources.length, 0);
   assert.equal(researchBlocks('- Eerste\n- Tweede')[0].items.length, 2);
 });
+test('Alle elf imports splitsen losse, vetgemaakte en gemengde kopregels',()=>{
+ for(let n=1;n<=11;n++)for(const headings of [['Samenvatting','Volledige analyse','Bronnen'],['**Samenvatting**','**Volledige analyse**','**Bronnen**'],['Samenvatting:','## Volledige analyse','__Bronnen:__']]){
+  const view=researchView({answer:`${headings[0]}\r\n\r\nBeperking ${n}.\r\n\r\n${headings[1]}\r\n\r\n- Bevinding ${n}.<sup>1</sup>\r\n\r\n${headings[2]}\r\n\r\n[1] [Bron](https://example.org)`});
+  assert.equal(view.summaryText,`Beperking ${n}.`);assert.equal(view.analysis,`- Bevinding ${n}.<sup>1</sup>`);assert.equal(view.sourcesMarkdown,'[1] [Bron](https://example.org)');
+ }
+});
+test('Subkoppen blijven bij de analyse; sectienamen binnen zinnen of code zijn geen scheiding',()=>{
+ const view=researchView({answer:'Samenvatting\n\nEen korte tekst.\n\nVolledige analyse\n\n### Onderdeel\n\nBronnen zijn beperkt.\n\n```text\nBronnen\n```\n\nBronnen\n\nEen echte bron.'});
+ assert.ok(view.analysis.includes('### Onderdeel'));assert.ok(view.analysis.includes('Bronnen zijn beperkt.'));assert.ok(view.analysis.includes('```text\nBronnen\n```'));assert.equal(view.sourcesMarkdown,'Een echte bron.');
+});

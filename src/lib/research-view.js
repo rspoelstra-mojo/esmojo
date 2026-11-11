@@ -40,12 +40,24 @@ function plain(markdown) {
 }
 export function researchView(research) {
   const answer = typeof research?.answer === 'string' ? research.answer.replace(/\r\n?/g, '\n').trim() : '';
-  const sections = new Map(), headings = [...answer.matchAll(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/gm)];
+  const sections = new Map(), headings = [];let offset=0,fence=null;
+  const sectionNames=['samenvatting','volledige analyse','bronnen'];
+  for(const line of answer.split('\n')){
+    const codeFence=line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if(codeFence){if(!fence)fence={char:codeFence[1][0],length:codeFence[1].length};else if(codeFence[1][0]===fence.char&&codeFence[1].length>=fence.length)fence=null;offset+=line.length+1;continue;}
+    if(!fence){
+      const markdown=line.match(/^ {0,3}(#{1,6})[\t ]+(.+?)[\t ]*#*[\t ]*$/);
+      const label=(markdown?markdown[2]:line).trim().replace(/\*\*|__/g,'').replace(/:$/,'').trim().toLowerCase();
+      const known=sectionNames.includes(label);
+      if(markdown||known)headings.push({index:offset,end:offset+line.length,name:label,level:markdown?markdown[1].length:0,known});
+    }
+    offset+=line.length+1;
+  }
   for (let i = 0; i < headings.length; i++) {
-    const heading = headings[i], name = heading[2].replace(/\*\*/g, '').trim().toLowerCase();
-    if (!['samenvatting', 'volledige analyse', 'bronnen'].includes(name)) continue;
-    const next = headings.slice(i + 1).find(next => next[1].length <= heading[1].length);
-    sections.set(name, answer.slice(heading.index + heading[0].length, next?.index ?? answer.length).trim());
+    const heading = headings[i];
+    if (!heading.known) continue;
+    const next = headings.slice(i + 1).find(next => next.known || heading.level>0&&next.level>0&&next.level<=heading.level);
+    sections.set(heading.name, answer.slice(heading.end, next?.index ?? answer.length).trim());
   }
   const firstParagraph = researchBlocks(answer).find(block => block.type === 'p');
   const summary = sections.get('samenvatting') ?? firstParagraph?.text ?? '';
