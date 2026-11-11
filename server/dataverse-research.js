@@ -32,7 +32,9 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
  }
  async function read(){
   const {headers,entity}=await connect();
-  const params=new URLSearchParams({'$select':columns.join(','),'$filter':`esmojo_showsleutel eq '${pilot.sourceKey}' and esmojo_bronbibliotheekid eq '${pilot.libraryId}'`,'$top':'501'});
+  // Power Automate kan randspaties/newlines in een tekstveld opslaan. De query
+  // selecteert kandidaten; alleen de exacte getrimde sleutel wordt gekoppeld.
+  const params=new URLSearchParams({'$select':columns.join(','),'$filter':`contains(esmojo_showsleutel,'${pilot.sourceKey}') and esmojo_bronbibliotheekid eq '${pilot.libraryId}'`,'$top':'501'});
   let url=base+entity+'?'+params,rows=[],pages=0;
   while(url){
    if(++pages>11)throw Error('DATAVERSE_LIMIT');
@@ -43,8 +45,9 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
   }
   const selected=new Map();let bytes=0;
   for(const row of rows){
+   if(typeof row.esmojo_showsleutel!=='string'||row.esmojo_showsleutel.trim()!==pilot.sourceKey)continue;
    const number=row.esmojo_vraagnummer,v=version(row.esmojo_bronversie),text=row.esmojo_markdowninhoud;
-   if(row.esmojo_showsleutel!==pilot.sourceKey||row.esmojo_bronbibliotheekid!==pilot.libraryId||!Number.isInteger(number)||number<1||number>11||!v||!Number.isSafeInteger(row.esmojo_bronbestanditemnummer)||row.esmojo_bronbestanditemnummer<1||typeof text!=='string'||!text.trim()||text.length>1048576||!Number.isFinite(Date.parse(row.createdon)))throw Error('DATAVERSE_RESPONSE');
+   if(row.esmojo_bronbibliotheekid!==pilot.libraryId||!Number.isInteger(number)||number<1||number>11||!v||!Number.isSafeInteger(row.esmojo_bronbestanditemnummer)||row.esmojo_bronbestanditemnummer<1||typeof text!=='string'||!text.trim()||text.length>1048576||!Number.isFinite(Date.parse(row.createdon)))throw Error('DATAVERSE_RESPONSE');
    const path=row.esmojo_bronbestandpad;
    if(typeof path!=='string'||!path.replace(/^\//,'').startsWith('Shared Documents/General/NIEUWE_SHOW_RESULTAAT/'+pilot.sourceKey+'/')||!path.endsWith('.md'))throw Error('DATAVERSE_RESPONSE');
    bytes+=Buffer.byteLength(text);if(bytes>2*1024*1024)throw Error('DATAVERSE_LIMIT');

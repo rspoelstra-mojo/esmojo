@@ -28,6 +28,15 @@ test('Bronversies worden numeriek vergeleken en ontbrekende onderwerpen blijven 
  const {service}=setup([row(1,'1.9'),{...row(1,'1.10'),esmojo_markdowninhoud:'Nieuw'},row(2,'2.0')]);
  const result=await service.load(pilot.concertId);assert.equal(result.researchByNumber[1].answer,'Nieuw');assert.equal(result.researchByNumber[2].sourceVersion,'2.0');assert.ok(result.researchErrors[3]);
 });
+test('Geïmporteerde randspaties herstellen alle elf vragen; andere shows blijven uitgesloten',async()=>{
+ const rows=Array.from({length:11},(_,i)=>({...row(i+1),esmojo_showsleutel:'\t '+pilot.sourceKey+'\r\n'}));
+ rows.push({...row(1),esmojo_showsleutel:pilot.sourceKey+'_andere_show',esmojo_markdowninhoud:'Niet koppelen'});
+ rows.push({...row(1),esmojo_showsleutel:'voorvoegsel_'+pilot.sourceKey,esmojo_markdowninhoud:'Niet koppelen'});
+ const {service,calls}=setup(rows),result=await service.load(pilot.concertId);
+ assert.equal(Object.keys(result.researchByNumber).length,11);assert.deepEqual(result.researchErrors,{});assert.doesNotMatch(JSON.stringify(result),/Niet koppelen/);
+ assert.ok(new URL(calls.at(-1).url).searchParams.get('$filter').includes(`contains(esmojo_showsleutel,'${pilot.sourceKey}')`));
+ assert.equal(rows[0].esmojo_showsleutel,'\t '+pilot.sourceKey+'\r\n','Brondata niet wijzigen');
+});
 test('Dubbele vraagnummers uit verschillende bestanden zijn ambigu, geen willekeurige selectie',async()=>{
  for(const rows of [[row(1),{...row(1),esmojo_bronbestanditemnummer:22}],[row(1),row(1)]]){
   const {service}=setup(rows);const result=await service.load(pilot.concertId);assert.deepEqual(result.researchByNumber,{});assert.equal(Object.keys(result.researchErrors).length,11);
