@@ -1,3 +1,10 @@
+> **Actualisatie 12 november 2026:** voor de Shows-module is
+> [shows-schema.md](shows-schema.md) het concrete actuele aanmaakcontract.
+> Het nieuwere gebruikersbesluit vervangt alle PDF-naar-SharePoint-passages in
+> dit oudere ontwerp: PDF’s worden opgeslagen in **Dataverse File**;
+> SharePoint/ESMOJO Bibliotheek is uitsluitend voor ChatGPT-uitwisseling.
+> De bestaande onderzoekstabel met volledige Markdown blijft behouden.
+
 # Datamodel: 36 eigen tabellen
 
 Status: ontwerp v1, 11 november 2026. Geen tabel aangemaakt. Aantal exclusief

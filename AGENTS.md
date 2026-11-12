@@ -1,3 +1,18 @@
+## Definitief PDF-besluit en Shows-schema (12 november 2026)
+
+Nieuwste gebruikerbesluit: PDF’s worden canoniek opgeslagen in Dataverse File,
+net als overige applicatiebestanden. ESMOJO Bibliotheek/SharePoint dient uitsluitend
+ChatGPT-uitwisseling, geen permanente hoofdopslag van ESMOJO-PDF’s. Dit vervangt
+alle oudere PDF-naar-SharePoint-ontwerpinstructies in deze repository.
+Gebruiker wil eerst tabellen/kolommen aanmaken en vraagt een concreet schema.
+Actueel contract: docs/dataverse/shows-schema.md en shows-schema.json, 30 tabellen
+voor Shows en benodigde gedeelde afhankelijkheden: 29 nieuw + bestaand Onderzoek.
+Onderzoeksresultaat behouden: één Markdown-kolom met bronnen, geen onderzoeksdatum
+of aparte bronnenkolom. Alleen optionele lookup naar Concertreeks voorbereiden.
+Geen schema-aanmaak, dataoverdracht of routeomschakeling door documentoplevering.
+Inventarisatie van stap 1 is tijdelijk geparkeerd op task/show-inventory-20261112;
+WIP daarvan niet naar main samenvoegen als onderdeel van deze schema-opdracht.
+
 ## Eénknopsimport alle AI-analyses (12 november 2026)
 
 Gebruiker autoriseert een knop om alle bestaande openbare Drive AI-analyses naar

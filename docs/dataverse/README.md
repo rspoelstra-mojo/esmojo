@@ -1,3 +1,11 @@
+> **Actueel besluit en uitvoerbaar aanmaakschema — 12 november 2026:**
+> [Shows: tabellen, alle kolommen, relaties en keuzelijsten](shows-schema.md).
+> Dit nieuwe Shows-contract bevat 30 tabellen (29 nieuw, 1 bestaand). Het oudere
+> 36-tabellenplan hieronder gaat over de hele applicatie en is geen aanmaaklijst.
+> PDF’s gaan volgens het nieuwste besluit naar **Dataverse File**. SharePoint is
+> uitsluitend voor ChatGPT-uitwisseling. Oudere SharePoint-PDF-passages hieronder
+> zijn vervallen. AI-Markdown blijft in de bestaande onderzoekstabel.
+
 # ESMOJO: Dataverse-ontwerp en meetplan
 
 Ontwerp v1 — 11 november 2026. Alleen documentatie; geen migratie, schema-aanmaak
