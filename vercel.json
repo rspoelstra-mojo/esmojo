@@ -18,6 +18,10 @@
     "api/email-deliverability.js": {
       "includeFiles": "server/email/template.html",
       "maxDuration": 60
+    },
+    "api/background-tasks-sync.js": {
+      "includeFiles": "docs/dataverse/shows-schema.json",
+      "maxDuration": 300
     }
   },
   "headers": [

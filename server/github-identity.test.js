@@ -72,3 +72,10 @@ test('Automatische incidentherberekening accepteert alleen webworkflow/main/eige
   for(const patch of [{ref:'refs/heads/task'},{repository_id:'123'},{repository_owner_id:'123'},{aud:'other'},{workflow_ref:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name,...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
  }
 });
+
+test('background tasks require their own OIDC audience/workflow on main, with no push or PR authority',async()=>{
+ const audience='https://esmojo.nl/api/background-tasks-sync',workflow='background-tasks.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
+ for(const event_name of ['schedule','workflow_dispatch'])assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),{runId:'123'});
+ for(const patch of [{aud:'other'},{workflow_ref:claims.workflow_ref},{ref:'refs/heads/task'},{event_name:'push'},{event_name:'pull_request'},{repository_id:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref}),{request,now,audience}),/FORBIDDEN/);
+});

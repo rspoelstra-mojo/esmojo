@@ -1,3 +1,19 @@
+## Herbruikbare server-achtergrondtaken (12 november 2026)
+
+Gebruiker autoriseert duurzame achtergrondtaken voor de Shows-migratie en een
+herbruikbare basis voor toekomstige Dataverse-aanpassingen. Bestaande Opdracht
+mag versleutelde checkpoints/machtiging en een globaal uitvoeringsslot bewaren;
+beide Opdracht-indexen Actief vóór technische writes, alle migratiechecks vóór
+bedrijfsdata. Expliciete start na admin/Shows/MFA, geen automatische taak bij laden
+of deploy. Worker gebruikt vaste main/OIDC-workflow en alleen geregistreerde
+idempotente adapters; actuele bronprofielrechten per stap, delegatie maximaal24u.
+Globaal slot/per-taaklease/ETag/generatie en terugleescontrole; onbekende writes
+blijven15min uitgesloten. Geen bronverwijdering, cutover, mail of vrije scripts.
+Browser leest status, geen cursors/actorIDs/native tokens. Opdracht-payload AES-GCM
+met bestaande domeingescheiden serverkey; geen nieuwe dienst/geheim. Oude AI- en
+schema-setupknoppen blijven voorlopig browsergestuurd. Handleiding en uitbreiden:
+docs/background-tasks.md. Nieuwe adapter vereist eigen inhoudelijke autorisatie.
+
 ## Geautoriseerde Shows-kopie naar Dataverse (12 november 2026)
 
 Gebruiker autoriseert de volledige migratieknop op de beheer-datatransitiepagina.

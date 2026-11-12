@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createBackgroundTasks} from './engine.js';
+const clone=structuredClone;
+function memoryStore(){const rows=new Map();let version=0,runner=null;return{rows,async claimRunner(lease,now){if(runner?.until>now)return null;runner=clone(lease);return{lease:clone(lease)};},async releaseRunner(row,id){if(runner?.id===id)runner=null;},async get(type){return clone(rows.get(type)||null);},async create(type,title,state){if(!rows.has(type))rows.set(type,{id:type,etag:String(++version),state:clone(state)});return this.get(type);},async save(row,state){if(rows.get(state.type)?.etag!==row.etag)throw Error('TASK_STALE');rows.set(state.type,{id:row.id,etag:String(++version),state:clone(state)});return this.get(state.type);}};}
+function fixture({step,authorize=async()=>true,failure}={}){const store=memoryStore();let clock=1000000,calls=0;const registry={'example-task':{title:'Example',module:'shows',version:1,idempotent:true,step:step||(async({cursor})=>{calls++;const n=(Number(cursor)||0)+1;return{status:n===3?'complete':'ready',cursor:String(n),public:{label:'Step '+n,total:3,progress:{current:n,verifiedRecords:n},private:'secret'}};}),failure}};const build=()=>createBackgroundTasks({store,registry,authorize,now:()=>clock});return{store,registry,build,advance:ms=>clock+=ms,get calls(){return calls;}};}
+const command=(operation='start')=>({operation,type:'example-task'});
+test('task survives a closed browser and process restart; duplicate starts preserve the same job',async()=>{
+ const f=fixture(),engine=f.build();assert.equal((await engine.control(command('status'),'admin')).task,null);assert.equal(f.calls,0);
+ const first=await engine.control(command(),'admin');await engine.control(command(),'admin');assert.equal(f.store.rows.size,1);assert.equal(first.task.status,'queued');assert.equal(f.calls,0);
+ await engine.run({maxSteps:1});assert.equal(f.calls,1);const restarted=f.build();const status=await restarted.control(command('status'),'admin');assert.equal(status.task.progress.current,1);assert.ok(!JSON.stringify(status).includes('secret'));assert.ok(!JSON.stringify(status).includes('cursor'));assert.ok(!JSON.stringify(status).includes('actor'));
+ await restarted.run();assert.equal(f.calls,3);const complete=await restarted.control(command('status'),'admin');assert.equal(complete.task.status,'complete');assert.equal(complete.task.canRestart,true);
+ await restarted.run();await restarted.control(command(),'admin');assert.equal(f.calls,3,'No implicit rerun');
+ await restarted.control(command('restart'),'admin');await restarted.run();assert.equal(f.calls,6);
+});
+test('parallel workers and simultaneous clicks execute one claimed task only',async()=>{
+ let calls=0,finish,started;const beginning=new Promise(resolve=>started=resolve),gate=new Promise(resolve=>finish=resolve);const f=fixture({step:async()=>{calls++;started();await gate;return{status:'complete',public:{label:'Done'}};}}),a=f.build(),b=f.build();
+ await Promise.all([a.control(command(),'admin'),b.control(command(),'admin')]);const first=a.run();await beginning;await b.run();assert.equal(calls,1);finish();await first;assert.equal((await b.control(command('status'),'admin')).task.status,'complete');
+});
+test('expired lease recovers the previous checkpoint; stale saves cannot overwrite a newer one',async()=>{
+ const f=fixture(),engine=f.build();await engine.control(command(),'admin');let row=await f.store.get('example-task');await f.store.save(row,{...row.state,lease:{id:'crashed-worker',until:1000100}});await engine.run();assert.equal(f.calls,0);f.advance(101);await f.build().run();assert.equal(f.calls,3);await assert.rejects(f.store.save(row,row.state),/TASK_STALE/);
+});
+test('permissions are rechecked before every step, with revocation failing closed',async()=>{
+ let allowed=true,calls=0;const f=fixture({authorize:async()=>allowed,step:async()=>{calls++;allowed=false;return{status:'ready',cursor:'saved',public:{label:'Saved'}};}}),engine=f.build();await engine.control(command(),'admin');await engine.run();assert.equal(calls,1);assert.equal(f.store.rows.get('example-task').state.public.code,'TASK_ACCESS_REVOKED');assert.equal(f.store.rows.get('example-task').state.cursor,'saved');await assert.rejects(engine.control(command('resume'),'admin'),/FORBIDDEN/);
+});
+test('transient retries respect delay, uncertain writes retain lease, and conflict requires deliberate resume',async()=>{
+ let fail=true;const f=fixture({step:async()=>{if(fail)throw Error('private source');return{status:'complete',public:{label:'Done'}};},failure:()=>({retryable:true,uncertain:true,code:'TEMPORARY',error:'Safe explanation'})}),engine=f.build();await engine.control(command(),'admin');await engine.run();let row=f.store.rows.get('example-task');assert.equal(row.state.status,'waiting');assert.ok(row.state.lease);assert.ok(row.state.nextAt>=row.state.lease.until);await engine.run();fail=false;f.advance(900001);await engine.run();assert.equal(f.store.rows.get('example-task').state.status,'complete');
+ const conflict=fixture({step:async()=>{throw Error('private native body');},failure:()=>({retryable:false,code:'MIGRATION_CONFLICT',error:'Safe conflict'})}),other=conflict.build();await other.control(command(),'admin');await other.run();const result=await other.control(command('status'),'admin');assert.equal(result.task.status,'blocked');assert.ok(!JSON.stringify(result).includes('private'));await assert.rejects(other.control(command('resume'),'someone-else'),/FORBIDDEN/);assert.equal((await other.control(command('resume'),'admin')).task.status,'queued');
+});
+test('unknown task types, arbitrary payloads, expired grants and changed handler versions cannot run',async()=>{
+ const f=fixture(),engine=f.build();await assert.rejects(engine.control({...command(),url:'https://untrusted.invalid'},'admin'),/VALIDATION/);await assert.rejects(engine.control({operation:'start',type:'arbitrary'},'admin'),/VALIDATION/);await engine.control(command(),'admin');f.advance(24*3600000+1);await engine.run();assert.equal(f.calls,0);assert.equal(f.store.rows.get('example-task').state.public.code,'TASK_EXPIRED');await assert.rejects(engine.control(command('resume'),'admin'),/TASK_EXPIRED/);
+ await engine.control(command('restart'),'admin');f.registry['example-task'].version=2;await engine.run();assert.equal(f.calls,0);assert.equal(f.store.rows.get('example-task').state.public.code,'TASK_VERSION');
+});
+test('several registered task types take turns rather than starving later types',async()=>{
+ const store=memoryStore(),calls=[],registry=Object.fromEntries(['one','two'].map(type=>[type,{title:type,module:'shows',version:1,idempotent:true,step:async()=>{calls.push(type);return{status:'ready',cursor:'next',public:{label:'Next'}};}}]));const engine=createBackgroundTasks({store,registry,authorize:async()=>true,now:()=>1000000});for(const type of Object.keys(registry))await engine.control({operation:'start',type},'admin');await engine.run({maxSteps:4});assert.deepEqual(calls,['one','two','one','two']);
+});
+
+test('unknown side effects keep their exclusion lease even when automatic retries are exhausted',async()=>{
+ const f=fixture({step:async()=>{throw Error('uncertain');},failure:()=>({retryable:true,uncertain:true,code:'TEMPORARY',error:'Safe'})}),engine=f.build();await engine.control(command(),'admin');let row=await f.store.get('example-task');await f.store.save(row,{...row.state,attempts:8});await engine.run();row=await f.store.get('example-task');assert.equal(row.state.status,'blocked');assert.ok(row.state.lease);assert.equal((await engine.control(command('status'),'admin')).task.canRestart,false);await assert.rejects(engine.control(command('resume'),'admin'),/TASK_BUSY/);
+});
+
+test('an uncertain task prevents later task types from executing until the exclusion window has passed',async()=>{
+ const store=memoryStore(),calls=[],registry=Object.fromEntries(['one','two'].map(type=>[type,{title:type,module:'shows',version:1,idempotent:true,step:async()=>{calls.push(type);if(type==='one')throw Error('uncertain');return{status:'complete',public:{label:'Done'}};},failure:()=>({retryable:true,uncertain:true,code:'TEMPORARY',error:'Safe'})}]));const engine=createBackgroundTasks({store,registry,authorize:async()=>true,now:()=>1000000});for(const type of Object.keys(registry))await engine.control({operation:'start',type},'admin');await engine.run();await engine.run();assert.deepEqual(calls,['one']);
+});

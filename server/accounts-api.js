@@ -1,4 +1,5 @@
-import {migrationConflictDetails} from './show-migration-writer.js';
+import {createApplicationTasks,backgroundTaskModule} from './background-tasks/registry.js';
+import {showMigrationFailure} from './show-migration-errors.js';
 import {createShowMigration} from './show-migration.js';
 import {metadataProcessing} from './dataverse-setup-retry.js';
 import {createDataverseTables} from './dataverse-tables.js';
@@ -44,7 +45,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows});
@@ -146,7 +147,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
@@ -291,15 +292,27 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='background-tasks'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        if(previewReads)return reply(403,{error:'Achtergrondtaken zijn uitsluitend beschikbaar in de productie-beheerdersomgeving.'});
+        try{
+          const result=await tasks.control(req.body,actor);
+          if(req.body.operation!=='status'&&result.task&&['queued','running','waiting'].includes(result.task.status))try{background(tasks.run().catch(()=>{}));}catch{/* De duurzame worker pakt de opgeslagen taak alsnog op. */}
+          return reply(200,result);
+        }catch(error){
+          const messages={VALIDATION:'Ongeldige achtergrondtaak.',FORBIDDEN:'Geen actuele toegang tot deze taak.',TASK_BUSY:'Deze taak wordt al uitgevoerd. De voortgang is op de server bewaard.',TASK_NOT_FOUND:'Deze taak is nog niet gestart.',TASK_EXPIRED:'De taakmachtiging is verlopen. Start de taak opnieuw.',TASK_VERSION:'Deze taak gebruikt een oudere versie. Start opnieuw na controle.',TASK_SCHEMA:'De Opdracht-tabel of haar actieve sleutels is niet bevestigd. Controleer eerst de tabelsetup.',TASK_CORRUPT:'De opgeslagen taak is niet betrouwbaar leesbaar. Laat deze controleren; er zijn geen brongegevens verwijderd.',TASK_CONFIG:'De bestaande beveiligde taakverbinding is niet geconfigureerd.',TASK_STALE:'De taak is inmiddels door een andere serverronde gewijzigd. Vernieuw de status.',CHOICE_FORBIDDEN:'Dataverse weigert de achtergrondtaak. Controleer de bestaande apprechten.'};
+          const code=Object.hasOwn(messages,error.message)?error.message:'TASK_UNCONFIRMED';return reply(code==='VALIDATION'?400:code==='FORBIDDEN'?403:code==='TASK_UNCONFIRMED'?503:409,{code,error:messages[code]||'De taakopdracht is nog niet bevestigd. Bekijk de status voordat je opnieuw start.'});
+        }
+      }
       if(action==='show-migration'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         if(previewReads)return reply(403,{error:'Start de migratie vanuit de productie-beheerderspagina.'});
-        try{return reply(200,await showMigration(req.body,actor));}catch(error){
+        try{
+          if(env.DATAVERSE_TEST_URL){const {task}=await tasks.control({operation:'status',type:'shows-migration-v1'},actor);if(task&&['queued','running','waiting'].includes(task.status))return reply(409,{error:'Deze migratie loopt al op de server. Ververs de beheerpagina om de opgeslagen voortgang te bekijken.'});}
+          return reply(200,await showMigration(req.body,actor));
+        }catch(error){
           const waiting=metadataProcessing(error);if(waiting)return reply(200,waiting);
-          const messages={CONFLICT:'Een bronbestand of bronkoppeling wijkt af van het verwachte contract. De migratie is gestopt voor controle.',ATTACHMENT_INVALID:'Een bijlage of haar bronverwijzing is niet bevestigd. De migratie is gestopt.',NOT_FOUND:'Een benodigde Drive-bron is niet gevonden. De migratie is gestopt.',SHOWS_CONFIG:'Controleer de bestaande beveiligde Drive-verbinding.',CHOICE_SOLUTION:'De onbeheerde oplossing ESMOJO is niet bevestigd.',CHOICE_LANGUAGE:'De Dataverse-basistaal is niet bevestigd.',VALIDATION:'Ongeldig migratieverzoek.',MIGRATION_TOKEN:'De migratiesessie is verlopen of ongeldig. Start opnieuw; bevestigde gegevens worden herkend.',MIGRATION_CONFIG:'De bestaande migratieverbinding is niet geconfigureerd.',MIGRATION_MAPPING:'Een bronwaarde past niet eenduidig in het nieuwe schema. De migratie stopt voor controle.',MIGRATION_SOURCE:'Een bronbestand heeft een onbekende of onvolledige structuur. De migratie is gestopt.',MIGRATION_SOURCE_LIMIT:'De bron overschrijdt de veilige batchgrens. De migratie is gestopt voor controle.',MIGRATION_ORPHAN:'Een actieve show heeft geen bevestigde bronkoppeling. Laat deze eerst controleren.',MIGRATION_UNKNOWN_FILES:'Er staan niet-herkende bestanden in een showmap. De migratie is gestopt zodat niets stil wordt overgeslagen.',MIGRATION_DEPENDENCY:'Een vereiste bronrelatie of bronbestand ontbreekt. De migratie is gestopt.',MIGRATION_CONFLICT:'Dataverse bevat afwijkende gegevens of een afwijkend bestand. Er is niets overschreven.',MIGRATION_SOURCE_CHANGED:'De bron is gewijzigd tijdens de overdracht. Start opnieuw om de stand te controleren.',SOURCE_CHANGED:'Een bronbestand is gewijzigd. Start opnieuw om te controleren.',STORAGE_BUSY:'Een bron wordt nog verwerkt of naar Drive gespiegeld. Probeer later opnieuw.',MIGRATION_SCHEMA:'Het Dataverse-schema is niet bevestigd.',MIGRATION_REJECTED:'Dataverse weigert deze gegevensbewerking. Controleer de apprechten.',CHOICE_FORBIDDEN:'Dataverse weigert toegang tot deze migratiestap. Controleer de apprechten.',CHOICE_AUTH:'De Dataverse-appaanmelding is niet bevestigd.',CHOICE_CONFIG:'Controleer de bestaande Dataverse-appconfiguratie.'};
-          const code=Object.hasOwn(messages,error.message)?error.message:'MIGRATION_UNCONFIRMED';
-          const details=code==='MIGRATION_CONFLICT'?migrationConflictDetails(error):null;const context=details?' Tabel: '+details.label+'. Kolom(men): '+details.differences.map(row=>row.label).join(', ')+'.':'';
-          return reply(code==='VALIDATION'?400:code==='MIGRATION_TOKEN'?409:code==='MIGRATION_UNCONFIRMED'?503:424,{code,...(details?{details}:{}),error:(messages[code]||'Deze migratiestap is nog niet bevestigd. Hervat om veilig opnieuw te controleren; brongegevens blijven behouden.')+context});
+          const {status,retryable,...failure}=showMigrationFailure(error);return reply(status,failure);
         }
       }
       if(action==='dataverse-tables'){

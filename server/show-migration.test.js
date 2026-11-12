@@ -44,7 +44,7 @@ test('file upload is verified block for block, existing file is never uploaded a
  const read=async offset=>({offset,size:bytes.length,sha256:file.sha256,base64:bytes.toString('base64')});
  let state;for(let n=0;n<8&&!state?.done;n++)state=await migrateFileStep({file,state,writer,read});assert.equal(state.done,true);assert.equal(actions.filter(a=>a.name==='UploadBlock').length,1);
  state=null;for(let n=0;n<8&&!state?.done;n++)state=await migrateFileStep({file,state,writer,read});assert.equal(actions.filter(a=>a.name==='UploadBlock').length,1);
- state={phase:'verify',offset:0,continuation:'download'};await assert.rejects(migrateFileStep({file,state,writer,read:async()=>({offset:0,size:bytes.length,sha256:file.sha256,base64:Buffer.alloc(bytes.length).toString('base64')})}),/MIGRATION_CONFLICT/);
+ state={phase:'verify',offset:0,continuation:'download',sessionStartedAt:Date.now()};await assert.rejects(migrateFileStep({file,state,writer,read:async()=>({offset:0,size:bytes.length,sha256:file.sha256,base64:Buffer.alloc(bytes.length).toString('base64')})}),/MIGRATION_CONFLICT/);
 });
 
 test('native writer uses actual metadata collections/navigation and create-only requests; lost replies and conflicts are safe',async()=>{
@@ -91,7 +91,7 @@ test('a changed source after a partial batch stops before further target writes'
 test('lost file commit reply recovers through existing bytes rather than repeating an expired upload',async()=>{
  const bytes=Buffer.from('file'),file={identity:'file',name:'f.pdf',mime:'application/pdf',size:4,sha256:digest(bytes)};let uploaded=false,uploadCalls=0;
  const writer={resolve:async()=>({id:'11111111-1111-4111-8111-111111111111',set:'docs'}),meta:async()=>({PrimaryIdAttribute:'native_id'}),json:async()=>({esmojo_bestand:uploaded?'file-id':null}),call:async name=>{if(name==='UploadBlock'){uploadCalls++;return new Response(null,{status:204});}if(name==='CommitFileBlocksUpload'){uploaded=true;throw Error('lost reply');}if(name==='InitializeFileBlocksDownload')return Response.json({FileContinuationToken:'download',FileSizeInBytes:4});throw Error(name);}};
- const state={phase:'upload',offset:0,continuation:'upload'},read=async offset=>({offset,size:4,sha256:file.sha256,base64:bytes.toString('base64')});
+ const state={phase:'upload',offset:0,continuation:'upload',sessionStartedAt:Date.now()},read=async offset=>({offset,size:4,sha256:file.sha256,base64:bytes.toString('base64')});
  await assert.rejects(migrateFileStep({file,state,writer,read}),/lost reply/);const recovered=await migrateFileStep({file,state,writer,read});assert.equal(recovered.phase,'verify');assert.equal(uploadCalls,1);
 });
 
@@ -119,4 +119,11 @@ test('conflict diagnostics contain only approved schema names/labels and fixed r
  const error=Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:'esmojo_artiest',differences:[{column:'esmojo_biografieopgehaaldop',reason:'DATETIME_DIFFERENCE',actual:'secret actual value',expected:'secret source value'},{column:'unknown',reason:'VALUE_DIFFERENCE'}],private:'sensitive'}});
  const details=migrationConflictDetails(error);assert.equal(details.differences.length,1);assert.equal(details.differences[0].column,'esmojo_biografieopgehaaldop');assert.doesNotMatch(JSON.stringify(details),/secret|sensitive|actual|expected|unknown/);assert.equal(migrationConflictDetails({migration:{table:'unapproved',differences:[]}}),null);
  const source=fixture();source.biography={text:'Original biography',capturedAt:'2026-11-12T10:20:30.789Z'};const result=mapShow(source,people),history=result.records.find(row=>row.fields.esmojo_entiteitsoort==='artist-source');assert.equal(JSON.parse(history.fields.esmojo_snapshot_json).biography.capturedAt,source.biography.capturedAt);
+});
+
+test('an old native file session is renewed safely after a background-worker interruption',async()=>{
+ const bytes=Buffer.from('file'),file={identity:'file',name:'f.pdf',mime:'application/pdf',size:4,sha256:digest(bytes)};let initializations=0,uploads=0;
+ const writer={resolve:async()=>({id:'11111111-1111-4111-8111-111111111111',set:'docs'}),meta:async()=>({PrimaryIdAttribute:'native_id'}),json:async()=>({esmojo_bestand:'existing-file'}),call:async name=>{if(name==='InitializeFileBlocksDownload'){initializations++;return Response.json({FileContinuationToken:'fresh-download',FileSizeInBytes:4});}if(name==='UploadBlock')uploads++;throw Error('Unexpected mutation');}};
+ const read=async()=>assert.fail('Restart initializes without reading a source block yet'),state={phase:'upload',offset:0,continuation:'expired-token',sessionStartedAt:1000};
+ const resumed=await migrateFileStep({file,state,writer,read,now:()=>700000});assert.equal(resumed.phase,'verify');assert.equal(resumed.continuation,'fresh-download');assert.equal(resumed.sessionStartedAt,700000);assert.equal(initializations,1);assert.equal(uploads,0);
 });

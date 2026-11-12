@@ -50,7 +50,7 @@ test('Algemene Dataverse-discovery blijft achter Shows/MFA; Westlife krijgt meta
  const opened=await run({action:'show-open',method:'POST',body:{concertId:key},researchService,showsSource});assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Westlife-concept');
 });
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', migrationService, tableService, choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', taskService, migrationService, tableService, choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -63,6 +63,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({
+    ...(taskService?{tasks:taskService,background:promise=>{calls.push(['task-background']);void promise.catch(()=>{});}}:{}),
     ...(migrationService?{showMigration:migrationService}:{}),
     ...(tableService?{dataverseTables:tableService}:{}),
     ...(choiceService?{dataverseChoices:choiceService}:{}),
@@ -410,4 +411,12 @@ test('full Shows migration requires admin, current Shows access, MFA and allowed
 test('migration conflict response identifies approved table/columns without source or target content',async()=>{
  const migrationService=async()=>{throw Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:'esmojo_artiest',differences:[{column:'esmojo_biografieopgehaaldop',reason:'DATETIME_DIFFERENCE',expected:'private source',actual:'private target'}]}});};
  const result=await run({action:'show-migration',method:'POST',body:{operation:'start'},migrationService});assert.equal(result.response.code,424);assert.match(result.response.data.error,/Tabel: Artiest/);assert.equal(result.response.data.details.differences[0].column,'esmojo_biografieopgehaaldop');assert.doesNotMatch(JSON.stringify(result.response.data),/private source|private target|expected|actual/);
+});
+
+test('background-task controls require current admin/Shows/MFA and only explicit commands schedule work',async()=>{
+ let controls=0,runs=0;const taskService={control:async(body,actor)=>{controls++;assert.equal(actor,id);return{task:body.operation==='status'?null:{status:'queued',type:'shows-migration-v1'}};},run:async()=>{runs++;return{steps:0};}};
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,modules:['artists']}},{origin:'https://untrusted.invalid'}]){const result=await run({...input,action:'background-tasks',method:'POST',body:{operation:'start',type:'shows-migration-v1'},taskService});assert.ok([401,403].includes(result.response.code));}assert.equal(controls,0);
+ const status=await run({action:'background-tasks',method:'POST',body:{operation:'status',type:'shows-migration-v1'},taskService});assert.equal(status.response.code,200);assert.equal(runs,0);assert.ok(!status.calls.some(call=>call[0]==='task-background'));
+ const start=await run({action:'background-tasks',method:'POST',body:{operation:'start',type:'shows-migration-v1'},taskService});assert.equal(start.response.code,200);assert.equal(runs,1);assert.ok(start.calls.some(call=>call[0]==='task-background'));assert.match(start.response.headers['Cache-Control'],/no-store/);
+ assert.equal((await run({action:'background-tasks',method:'GET',taskService})).response.code,405);
 });

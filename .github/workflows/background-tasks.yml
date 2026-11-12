@@ -1,0 +1,31 @@
+name: Continue approved background tasks
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: approved-background-tasks-production
+  cancel-in-progress: false
+jobs:
+  continue:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Continue existing approved tasks only
+        run: |
+          node --input-type=module <<'JS'
+          const endpoint='https://esmojo.nl/api/background-tasks-sync';
+          const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+          const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});
+          if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
+          const {value}=await identity.json();console.log(`::add-mask::${value}`);
+          const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(280000)});
+          const data=await response.json(),stats=data.stats||{};
+          // Geen actor, cursor, taakinhoud, bron-/doelwaarden of providerfouten in CI.
+          console.log(JSON.stringify({steps:stats.steps,completed:stats.completed,blocked:stats.blocked,waiting:stats.waiting,failed:stats.failed}));
+          if(!response.ok||!data.ok)throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
+          JS

@@ -8,17 +8,26 @@ aangegeven. De code blijft ook automatische bronwijzigingen controleren.
 
 ## Gebruik
 
-Klik één keer en houd het tabblad open. Alle 52 unieke sleutelindexen worden eerst
-gelezen, inclusief de vier nog lopende indexen voor Historieversie, Opdracht (twee)
-en Routealias. Zolang één niet Actief is, volgt geen datawrite. Daarna controleert
-dezelfde server de volledige 564 stappen van het vaste schema, in uitsluitend
-leesmodus: geen aanmaak, reparatie, solution-associatie of publicatie.
+Klik één keer. De taak wordt op de server opgeslagen en op de achtergrond
+uitgevoerd; je mag de pagina sluiten of je telefoon vergrendelen. Bij terugkomst
+wordt de opgeslagen status opnieuw opgehaald. Tussen korte serverrondes kan een
+wachttijd zitten; de vaste worker draait ongeveer elke vijf minuten, met mogelijke
+vertraging door GitHub. Details: [herbruikbare achtergrondtaken](../background-tasks.md).
 
-De verwerking gaat vervolgens in kleine batches door. De knop toont de huidige
-fase en aantallen teruggelezen records/bestanden. Bij onderbreking hervat dezelfde
-knop vanuit een versleutelde, actor- en contractgebonden cursor in paginageheugen.
-Na herladen begint de controle opnieuw en worden aanwezige records en bestanden
-herkend. Geen migratie-inhoud of cursor in localStorage, logs of analytics.
+Alle 52 unieke sleutelindexen worden eerst gelezen, inclusief de eerder lopende
+indexen voor Historieversie, Opdracht (twee) en Routealias. Zolang één niet Actief is,
+wordt gewacht en automatisch opnieuw gecontroleerd. Daarna controleert dezelfde
+server de volledige 564 stappen van het vaste schema, in uitsluitend leesmodus.
+De technische Opdracht-checkpoints en het uitvoeringsslot staan los van de te
+migreren bedrijfsgegevens; daarvoor worden alleen de twee Opdracht-indexen vooraf
+vereist.
+
+De verwerking gaat in kleine batches door. De pagina toont de fase en aantallen
+teruggelezen records/bestanden. Tijdelijke fouten worden begrensd opnieuw geprobeerd;
+echte conflicten stoppen. Hervatten behoudt de servervoortgang, ook na herladen.
+Checkpoints en actor/native bestandscontinuatietokens worden uitsluitend versleuteld
+in Dataverse bewaard, niet in browseropslag of logs. Een bewuste herstart herkent
+reeds aanwezige records opnieuw. De bestaande reader-/writer-routes blijven werken.
 
 ## Bronnen en mapping
 

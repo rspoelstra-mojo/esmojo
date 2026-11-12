@@ -38,6 +38,8 @@ jobs:
           ESMOJO_TEST_REDIS_CONTAINER: ${{ job.services.artistredis.id }}
           ESMOJO_TEST_REDIS_PORT: '6379'
         run: |
+          node --test server/background-tasks/*.test.js
+          node --test server/show-migration*.test.js
           node server/accounts-api.test.js
           node --test server/show-management.test.js
           node --test server/dataverse-tables.test.js
