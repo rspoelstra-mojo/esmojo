@@ -13,6 +13,9 @@ Drive-ID, veldmapping of metadata vanuit browser. Create-only + terugleescontrol
 conflictstop, blokgewijze File-terugleescontrole en veilig hervatten. Geen inhoud
 of native uploadtokens in browseropslag/logs. Details en scope:
 docs/dataverse/shows-migratieknop.md. Een codepublicatie voert de migratie niet uit.
+De vaste register-superbeheerder wordt voor de gewone Dataverse-medewerkerrol
+naar Beheerder vertaald, met bronrol in Historie en controle op superAdminId.
+De bestaande superbeheerderpolicy en bronrechten blijven ongewijzigd.
 
 ## Automatisch hervatten van metadata-setup (12 november 2026)
 

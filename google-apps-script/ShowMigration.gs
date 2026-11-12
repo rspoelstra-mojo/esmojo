@@ -14,7 +14,7 @@ function esmojoShowMigration_(request){
   if(keys!=='operation')throw Error('VALIDATION');
   const accounts=read(root,'_esmojo_accounts_v1.json'),assignments=esmojoHomeAssignments_(production).document;
   if(!Array.isArray(accounts?.profiles))throw Error('CONFLICT');
-  return{version:1,profiles:accounts.profiles.map(row=>({id:row.id,email:row.email,firstName:row.firstName,lastName:row.lastName,company:row.company,jobTitle:row.jobTitle,role:row.role,modules:row.modules,activated:row.activated,disabled:row.disabled,photo:row.photo||null})),assignments:assignments.assignments};
+  return{version:1,superAdminId:typeof accounts.superAdminId==='string'?accounts.superAdminId:null,profiles:accounts.profiles.map(row=>({id:row.id,email:row.email,firstName:row.firstName,lastName:row.lastName,company:row.company,jobTitle:row.jobTitle,role:row.role,modules:row.modules,activated:row.activated,disabled:row.disabled,photo:row.photo||null})),assignments:assignments.assignments};
  }
  if(!['migration-v1-show','migration-v1-file'].includes(operation)||keys!==(operation==='migration-v1-show'?'concertId,operation':'concertId,fileId,offset,operation'))throw Error('VALIDATION');
  assessmentConcert(request.concertId);const target=esmojoResearchTarget_(request.concertId);

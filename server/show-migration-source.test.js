@@ -21,3 +21,11 @@ test('unmapped active shows and moving source revisions block migration instead 
  const orphan=createMigrationSource({drive:async()=>({version:1,shows:[]}),active:{all:async()=>[{aliases:['missing']}]},research:{sourceKeys:async()=>[]}});await assert.rejects(orphan.catalogue(),/MIGRATION_ORPHAN/);
  let reads=0;const changed=createMigrationSource({drive:async()=>({version:1,concertId:'show'}),active:{get:async()=>({revision:++reads})},management:{get:async()=>null}});await assert.rejects(changed.show({concertId:'show',source:'drive'}),/MIGRATION_SOURCE_CHANGED/);
 });
+
+test('people export includes only the pinned policy ID and minimal account fields, excluding register secrets',()=>{
+ const production={},root={getFoldersByName:()=>iterator([production])},accounts={superAdminId:'pinned-user',nonces:{secret:'do-not-export'},profiles:[{id:'pinned-user',role:'superbeheerder',email:'synthetic@example.invalid',firstName:'Test',lastName:'Account',modules:['shows'],activated:true,disabled:false,privateGrant:'do-not-export'}]},index={managedBy:'ESMOJO/MOJO-v1',version:1,concerts:[]};
+ const context=vm.createContext({ESMOJO_FOLDER_ID:'root',DriveApp:{getFolderById:()=>root},esmojoShowFile_:(folder,name)=>({getBlob:()=>({getDataAsString:()=>JSON.stringify(name==='_esmojo_accounts_v1.json'?accounts:index)})}),esmojoHomeAssignments_:()=>({document:{assignments:[]}})});
+ vm.runInContext(readFileSync(new URL('../google-apps-script/ShowMigration.gs',import.meta.url),'utf8'),context);
+ const result=context.esmojoShowMigration_({operation:'migration-v1-people'});
+ assert.equal(result.superAdminId,'pinned-user');assert.equal(result.profiles[0].role,'superbeheerder');assert.doesNotMatch(JSON.stringify(result),/nonces|privateGrant|do-not-export/);
+});

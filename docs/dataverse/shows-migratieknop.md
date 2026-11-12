@@ -56,6 +56,11 @@ zijn. Tijdelijke applicatiecaches/paginaweergaven en nieuwe integratie-opdrachte
 worden niet uitgevonden. Incident-CSV's, rapportagemailregisters en rapportages uit
 de afzonderlijke Rapportages-module vallen buiten deze Shows-overdracht.
 
+De vaste bronrol `superbeheerder` wordt alleen voor de in het bestaande register
+aangewezen gebruiker vertaald naar de gewone Dataverse-keuze `Beheerder`. Een
+Historie-record bewaart bronrol en mapping. De vaste superbeheerderpolicy blijft
+ongewijzigd; er komt geen extra bewerkbare rolkeuze of nieuwe rechtentoekenning.
+
 ## Schrijf- en bestandscontrole
 
 De server gebruikt uitsluitend het vaste schema en haalt echte EntitySetName,

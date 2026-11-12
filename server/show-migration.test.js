@@ -94,3 +94,14 @@ test('lost file commit reply recovers through existing bytes rather than repeati
  const state={phase:'upload',offset:0,continuation:'upload'},read=async offset=>({offset,size:4,sha256:file.sha256,base64:bytes.toString('base64')});
  await assert.rejects(migrateFileStep({file,state,writer,read}),/lost reply/);const recovered=await migrateFileStep({file,state,writer,read});assert.equal(recovered.phase,'verify');assert.equal(uploadCalls,1);
 });
+
+test('pinned super-administrator maps to the ordinary Dataverse administrator role, preserving source policy in history',()=>{
+ const source={...people,superAdminId:'person',profiles:[{...people.profiles[0],role:'superbeheerder'}]};
+ const before=structuredClone(source),result=mapPeople(source),employee=result.records.find(row=>row.table==='esmojo_medewerker'),audit=result.records.find(row=>row.table==='esmojo_historie');
+ assert.equal(employee.fields.esmojo_rol,choice('medewerkerrol','beheerder'));
+ assert.equal(JSON.parse(audit.fields.esmojo_snapshot_json).sourceRole,'superbeheerder');
+ assert.equal(JSON.parse(audit.fields.esmojo_snapshot_json).policy,'existing-pinned-super-administrator');
+ assert.deepEqual(source,before,'Source roles and policy remain unchanged');
+ assert.throws(()=>mapPeople({...source,superAdminId:'different-person'}),/MIGRATION_SOURCE/);
+ assert.throws(()=>mapPeople({...source,superAdminId:null}),/MIGRATION_SOURCE/);
+});

@@ -14,10 +14,15 @@ export function mapPeople(source){
  for(const person of source.profiles){
   if(typeof person.id!=='string'||!person.id||!Array.isArray(person.modules)||typeof person.activated!=='boolean'||typeof person.disabled!=='boolean')throw Error('MIGRATION_SOURCE');
   const identity='account/'+person.id;
-  records.push(record('medewerker',identity,[person.firstName,person.lastName].filter(Boolean).join(' ')||person.email,{authuserid:person.id,voornaam:person.firstName,achternaam:person.lastName,email:person.email,bedrijf:person.company,functie:person.jobTitle,rol:choice('medewerkerrol',person.role),geactiveerd:person.activated,geblokkeerd:person.disabled}));
+  const superAdministrator=person.role==='superbeheerder';
+  if(superAdministrator&&person.id!==source.superAdminId)throw Error('MIGRATION_SOURCE');
+  // Dataverse bevat alleen de gewone approl. Superrechten blijven de vaste codepolicy.
+  const mappedRole=superAdministrator?'beheerder':person.role;
+  records.push(record('medewerker',identity,[person.firstName,person.lastName].filter(Boolean).join(' ')||person.email,{authuserid:person.id,voornaam:person.firstName,achternaam:person.lastName,email:person.email,bedrijf:person.company,functie:person.jobTitle,rol:choice('medewerkerrol',mappedRole),geactiveerd:person.activated,geblokkeerd:person.disabled}));
   for(const module of ['shows','artists','reports'])records.push(record('modulerecht',identity+'/'+module,module,{module:choice('module',module),toegestaan:person.modules.includes(module)},{medewerker:ref('medewerker',identity)}));
   if(person.photo){const match=/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+=*)$/.exec(person.photo);if(!match)throw Error('MIGRATION_SOURCE');const bytes=Buffer.from(match[2],'base64'),key=identity+'/avatar/'+digest(bytes);files.push({fileId:key,identity:key,name:'avatar.'+match[1].split('/')[1],mime:match[1],size:bytes.length,sha256:digest(bytes),kind:'employee-avatar',version:1,bytes,links:{medewerker:ref('medewerker',identity)}});}
  }
+ for(const person of source.profiles.filter(person=>person.role==='superbeheerder'))records.push(history('account-role/'+person.id,'account-role',{authUserId:person.id,sourceRole:person.role,mappedRole:'beheerder',policy:'existing-pinned-super-administrator'}));
  for(const row of records)validateRecord(row);
  return{records,files};
 }
