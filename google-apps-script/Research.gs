@@ -36,7 +36,7 @@ function esmojoResearch_(input) {
     const filename = esmojoResearchName_(number), existing = esmojoShowFile_(target.folder, filename);
     if (request.operation === 'read') {
       if (!existing) throw new Error('NOT_FOUND');
-      return esmojoReply_({ ok: true, data: { filename, document: esmojoReadResearch_(existing, target.primary.concertId, number) } });
+      return esmojoReply_({ ok: true, data: Object.assign(common, { filename, document: esmojoReadResearch_(existing, target.primary.concertId, number) }) });
     }
     const result = request.result;
     if (!result || typeof result.question !== 'string' || !result.question.trim() || result.question.length > 6000

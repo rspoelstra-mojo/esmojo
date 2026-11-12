@@ -1,5 +1,6 @@
+import {createHash} from 'node:crypto';
 import {dataversePilot as pilot} from '../shared/dataverse-pilot.js';
-import {RESEARCH_LIBRARY,parseResearchKey,researchKeyForId,isDataverseShowId} from '../shared/dataverse-shows.js';
+import {RESEARCH_LIBRARY,DRIVE_RESEARCH_LIBRARY,parseResearchKey,researchKeyForId,isDataverseShowId} from '../shared/dataverse-shows.js';
 
 const table='esmojo_onderzoeksresultaat';
 const columns=['esmojo_showsleutel','esmojo_vraagnummer','esmojo_markdowninhoud','esmojo_bronbibliotheekid','esmojo_bronbestanditemnummer','esmojo_bronversie','esmojo_bronbestandpad','createdon'];
@@ -21,9 +22,9 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
    if(!response.ok)throw Error('DATAVERSE_AUTH');
    const token=await response.json();if(token.token_type?.toLowerCase()!=='bearer'||typeof token.access_token!=='string'||!token.access_token||token.access_token.length>32000)throw Error('DATAVERSE_AUTH');
    const headers={Authorization:'Bearer '+token.access_token,Accept:'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0',Prefer:'odata.maxpagesize=50'};
-   const meta=await get(base+"EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName",headers);
+   const meta=await get(base+"EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName,PrimaryNameAttribute",headers);
    if(meta.LogicalName!==table||!name(meta.EntitySetName))throw Error('DATAVERSE_SCHEMA');
-   session={headers,entity:meta.EntitySetName,until:now()+Math.max(0,Math.min(Number(token.expires_in)||0,3600)-60)*1000};return session;
+   session={headers,entity:meta.EntitySetName,primary:meta.PrimaryNameAttribute,until:now()+Math.max(0,Math.min(Number(token.expires_in)||0,3600)-60)*1000};return session;
   })().finally(()=>{pending=null;});return pending;
  }
  async function get(url,headers){
@@ -45,20 +46,20 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
  const configured=()=>Boolean(env.DATAVERSE_TEST_CLIENT_SECRET);
  async function sourceKeys(){
   if(!configured())return[];
-  const xml='<fetch aggregate="true"><entity name="'+table+'"><attribute name="esmojo_showsleutel" alias="show_key" groupby="true"/><filter><condition attribute="esmojo_bronbibliotheekid" operator="eq" value="'+RESEARCH_LIBRARY+'"/></filter></entity></fetch>';
+  const xml='<fetch aggregate="true"><entity name="'+table+'"><attribute name="esmojo_showsleutel" alias="show_key" groupby="true"/><filter type="or"><condition attribute="esmojo_bronbibliotheekid" operator="eq" value="'+RESEARCH_LIBRARY+'"/><condition attribute="esmojo_bronbibliotheekid" operator="eq" value="'+DRIVE_RESEARCH_LIBRARY+'"/></filter></entity></fetch>';
   const rows=await query({fetchXml:xml},{limit:5000});
   return [...new Set(rows.map(row=>parseResearchKey(row.show_key??row.showKey)?.sourceKey).filter(Boolean))];
  }
  async function read(sourceKey){
   const escaped=sourceKey.replaceAll("'","''");
-  const rows=await query({'$select':columns.join(','),'$filter':`contains(esmojo_showsleutel,'${escaped}') and esmojo_bronbibliotheekid eq '${RESEARCH_LIBRARY}'`,'$top':'501'});
+  const rows=await query({'$select':columns.join(','),'$filter':`contains(esmojo_showsleutel,'${escaped}') and (esmojo_bronbibliotheekid eq '${RESEARCH_LIBRARY}' or esmojo_bronbibliotheekid eq '${DRIVE_RESEARCH_LIBRARY}')`,'$top':'501'});
   const selected=new Map();let bytes=0;
   for(const row of rows){
    if(typeof row.esmojo_showsleutel!=='string'||row.esmojo_showsleutel.trim()!==sourceKey)continue;
    const number=row.esmojo_vraagnummer,v=version(row.esmojo_bronversie),text=row.esmojo_markdowninhoud;
-   if(row.esmojo_bronbibliotheekid!==RESEARCH_LIBRARY||!Number.isInteger(number)||number<1||number>11||!v||!Number.isSafeInteger(row.esmojo_bronbestanditemnummer)||row.esmojo_bronbestanditemnummer<1||typeof text!=='string'||!text.trim()||text.length>1048576||!Number.isFinite(Date.parse(row.createdon)))throw Error('DATAVERSE_RESPONSE');
+   if(![RESEARCH_LIBRARY,DRIVE_RESEARCH_LIBRARY].includes(row.esmojo_bronbibliotheekid)||!Number.isInteger(number)||number<1||number>11||!v||!Number.isSafeInteger(row.esmojo_bronbestanditemnummer)||row.esmojo_bronbestanditemnummer<1||typeof text!=='string'||!text.trim()||text.length>1048576||!Number.isFinite(Date.parse(row.createdon)))throw Error('DATAVERSE_RESPONSE');
    const path=row.esmojo_bronbestandpad;
-   if(typeof path!=='string'||!path.replace(/^\//,'').startsWith('Shared Documents/General/NIEUWE_SHOW_RESULTAAT/'+sourceKey+'/')||!path.endsWith('.md'))throw Error('DATAVERSE_RESPONSE');
+   if(typeof path!=='string'||!(row.esmojo_bronbibliotheekid===DRIVE_RESEARCH_LIBRARY?path===('drive-research/'+sourceKey+'/onderzoek_'+String(number).padStart(2,'0')+'.md'):path.replace(/^\//,'').startsWith('Shared Documents/General/NIEUWE_SHOW_RESULTAAT/'+sourceKey+'/')&&path.endsWith('.md')))throw Error('DATAVERSE_RESPONSE');
    bytes+=Buffer.byteLength(text);if(bytes>2*1024*1024)throw Error('DATAVERSE_LIMIT');
    const old=selected.get(number);
    // Versies zijn alleen binnen hetzelfde bronbestand vergelijkbaar.
@@ -80,6 +81,23 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
   applies:id=>Boolean(researchKeyForId(id)),
   configured,
   sourceKeys,
+  read,
+  async importDrive({sourceKey,number,markdown}){
+   if(!parseResearchKey(sourceKey)||!Number.isInteger(number)||number<1||number>11||typeof markdown!=='string'||!markdown.trim()||markdown.length>1048576)throw Error('VALIDATION');
+   const existing=(await read(sourceKey)).researchByNumber[number];
+   if(existing){if(existing.answer!==markdown)throw Error('CONFLICT');return{verified:true,created:false};}
+   const {headers,entity,primary}=await connect();if(!name(primary))throw Error('DATAVERSE_SCHEMA');
+   const digest=createHash('sha256').update(sourceKey+'\n'+number).digest('hex');
+   const id=digest.slice(0,8)+'-'+digest.slice(8,12)+'-4'+digest.slice(13,16)+'-a'+digest.slice(17,20)+'-'+digest.slice(20,32);
+   // Stable logical import number, not a native Drive/SharePoint item ID.
+   const item=parseInt(digest.slice(0,7),16)+1;
+   const body={[primary]:(sourceKey+' / '+number).slice(0,100),esmojo_showsleutel:sourceKey,esmojo_vraagnummer:number,esmojo_markdowninhoud:markdown,esmojo_bronbibliotheekid:DRIVE_RESEARCH_LIBRARY,esmojo_bronbestanditemnummer:item,esmojo_bronversie:'1.0',esmojo_bronbestandpad:'drive-research/'+sourceKey+'/onderzoek_'+String(number).padStart(2,'0')+'.md',esmojo_opruimstatus:158610000};
+   const response=await request(base+entity+'('+id+')',{method:'PATCH',headers:{...headers,'Content-Type':'application/json','If-None-Match':'*'},redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000),body:JSON.stringify(body)});
+   if(!response.ok&&response.status!==412)throw Error('DATAVERSE_WRITE');
+   const confirmed=(await read(sourceKey)).researchByNumber[number];
+   if(!confirmed||confirmed.answer!==markdown)throw Error('VERIFY');
+   return{verified:true,created:response.status!==412};
+  },
   async diagnose(){
    const result={environment:origin,table,configuration:false,tableRead:false,sampleRows:0,showMatches:0,libraryMatches:0,combinedMatches:0,normalizedMatches:0};
    try{

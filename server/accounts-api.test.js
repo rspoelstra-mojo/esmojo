@@ -50,7 +50,7 @@ test('Algemene Dataverse-discovery blijft achter Shows/MFA; Westlife krijgt meta
  const opened=await run({action:'show-open',method:'POST',body:{concertId:key},researchService,showsSource});assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Westlife-concept');
 });
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -62,7 +62,8 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
       updateUserById: async (...args) => { calls.push(['password', ...args]); return {}; },
     },
   } });
-  const handler = makeAccountsHandler({ env: configuration, clientFactory, dataverseResearch:researchService, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
+  const handler = makeAccountsHandler({
+    ...(transitionService?{dataTransition:transitionService}:{}), env: configuration, clientFactory, dataverseResearch:researchService, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
@@ -347,4 +348,16 @@ test('Dataverse table-read accepteert alleen vaste operatie achter dezelfde behe
 test('Dataverse-schrijfproef vereist expliciete vaste actie en beheerder/MFA, zonder vrije recordwaarden',async()=>{
  const body={operation:'table-write'},result=await run({action:'dataverse-test',method:'POST',body});assert.equal(result.response.code,200);assert.deepEqual(result.calls.find(call=>call[0]==='dataverseTest'),['dataverseTest',{table:true,write:true}]);
  for(const input of [{own:{...profile,role:'gebruiker'}},{auth:false},{aal:'aal1'},{body:{operation:'table-write',recordId:'other'}}]){const denied=await run({action:'dataverse-test',method:'POST',body,...input});assert.ok([400,401,403].includes(denied.response.code));assert.ok(!denied.calls.some(call=>call[0]==='dataverseTest'));}
+});
+
+
+test('datatransitie vereist beheerder, Shows, geactiveerd account en MFA vóór brongebruik',async()=>{
+ let calls=0;const transitionService=async()=>{calls++;return{shows:[]};};
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{own:{...profile,modules:['artists']}}]){
+  const {response}=await run({...input,action:'data-transition',method:'POST',body:{operation:'list'},transitionService});assert.ok([401,403].includes(response.code));
+ }
+ assert.equal(calls,0);
+ const good=await run({action:'data-transition',method:'POST',body:{operation:'list'},transitionService});assert.equal(good.response.code,200);assert.equal(calls,1);assert.match(good.response.headers['Cache-Control'],/no-store/);
+ const denied=await run({action:'data-transition',method:'GET',transitionService});assert.equal(denied.response.code,405);assert.equal(calls,1);
+ const failure=await run({action:'data-transition',method:'POST',body:{operation:'list'},transitionService:async()=>{throw Error('secret provider data');}});assert.equal(failure.response.code,503);assert.doesNotMatch(JSON.stringify(failure.response.data),/secret provider/);
 });

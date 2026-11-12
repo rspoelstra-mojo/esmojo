@@ -1,0 +1,10 @@
+.data-transition {padding:24px;max-width:100%;}
+.data-transition h1 {font-size:24px;margin:0 0 16px;}
+.data-transition p {font-size:14px;line-height:1.6;max-width:75ch;}
+.data-transition label {display:block;margin-top:20px;}
+.data-transition input,.data-transition select {display:block;width:100%;max-width:100%;box-sizing:border-box;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--canvas);color:inherit;font:inherit;}
+.data-transition-actions {display:flex;gap:12px;flex-wrap:wrap;margin:20px 0;}
+.data-transition button {padding:10px 14px;cursor:pointer;}
+.data-transition details {border:1px solid var(--line);border-radius:8px;padding:14px;margin:10px 0;}
+.data-transition summary {cursor:pointer;font-size:14px;}
+.data-transition pre {white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px;line-height:1.6;}

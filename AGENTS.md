@@ -1,3 +1,22 @@
+## Beheerder datatransitie Drive → Dataverse (12 november 2026)
+
+Gebruiker vraagt expliciet een beheerpagina voor de komende migratiedagen en
+heeft Antoon als eerste proef aangewezen. Route /beheerder/datatransitie vereist
+actuele beheerderrol, Shows-module, geactiveerd account en bestaande MFA.
+Alleen openbaar ESMOJO/Research-v1-onderzoek uit de bestaande Productie-index;
+geen eigen samenvattingen/beoordelingen, privégegevens of vrije Drive-paden.
+Preview per vraag, bewuste importklik, server leest de bron opnieuw en controleert
+previewchecksum. Geen bronverwijdering; geen automatische bulkoverdracht.
+Import in bestaande Markdown-kolom inclusief bronnen, zonder onderzoeksdatum.
+Drive-imports hebben aparte logische bronnamespace 8d4b3512-7f82-4d51-a98a-a0c67d629184,
+logisch importnummer en drive-research/<show-sleutel>/onderzoek_NN.md.
+Dit zijn expliciet geen native Drive/SharePoint-bestandsidentificaties.
+Opruimstatus blijft Nog niet vrijgegeven; geen ETag. SharePoint-opruiming mag
+uitsluitend de eigen oorspronkelijke bibliotheek blijven gebruiken.
+Create-only met stabiele record-ID; afwijkende bestaande inhoud blokkeert;
+terugleescontrole vóór succes. Bestaande Dataverse-weergave leest beide bekende
+bronnamespace-waarden. Geen secrets, onderzoekinhoud of providerfouten loggen.
+
 ## Algemene Dataverse-showkoppeling (12 november 2026)
 
 Nieuwste gebruikersopdracht vervangt de beperking tot Hatsune Miku: iedere show

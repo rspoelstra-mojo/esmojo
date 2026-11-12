@@ -1,3 +1,4 @@
+import {createDataTransition} from './data-transition.js';
 import {createDataverseShows} from './dataverse-shows.js';
 import {researchKeyForConcert} from '../shared/dataverse-shows.js';
 import {createDataverseResearch} from './dataverse-research.js';
@@ -38,7 +39,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows});
@@ -140,7 +141,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=['data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
@@ -285,6 +286,14 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='data-transition'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await dataTransition(req.body));}catch(error){
+          const messages={VALIDATION:'Ongeldig migratieverzoek.',CONFLICT:'Dataverse bevat afwijkende inhoud. Er is niets overschreven.',SOURCE_CHANGED:'De bron is gewijzigd. Bekijk het voorbeeld opnieuw.',SOURCE_INVALID:'De Drive-bron kan niet veilig worden verwerkt.',VERIFY:'De import is nog niet bevestigd. Herhaal de import om te controleren.',DATAVERSE_WRITE:'Dataverse heeft de import niet bevestigd. Controleer de schrijfrechten en probeer opnieuw.'};
+          const code=Object.hasOwn(messages,error.message)?error.message:'UNAVAILABLE';
+          return reply(code==='VALIDATION'?400:['CONFLICT','SOURCE_CHANGED'].includes(code)?409:503,{code,error:messages[code]||'Migratie niet gelukt. Eerder bevestigde imports blijven behouden. Probeer opnieuw.'});
+        }
+      }
       if(action==='dataverse-test'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         if(!req.body||Object.keys(req.body).length!==1||!['status','table-read','table-write','research-read'].includes(req.body.operation))return reply(400,{error:'Ongeldig testverzoek.'});

@@ -1,3 +1,4 @@
+import {createDataTransitionView} from './data-transition.js';
 import {createDataverseTestView} from './dataverse-test.js';
 import {createIncidentAdminView} from './incident-admin.js';
 import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
@@ -136,6 +137,10 @@ function renderPage() {
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
+    if(hasModule(profile,'shows')){
+    const migrationLink=document.createElement('a');migrationLink.href='/beheerder/datatransitie';migrationLink.className='submenu-link';migrationLink.textContent='Datatransitie';migrationLink.dataset.submenuTitle='Datatransitie';submenu.append(migrationLink);
+    if(route==='beheerder/datatransitie'){migrationLink.setAttribute('aria-current','page');disposePage=createDataTransitionView(content);}
+    }else if(route==='beheerder/datatransitie')content.textContent='Je hebt geen toegang tot Shows.';
     if(route==='beheerder/dataverse-test')disposePage=createDataverseTestView(content);
     const link = document.createElement('a'); link.href = '/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
     if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');

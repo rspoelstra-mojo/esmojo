@@ -18,6 +18,17 @@ function esmojoShows_(input) {
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if(request.operation==='migration-list'){
+      if(Object.keys(request).join(',')!=='operation')throw Error('VALIDATION');
+      const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),folders=root.getFoldersByName('Productie');
+      if(!folders.hasNext())return esmojoReply_({ok:true,data:{concerts:[]}});
+      const folder=folders.next();if(folders.hasNext())throw Error('CONFLICT');
+      const file=esmojoShowFile_(folder,'_esmojo_shows_v1.json');
+      if(!file)return esmojoReply_({ok:true,data:{concerts:[]}});
+      const state=JSON.parse(file.getBlob().getDataAsString('UTF-8'));
+      if(state.version!==1||!Array.isArray(state.concerts))throw Error('CONFLICT');
+      return esmojoReply_({ok:true,data:{concerts:state.concerts.filter(row=>row.generalConcertId===row.concertId).map(row=>({concertId:row.concertId,artist:row.artist,venue:row.venue||'Gashouder',date:row.date}))}});
+    }
     if(request.operation==='research-identities'){
       if(Object.keys(request).sort().join(',')!=='operation,sourceKeys'||!Array.isArray(request.sourceKeys)||request.sourceKeys.length>500||request.sourceKeys.some(key=>typeof key!=='string'||key.length>200||/[\x00-\x1f/\\]/.test(key)))throw Error('VALIDATION');
       return esmojoReply_({ok:true,data:esmojoDataverseIdentities_(request.sourceKeys)});

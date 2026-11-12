@@ -1,4 +1,6 @@
 import {dataversePilot} from './dataverse-pilot.js';
+// Logical source namespace for Drive imports; never a SharePoint library.
+export const DRIVE_RESEARCH_LIBRARY='8d4b3512-7f82-4d51-a98a-a0c67d629184';
 export const RESEARCH_LIBRARY=dataversePilot.libraryId;
 export const researchSlug=value=>String(value).normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 export function parseResearchKey(value){

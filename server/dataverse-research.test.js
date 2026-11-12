@@ -66,3 +66,19 @@ test('Bewuste diagnose onderscheidt lege tabel, bronverschil en randspaties zond
   assert.equal(new URL(calls.at(-1).url).searchParams.get('$select'),'esmojo_showsleutel,esmojo_bronbibliotheekid');
  }
 });
+
+test('Drive-import heeft eigen namespace, create-only writes en bevestigde readback',async()=>{
+ const {DRIVE_RESEARCH_LIBRARY}=await import('../shared/dataverse-shows.js');let rows=[],writes=0;
+ const service=createDataverseResearch({env,request:async(url,options)=>{
+  if(url.includes('/oauth2/'))return Response.json({token_type:'Bearer',access_token:'synthetic-access',expires_in:3600});
+  if(url.includes('EntityDefinitions'))return Response.json({LogicalName:'esmojo_onderzoeksresultaat',EntitySetName:'esmojo_onderzoeksresultaats',PrimaryNameAttribute:'esmojo_titel'});
+  if(options.method==='PATCH'){writes++;assert.equal(options.headers['If-None-Match'],'*');const body=JSON.parse(options.body);assert.equal(body.esmojo_bronbibliotheekid,DRIVE_RESEARCH_LIBRARY);assert.equal(body.esmojo_opruimstatus,158610000);assert.match(body.esmojo_bronbestandpad,/^drive-research\//);assert.equal(body.esmojo_bronbestandetag,undefined);rows=[{...body,createdon:'2026-11-12T12:00:00Z'}];return new Response(null,{status:204});}
+  return Response.json({value:rows});
+ }});
+ const input={sourceKey:'antoon_gashouder_20261123',number:1,markdown:'# Samenvatting\n\nAntoon-test'};
+ assert.deepEqual(await service.importDrive(input),{verified:true,created:true});assert.deepEqual(await service.importDrive(input),{verified:true,created:false});assert.equal(writes,1);
+ assert.equal((await service.load('Antoon_Gashouder_23112026')).researchByNumber[1].answer,input.markdown);
+ await assert.rejects(service.importDrive({...input,markdown:'anders'}),/CONFLICT/);assert.equal(writes,1);
+ rows[0].esmojo_bronbestandpad='Shared Documents/General/NIEUWE_SHOW_RESULTAAT/'+input.sourceKey+'/x.md';
+ assert.deepEqual((await service.load('dataverse_'+input.sourceKey)).researchByNumber,{});
+});

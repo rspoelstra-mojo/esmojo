@@ -134,3 +134,14 @@ test('Ontbrekend/ambigu account blokkeert alleen toewijzing; import/accountrelat
   const result=await h.store('sync',{snapshot:snapshot([row('Test',2)])});assert.equal(result.managerAssignment,profiles.length?'ambiguous-account':'missing-account');assert.equal((await h.store('list')).concerts.length,1);assert.equal(h.root.folders[0].files.some(file=>file.name==='_esmojo_show_assignments_v1.json'),false);
  }
 });
+
+test('migratiecatalogus leest ook inactieve primaire reeksdata, zonder eigen teksten of writes',async()=>{
+ const h=harness(),rows=[row('Antoon',4),row('Antoon',5),row('Andere artiest',8)];
+ assert.deepEqual(await h.store('migration-list'),{concerts:[]});assert.equal(h.writes(),0);
+ await h.store('sync',{snapshot:snapshot(rows)});
+ await h.store('sync',{snapshot:snapshot([rows[2]])});
+ const before=h.writes(),data=await h.store('migration-list');
+ assert.deepEqual(data.concerts.map(row=>row.artist).sort(),['Andere artiest','Antoon']);assert.equal(data.concerts.find(row=>row.artist==='Antoon').date,rows[0].date);
+ assert.equal(h.writes(),before);assert.equal(JSON.stringify(data).includes('folderId'),false);
+ await assert.rejects(h.store('migration-list',{path:'vrij pad'}),/VALIDATION/);assert.equal(h.writes(),before);
+});
