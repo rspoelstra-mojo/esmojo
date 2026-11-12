@@ -1,3 +1,19 @@
+## Geautoriseerde Shows-kopie naar Dataverse (12 november 2026)
+
+Gebruiker autoriseert de volledige migratieknop op de beheer-datatransitiepagina.
+Kopieer bestaande Shows-bronnen en benodigde gedeelde accounts/rechten/documenten
+naar het vaste schema, inclusief PDFs naar Dataverse File. Dit vervangt oude
+uitsluitend-Drive/Supabase-opslagbeperkingen voor deze gerichte kopie. Bronnen en
+bestaande applicatieroutes behouden; geen cutover, bronopruiming of mails.
+Gebruiker zegt gedurende de komende 24 uur geen handmatige Shows-wijzigingen;
+bronversies/automatische processen blijven gecontroleerd. Eerst alle 52 indexen
+Actief en volledige schema-readback; vooral de vier nog lopende indexen bewaken.
+Bewuste klik, actuele admin/Shows/activatie/MFA, productie-only; geen vrije tabel,
+Drive-ID, veldmapping of metadata vanuit browser. Create-only + terugleescontrole,
+conflictstop, blokgewijze File-terugleescontrole en veilig hervatten. Geen inhoud
+of native uploadtokens in browseropslag/logs. Details en scope:
+docs/dataverse/shows-migratieknop.md. Een codepublicatie voert de migratie niet uit.
+
 ## Automatisch hervatten van metadata-setup (12 november 2026)
 
 Tabelsetup herhaalt alleen de huidige idempotente stap bij bekende tijdelijke

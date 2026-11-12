@@ -23,6 +23,8 @@ export function createActiveRepository({env=process.env,clientFactory=createClie
   async commit(row,snapshot,command=null,result=null){validateActiveSnapshot(snapshot);const rows=check(await db().rpc('esmojo_show_commit',{p_id:row.concert_id,p_lease:row.lease,p_revision:row.revision,p_snapshot:snapshot,p_archive_after:archiveAfterShow(snapshot.dates),p_command:command,p_result:result}));if(!rows[0])throw Error('ACTIVE_STORAGE_CONFLICT');return rows[0];},
   async intent(row,command){if(!check(await db().rpc('esmojo_show_intent',{p_id:row.concert_id,p_lease:row.lease,p_revision:row.revision,p_command:command})))throw Error('ACTIVE_STORAGE_CONFLICT');},
   async error(row){check(await db().rpc('esmojo_show_error',{p_id:row.concert_id,p_lease:row.lease,p_revision:row.revision}));},
+  async migrationIdentities(){return check(await db().from('esmojo_active_shows').select('concert_id,aliases').order('concert_id').limit(1001));},
+  async migrationReceipts(id){return check(await db().from('esmojo_show_receipts').select('command,result,created_at').eq('concert_id',id).order('created_at').limit(201));},
   async receipt(id,command){return check(await db().from('esmojo_show_receipts').select('result').eq('concert_id',id).eq('command',command).maybeSingle());},
   async release(row,{mirrored=false,error=false}={}){return check(await db().rpc('esmojo_show_release',{p_id:row.concert_id,p_lease:row.lease,p_revision:row.revision,p_mirrored:mirrored,p_error:error}));},
   async purge(row){if(!check(await db().rpc('esmojo_show_purge',{p_id:row.concert_id,p_lease:row.lease,p_revision:row.revision})))throw Error('ACTIVE_STORAGE_CONFLICT');},

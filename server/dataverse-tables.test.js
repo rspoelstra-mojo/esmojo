@@ -16,7 +16,7 @@ function fixture({pendingKeys=false,intercept=null,primaryRequired='ApplicationR
  };
  const seed=table=>{const body=compileEntity(table,1043);const primary=attribute(body.Attributes[0]);primary.RequiredLevel.Value=primaryRequired;primary.MaxLength=primaryMaxLength;const result={meta:{MetadataId:nextId(),LogicalName:table.logical_name,PrimaryIdAttribute:table.logical_name+'id',EntitySetName:table.logical_name+'_native_collection',PrimaryNameAttribute:'esmojo_naam',OwnershipType:'OrganizationOwned',IsManaged:false,IsActivity:false,HasNotes:false},attributes:new Map([['esmojo_naam',primary]]),keys:[]};entities.set(table.logical_name,result);return result;};
  const legacy=setupTables.find(t=>t.existing),research={meta:{MetadataId:nextId(),LogicalName:legacy.logical_name,PrimaryIdAttribute:legacy.logical_name+'id',PrimaryNameAttribute:'esmojo_originaltitle',OwnershipType:'UserOwned',IsManaged:false,HasNotes:true},attributes:new Map([['esmojo_markdowninhoud',{LogicalName:'esmojo_markdowninhoud',MaxLength:1048576,existing:'do not change'}]]),keys:[{MetadataId:nextId(),SchemaName:'existing_source_key',KeyAttributes:['esmojo_bronbibliotheekid','esmojo_bronbestanditemnummer','esmojo_bronversie'],EntityKeyIndexStatus:'Active'}]};entities.set(legacy.logical_name,research);
- const create=createDataverseTables({env,request:async(url,options)=>{
+ const request=async(url,options)=>{
   calls.push({url,options});assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');if(options.method==='GET')assert.equal(options.headers.Consistency,'Strong');
   const override=await intercept?.(url,options,{entities,choices,seed,attribute,nextId});if(override)return override;
   if(url.includes('/oauth2/'))return Response.json({token_type:'Bearer',access_token:'synthetic-token',expires_in:3600});
@@ -52,8 +52,9 @@ function fixture({pendingKeys=false,intercept=null,primaryRequired='ApplicationR
    }
   }
   assert.fail('Non-schema or unsupported provider endpoint '+path);
- }});
- return{service:create,entities,relationships,choices,calls,research,seed,attribute,nextId};
+ };
+ const create=createDataverseTables({env,request}),readOnly=createDataverseTables({env,request,readOnly:true});
+ return{service:create,readOnly,entities,relationships,choices,calls,research,seed,attribute,nextId};
 }
 const step=(kind,table,column)=>tableSetupSteps.find(row=>row.kind===kind&&row.table===table&&(!column||row.column===column));
 test('fixed schema covers all entities/types; no jobs can edit legacy research attributes',()=>{
@@ -144,4 +145,12 @@ test('all platform-default primary names are normalized, while research and popu
  assert.equal(f.calls.filter(call=>call.options.method==='PUT').length,29);assert.ok(!f.calls.some(call=>call.options.method==='PUT'&&call.url.includes('esmojo_onderzoeksresultaat')));
  const populated=fixture({primaryRequired:'None',primaryMaxLength:850,intercept:url=>url.includes('_native_collection?')?Response.json({value:[{id:'private-not-returned'}]}):null});populated.seed(tableByName.get('esmojo_artiest'));
  const result=await populated.service({operation:'apply',stepId:step('table','esmojo_artiest').id});assert.equal(result.status,'conflict');assert.equal(result.difference,'PRIMARY_HAS_RECORDS');assert.doesNotMatch(JSON.stringify(result),/private-not-returned/);assert.ok(!populated.calls.some(call=>call.options.method==='PUT'));
+});
+
+test('migration schema verification reads all 564 steps without metadata or business writes',async()=>{
+ const f=fixture();for(const step of tableSetupSteps)await f.service({operation:'apply',stepId:step.id});
+ f.calls.length=0;for(const step of tableSetupSteps)assert.equal((await f.readOnly({operation:'apply',stepId:step.id})).verified,true,step.id);
+ assert.ok(f.calls.every(call=>call.options.method==='GET'||call.url.includes('/oauth2/')));
+ const missing=fixture();assert.equal((await missing.readOnly({operation:'apply',stepId:tableSetupSteps.find(s=>s.kind==='table'&&s.table==='esmojo_artiest').id})).difference,'TABLE_MISSING');assert.ok(missing.calls.every(call=>call.options.method==='GET'||call.url.includes('/oauth2/')));
+ const defaults=fixture({primaryRequired:'None',primaryMaxLength:850});defaults.seed(tableByName.get('esmojo_artiest'));assert.equal((await defaults.readOnly({operation:'apply',stepId:tableSetupSteps.find(s=>s.kind==='table'&&s.table==='esmojo_artiest').id})).status,'conflict');assert.ok(defaults.calls.every(call=>call.options.method==='GET'||call.url.includes('/oauth2/')));
 });

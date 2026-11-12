@@ -18,6 +18,7 @@ function esmojoShows_(input) {
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if(String(request.operation).startsWith('migration-v1-'))return esmojoReply_({ok:true,data:esmojoShowMigration_(request)});
     if(request.operation==='migration-list'){
       if(Object.keys(request).join(',')!=='operation')throw Error('VALIDATION');
       const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),folders=root.getFoldersByName('Productie');

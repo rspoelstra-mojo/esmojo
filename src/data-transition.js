@@ -3,17 +3,17 @@ import {access} from './auth.js';
 import './data-transition.css';
 const el=(tag,text='')=>Object.assign(document.createElement(tag),{textContent:text});
 export function createDataTransitionView(content,{request=access,setupDelay=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
- let disposed=false,busy=false,previews=[],bulkRun=null;
- const card=el('section'),title=el('h1','Datatransitie'),intro=el('p','Bereid de Dataverse-tabellen en keuzelijsten voor, of verplaats openbare AI-analyses van Google Drive naar Dataverse. De volledige tekst en bronnen blijven samen in Markdown. Drive-originelen, eigen teksten en beoordelingen blijven behouden. Kies één show of zet alle beschikbare analyses over met één knop. Houd deze pagina open tijdens de verwerking.'),label=el('label','Show zoeken'),search=el('input'),select=el('select'),load=el('button','Shows laden'),preview=el('button','Voorbeeld bekijken'),save=el('button','Importeren en controleren'),status=el('p'),results=el('div'),bulk=el('button','Alle AI-analyses overzetten'),choices=el('button','Keuzelijsten aanmaken en controleren'),tables=el('button','Tabellen aanmaken en controleren');
+ let disposed=false,busy=false,previews=[],bulkRun=null,migrationToken=null;
+ const card=el('section'),title=el('h1','Datatransitie'),intro=el('p','Bereid de Dataverse-tabellen en keuzelijsten voor, of verplaats openbare AI-analyses van Google Drive naar Dataverse. De volledige tekst en bronnen blijven samen in Markdown. Drive-originelen, eigen teksten en beoordelingen blijven behouden. Kies één show of zet alle beschikbare analyses over met één knop. Houd deze pagina open tijdens de verwerking.'),label=el('label','Show zoeken'),search=el('input'),select=el('select'),load=el('button','Shows laden'),preview=el('button','Voorbeeld bekijken'),save=el('button','Importeren en controleren'),status=el('p'),results=el('div'),bulk=el('button','Alle AI-analyses overzetten'),choices=el('button','Keuzelijsten aanmaken en controleren'),tables=el('button','Tabellen aanmaken en controleren'),migrate=el('button','Alle Shows-gegevens overzetten');
  card.className='data-transition';search.type='search';search.placeholder='Bijvoorbeeld Antoon';search.id='migration-search';label.htmlFor=search.id;select.setAttribute('aria-label','Te migreren show');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
- for(const button of [load,preview,save,bulk,choices,tables])button.type='button';
+ for(const button of [load,preview,save,bulk,choices,tables,migrate])button.type='button';
  save.disabled=true;preview.disabled=true;let shows=[];
  const reset=()=>{previews=[];results.replaceChildren();save.disabled=true;};
  const renderShows=()=>{select.replaceChildren();const term=search.value.trim().toLocaleLowerCase();for(const show of shows.filter(row=>`${row.name} ${row.venue} ${row.date}`.toLocaleLowerCase().includes(term))){const option=el('option',`${show.name} · ${show.venue} · ${show.date}`);option.value=show.concertId;select.append(option);}preview.disabled=busy||!select.value;};
  search.oninput=()=>{reset();renderShows();};select.onchange=reset;
- async function run(task){if(busy||disposed)return;busy=true;for(const control of [load,preview,save,bulk,choices,tables,select,search])control.disabled=true;
+ async function run(task){if(busy||disposed)return;busy=true;for(const control of [load,preview,save,bulk,choices,tables,migrate,select,search])control.disabled=true;
   try{await task();}catch(error){if(!disposed)status.textContent=error.message||'De verwerking is onderbroken. Probeer opnieuw; bevestigde imports blijven behouden.';}
-  finally{busy=false;if(!disposed){if(bulkRun)bulk.textContent='Alle AI-analyses hervatten';load.disabled=false;bulk.disabled=false;choices.disabled=false;tables.disabled=false;search.disabled=false;select.disabled=false;preview.disabled=!select.value;save.disabled=!previews.some(row=>row.status==='ready');}}
+  finally{busy=false;if(!disposed){if(bulkRun)bulk.textContent='Alle AI-analyses hervatten';load.disabled=false;bulk.disabled=false;choices.disabled=false;tables.disabled=false;migrate.disabled=false;search.disabled=false;select.disabled=false;preview.disabled=!select.value;save.disabled=!previews.some(row=>row.status==='ready');}}
  }
  const call=body=>request('data-transition',{method:'POST',body});
  load.onclick=()=>run(async()=>{status.textContent='Shows uit Drive laden…';const data=await call({operation:'list'});if(disposed)return;shows=data.shows;reset();renderShows();status.textContent=`${shows.length} shows beschikbaar. Kies een show en bekijk het voorbeeld.`;});
@@ -84,5 +84,21 @@ export function createDataTransitionView(content,{request=access,setupDelay=ms=>
   }
   status.textContent=`Tabelsetup klaar: ${plan.tableCount} tabellen gecontroleerd, ${verified} van ${plan.steps.length} schemastappen bevestigd (${createdSteps.size} nieuw). Sleutelindexen zijn Actief. Bestaande onderzoeksinhoud en showgegevens zijn behouden; er zijn nog geen gegevens gemigreerd.`;
  });
- const actions=el('div');actions.className='data-transition-actions';actions.append(load,preview,save,bulk,choices,tables);card.append(title,intro,label,search,select,actions,status,results);content.replaceChildren(card);return()=>{disposed=true;};
+ migrate.onclick=()=>run(async()=>{
+  reset();status.textContent='Alle Shows-gegevens voorbereiden. Eerst worden schema en actieve sleutelindexen gecontroleerd; daarna start de overdracht. Houd deze pagina open.';
+  const callMigration=body=>retrySetupStep(()=>request('show-migration',{method:'POST',body}),{wait:setupDelay,active:()=>!disposed,onWait:({seconds})=>{status.textContent=`Tijdelijk wachten; dezelfde migratiestap wordt over ${seconds} seconden opnieuw gecontroleerd…`;}});
+  const progressLine=el('p');results.append(progressLine);
+  let result=await callMigration(migrationToken?{operation:'advance',token:migrationToken}:{operation:'start'});
+  while(!disposed){
+   if(!result?.token)throw Error('Migratiestap niet bevestigd. Probeer opnieuw.');migrationToken=result.token;
+   const progress=result.progress||{};status.textContent=`${result.label||'Shows-gegevens verwerken'} · ${progress.current||0}${result.total?' van '+result.total:''} · ${progress.verifiedRecords||0} records en ${progress.verifiedFiles||0} bestanden gecontroleerd.`;
+   progressLine.textContent=status.textContent;
+   if(result.status==='blocked'){status.textContent=result.reason==='KEY_INDEX_PENDING'?`${result.label}: de sleutelindex is nog niet Actief. Er zijn geen gegevens overgezet. Klik later op hervatten om opnieuw te controleren.`:`Migratie geblokkeerd bij ${result.label}. Controleer eerst het Dataverse-schema. Er zijn geen gegevens overgezet.`;migrate.textContent='Shows-migratie hervatten';return;}
+   if(result.status==='complete'){status.textContent=`Shows-migratie klaar: ${result.total} shows, ${progress.verifiedRecords} records en ${progress.verifiedFiles} bestanden overgezet en teruggelezen. Supabase- en Drive-originelen zijn behouden. De website gebruikt nog de bestaande opslagroutes.`;migrationToken=null;migrate.textContent='Alle Shows-gegevens opnieuw controleren';return;}
+   if(result.status!=='running')throw Error('Migratiestap niet bevestigd. Probeer opnieuw.');
+   migrate.textContent='Shows-migratie hervatten';result=await callMigration({operation:'advance',token:migrationToken});
+  }
+ });
+ const migrationInfo=el('p','Alle Shows-gegevens overzetten kopieert de bestaande showgegevens, relaties en bestanden naar Dataverse. Eerst moeten alle sleutelindexen Actief zijn. Originelen blijven behouden en de website wordt hiermee nog niet naar Dataverse omgeschakeld. Na een onderbreking kun je hervatten; na verversen worden bestaande gegevens opnieuw herkend.');
+ const actions=el('div');actions.className='data-transition-actions';actions.append(load,preview,save,bulk,choices,tables,migrate);card.append(title,intro,label,search,select,actions,migrationInfo,status,results);content.replaceChildren(card);return()=>{disposed=true;};
 }
