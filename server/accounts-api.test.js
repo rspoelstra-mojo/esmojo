@@ -388,3 +388,11 @@ test('tabelsetup vereist actuele admin/Shows/activatie/MFA en accepteert geen vr
  const bad=await run({action:'dataverse-tables',method:'POST',body:{operation:'apply',stepId:'arbitrary',body:{}}});assert.equal(bad.response.code,400);
  const failure=await run({action:'dataverse-tables',method:'POST',body:{operation:'plan'},tableService:async()=>{throw Error('private provider data');}});assert.equal(failure.response.code,503);assert.doesNotMatch(JSON.stringify(failure.response.data),/private provider data/);
 });
+
+test('table setup exposes temporary processing safely and keeps permanent failures nonretryable',async()=>{
+ for(const [code,status] of [['TABLE_PUBLISH_UNCONFIRMED',200],['SETUP_TEMPORARY',200],['SETUP_THROTTLED',200],['TABLE_CREATE_REJECTED',424],['CHOICE_FORBIDDEN',403],['CHOICE_CONFIG',424]]){
+  const result=await run({action:'dataverse-tables',method:'POST',body:{operation:'apply',stepId:'fixed'},tableService:async()=>{throw Object.assign(Error(code),{retryAfterSeconds:12});}});
+  assert.equal(result.response.code,status);
+  if(status===200){assert.equal(result.response.data.reason,'METADATA_PROCESSING');assert.equal(result.response.data.verified,false);assert.equal(result.response.data.retryAfterSeconds,12);}
+ }
+});

@@ -1,3 +1,4 @@
+import {retrySetupStep} from './lib/setup-retry.js';
 import {access} from './auth.js';
 import './data-transition.css';
 const el=(tag,text='')=>Object.assign(document.createElement(tag),{textContent:text});
@@ -61,13 +62,13 @@ export function createDataTransitionView(content,{request=access,setupDelay=ms=>
  });
  tables.onclick=()=>run(async()=>{
   reset();status.textContent='Tabelsetup voorbereiden. Houd deze pagina open; dit kan enige tijd duren.';
-  const plan=await request('dataverse-tables',{method:'POST',body:{operation:'plan'}});if(disposed)return;
+  const plan=await retrySetupStep(()=>request('dataverse-tables',{method:'POST',body:{operation:'plan'}}),{wait:setupDelay,active:()=>!disposed,onWait:({seconds})=>{status.textContent=`Dataverse is nog bezig met de voorbereiding; automatisch opnieuw controleren over ${seconds} seconden…`;}});if(disposed)return;
   const pending=[],createdSteps=new Set();let verified=0;
   const lines=new Map();
   const apply=async(step,index)=>{
    status.textContent=`${step.phase}: stap ${index+1} van ${plan.steps.length} · ${step.title}…`;
    let line=lines.get(step.id);if(!line){line=el('p',step.title+' · Bezig…');lines.set(step.id,line);results.append(line);}
-   let result;try{result=await request('dataverse-tables',{method:'POST',body:{operation:'apply',stepId:step.id}});}catch(error){if(!disposed)line.textContent=step.title+' · Niet bevestigd; start opnieuw om te controleren en te hervatten.';throw error;}
+   let result;try{result=await retrySetupStep(()=>request('dataverse-tables',{method:'POST',body:{operation:'apply',stepId:step.id}}),{wait:setupDelay,active:()=>!disposed,onWait:({attempt,maxAttempts,seconds})=>{line.textContent=step.title+` · Dataverse verwerkt deze stap nog; opnieuw controleren over ${seconds} seconden (poging ${attempt} van ${maxAttempts})…`;status.textContent=`${step.phase}: stap ${index+1} van ${plan.steps.length} · Wachten op ${step.title}; je hoeft niet te verversen.`;}});}catch(error){if(!disposed)line.textContent=step.title+' · Niet bevestigd; start opnieuw om te controleren en te hervatten.';throw error;}
    if(disposed)return null;if(result.created)createdSteps.add(step.id);
    if(result.status==='conflict'){const details=result.details;const requiredLabels={None:'Optioneel',SystemRequired:'Systeemvereist',ApplicationRequired:'Bedrijfsvereist',Recommended:'Aanbevolen',Unknown:'Onbekend'};const explanation=details?.expectedRequired?` Kolom ${details.column}: verwacht ${requiredLabels[details.expectedRequired]||'Onbekend'}, ontvangen ${requiredLabels[details.actualRequired]||'Onbekend'}.`:details?.column?' Kolom '+details.column+'.':'';line.textContent=step.title+' · Afwijking ('+result.difference+'); niet aangepast.'+explanation;throw Error('Setup gestopt bij '+step.title+'. Los de gemelde schema-afwijking op en start daarna opnieuw. Er zijn geen bestaande definities overschreven.');}
    if(result.status==='pending'&&result.reason==='KEY_INDEX_PENDING'){line.textContent=step.title+' · Sleutelindex wordt door Dataverse opgebouwd…';return false;}

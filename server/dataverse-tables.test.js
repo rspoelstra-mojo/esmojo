@@ -94,14 +94,14 @@ test('invalid steps, metadata injection and protected research changes never acc
  const f=fixture();for(const input of [{operation:'delete',stepId:'anything'},{operation:'apply',stepId:'column:esmojo_onderzoeksresultaat:esmojo_markdowninhoud'},{operation:'apply',stepId:tableSetupSteps[0].id,body:{}},{operation:'plan',url:'https://evil.invalid'}])await assert.rejects(f.service(input),/VALIDATION/);assert.equal(f.calls.length,0);
 });
 test('read failure does not trigger creation; missing or mismatched global choices are conflicts',async()=>{
- const f=fixture({intercept:(url)=>url.includes("EntityDefinitions(LogicalName='esmojo_artiest')")?new Response('private data',{status:500}):null});await assert.rejects(f.service({operation:'apply',stepId:step('table','esmojo_artiest').id}),/TABLE_READ/);assert.ok(f.calls.filter(row=>!row.url.includes('oauth2')).every(row=>row.options.method==='GET'));
+ const f=fixture({intercept:(url)=>url.includes("EntityDefinitions(LogicalName='esmojo_artiest')")?new Response('private data',{status:500}):null});await assert.rejects(f.service({operation:'apply',stepId:step('table','esmojo_artiest').id}),/SETUP_TEMPORARY/);assert.ok(f.calls.filter(row=>!row.url.includes('oauth2')).every(row=>row.options.method==='GET'));
  const missing=fixture();missing.choices.clear();assert.equal((await missing.service({operation:'apply',stepId:tableSetupSteps[0].id})).status,'conflict');
 });
 
 test('partial column create failure is recovered without recreating or updating the column',async()=>{
  let first=true;const target='esmojo_artiest',column='esmojo_sleutel';
  const f=fixture({intercept:(url,options,{entities})=>{if(first&&url.includes("Attributes(LogicalName='"+column+"')")&&entities.get(target)?.attributes.has(column)){first=false;return new Response(null,{status:500});}}});f.seed(tableByName.get(target));
- const s=step('column',target,column);await assert.rejects(f.service({operation:'apply',stepId:s.id}),/TABLE_READ/);assert.equal(f.entities.get(target).attributes.has(column),true);
+ const s=step('column',target,column);await assert.rejects(f.service({operation:'apply',stepId:s.id}),/SETUP_TEMPORARY/);assert.equal(f.entities.get(target).attributes.has(column),true);
  assert.equal((await f.service({operation:'apply',stepId:s.id})).status,'verified');assert.equal(f.calls.filter(row=>row.options.method==='POST'&&new URL(row.url).pathname.endsWith('/Attributes')).length,1);
 });
 test('out-of-order publication cannot publish an unverified schema',async()=>{

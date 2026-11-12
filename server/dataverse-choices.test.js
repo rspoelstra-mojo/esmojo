@@ -61,11 +61,11 @@ test('invalid names, cleanup, arbitrary bodies and wrong solution cannot cause w
  const unconfigured=createDataverseChoices({env:{},request:()=>assert.fail('No network')});await assert.rejects(unconfigured({operation:'list'}),/CHOICE_CONFIG/);
 });
 test('read errors cannot be mistaken for missing lists and provider bodies are never exposed',async()=>{
- for(const status of [403,500]){const f=fixture({intercept:(url)=>url.includes('GlobalOptionSetDefinitions(Name=')?new Response('private provider body',{status}):null});await assert.rejects(f.service({operation:'create',name:definitions[0].name}),error=>['CHOICE_FORBIDDEN','CHOICE_READ'].includes(error.message));assert.ok(!f.calls.some(row=>row.options.method==='POST'&&!row.url.includes('oauth2')));}
+ for(const status of [403,500]){const f=fixture({intercept:(url)=>url.includes('GlobalOptionSetDefinitions(Name=')?new Response('private provider body',{status}):null});await assert.rejects(f.service({operation:'create',name:definitions[0].name}),error=>['CHOICE_FORBIDDEN','SETUP_TEMPORARY'].includes(error.message));assert.ok(!f.calls.some(row=>row.options.method==='POST'&&!row.url.includes('oauth2')));}
 });
 test('partial publish failure can be retried without recreating metadata',async()=>{
  let first=true;const f=fixture({intercept:(url)=>{if(url.endsWith('/PublishXml')&&first){first=false;return new Response(null,{status:500});}}});
- const input={operation:'create',name:definitions[0].name};await assert.rejects(f.service(input),/CHOICE_PUBLISH_UNCONFIRMED/);assert.equal(f.store.size,1);const result=await f.service(input);assert.equal(result.created,false);assert.equal(result.verified,true);assert.equal(f.store.size,1);
+ const input={operation:'create',name:definitions[0].name};await assert.rejects(f.service(input),/SETUP_TEMPORARY/);assert.equal(f.store.size,1);const result=await f.service(input);assert.equal(result.created,false);assert.equal(result.verified,true);assert.equal(f.store.size,1);
 });
 test('concurrent creation is read and compared, not overwritten',async()=>{
  const f=fixture({intercept:(url,options,{store})=>{if(url.endsWith('/GlobalOptionSetDefinitions')&&options.method==='POST'){store.set(definitions[0].name,metadata(definitions[0]));return new Response(null,{status:400});}}});

@@ -44,10 +44,10 @@ export function compareRelationship(actual,table,column,primaryId){
 export function createDataverseTables({env=process.env,request=fetch,now=Date.now}={}){
  const {connect,call,json,includeInSolution}=createDataverseSetupConnection({env,request,now});
  const entityPath=table=>"EntityDefinitions(LogicalName='"+table.logical_name+"')";
- async function get(path,ctx){const response=await call(path,ctx.headers,{code:'TABLE_READ'});if(response.status===404)return null;if(!response.ok)throw Error('TABLE_READ');return json(response);}
- async function post(path,body,ctx){const response=await call(path,{...ctx.headers,'MSCRM.SolutionUniqueName':ctx.solution},{method:'POST',body,code:'TABLE_CREATE_UNCONFIRMED'});if(!response.ok&&![400,409].includes(response.status))throw Error('TABLE_CREATE_UNCONFIRMED');return response.ok;}
+ async function get(path,ctx){const response=await call(path,ctx.headers,{code:'TABLE_READ'});if(response.status===404)return null;if(!response.ok)throw Error('TABLE_READ_REJECTED');return json(response);}
+ async function post(path,body,ctx){const response=await call(path,{...ctx.headers,'MSCRM.SolutionUniqueName':ctx.solution},{method:'POST',body,code:'TABLE_CREATE_UNCONFIRMED',timeoutMs:60000});if(!response.ok&&![400,409].includes(response.status))throw Error('TABLE_CREATE_UNCONFIRMED');return{created:response.ok,rejected:response.status===400};}
  async function entity(table,ctx){const actual=await get(entityPath(table),ctx);return actual;}
- async function validatedEntity(table,ctx){const actual=await entity(table,ctx);if(compareTable(actual,table))throw Error('TABLE_PARENT_UNCONFIRMED');return actual;}
+ async function validatedEntity(table,ctx){const actual=await entity(table,ctx);if(!actual)throw Error('TABLE_PARENT_UNCONFIRMED');if(compareTable(actual,table))throw Error('TABLE_PARENT_CONFLICT');return actual;}
  async function globalChoice(name,ctx){const definition=choiceByName.get(name);if(!definition)throw Error('TABLE_SCHEMA');const actual=await get("GlobalOptionSetDefinitions(Name='"+name+"')",ctx);if(compareChoice(actual,definition,ctx.language))return null;return actual;}
  async function attribute(table,column,ctx){
   const path=entityPath(table)+"/Attributes(LogicalName='"+column.logical_name+"')",base=await get(path,ctx);if(!base)return null;
@@ -70,8 +70,8 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
   for(const name of ['DisplayName','Description'])if(payload[name]){payload[name]={...payload[name]};delete payload[name].UserLocalizedLabel;}
   payload.MaxLength=compileAttribute(column,ctx.language,{primary:true}).MaxLength;
   payload.RequiredLevel={...actual.RequiredLevel,Value:required(column)};
-  const response=await call(entityPath(table)+"/Attributes(LogicalName='esmojo_naam')",{...ctx.headers,'MSCRM.SolutionUniqueName':ctx.solution,'MSCRM.MergeLabels':'true'},{method:'PUT',body:payload,code:'TABLE_PRIMARY_UNCONFIRMED'});
-  if(!response.ok)throw Error('TABLE_PRIMARY_UNCONFIRMED');
+  const response=await call(entityPath(table)+"/Attributes(LogicalName='esmojo_naam')",{...ctx.headers,'MSCRM.SolutionUniqueName':ctx.solution,'MSCRM.MergeLabels':'true'},{method:'PUT',body:payload,code:'TABLE_PRIMARY_UNCONFIRMED',timeoutMs:45000});
+  if(!response.ok)throw Error('TABLE_PRIMARY_REJECTED');
   await publish(table,ctx);
   const confirmed=await attribute(table,column,ctx);if(compareAttribute(confirmed,column,compileAttribute(column,ctx.language,{primary:true}),{primary:true}))throw Error('TABLE_PRIMARY_UNCONFIRMED');
   return{actual:confirmed,normalized:true};
@@ -86,7 +86,7 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
   }
   return null;
  }
- async function publish(table,ctx){const response=await call('PublishXml',ctx.headers,{method:'POST',body:{ParameterXml:'<importexportxml><entities><entity>'+table.logical_name+'</entity></entities></importexportxml>'},code:'TABLE_PUBLISH_UNCONFIRMED'});if(!response.ok)throw Error('TABLE_PUBLISH_UNCONFIRMED');}
+ async function publish(table,ctx){const response=await call('PublishXml',ctx.headers,{method:'POST',body:{ParameterXml:'<importexportxml><entities><entity>'+table.logical_name+'</entity></entities></importexportxml>'},code:'TABLE_PUBLISH_UNCONFIRMED',timeoutMs:90000});if(!response.ok)throw Error('TABLE_PUBLISH_REJECTED');}
  return async input=>{
   if(!input||Array.isArray(input)||!['plan','apply'].includes(input.operation)||Object.keys(input).sort().join(',')!==(input.operation==='plan'?'operation':'operation,stepId')||input.operation==='apply'&&!tableStepById.has(input.stepId))throw Error('VALIDATION');
   const ctx=await connect();
@@ -95,7 +95,7 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
   if(step.kind==='choice')return await globalChoice(step.name,ctx)?{status:'verified',verified:true,created:false}:conflict('GLOBAL_CHOICE');
   if(step.kind==='table'){
    let actual=await entity(table,ctx);
-   if(!actual){if(table.existing)return conflict('EXISTING_RESEARCH_MISSING');created=await post('EntityDefinitions',compileEntity(table,ctx.language),ctx);actual=await entity(table,ctx);if(!actual)throw Error('TABLE_CREATE_UNCONFIRMED');}
+   if(!actual){if(table.existing)return conflict('EXISTING_RESEARCH_MISSING');const attempt=await post('EntityDefinitions',compileEntity(table,ctx.language),ctx);created=attempt.created;actual=await entity(table,ctx);if(!actual)throw Error(attempt.rejected?'TABLE_CREATE_REJECTED':'TABLE_CREATE_UNCONFIRMED');}
    const difference=compareTable(actual,table);if(difference)return conflict(difference);
    let normalizedPrimary=false;
    if(!table.existing){
@@ -113,14 +113,14 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
    const column=table.columns.find(column=>column.logical_name===step.column);if(table.existing||!column||column.target)throw Error('TABLE_PROTECTED');
    const choice=column.choice?await globalChoice('esmojo_keuze_'+column.choice,ctx):null;if(column.choice&&!choice)return conflict('GLOBAL_CHOICE');
    const expected=compileAttribute(column,ctx.language,{choiceId:choice?.MetadataId});let actual=await attribute(table,column,ctx);
-   if(!actual){created=await post(entityPath(table)+'/Attributes',expected,ctx);actual=await attribute(table,column,ctx);if(!actual)throw Error('TABLE_CREATE_UNCONFIRMED');}
+   if(!actual){const attempt=await post(entityPath(table)+'/Attributes',expected,ctx);created=attempt.created;actual=await attribute(table,column,ctx);if(!actual)throw Error(attempt.rejected?'TABLE_CREATE_REJECTED':'TABLE_CREATE_UNCONFIRMED');}
    const difference=compareAttribute(actual,column,expected);if(difference)return conflict(difference,difference==='COLUMN_REQUIRED'?requiredDetails(actual,column):{column:column.logical_name});if(!guid(actual.MetadataId))throw Error('TABLE_RESPONSE');
    await includeInSolution(actual,ctx,2);return{status:'verified',verified:true,created};
   }
   if(step.kind==='relationship'){
    const column=table.columns.find(column=>column.logical_name===step.column);if(table.existing&&column.logical_name!=='esmojo_concertreeks')throw Error('TABLE_PROTECTED');
    const parent=await validatedEntity(tableByName.get(column.target),ctx),lookup=await attribute(table,column,ctx);let actual=await relationship(table,column,ctx);
-   if(!actual){if(lookup)return conflict('LOOKUP_WITH_OTHER_RELATIONSHIP');created=await post('RelationshipDefinitions',compileRelationship(table,column,ctx.language,parent.PrimaryIdAttribute),ctx);actual=await relationship(table,column,ctx);if(!actual)throw Error('TABLE_CREATE_UNCONFIRMED');}
+   if(!actual){if(lookup)return conflict('LOOKUP_WITH_OTHER_RELATIONSHIP');const attempt=await post('RelationshipDefinitions',compileRelationship(table,column,ctx.language,parent.PrimaryIdAttribute),ctx);created=attempt.created;actual=await relationship(table,column,ctx);if(!actual)throw Error(attempt.rejected?'TABLE_CREATE_REJECTED':'TABLE_CREATE_UNCONFIRMED');}
    const difference=compareRelationship(actual,table,column,parent.PrimaryIdAttribute);if(difference)return conflict(difference);
    const confirmed=await attribute(table,column,ctx);if(compareAttribute(confirmed,column,compileAttribute(column,ctx.language))||!Array.isArray(confirmed.Targets)||confirmed.Targets.length!==1||confirmed.Targets[0]!==column.target)return conflict('LOOKUP_TYPE_OR_TARGET');
    await includeInSolution(actual,ctx,10);return{status:'verified',verified:true,created};
@@ -134,8 +134,8 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
     if(table.existing)return conflict('EXISTING_RESEARCH_KEY_MISSING');
     if(all.some(row=>sameKey(row.KeyAttributes,key.columns)))return conflict('KEY_OTHER_NAME');
     for(const name of key.columns){const difference=await verifyColumn(table,table.columns.find(column=>column.logical_name===name),ctx);if(difference)return conflict(difference);}
-    created=await post(path,{'@odata.type':'Microsoft.Dynamics.CRM.EntityKeyMetadata',SchemaName:key.name,DisplayName:labelForKey(key.name,ctx.language),KeyAttributes:key.columns},ctx);
-    all=await readKeys();actual=all.find(row=>row.SchemaName?.toLowerCase()===key.name);if(!actual)throw Error('TABLE_CREATE_UNCONFIRMED');
+    const attempt=await post(path,{'@odata.type':'Microsoft.Dynamics.CRM.EntityKeyMetadata',SchemaName:key.name,DisplayName:labelForKey(key.name,ctx.language),KeyAttributes:key.columns},ctx);created=attempt.created;
+    all=await readKeys();actual=all.find(row=>row.SchemaName?.toLowerCase()===key.name);if(!actual)throw Error(attempt.rejected?'TABLE_CREATE_REJECTED':'TABLE_CREATE_UNCONFIRMED');
    }
    if(!sameKey(actual.KeyAttributes,key.columns)||!guid(actual.MetadataId))return conflict('KEY_COLUMNS');
    if(!table.existing&&actual.IsManaged===true)return conflict('KEY_MANAGED');

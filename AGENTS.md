@@ -1,3 +1,13 @@
+## Automatisch hervatten van metadata-setup (12 november 2026)
+
+Tabelsetup herhaalt alleen de huidige idempotente stap bij bekende tijdelijke
+metadata-uitkomsten, netwerkfouten of throttling. Maximaal zes pogingen met
+zichtbare wachttijd; Retry-After respecteren, boven 300 seconden stoppen.
+Conflicten, configuratiefouten en rechtenfouten stoppen direct; Pending is nooit
+bevestigd. Native create maximaal 60s, primaire-naam-PUT 45s, gerichte publicatie
+90s. Elke herhaling leest eerst bestaande metadata; geen duplicaten of bredere
+reparaties. De browser hoeft niet na elke tabel te worden ververst.
+
 ## Gerichte correctie primaire Naam-standaard (12 november 2026)
 
 Gebruiker meldt COLUMN_REQUIRED bij Artiest en toont Naam als Optioneel,
