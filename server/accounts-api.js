@@ -1,3 +1,4 @@
+import {createDataverseChoices} from './dataverse-choices.js';
 import {createDataTransition} from './data-transition.js';
 import {createDataverseShows} from './dataverse-shows.js';
 import {researchKeyForConcert} from '../shared/dataverse-shows.js';
@@ -39,7 +40,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows});
@@ -141,7 +142,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=['dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
@@ -286,6 +287,14 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='dataverse-choices'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await dataverseChoices(req.body));}catch(error){
+          const messages={VALIDATION:'Ongeldig keuzelijstverzoek.',CHOICE_CONFIG:'Controleer de bestaande Dataverse-serverconfiguratie.',CHOICE_AUTH:'Microsoft-aanmelding niet gelukt. Controleer de bestaande Dataverse-appverbinding.',CHOICE_FORBIDDEN:'Dataverse weigert deze actie. De app heeft rechten nodig om globale keuzelijsten te lezen, aan te maken, aan ESMOJO toe te voegen en te publiceren.',CHOICE_SOLUTION:'De onbeheerde oplossing ESMOJO met publisherprefix esmojo kon niet worden bevestigd.',CHOICE_LANGUAGE:'De basistaal van de Dataverse-omgeving kon niet worden bepaald.',CHOICE_COMPONENT:'De koppeling met de oplossing is niet bevestigd. Klik opnieuw om te controleren en te hervatten.',CHOICE_CREATE_UNCONFIRMED:'Aanmaken is nog niet bevestigd. Klik opnieuw om veilig te controleren en te hervatten.',CHOICE_PUBLISH_UNCONFIRMED:'Publiceren is nog niet bevestigd. Klik opnieuw om te controleren en te hervatten.',CHOICE_VERIFY_UNCONFIRMED:'Terugleescontrole is nog niet bevestigd. Klik opnieuw om te controleren en te hervatten.'};
+          const code=Object.hasOwn(messages,error.message)?error.message:'CHOICE_UNAVAILABLE';
+          return reply(code==='VALIDATION'?400:503,{code,error:messages[code]||'Keuzelijstcontrole onderbroken. Eerder aangemaakte lijsten blijven behouden; klik opnieuw om te hervatten.'});
+        }
+      }
       if(action==='data-transition'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         try{return reply(200,await dataTransition(req.body));}catch(error){

@@ -50,7 +50,7 @@ test('Algemene Dataverse-discovery blijft achter Shows/MFA; Westlife krijgt meta
  const opened=await run({action:'show-open',method:'POST',body:{concertId:key},researchService,showsSource});assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Westlife-concept');
 });
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -63,6 +63,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({
+    ...(choiceService?{dataverseChoices:choiceService}:{}),
     ...(transitionService?{dataTransition:transitionService}:{}), env: configuration, clientFactory, dataverseResearch:researchService, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
@@ -360,4 +361,17 @@ test('datatransitie vereist beheerder, Shows, geactiveerd account en MFA vóór 
  const good=await run({action:'data-transition',method:'POST',body:{operation:'list'},transitionService});assert.equal(good.response.code,200);assert.equal(calls,1);assert.match(good.response.headers['Cache-Control'],/no-store/);
  const denied=await run({action:'data-transition',method:'GET',transitionService});assert.equal(denied.response.code,405);assert.equal(calls,1);
  const failure=await run({action:'data-transition',method:'POST',body:{operation:'list'},transitionService:async()=>{throw Error('secret provider data');}});assert.equal(failure.response.code,503);assert.doesNotMatch(JSON.stringify(failure.response.data),/secret provider/);
+});
+
+
+test('keuzelijstsetup vereist admin/Shows/activatie/MFA en laat providerfouten niet door',async()=>{
+ let count=0;const choiceService=async()=>{count++;return{choices:[]};};
+ for(const params of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{own:{...profile,modules:['artists']}},{origin:'https://evil.invalid'}]){
+  const {response}=await run({...params,action:'dataverse-choices',method:'POST',body:{operation:'list'},choiceService});assert.ok([401,403].includes(response.code));
+ }
+ assert.equal(count,0);
+ const good=await run({action:'dataverse-choices',method:'POST',body:{operation:'list'},choiceService});assert.equal(good.response.code,200);assert.equal(count,1);assert.match(good.response.headers['Cache-Control'],/no-store/);
+ const denied=await run({action:'dataverse-choices',method:'GET',choiceService});assert.equal(denied.response.code,405);assert.equal(count,1);
+ const fail=await run({action:'dataverse-choices',method:'POST',body:{operation:'list'},choiceService:async()=>{throw Error('private provider credentials');}});assert.equal(fail.response.code,503);assert.doesNotMatch(JSON.stringify(fail.response.data),/private provider credentials/);
+ const invalid=await run({action:'dataverse-choices',method:'POST',body:{operation:'delete',name:'arbitrary'}});assert.equal(invalid.response.code,400);
 });

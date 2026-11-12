@@ -3,16 +3,16 @@ import './data-transition.css';
 const el=(tag,text='')=>Object.assign(document.createElement(tag),{textContent:text});
 export function createDataTransitionView(content,{request=access}={}){
  let disposed=false,busy=false,previews=[],bulkRun=null;
- const card=el('section'),title=el('h1','Datatransitie'),intro=el('p','Verplaats openbare AI-analyses van Google Drive naar Dataverse. De volledige tekst en bronnen blijven samen in Markdown. Drive-originelen, eigen teksten en beoordelingen blijven behouden. Kies één show of zet alle beschikbare analyses over met één knop. Houd deze pagina open tijdens de verwerking.'),label=el('label','Show zoeken'),search=el('input'),select=el('select'),load=el('button','Shows laden'),preview=el('button','Voorbeeld bekijken'),save=el('button','Importeren en controleren'),status=el('p'),results=el('div'),bulk=el('button','Alle AI-analyses overzetten');
+ const card=el('section'),title=el('h1','Datatransitie'),intro=el('p','Verplaats openbare AI-analyses van Google Drive naar Dataverse. De volledige tekst en bronnen blijven samen in Markdown. Drive-originelen, eigen teksten en beoordelingen blijven behouden. Kies één show of zet alle beschikbare analyses over met één knop. Houd deze pagina open tijdens de verwerking.'),label=el('label','Show zoeken'),search=el('input'),select=el('select'),load=el('button','Shows laden'),preview=el('button','Voorbeeld bekijken'),save=el('button','Importeren en controleren'),status=el('p'),results=el('div'),bulk=el('button','Alle AI-analyses overzetten'),choices=el('button','Keuzelijsten aanmaken en controleren');
  card.className='data-transition';search.type='search';search.placeholder='Bijvoorbeeld Antoon';search.id='migration-search';label.htmlFor=search.id;select.setAttribute('aria-label','Te migreren show');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
- for(const button of [load,preview,save,bulk])button.type='button';
+ for(const button of [load,preview,save,bulk,choices])button.type='button';
  save.disabled=true;preview.disabled=true;let shows=[];
  const reset=()=>{previews=[];results.replaceChildren();save.disabled=true;};
  const renderShows=()=>{select.replaceChildren();const term=search.value.trim().toLocaleLowerCase();for(const show of shows.filter(row=>`${row.name} ${row.venue} ${row.date}`.toLocaleLowerCase().includes(term))){const option=el('option',`${show.name} · ${show.venue} · ${show.date}`);option.value=show.concertId;select.append(option);}preview.disabled=busy||!select.value;};
  search.oninput=()=>{reset();renderShows();};select.onchange=reset;
- async function run(task){if(busy||disposed)return;busy=true;for(const control of [load,preview,save,bulk,select,search])control.disabled=true;
+ async function run(task){if(busy||disposed)return;busy=true;for(const control of [load,preview,save,bulk,choices,select,search])control.disabled=true;
   try{await task();}catch(error){if(!disposed)status.textContent=error.message||'De verwerking is onderbroken. Probeer opnieuw; bevestigde imports blijven behouden.';}
-  finally{busy=false;if(!disposed){if(bulkRun)bulk.textContent='Alle AI-analyses hervatten';load.disabled=false;bulk.disabled=false;search.disabled=false;select.disabled=false;preview.disabled=!select.value;save.disabled=!previews.some(row=>row.status==='ready');}}
+  finally{busy=false;if(!disposed){if(bulkRun)bulk.textContent='Alle AI-analyses hervatten';load.disabled=false;bulk.disabled=false;choices.disabled=false;search.disabled=false;select.disabled=false;preview.disabled=!select.value;save.disabled=!previews.some(row=>row.status==='ready');}}
  }
  const call=body=>request('data-transition',{method:'POST',body});
  load.onclick=()=>run(async()=>{status.textContent='Shows uit Drive laden…';const data=await call({operation:'list'});if(disposed)return;shows=data.shows;reset();renderShows();status.textContent=`${shows.length} shows beschikbaar. Kies een show en bekijk het voorbeeld.`;});
@@ -44,5 +44,20 @@ export function createDataTransitionView(content,{request=access}={}){
   status.textContent=`Verwerking klaar: ${batch.shows.length} shows gecontroleerd. ${batch.verified} analyses bevestigd (${batch.created} nieuw), ${batch.missing} niet aanwezig in Drive, ${batch.conflicts} conflicten. Drive-originelen behouden.`;
   bulkRun=null;bulk.textContent='Alle AI-analyses opnieuw controleren';
  });
- const actions=el('div');actions.className='data-transition-actions';actions.append(load,preview,save,bulk);card.append(title,intro,label,search,select,actions,status,results);content.replaceChildren(card);return()=>{disposed=true;};
+ choices.onclick=()=>run(async()=>{
+  reset();status.textContent='Dataverse-verbinding, oplossing en basistaal controleren…';
+  const plan=await request('dataverse-choices',{method:'POST',body:{operation:'list'}});if(disposed)return;
+  let verified=0,created=0,conflicts=0;
+  for(const [index,choice] of plan.choices.entries()){
+   status.textContent=`Keuzelijst ${index+1} van ${plan.choices.length}: ${choice.title}…`;
+   const line=el('p',choice.title+' · Bezig…');results.append(line);let result;
+   try{result=await request('dataverse-choices',{method:'POST',body:{operation:'create',name:choice.name}});}catch(error){if(!disposed)line.textContent=choice.title+' · Niet bevestigd; klik opnieuw om te controleren en te hervatten.';throw error;}
+   if(disposed)return;
+   if(result.status==='verified'&&result.verified===true&&result.published===true){verified++;if(result.created)created++;line.textContent=choice.title+' · '+(result.created?'Aangemaakt, gepubliceerd en gecontroleerd':'Bestaat, gepubliceerd en gecontroleerd');}
+   else if(result.status==='conflict'){conflicts++;line.textContent=choice.title+' · Afwijkende bestaande lijst; niet aangepast. Controleer de namen en waarden in het schema.';}
+   else throw Error('Keuzelijst niet bevestigd. Klik opnieuw om te controleren en te hervatten.');
+  }
+  status.textContent=`Keuzelijsten klaar: ${verified} van ${plan.choices.length} bevestigd (${created} nieuw), ${conflicts} conflicten. Bestaande Opruimstatus en showgegevens zijn niet gewijzigd.`;
+ });
+ const actions=el('div');actions.className='data-transition-actions';actions.append(load,preview,save,bulk,choices);card.append(title,intro,label,search,select,actions,status,results);content.replaceChildren(card);return()=>{disposed=true;};
 }

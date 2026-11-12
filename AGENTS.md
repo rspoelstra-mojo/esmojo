@@ -1,3 +1,18 @@
+## Geautoriseerde keuzelijstsetup (12 november 2026)
+
+Gebruiker vraagt setupknop op /beheerder/datatransitie. Achter actuele admin,
+Shows-module, activatie en bestaande MFA mag de server de 24 vaste globale
+keuzelijsten uit docs/dataverse/shows-schema.json aanmaken en controleren.
+Server allowlist in server/dataverse-choice-definitions.js moet exact met dit
+schema overeenkomen; test bewaakt synchronisatie. Geen vrije metadata/body/URL.
+Alleen oplossing ESMOJO, onbeheerd en publisherprefix esmojo; taal uit omgeving.
+Bestaande afwijkende/managed lijsten niet wijzigen; geen PATCH/PUT/DELETE.
+Overeenkomende/nieuwe lijsten koppelen aan ESMOJO en alleen die exacte keuzes
+via PublishXml publiceren, geen PublishAll. Daarna namen, opties, labels/waarden
+teruglezen. Veilige herhaling na gedeeltelijke uitkomst; geen secrets/providerbody.
+Geen tabelaanmaak, bedrijfsrecords of bestaande lokale Opruimstatus aanpassen.
+Een publicatie van code betekent niet dat de live metadata-setup al is uitgevoerd.
+
 ## Definitief PDF-besluit en Shows-schema (12 november 2026)
 
 Nieuwste gebruikerbesluit: PDF’s worden canoniek opgeslagen in Dataverse File,

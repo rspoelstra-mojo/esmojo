@@ -5,6 +5,35 @@ en bestaande tweestapsverificatie. De pagina draait via de bestaande ESMOJO-serv
 met de bestaande Drive-brug en DATAVERSE_TEST_* configuratie. Geen nieuwe secrets,
 tabellen of kolommen nodig. De app moet aanmaakrecht op Onderzoeksresultaten hebben.
 
+## Globale keuzelijsten voorbereiden
+
+Op dezelfde beheerpagina staat **Keuzelijsten aanmaken en controleren**.
+Eén bewuste klik verwerkt de 24 nieuwe globale lijsten uit het vastgestelde
+[Shows-schema](shows-schema.md). Er is geen voorafgaande showselectie nodig.
+
+De server controleert bestaande Dataverse-configuratie, de onbeheerde oplossing
+ESMOJO met publisherprefix esmojo en de basistaal van de omgeving. Daarna wordt
+iedere lijst gelezen. Alleen een echte 404 betekent ontbrekend; een lees-/rechten-
+fout start geen aanmaak. Nieuwe lijsten gebruiken de exacte namen/labels/waarden.
+Bestaande afwijkende of managed lijsten worden als conflict gemeld, zonder hun
+inhoud bij te werken. Overeenkomende lijsten en nieuwe lijsten worden aan ESMOJO
+gekoppeld en uitsluitend per goedgekeurde lijst gepubliceerd met PublishXml.
+De server leest daarna de metadata terug. Er is geen PublishAll en geen bewerking
+van tabellen, showgegevens of de bestaande lokale Opruimstatus.
+
+Houd de pagina open. Bij een onderbreking opnieuw dezelfde knop gebruiken:
+bestaande definities worden opnieuw vergeleken; er ontstaan geen dubbele namen.
+Bij conflicten gaan de overige lijsten door en volgt een telling. Een fout bij
+rechte-/netwerk-/publicatiecontrole stopt de huidige ronde. Eerder aangemaakte
+lijsten blijven staan en de huidige lijst toont Niet bevestigd.
+
+De app moet metadata mogen lezen, globale keuzes aanmaken, componenten aan de
+oplossing toevoegen en die keuzes publiceren. Lezen vooraf bewijst op zichzelf
+geen schrijfrecht; Dataverse controleert de benodigde rechten bij iedere actie.
+Geen extra geheimen of Graph/Drive-toegang nodig voor deze functie.
+De eerste werkelijke setup gebeurt via de ingelogde beheerpagina; lokale tests
+gebruiken synthetische Microsoft-antwoorden en maken geen echte opties aan.
+
 ## Alles in één keer
 
 Klik **Alle AI-analyses overzetten**. Geen voorafgaande showselectie nodig.
