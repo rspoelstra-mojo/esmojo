@@ -1,3 +1,4 @@
+import {createShowInventory} from './show-inventory.js';
 import {createHash} from 'node:crypto';
 import {createShowsStore} from './shows-store.js';
 import {createResearchStore} from './research-store.js';
@@ -15,9 +16,10 @@ export function researchMarkdown(document){
  if(missing.length)text+='\n\n## Bronnen\n\n'+missing.map((source,i)=>`[${i+1}] [${source.title.replace(/[\\[\]\r\n]/g,' ')}](${new URL(source.url).href.replaceAll('(','%28').replaceAll(')','%29')})`).join('\n\n');
  return text;
 }
-export function createDataTransition({env=process.env,shows=createShowsStore({env,active:false}),research=createResearchStore({env}),dataverse=createDataverseResearch({env})}={}){
+export function createDataTransition({env=process.env,shows=createShowsStore({env,active:false}),research=createResearchStore({env}),dataverse=createDataverseResearch({env}),inspection=createShowInventory({env,shows})}={}){
  return async function transition(input){
   if(!input||Array.isArray(input))throw Error('VALIDATION');
+  if(['inventory-list','inventory-show'].includes(input.operation))return inspection(input);
   const operation=input.operation,expected={list:['operation'],inventory:['operation','concertId'],preview:['operation','concertId','number'],import:['operation','concertId','number','checksum'],'bulk-import':['operation','concertId','number']}[operation];
   if(!expected||Object.keys(input).sort().join(',')!==expected.sort().join(','))throw Error('VALIDATION');
   if(operation==='list'){
