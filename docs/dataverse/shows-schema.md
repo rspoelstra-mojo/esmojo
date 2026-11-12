@@ -81,6 +81,9 @@ vervanging van native optimistic concurrency.
   JSON is platte tekst met een expliciet gevalideerd contract; geen HTML of base64-
   bestandsbytes. Bestaande versleutelde Showbeheer-ciphertext is expliciet een
   tekstwaarde en wordt ongewijzigd behouden.
+- Getalstandaarden zoals revisie 0 en versienummer 1 zijn **appstandaarden**.
+  De Dataverse-getalkolom heeft geen native DefaultValue-instelling. De latere
+  opslagcode moet die waarden expliciet invullen; schema-aanmaak vult geen rijen.
 - Keuzes: één optie, met exact de gegeven numerieke waarden en labels. Oude
   stringcodes worden door de migratiecode gemapt; ze zijn geen losse extra kolom.
   **Geen standaard** betekent echt leeg. Geen risico, Nee en 0 zijn geen Onbekend.
@@ -180,7 +183,7 @@ Eén canonieke artiest.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Openbaar (158620000) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -205,7 +208,7 @@ Eén zaal/locatie, geen afzonderlijk vak.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Openbaar (158620000) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -213,7 +216,7 @@ Eén zaal/locatie, geen afzonderlijk vak.
 | Locatiecode | `esmojo_locatiecode` | Eén tekstregel; Tekst; maximaal 80 tekens | Ja / geen standaard | — | Stabiele code, bijvoorbeeld gashouder, afaslive of ziggodome. |
 | Stad | `esmojo_stad` | Eén tekstregel; Tekst; maximaal 120 tekens | Nee / geen standaard | — | Bestaande stad; onbekend blijft leeg. |
 | Landcode | `esmojo_landcode` | Eén tekstregel; Tekst; maximaal 2 tekens | Nee / geen standaard | — | ISO-landcode indien bekend, bijvoorbeeld NL. |
-| Configuratieversie | `esmojo_configuratieversie` | Geheel getal; Min 0; max 2147483647 | Ja / 1 | — | Versie van bestaande zaal-/referentieregels. |
+| Configuratieversie | `esmojo_configuratieversie` | Geheel getal; Min 0; max 2147483647; appstandaard 1 (geen native getalstandaard) | Ja / 1 | — | Versie van bestaande zaal-/referentieregels. |
 | Configuratie JSON | `esmojo_configuratie_json` | Meerdere tekstregels; Platte tekst; maximaal 100000 tekens; geen rich text | Nee / geen standaard | — | Alleen gevalideerde bestaande locatieconfiguratie; geen nieuwe zaalregels afleiden. |
 
 **Unieke sleutels:**
@@ -233,7 +236,7 @@ Eén reeks met gedeelde voorbereiding.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -243,10 +246,10 @@ Eén reeks met gedeelde voorbereiding.
 | Oud algemeen concert-ID | `esmojo_oudalgemeenconcertid` | Eén tekstregel; Tekst; maximaal 240 tekens | Nee / geen standaard | — | Oorspronkelijke generalConcertId; herkenning van bestaande gedeelde voorbereiding. |
 | Eerste datum | `esmojo_eerstedatum` | Datum en tijd; Gedrag Alleen datum; notatie Alleen datum; geen tijdzoneconversie | Ja / geen standaard | — | Eerste daadwerkelijke reeksdatum. |
 | Laatste datum | `esmojo_laatstedatum` | Datum en tijd; Gedrag Alleen datum; notatie Alleen datum; geen tijdzoneconversie | Ja / geen standaard | — | Laatste daadwerkelijke reeksdatum. |
-| Profielrevisie | `esmojo_profielrevisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
-| Afrondrevisie | `esmojo_afrondrevisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
-| Productierevisie | `esmojo_productierevisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
-| Voorbereidingsgeneratie | `esmojo_voorbereidingsgeneratie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
+| Profielrevisie | `esmojo_profielrevisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
+| Afrondrevisie | `esmojo_afrondrevisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
+| Productierevisie | `esmojo_productierevisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
+| Voorbereidingsgeneratie | `esmojo_voorbereidingsgeneratie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole. |
 
 **Unieke sleutels:**
 - esmojo_ak_concertreeks_sleutel: esmojo_sleutel
@@ -262,7 +265,7 @@ Eén daadwerkelijke uitvoering; dezelfde datum kan meerdere uitvoeringen hebben.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Openbaar (158620000) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -292,7 +295,7 @@ Eén medewerker/contact; login-koppeling is optioneel.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -322,7 +325,7 @@ Eén expliciet recht per medewerker en module.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -348,7 +351,7 @@ Eén bestaande medewerkerfunctie bij een reeks of concert.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -376,7 +379,7 @@ Eén veld/status per reeks: ticket_sales, visitor_origins of domestic_origins.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -385,7 +388,7 @@ Eén veld/status per reeks: ticket_sales, visitor_origins of domestic_origins.
 | Veldsoort | `esmojo_veldsoort` | Keuze; Eén waarde; geen meerkeuze | Ja / geen standaard | esmojo_keuze_bezoekersveld | De drie bestaande veldcodes. |
 | Veldstatus | `esmojo_veldstatus` | Keuze; Eén waarde; geen meerkeuze | Ja / Leeg (158620000) | esmojo_keuze_veldstatus | Leeg/concept/gecontroleerd; originele reviewstatus mappen. |
 | Herkomst JSON | `esmojo_herkomst_json` | Meerdere tekstregels; Platte tekst; maximaal 100000 tekens; geen rich text | Nee / geen standaard | — | Alleen visitor_origins/domestic_origins: bestaande percentages, landen/steden en volgorde. Geen AI-bronnen. |
-| Veldversie | `esmojo_veldversie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Oorspronkelijke ticket-/herkomstveldversie voor afrondbasis. |
+| Veldversie | `esmojo_veldversie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Oorspronkelijke ticket-/herkomstveldversie voor afrondbasis. |
 | Gecontroleerd op | `esmojo_gecontroleerdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijke veldcontrole indien bekend. |
 | Gecontroleerd door | `esmojo_gecontroleerddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke oorspronkelijke controleur, indien bekend. |
 
@@ -406,7 +409,7 @@ Eén ticketverkoopaantal per uitvoering binnen een ticket_sales-veld.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -431,7 +434,7 @@ Eén eigen ESMOJO-samenvatting per reeks en vraagnummer.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Openbaar (158620000) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -457,7 +460,7 @@ Eén actuele eindbeoordeling per reeks en categorie; oude versies in Historiever
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Openbaar (158620000) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -516,7 +519,7 @@ Eén bestaande zelfstandige Ja/Nee-productiekeuze per reeks en onderwerp.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -540,7 +543,7 @@ Eén actuele barrierbeoordeling per reeks.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -571,7 +574,7 @@ Eén actuele vloerbeoordeling per reeks, met afzonderlijke vakken.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -605,14 +608,14 @@ Eén vak binnen een vloerdrukbeoordeling.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
 | Bronidentiteit | `esmojo_bronidentiteit` | Eén tekstregel; Tekst; maximaal 1000 tekens | Nee / geen standaard | — | Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal. |
 | Vloerdrukbeoordeling | `esmojo_vloerdrukbeoordeling` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Ja / geen standaard | N:1 → esmojo_vloerdrukbeoordeling | Parent-beoordeling. |
 | Vakcode | `esmojo_vakcode` | Eén tekstregel; Tekst; maximaal 80 tekens | Ja / geen standaard | — | Bestaande stabiele row.id, bijvoorbeeld standing, gc, gc_left. |
-| Volgorde | `esmojo_volgorde` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Bestaande weergavevolgorde. |
+| Volgorde | `esmojo_volgorde` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Bestaande weergavevolgorde. |
 | Bezoekers | `esmojo_bezoekers` | Geheel getal; Min 0; max 2147483647 | Nee / geen standaard | — | Bestaande bezoekers in dit vak; null onbekend, 0 geldig. |
 | Netto oppervlakte m² | `esmojo_nettooppervlakte` | Decimaal getal; 10 decimalen; min 0; max 1000000000; geen valuta of floating point | Nee / geen standaard | — | Bestaande netto oppervlakte; concept kan null/0 bevatten, afronding vereist >0. |
 
@@ -633,7 +636,7 @@ Eén versiegebonden AI-risicoanalyse op een showprofiel-PDF, ook bij nul risico�
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -642,7 +645,7 @@ Eén versiegebonden AI-risicoanalyse op een showprofiel-PDF, ook bij nul risico�
 | Bron-PDF | `esmojo_brondocument` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Ja / geen standaard | N:1 → esmojo_document | Exacte immutable showprofiel-PDF-versie. |
 | Bronrevisie | `esmojo_bronrevisie` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Bestaande source.revision: 64-tekens fingerprint, GEEN geheel revisienummer. |
 | Bron SHA-256 | `esmojo_bronsha256` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Bestaande hash van exacte PDF-bytes. |
-| Promptversie | `esmojo_promptversie` | Geheel getal; Min 1; max 2147483647 | Ja / 1 | — | Bestaande RISK_PROMPT_VERSION; geen nieuw onderzoek starten. |
+| Promptversie | `esmojo_promptversie` | Geheel getal; Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard) | Ja / 1 | — | Bestaande RISK_PROMPT_VERSION; geen nieuw onderzoek starten. |
 | PDF-versie | `esmojo_pdfversie` | Geheel getal; Min 1; max 2147483647 | Ja / geen standaard | — | Bestaand PDF-versienummer. |
 | Bronstatus | `esmojo_bronstatus` | Keuze; Eén waarde; geen meerkeuze | Ja / In afwachting (158620000) | esmojo_keuze_bronstatus | Conceptbron beschikbaar/gecontroleerd betekent geen ESM-goedkeuring. |
 | Beperkingen JSON | `esmojo_beperkingen_json` | Meerdere tekstregels; Platte tekst; maximaal 32000 tekens; geen rich text | Nee / geen standaard | — | Exacte bestaande limitations-array; bewaren ook als risks leeg is. |
@@ -662,7 +665,7 @@ Eén gevonden risico binnen één versiegebonden bron, met eigen ESM-beoordeling
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -695,7 +698,7 @@ Eén brongebonden maatregel uit productie of operationeel risico.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -731,7 +734,7 @@ Eén fysieke bestandsversie in Dataverse; PDF’s ook in Dataverse.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -743,7 +746,7 @@ Eén fysieke bestandsversie in Dataverse; PDF’s ook in Dataverse.
 | SHA-256 | `esmojo_sha256` | Eén tekstregel; Tekst; maximaal 64 tekens | Nee / geen standaard | — | Hash van volledige originele bytes; verplicht vóór vrijgeven voor download. |
 | Documentsoort | `esmojo_documentsoort` | Keuze; Eén waarde; geen meerkeuze | Ja / geen standaard | esmojo_keuze_documentsoort | Bestaande functie van het document. |
 | Documentgroep | `esmojo_documentgroep` | Eén tekstregel; Tekst; maximaal 100 tekens | Ja / geen standaard | — | Stabiele groep voor alle versies van hetzelfde logische document. |
-| Versienummer | `esmojo_versienummer` | Geheel getal; Min 1; max 2147483647 | Ja / 1 | — | Bestaande versie; nieuw document start op 1. |
+| Versienummer | `esmojo_versienummer` | Geheel getal; Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard) | Ja / 1 | — | Bestaande versie; nieuw document start op 1. |
 | Documentstatus | `esmojo_documentstatus` | Keuze; Eén waarde; geen meerkeuze | Ja / In afwachting (158620000) | esmojo_keuze_bronstatus | Bestand beschikbaar/gecontroleerd, in afwachting of fout. |
 | Bronfingerprint | `esmojo_bronfingerprint` | Eén tekstregel; Tekst; maximaal 64 tekens | Nee / geen standaard | — | Voor showprofiel-PDF: exacte bestaande snapshot-revision/hash van generatiebasis. |
 | Bronbasis JSON | `esmojo_bronbasis_json` | Meerdere tekstregels; Platte tekst; maximaal 100000 tekens; geen rich text | Nee / geen standaard | — | Exacte analyse-, afrond-, ticket- en productieversies die bij deze PDF/documentversie horen. |
@@ -766,7 +769,7 @@ Eén documentversie gekoppeld aan één eigenaar en één rol.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -775,7 +778,7 @@ Eén documentversie gekoppeld aan één eigenaar en één rol.
 | Rolcode | `esmojo_rolcode` | Eén tekstregel; Tekst; maximaal 80 tekens | Ja / geen standaard | — | Bijvoorbeeld showprofile-pdf, barrier-reference:end_stage_gc, attachment, avatar, photo. |
 | Oorspronkelijk upload-ID | `esmojo_bronuploadid` | Eén tekstregel; Tekst; maximaal 36 tekens | Nee / geen standaard | — | Bestaand UUID uploadId; behouden voor retries en historische verwijzingen. |
 | Koppelstatus | `esmojo_koppelstatus` | Keuze; Eén waarde; geen meerkeuze | Ja / Actief (158620000) | esmojo_keuze_koppelstatus | Bestaande actieve/verwijderde/vervangen koppeling; geen automatische fysieke verwijdering. |
-| Volgorde | `esmojo_volgorde` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Bestaande bijlage-/weergavevolgorde. |
+| Volgorde | `esmojo_volgorde` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Bestaande bijlage-/weergavevolgorde. |
 | Concertreeks | `esmojo_concertreeks` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_concertreeks | Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg. |
 | Concert | `esmojo_concert` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_concert | Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg. |
 | Beheersmaatregel | `esmojo_beheersmaatregel` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_beheersmaatregel | Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg. |
@@ -802,7 +805,7 @@ Eén bestaande externe showtoegang; PIN en linkgeheim niet in platte tekst.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -833,7 +836,7 @@ Eén bestaande sectiestatus per Showbeheer-toegang.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -858,7 +861,7 @@ Eén gepland/feitelijk tijdschemapunt bij een uitvoering.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -866,7 +869,7 @@ Eén gepland/feitelijk tijdschemapunt bij een uitvoering.
 | Concert | `esmojo_concert` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Ja / geen standaard | N:1 → esmojo_concert | Exacte uitvoering. |
 | Regelcode | `esmojo_regelcode` | Eén tekstregel; Tekst; maximaal 80 tekens | Ja / geen standaard | — | Bestaande bron-/regelidentiteit, bijvoorbeeld doors, support of start; geen nieuwe labels verzinnen. |
 | Label | `esmojo_label` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Oorspronkelijk zichtbare label. |
-| Volgorde | `esmojo_volgorde` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Bestaande bron-/presentatievolgorde. |
+| Volgorde | `esmojo_volgorde` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Bestaande bron-/presentatievolgorde. |
 | Tijdsoort | `esmojo_tijdsoort` | Keuze; Eén waarde; geen meerkeuze | Ja / geen standaard | esmojo_keuze_tijdsoort | Gepland of feitelijk; geen feitelijke tijden uit geplande tijden raden. |
 | Oorspronkelijke tijdtekst | `esmojo_tijdtekst` | Eén tekstregel; Tekst; maximaal 200 tekens | Nee / geen standaard | — | Oorspronkelijke tekst inclusief onbekend/afwijkend label. |
 | Genormaliseerde tijd | `esmojo_tijd` | Eén tekstregel; Tekst; maximaal 5 tekens | Nee / geen standaard | — | Alleen geldig HH:mm indien daadwerkelijk bekend; anders null. |
@@ -890,7 +893,7 @@ Eén status/cursor per integratie/batch/resource.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -900,9 +903,9 @@ Eén status/cursor per integratie/batch/resource.
 | Integratiestatus | `esmojo_integratiestatus` | Keuze; Eén waarde; geen meerkeuze | Ja / Niet gestart (158620000) | esmojo_keuze_integratiestatus | Bestaande of nieuwe gecontroleerde voortgang. |
 | Cursor JSON | `esmojo_cursor_json` | Meerdere tekstregels; Platte tekst; maximaal 100000 tekens; geen rich text | Nee / geen standaard | — | Laatste paginacursor, bronwatermark of bestaand importmanifest-deel, zonder tokens. |
 | Configuratie JSON | `esmojo_configuratie_json` | Meerdere tekstregels; Platte tekst; maximaal 100000 tekens; geen rich text | Nee / geen standaard | — | Alleen toegestane technische instellingen; geen appcredentials. |
-| Aantal gelezen | `esmojo_aantalgelezen` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Gecontroleerde aantallen. |
-| Aantal bevestigd | `esmojo_aantalbevestigd` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Teruggelezen/bevestigde doelen. |
-| Aantal conflicten | `esmojo_aantalconflicten` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Niet overschreven afwijkende doelen. |
+| Aantal gelezen | `esmojo_aantalgelezen` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Gecontroleerde aantallen. |
+| Aantal bevestigd | `esmojo_aantalbevestigd` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Teruggelezen/bevestigde doelen. |
+| Aantal conflicten | `esmojo_aantalconflicten` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Niet overschreven afwijkende doelen. |
 | Laatste start op | `esmojo_laatstestartop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Laatste daadwerkelijke start. |
 | Laatst geslaagd op | `esmojo_laatstgeslaagdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Laatste bevestigde volledige uitvoering. |
 | Foutcode | `esmojo_foutcode` | Eén tekstregel; Tekst; maximaal 80 tekens | Nee / geen standaard | — | Vaste veilige code; geen ruwe providerfout of gevoelige broninhoud. |
@@ -925,7 +928,7 @@ Eén append-only oorspronkelijke versie/handeling van een benoemde bron.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -941,7 +944,7 @@ Eén append-only oorspronkelijke versie/handeling van een benoemde bron.
 | Snapshotdocument | `esmojo_snapshotdocument` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_document | JSON-bron als File als de oorspronkelijke snapshot niet in een tekstkolom past. |
 | Snapshot SHA-256 | `esmojo_fingerprint` | Eén tekstregel; Tekst; maximaal 64 tekens | Nee / geen standaard | — | Controlehash van exact gekozen snapshot-/broncontract. |
 | Oorspronkelijke actorreferentie | `esmojo_oorspronkelijkeactor` | Eén tekstregel; Tekst; maximaal 100 tekens | Nee / geen standaard | — | Bestaande actor-ID als die nog niet aan een Medewerker kan worden gekoppeld. Geen fictieve auteur. |
-| Snapshot-schemaversie | `esmojo_schemaversie` | Geheel getal; Min 1; max 2147483647 | Ja / 1 | — | Contract waarmee de historische inhoud gelezen moet worden. |
+| Snapshot-schemaversie | `esmojo_schemaversie` | Geheel getal; Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard) | Ja / 1 | — | Contract waarmee de historische inhoud gelezen moet worden. |
 
 **Unieke sleutels:**
 - esmojo_ak_historie_sleutel: esmojo_sleutel
@@ -959,7 +962,7 @@ Eén idempotent commando/achtergrondopdracht of gecontroleerd afgesloten ontvang
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -975,7 +978,7 @@ Eén idempotent commando/achtergrondopdracht of gecontroleerd afgesloten ontvang
 | Payload JSON | `esmojo_payload_json` | Meerdere tekstregels; Platte tekst; maximaal 1048576 tekens; geen rich text | Nee / geen standaard | — | Alleen gevalideerd noodzakelijke commando-invoer; geen secrets/base64. |
 | Ontvangstbewijs JSON | `esmojo_resultaat_json` | Meerdere tekstregels; Platte tekst; maximaal 1048576 tekens; geen rich text | Nee / geen standaard | — | Oorspronkelijk bevestigd resultaat, nodig voor idempotente retries. Grote legacyresultaten via Resultaatdocument. |
 | Resultaatdocument | `esmojo_resultaatdocument` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_document | Exact groot legacyresultaat als tekstgrens wordt overschreden. |
-| Pogingen | `esmojo_pogingen` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Aantal uitvoeringspogingen. |
+| Pogingen | `esmojo_pogingen` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Aantal uitvoeringspogingen. |
 | Lease-ID | `esmojo_leaseid` | Eén tekstregel; Tekst; maximaal 36 tekens | Nee / geen standaard | — | Server-only technische UUID; geen openbaar toegangstoken. |
 | Lease verloopt op | `esmojo_leaseverlooptop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Bestaande/geldige technische lease. |
 | Gestart op | `esmojo_gestartop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Werkelijke start. |
@@ -999,7 +1002,7 @@ Eén bestaande openbare/appidentificatie gekoppeld aan een canoniek doel.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Openbaar (158620000) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -1029,7 +1032,7 @@ Eén automatisch samengestelde, versiegebonden schermbundel.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -1039,8 +1042,8 @@ Eén automatisch samengestelde, versiegebonden schermbundel.
 | Concertreeks | `esmojo_concertreeks` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_concertreeks | Eigenaar van de gedeelde voorbereidingsbundel. |
 | Concert | `esmojo_concert` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_concert | Eigenaar van datumgebonden gegevens indien nodig. |
 | Artiest | `esmojo_artiest` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_artiest | Alleen indien bestaande gedeelde projectie dit nodig heeft. |
-| Contractversie | `esmojo_contractversie` | Geheel getal; Min 1; max 2147483647 | Ja / 1 | — | Versie van het JSON-responsecontract. |
-| Generatie | `esmojo_generatie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Gecoördineerde gepubliceerde generatie. |
+| Contractversie | `esmojo_contractversie` | Geheel getal; Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard) | Ja / 1 | — | Versie van het JSON-responsecontract. |
+| Generatie | `esmojo_generatie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Gecoördineerde gepubliceerde generatie. |
 | Bronfingerprint | `esmojo_bronfingerprint` | Eén tekstregel; Tekst; maximaal 64 tekens | Nee / geen standaard | — | Versiegebonden bronset van deze projectie. |
 | Inhoud JSON | `esmojo_inhoud_json` | Meerdere tekstregels; Platte tekst; maximaal 1048576 tekens; geen rich text | Nee / geen standaard | — | Uitsluitend toegestane compacte schermgegevens; geen PDF-bytes, secrets of onnodige historie. |
 | Vernieuwen nodig | `esmojo_vernieuwennodig` | Ja/Nee; Twee opties; alleen waar onbekend geen afzonderlijke betekenis heeft | Ja / Ja | — | Dirty-flag; aanmaak staat op Ja tot de bundel gecontroleerd is gepubliceerd. |
@@ -1062,7 +1065,7 @@ Eén gecoördineerde guard/lease/teller per resource.
 |---|---|---|---|---|---|
 | Naam | `esmojo_naam` | Eén tekstregel; Tekst; maximaal 200 tekens | Ja / geen standaard | — | Primaire naamkolom: leesbare omschrijving; niet de identiteit. |
 | Sleutel | `esmojo_sleutel` | Eén tekstregel; Tekst; maximaal 64 tekens | Ja / geen standaard | — | Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam. |
-| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
+| Revisie | `esmojo_revisie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion. |
 | Classificatie | `esmojo_classificatie` | Keuze; Eén waarde; geen meerkeuze | Ja / Vertrouwelijk (158620001) | esmojo_keuze_classificatie | Classificatie van de inhoud; afgeleide records erven de strengste bron. |
 | Oorspronkelijk vastgelegd op | `esmojo_vastgelegdop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg. |
 | Gewijzigd door | `esmojo_gewijzigddoor` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_medewerker | Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is. |
@@ -1071,10 +1074,10 @@ Eén gecoördineerde guard/lease/teller per resource.
 | Resourcecode | `esmojo_resourcecode` | Eén tekstregel; Tekst; maximaal 240 tekens | Ja / geen standaard | — | Gevalideerde stabiele scope, geen losse secrets. |
 | Concertreeks | `esmojo_concertreeks` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_concertreeks | Reeks indien relevant. |
 | Showbeheer | `esmojo_showbeheer` | Opzoeken; N:1; verwijdergedrag Beperken (Restrict); geen cascade delete | Nee / geen standaard | N:1 → esmojo_showbeheer | Externe toegang bij PIN-pogingslimiet. |
-| Generatie | `esmojo_generatie` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Gecoördineerde bron-/guardgeneratie. |
+| Generatie | `esmojo_generatie` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Gecoördineerde bron-/guardgeneratie. |
 | Lease-ID | `esmojo_leaseid` | Eén tekstregel; Tekst; maximaal 36 tekens | Nee / geen standaard | — | Server-only lease-UUID; niet als browsergeheim exporteren. |
 | Lease verloopt op | `esmojo_leaseverlooptop` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Technisch verloopmoment. |
-| Teller | `esmojo_teller` | Geheel getal; Min 0; max 2147483647 | Ja / 0 | — | Bestaande gedeelde pogingsteller of noodzakelijke technische teller. |
+| Teller | `esmojo_teller` | Geheel getal; Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard) | Ja / 0 | — | Bestaande gedeelde pogingsteller of noodzakelijke technische teller. |
 | Venstereinde | `esmojo_venstereinde` | Datum en tijd; Gedrag Gebruiker lokaal; API UTC; weergave Europe/Amsterdam | Nee / geen standaard | — | Bestaande attempt_until / rate-limitvenster. |
 | Spiegeling nodig | `esmojo_spiegelingnodig` | Ja/Nee; Twee opties; alleen waar onbekend geen afzonderlijke betekenis heeft | Ja / Nee | — | Oorspronkelijke pending-markering; uitsluitend tijdens gecontroleerde overgang. |
 | Archiveringsfout | `esmojo_archiveringsfout` | Ja/Nee; Twee opties; alleen waar onbekend geen afzonderlijke betekenis heeft | Ja / Nee | — | Oorspronkelijke archive_error; niet stil wissen. |

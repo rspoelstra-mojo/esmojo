@@ -1,3 +1,4 @@
+import {createDataverseTables} from './dataverse-tables.js';
 import {createDataverseChoices} from './dataverse-choices.js';
 import {createDataTransition} from './data-transition.js';
 import {createDataverseShows} from './dataverse-shows.js';
@@ -40,7 +41,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows});
@@ -142,7 +143,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=['dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=['dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
@@ -287,6 +288,14 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='dataverse-tables'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await dataverseTables(req.body));}catch(error){
+          const messages={VALIDATION:'Ongeldige tabelsetupstap.',CHOICE_CONFIG:'Controleer de bestaande Dataverse-serverconfiguratie.',CHOICE_AUTH:'Microsoft-aanmelding niet bevestigd. Controleer de Dataverse-appverbinding.',CHOICE_FORBIDDEN:'Dataverse weigert deze schemabewerking. Controleer de rechten voor tabellen, kolommen, relaties, sleutels en publiceren.',CHOICE_SOLUTION:'De onbeheerde oplossing ESMOJO met publisherprefix esmojo is niet bevestigd.',CHOICE_LANGUAGE:'De basistaal van de omgeving is niet bevestigd.',CHOICE_COMPONENT:'Toevoegen aan ESMOJO is niet bevestigd. Start opnieuw om veilig te hervatten.',TABLE_PARENT_UNCONFIRMED:'De vereiste brontabel of doeltabel klopt nog niet. Controleer de eerdere stappen.',TABLE_CREATE_UNCONFIRMED:'Aanmaken is nog niet bevestigd. Start opnieuw; reeds aanwezige onderdelen worden eerst gecontroleerd.',TABLE_PUBLISH_UNCONFIRMED:'Publiceren is niet bevestigd. Start opnieuw om veilig te hervatten.',TABLE_SCHEMA:'Het vaste schema kan niet worden verwerkt.',TABLE_PROTECTED:'Deze wijziging aan de bestaande onderzoekstabel is niet toegestaan.'};
+          const code=Object.hasOwn(messages,error.message)?error.message:'TABLE_UNAVAILABLE';
+          return reply(code==='VALIDATION'?400:503,{code,error:messages[code]||'Tabelsetup onderbroken. Eerder aangemaakte onderdelen blijven behouden; start opnieuw om te controleren en te hervatten.'});
+        }
+      }
       if(action==='dataverse-choices'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         try{return reply(200,await dataverseChoices(req.body));}catch(error){

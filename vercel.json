@@ -5,7 +5,7 @@
       "maxDuration": 300
     },
     "api/access.js": {
-      "includeFiles": "{server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**}",
+      "includeFiles": "{docs/dataverse/shows-schema.json,server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**}",
       "maxDuration": 300
     },
     "api/ontrack-reports-sync.js": {

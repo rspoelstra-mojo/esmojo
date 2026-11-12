@@ -28,6 +28,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -42,6 +43,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -49,13 +51,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -70,6 +73,7 @@
           "default": "Openbaar (158620000)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -84,6 +88,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -98,6 +103,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_artiest_gewijzigddoor"
         },
         {
@@ -112,6 +118,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -126,6 +133,7 @@
           "default": "",
           "meaning": "Bestaand artiest-ID; namen/aliases staan in Routealias.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -140,6 +148,7 @@
           "default": "",
           "meaning": "Laatst goede biografietekst; een mislukte update wist deze niet.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -154,6 +163,7 @@
           "default": "",
           "meaning": "Openbare bron-URL.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -168,6 +178,7 @@
           "default": "",
           "meaning": "Bestaand ophaalmoment van biografie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -182,6 +193,7 @@
           "default": "",
           "meaning": "Bestaande toegestane MOJO-fotobron; een daadwerkelijk opgeslagen foto koppelen via Documentkoppeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -217,6 +229,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -231,6 +244,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -238,13 +252,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -259,6 +274,7 @@
           "default": "Openbaar (158620000)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -273,6 +289,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -287,6 +304,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_locatie_gewijzigddoor"
         },
         {
@@ -301,6 +319,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -315,6 +334,7 @@
           "default": "",
           "meaning": "Stabiele code, bijvoorbeeld gashouder, afaslive of ziggodome.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -329,6 +349,7 @@
           "default": "",
           "meaning": "Bestaande stad; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -343,6 +364,7 @@
           "default": "",
           "meaning": "ISO-landcode indien bekend, bijvoorbeeld NL.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -350,13 +372,14 @@
           "label": "Configuratieversie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 1 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "1",
           "meaning": "Versie van bestaande zaal-/referentieregels.",
           "default_value": 1,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -371,6 +394,7 @@
           "default": "",
           "meaning": "Alleen gevalideerde bestaande locatieconfiguratie; geen nieuwe zaalregels afleiden.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -412,6 +436,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -426,6 +451,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -433,13 +459,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -454,6 +481,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -468,6 +496,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -482,6 +511,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_concertreeks_gewijzigddoor"
         },
         {
@@ -496,6 +526,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -510,6 +541,7 @@
           "default": "",
           "meaning": "Canonieke artiest van de reeks.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_concertreeks_artiest"
         },
         {
@@ -524,6 +556,7 @@
           "default": "",
           "meaning": "Locatie van de reeks.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_concertreeks_locatie"
         },
         {
@@ -538,6 +571,7 @@
           "default": "",
           "meaning": "Oorspronkelijke generalConcertId; herkenning van bestaande gedeelde voorbereiding.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -552,6 +586,7 @@
           "default": "",
           "meaning": "Eerste daadwerkelijke reeksdatum.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -566,6 +601,7 @@
           "default": "",
           "meaning": "Laatste daadwerkelijke reeksdatum.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -573,13 +609,14 @@
           "label": "Profielrevisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -587,13 +624,14 @@
           "label": "Afrondrevisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -601,13 +639,14 @@
           "label": "Productierevisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -615,13 +654,14 @@
           "label": "Voorbereidingsgeneratie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Oorspronkelijke documentrevisie / gecoördineerde generatie voor broncontrole.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         }
       ],
@@ -657,6 +697,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -671,6 +712,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -678,13 +720,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -699,6 +742,7 @@
           "default": "Openbaar (158620000)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -713,6 +757,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -727,6 +772,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_concert_gewijzigddoor"
         },
         {
@@ -741,6 +787,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -755,6 +802,7 @@
           "default": "",
           "meaning": "Reeks waartoe deze uitvoering behoort.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_concert_concertreeks"
         },
         {
@@ -769,6 +817,7 @@
           "default": "",
           "meaning": "Werkelijke lokale concertdatum, zonder tijdzoneconversie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -783,6 +832,7 @@
           "default": "",
           "meaning": "Stabiele uitvoeringscode: bestaand bron-slot/middag/avond; standaard alleen als er geen onderscheiden slot is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -797,6 +847,7 @@
           "default": "",
           "meaning": "Bestaande ESMOJO-concert-ID; oude route daarnaast in Routealias.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -811,6 +862,7 @@
           "default": "",
           "meaning": "Bestaande onderzoeks-/importsleutel, bijvoorbeeld artiest_zaal_jjjjmmdd; geen nieuwe primaire identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -825,6 +877,7 @@
           "default": "",
           "meaning": "Oorspronkelijke openbare concertaankondiging.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -839,6 +892,7 @@
           "default": "",
           "meaning": "Oorspronkelijke uitvoeringstijd, inclusief Niet vermeld; niet gebruiken als stabiele identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -853,6 +907,7 @@
           "default": "Nee",
           "meaning": "Alleen bestaande toegestane Gashouder- of expliciet in Dataverse geïmporteerde shows. Geen volledige MOJO-catalogus publiceren.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -867,6 +922,7 @@
           "default": "Nee",
           "meaning": "Bestaande module-/catalogusscope; apart van zichtbaarheid in Shows.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         }
       ],
@@ -910,6 +966,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -924,6 +981,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -931,13 +989,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -952,6 +1011,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -966,6 +1026,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -980,6 +1041,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_medewerker_gewijzigddoor"
         },
         {
@@ -994,6 +1056,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1008,6 +1071,7 @@
           "default": "",
           "meaning": "Bestaand UUID als tekst; uniek indien ingevuld. Geen wachtwoord/MFA/refresh-token.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1022,6 +1086,7 @@
           "default": "",
           "meaning": "Bestaande voornaam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1036,6 +1101,7 @@
           "default": "",
           "meaning": "Bestaande achternaam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1050,6 +1116,7 @@
           "default": "",
           "meaning": "Bestaand e-mailadres; verplicht in de app voor een actief Auth-gekoppeld account.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1064,6 +1131,7 @@
           "default": "",
           "meaning": "Bestaande bedrijfsnaam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1078,6 +1146,7 @@
           "default": "",
           "meaning": "Bestaande functieomschrijving.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1092,6 +1161,7 @@
           "default": "Gebruiker (158620000)",
           "meaning": "Gewone approl; superbeheerder blijft uitsluitend de bestaande vaste codepolicy, nooit een bewerkbare keuze.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1106,6 +1176,7 @@
           "default": "Nee",
           "meaning": "Bestaande activatiestatus.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1120,6 +1191,7 @@
           "default": "Nee",
           "meaning": "Bestaande blokkering.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         }
       ],
@@ -1161,6 +1233,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1175,6 +1248,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1182,13 +1256,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -1203,6 +1278,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1217,6 +1293,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1231,6 +1308,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_modulerecht_gewijzigddoor"
         },
         {
@@ -1245,6 +1323,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1259,6 +1338,7 @@
           "default": "",
           "meaning": "Medewerker voor wie het recht geldt.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_modulerecht_medewerker"
         },
         {
@@ -1273,6 +1353,7 @@
           "default": "",
           "meaning": "Bestaande modulecode.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1287,6 +1368,7 @@
           "default": "Nee",
           "meaning": "Expliciet toegestaan of geweigerd; ontbrekende rij verleent geen toegang.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         }
       ],
@@ -1329,6 +1411,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1343,6 +1426,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1350,13 +1434,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -1371,6 +1456,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1385,6 +1471,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1399,6 +1486,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_projectteam_gewijzigddoor"
         },
         {
@@ -1413,6 +1501,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1427,6 +1516,7 @@
           "default": "",
           "meaning": "Bestaande gekoppelde medewerker/contact.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_projectteam_medewerker"
         },
         {
@@ -1441,6 +1531,7 @@
           "default": "",
           "meaning": "Scope als de toewijzing voor de hele reeks geldt.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_projectteam_concertreeks"
         },
         {
@@ -1455,6 +1546,7 @@
           "default": "",
           "meaning": "Scope als de toewijzing voor één uitvoering geldt.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_projectteam_concert"
         },
         {
@@ -1469,6 +1561,7 @@
           "default": "",
           "meaning": "Bestaande toewijzingsfunctie, bijvoorbeeld event-safety-manager.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1483,6 +1576,7 @@
           "default": "",
           "meaning": "Alleen indien al in de bron vastgelegd.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1497,6 +1591,7 @@
           "default": "",
           "meaning": "Alleen indien al in de bron vastgelegd.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -1532,6 +1627,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1546,6 +1642,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1553,13 +1650,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -1574,6 +1672,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1588,6 +1687,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1602,6 +1702,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_bezoekersgegeven_gewijzigddoor"
         },
         {
@@ -1616,6 +1717,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1630,6 +1732,7 @@
           "default": "",
           "meaning": "Reeks waartoe het gecontroleerde veld behoort.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_bezoekersgegeven_concertreeks"
         },
         {
@@ -1644,6 +1747,7 @@
           "default": "",
           "meaning": "De drie bestaande veldcodes.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1658,6 +1762,7 @@
           "default": "Leeg (158620000)",
           "meaning": "Leeg/concept/gecontroleerd; originele reviewstatus mappen.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1672,6 +1777,7 @@
           "default": "",
           "meaning": "Alleen visitor_origins/domestic_origins: bestaande percentages, landen/steden en volgorde. Geen AI-bronnen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1679,13 +1785,14 @@
           "label": "Veldversie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Oorspronkelijke ticket-/herkomstveldversie voor afrondbasis.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -1700,6 +1807,7 @@
           "default": "",
           "meaning": "Oorspronkelijke veldcontrole indien bekend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1714,6 +1822,7 @@
           "default": "",
           "meaning": "Werkelijke oorspronkelijke controleur, indien bekend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_bezoekersgegeven_gecontroleerddoor"
         }
       ],
@@ -1756,6 +1865,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1770,6 +1880,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1777,13 +1888,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -1798,6 +1910,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1812,6 +1925,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1826,6 +1940,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_ticketverkoop_gewijzigddoor"
         },
         {
@@ -1840,6 +1955,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1854,6 +1970,7 @@
           "default": "",
           "meaning": "Parent met veldsoort ticket_sales; dezelfde reeks als Concert.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_ticketverkoop_bezoekersgegeven"
         },
         {
@@ -1868,6 +1985,7 @@
           "default": "",
           "meaning": "Exacte uitvoering, inclusief middag/avond/slot.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_ticketverkoop_concert"
         },
         {
@@ -1882,6 +2000,7 @@
           "default": "",
           "meaning": "Aangeleverd aantal; null is onbekend, 0 is geldige nul.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1896,6 +2015,7 @@
           "default": "",
           "meaning": "Oorspronkelijke tijd-/slottekst uit de meerdaagse ticketinvoer.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -1938,6 +2058,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1952,6 +2073,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -1959,13 +2081,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -1980,6 +2103,7 @@
           "default": "Openbaar (158620000)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -1994,6 +2118,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2008,6 +2133,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_analyse_gewijzigddoor"
         },
         {
@@ -2022,6 +2148,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2036,6 +2163,7 @@
           "default": "",
           "meaning": "Eigenaar van de gedeelde voorbereiding.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_analyse_concertreeks"
         },
         {
@@ -2050,6 +2178,7 @@
           "default": "",
           "meaning": "Bestaande nummers 1 t/m 11.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2064,6 +2193,7 @@
           "default": "",
           "meaning": "Vragen 1–4 bezoekers; 5–11 artiest.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2078,6 +2208,7 @@
           "default": "",
           "meaning": "Zelfgeschreven tekst; nooit automatisch de volledige AI-analyse kopiëren.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2092,6 +2223,7 @@
           "default": "Concept (158620000)",
           "meaning": "Bestaand concept/afgerond.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         }
       ],
@@ -2134,6 +2266,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2148,6 +2281,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2155,13 +2289,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -2176,6 +2311,7 @@
           "default": "Openbaar (158620000)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -2190,6 +2326,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2204,6 +2341,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_analyseafronding_gewijzigddoor"
         },
         {
@@ -2218,6 +2356,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2232,6 +2371,7 @@
           "default": "",
           "meaning": "Reeks van de eindbeoordeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_analyseafronding_concertreeks"
         },
         {
@@ -2246,6 +2386,7 @@
           "default": "",
           "meaning": "Bezoekersanalyse of artiestanalyse.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2260,6 +2401,7 @@
           "default": "",
           "meaning": "Bestaand cijfer; alleen verplicht bij geldige afronding.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2274,6 +2416,7 @@
           "default": "",
           "meaning": "Bestaande eindtoelichting.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2288,6 +2431,7 @@
           "default": "Concept (158620000)",
           "meaning": "Geen impliciete definitieve goedkeuring.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -2302,6 +2446,7 @@
           "default": "",
           "meaning": "Profielrevisie waarop het cijfer berust.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2316,6 +2461,7 @@
           "default": "",
           "meaning": "Exacte versies ticket_sales, visitor_origins en domestic_origins.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2330,6 +2476,7 @@
           "default": "",
           "meaning": "Oorspronkelijke afrondtijd.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2344,6 +2491,7 @@
           "default": "",
           "meaning": "Oorspronkelijke ESMOJO-actor, indien bekend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_analyseafronding_afgeronddoor"
         },
         {
@@ -2358,6 +2506,7 @@
           "default": "",
           "meaning": "Intrekkingsmoment als de bron ongeldig is geworden.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2372,6 +2521,7 @@
           "default": "",
           "meaning": "Bestaande reden / bronwijziging.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -2414,6 +2564,7 @@
           "default": "",
           "meaning": "BESTAAND: exacte bestaande showsleutel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2428,6 +2579,7 @@
           "default": "",
           "meaning": "BESTAAND: 1–11; bestaande minimum/maximum controleren, geen bestaande data verliezen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2442,6 +2594,7 @@
           "default": "",
           "meaning": "BESTAAND: volledige Markdown inclusief bronnen in één kolom.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2456,6 +2609,7 @@
           "default": "",
           "meaning": "BESTAAND: oorspronkelijke SharePoint-bibliotheek of aparte logische Drive-importnamespace.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2470,6 +2624,7 @@
           "default": "",
           "meaning": "BESTAAND: oorspronkelijke SharePoint-item-ID of het bestaande logische Drive-importnummer.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2484,6 +2639,7 @@
           "default": "",
           "meaning": "BESTAAND: bestaande versie, bijvoorbeeld 1.0.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2498,6 +2654,7 @@
           "default": "",
           "meaning": "BESTAAND: bestaand bron-/logisch importpad. De huidige reader vereist een passend pad.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2512,6 +2669,7 @@
           "default": "",
           "meaning": "BESTAAND: huidige opties/waarden blijven exact behouden. Geen omzetting naar nieuwe globale keuze.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2526,6 +2684,7 @@
           "default": "",
           "meaning": "BESTAAND: alleen bestaande SharePoint-opruimcontrole.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2540,6 +2699,7 @@
           "default": "",
           "meaning": "NIEUW, optioneel: later gecontroleerd koppelen; bestaande imports blijven werken zonder lookup.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_onderzoeksresultaat_concertreeks"
         }
       ],
@@ -2577,6 +2737,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2591,6 +2752,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2598,13 +2760,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -2619,6 +2782,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -2633,6 +2797,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2647,6 +2812,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_productiekeuze_gewijzigddoor"
         },
         {
@@ -2661,6 +2827,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2675,6 +2842,7 @@
           "default": "",
           "meaning": "Reeks van de productiekeuze.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_productiekeuze_concertreeks"
         },
         {
@@ -2689,6 +2857,7 @@
           "default": "",
           "meaning": "Alleen de vijf bestaande conditionele onderwerpen in deze tabel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2703,6 +2872,7 @@
           "default": "",
           "meaning": "Expliciete Ja of Nee; geen standaardwaarde invullen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -2745,6 +2915,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2759,6 +2930,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2766,13 +2938,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -2787,6 +2960,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -2801,6 +2975,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2815,6 +2990,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_barrierbeoordeling_gewijzigddoor"
         },
         {
@@ -2829,6 +3005,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2843,6 +3020,7 @@
           "default": "",
           "meaning": "Reeks van de opstelling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_barrierbeoordeling_concertreeks"
         },
         {
@@ -2857,6 +3035,7 @@
           "default": "",
           "meaning": "Bestaande zes opstellingscodes.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2871,6 +3050,7 @@
           "default": "",
           "meaning": "Eigen ESM-beoordeling; niet afleiden uit zaaltype.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2885,6 +3065,7 @@
           "default": "",
           "meaning": "Bestaande custom notes voor afwijkend ontwerp.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2899,6 +3080,7 @@
           "default": "",
           "meaning": "Bestaande riskNote met bestaande verplichte-toelichtingsregels.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2913,6 +3095,7 @@
           "default": "Concept (158620000)",
           "meaning": "Concept/afgerond/ongeldig.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -2927,6 +3110,7 @@
           "default": "",
           "meaning": "Exacte bestaande barrierSignature(JSON van type en afbeeldinghash); geen eigen variant verzinnen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2941,6 +3125,7 @@
           "default": "",
           "meaning": "Geselecteerde vaste referentie of actuele custom-bijlage; aanvullende/historische links via Documentkoppeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_barrierbeoordeling_actiefdocument"
         },
         {
@@ -2955,6 +3140,7 @@
           "default": "",
           "meaning": "Bestaand afrondmoment.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -2969,6 +3155,7 @@
           "default": "",
           "meaning": "Bestaande afrondende actor, indien bekend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_barrierbeoordeling_afgeronddoor"
         }
       ],
@@ -3010,6 +3197,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3024,6 +3212,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3031,13 +3220,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -3052,6 +3242,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -3066,6 +3257,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3080,6 +3272,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_vloerdrukbeoordeling_gewijzigddoor"
         },
         {
@@ -3094,6 +3287,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3108,6 +3302,7 @@
           "default": "",
           "meaning": "Reeks van de beoordeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_vloerdrukbeoordeling_concertreeks"
         },
         {
@@ -3122,6 +3317,7 @@
           "default": "",
           "meaning": "De gebruikte opstelling; afgeronde versie vereist bij definitieve beoordeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_vloerdrukbeoordeling_barrierbeoordeling"
         },
         {
@@ -3136,6 +3332,7 @@
           "default": "",
           "meaning": "Domeinrevisie van de gebruikte barrier.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3150,6 +3347,7 @@
           "default": "",
           "meaning": "Bestaande barriersignatuur bij deze vloerbeoordeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3164,6 +3362,7 @@
           "default": "",
           "meaning": "Bestaande ticketversievector en gebruikte dag-/uitvoeringswaarden; maximum over relevante dagen, geen som.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3178,6 +3377,7 @@
           "default": "",
           "meaning": "Gebruikt bezoekersmaximum; null blijft onbekend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3192,6 +3392,7 @@
           "default": "",
           "meaning": "Eigen beoordeling, geen automatisch risico uit bezoekers/m².",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3206,6 +3407,7 @@
           "default": "",
           "meaning": "Bestaande handmatige floor note.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3220,6 +3422,7 @@
           "default": "Concept (158620000)",
           "meaning": "Seated blijft volgens bestaande regels afgehandeld zonder sta-vakken.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -3234,6 +3437,7 @@
           "default": "",
           "meaning": "Bestaande afrondtijd.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3248,6 +3452,7 @@
           "default": "",
           "meaning": "Werkelijke actor.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_vloerdrukbeoordeling_afgeronddoor"
         }
       ],
@@ -3289,6 +3494,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3303,6 +3509,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3310,13 +3517,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -3331,6 +3539,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -3345,6 +3554,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3359,6 +3569,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_publieksvak_gewijzigddoor"
         },
         {
@@ -3373,6 +3584,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3387,6 +3599,7 @@
           "default": "",
           "meaning": "Parent-beoordeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_publieksvak_vloerdrukbeoordeling"
         },
         {
@@ -3401,6 +3614,7 @@
           "default": "",
           "meaning": "Bestaande stabiele row.id, bijvoorbeeld standing, gc, gc_left.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3408,13 +3622,14 @@
           "label": "Volgorde",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Bestaande weergavevolgorde.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -3429,6 +3644,7 @@
           "default": "",
           "meaning": "Bestaande bezoekers in dit vak; null onbekend, 0 geldig.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3443,6 +3659,7 @@
           "default": "",
           "meaning": "Bestaande netto oppervlakte; concept kan null/0 bevatten, afronding vereist >0.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -3485,6 +3702,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3499,6 +3717,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3506,13 +3725,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -3527,6 +3747,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -3541,6 +3762,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3555,6 +3777,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_risicoanalysebron_gewijzigddoor"
         },
         {
@@ -3569,6 +3792,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3583,6 +3807,7 @@
           "default": "",
           "meaning": "Reeks van de analyse.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_risicoanalysebron_concertreeks"
         },
         {
@@ -3597,6 +3822,7 @@
           "default": "",
           "meaning": "Exacte immutable showprofiel-PDF-versie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_risicoanalysebron_brondocument"
         },
         {
@@ -3611,6 +3837,7 @@
           "default": "",
           "meaning": "Bestaande source.revision: 64-tekens fingerprint, GEEN geheel revisienummer.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3625,6 +3852,7 @@
           "default": "",
           "meaning": "Bestaande hash van exacte PDF-bytes.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3632,13 +3860,14 @@
           "label": "Promptversie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 1; max 2147483647",
+          "settings": "Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "1",
           "meaning": "Bestaande RISK_PROMPT_VERSION; geen nieuw onderzoek starten.",
           "default_value": 1,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -3653,6 +3882,7 @@
           "default": "",
           "meaning": "Bestaand PDF-versienummer.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3667,6 +3897,7 @@
           "default": "In afwachting (158620000)",
           "meaning": "Conceptbron beschikbaar/gecontroleerd betekent geen ESM-goedkeuring.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -3681,6 +3912,7 @@
           "default": "",
           "meaning": "Exacte bestaande limitations-array; bewaren ook als risks leeg is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -3723,6 +3955,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3737,6 +3970,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3744,13 +3978,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -3765,6 +4000,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -3779,6 +4015,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3793,6 +4030,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_operationeelrisico_gewijzigddoor"
         },
         {
@@ -3807,6 +4045,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3821,6 +4060,7 @@
           "default": "",
           "meaning": "Exacte bronrun; via deze relatie is de reeks bekend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_operationeelrisico_risicoanalysebron"
         },
         {
@@ -3835,6 +4075,7 @@
           "default": "",
           "meaning": "Bestaande R01 t/m R30.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3849,6 +4090,7 @@
           "default": "",
           "meaning": "Bestaande AI-description; nooit overschrijven met eigen beoordeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3863,6 +4105,7 @@
           "default": "",
           "meaning": "Bestaande consequence.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3877,6 +4120,7 @@
           "default": "",
           "meaning": "Bestaand explicit/inferred.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3891,6 +4135,7 @@
           "default": "",
           "meaning": "Bestaande maximaal drie pagina/quote-verwijzingen naar de bron-PDF.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3905,6 +4150,7 @@
           "default": "",
           "meaning": "Eigen ESM-beoordeling, null indien nog niet beoordeeld.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3919,6 +4165,7 @@
           "default": "",
           "meaning": "Bestaande handmatige riskNote; bestaande toelichtingsregels behouden.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -3933,6 +4180,7 @@
           "default": "Concept (158620000)",
           "meaning": "Bronwijziging maakt oude beoordeling herkenbaar ongeldig.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -3947,6 +4195,7 @@
           "default": "",
           "meaning": "Oorspronkelijk ESM-beoordelingsmoment.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -3989,6 +4238,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4003,6 +4253,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4010,13 +4261,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -4031,6 +4283,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -4045,6 +4298,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4059,6 +4313,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_beheersmaatregel_gewijzigddoor"
         },
         {
@@ -4073,6 +4328,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4087,6 +4343,7 @@
           "default": "",
           "meaning": "Reeks van de maatregel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_beheersmaatregel_concertreeks"
         },
         {
@@ -4101,6 +4358,7 @@
           "default": "",
           "meaning": "Productie of operationeel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4115,6 +4373,7 @@
           "default": "",
           "meaning": "Bestaande production:<id>, alleen bij productiebron.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4129,6 +4388,7 @@
           "default": "",
           "meaning": "Bronrisico bij operationele maatregel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_beheersmaatregel_operationeelrisico"
         },
         {
@@ -4143,6 +4403,7 @@
           "default": "",
           "meaning": "Bestaande production:<id> of operational:<bronrevision>:Rxx.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4157,6 +4418,7 @@
           "default": "",
           "meaning": "Actuele ESM-maatregeltekst.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4171,6 +4433,7 @@
           "default": "",
           "meaning": "Exacte bestaande basis-string; bron, oorspronkelijk niveau en tekst. Niet vervangen door modifiedon.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4185,6 +4448,7 @@
           "default": "",
           "meaning": "Bestaand originalRiskLevel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4199,6 +4463,7 @@
           "default": "",
           "meaning": "Eigen beoordeling na uitvoering, null zolang niet gekozen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4213,6 +4478,7 @@
           "default": "",
           "meaning": "Expliciete keuze Ja/Nee. Geen standaard; null blijft onbekend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4227,6 +4493,7 @@
           "default": "Concept (158620000)",
           "meaning": "Afgerond alleen met actuele basis, niveau en expliciete briefingkeuze.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -4241,6 +4508,7 @@
           "default": "",
           "meaning": "Bestaand completedAt.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4255,6 +4523,7 @@
           "default": "",
           "meaning": "Bestaande actor.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_beheersmaatregel_afgeronddoor"
         },
         {
@@ -4269,6 +4538,7 @@
           "default": "",
           "meaning": "Bestaande idempotentie-/mutatievingerafdruk, indien aanwezig; geen geheim.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -4304,6 +4574,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4318,6 +4589,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4325,13 +4597,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -4346,6 +4619,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -4360,6 +4634,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4374,6 +4649,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_document_gewijzigddoor"
         },
         {
@@ -4388,6 +4664,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4402,6 +4679,7 @@
           "default": "",
           "meaning": "Werkelijke PDF-/afbeelding-/bronbytes in Dataverse File-opslag. Geen base64 in tekst.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4416,6 +4694,7 @@
           "default": "",
           "meaning": "Oorspronkelijke of bestaande gegenereerde bestandsnaam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4430,6 +4709,7 @@
           "default": "",
           "meaning": "Bijvoorbeeld application/pdf, image/png of image/jpeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4444,6 +4724,7 @@
           "default": "",
           "meaning": "Verwachte/geverifieerde grootte van de fysieke bytes.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4458,6 +4739,7 @@
           "default": "",
           "meaning": "Hash van volledige originele bytes; verplicht vóór vrijgeven voor download.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4472,6 +4754,7 @@
           "default": "",
           "meaning": "Bestaande functie van het document.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4486,6 +4769,7 @@
           "default": "",
           "meaning": "Stabiele groep voor alle versies van hetzelfde logische document.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4493,13 +4777,14 @@
           "label": "Versienummer",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 1; max 2147483647",
+          "settings": "Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "1",
           "meaning": "Bestaande versie; nieuw document start op 1.",
           "default_value": 1,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -4514,6 +4799,7 @@
           "default": "In afwachting (158620000)",
           "meaning": "Bestand beschikbaar/gecontroleerd, in afwachting of fout.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -4528,6 +4814,7 @@
           "default": "",
           "meaning": "Voor showprofiel-PDF: exacte bestaande snapshot-revision/hash van generatiebasis.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4542,6 +4829,7 @@
           "default": "",
           "meaning": "Exacte analyse-, afrond-, ticket- en productieversies die bij deze PDF/documentversie horen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4556,6 +4844,7 @@
           "default": "",
           "meaning": "Bestaande renderer-/layoutversie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -4598,6 +4887,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4612,6 +4902,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4619,13 +4910,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -4640,6 +4932,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -4654,6 +4947,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4668,6 +4962,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_gewijzigddoor"
         },
         {
@@ -4682,6 +4977,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4696,6 +4992,7 @@
           "default": "",
           "meaning": "De fysieke documentversie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_document"
         },
         {
@@ -4710,6 +5007,7 @@
           "default": "",
           "meaning": "Bijvoorbeeld showprofile-pdf, barrier-reference:end_stage_gc, attachment, avatar, photo.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4724,6 +5022,7 @@
           "default": "",
           "meaning": "Bestaand UUID uploadId; behouden voor retries en historische verwijzingen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4738,6 +5037,7 @@
           "default": "Actief (158620000)",
           "meaning": "Bestaande actieve/verwijderde/vervangen koppeling; geen automatische fysieke verwijdering.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -4745,13 +5045,14 @@
           "label": "Volgorde",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Bestaande bijlage-/weergavevolgorde.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -4766,6 +5067,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_concertreeks"
         },
         {
@@ -4780,6 +5082,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_concert"
         },
         {
@@ -4794,6 +5097,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_beheersmaatregel"
         },
         {
@@ -4808,6 +5112,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_barrierbeoordeling"
         },
         {
@@ -4822,6 +5127,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_locatie"
         },
         {
@@ -4836,6 +5142,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_artiest"
         },
         {
@@ -4850,6 +5157,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_medewerker"
         },
         {
@@ -4864,6 +5172,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_risicoanalysebron"
         },
         {
@@ -4878,6 +5187,7 @@
           "default": "",
           "meaning": "Eén van de eigenaar-lookups; alle andere eigenaar-lookups blijven leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_documentkoppeling_onderzoeksresultaat"
         }
       ],
@@ -4913,6 +5223,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4927,6 +5238,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4934,13 +5246,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -4955,6 +5268,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -4969,6 +5283,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -4983,6 +5298,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_showbeheer_gewijzigddoor"
         },
         {
@@ -4997,6 +5313,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5011,6 +5328,7 @@
           "default": "",
           "meaning": "Canonieke bestaande show-/reeks-scope.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_showbeheer_concertreeks"
         },
         {
@@ -5025,6 +5343,7 @@
           "default": "",
           "meaning": "Exacte huidige concert_id voor bestaande linkscope.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5039,6 +5358,7 @@
           "default": "",
           "meaning": "Exacte oude record-UUID die AES-GCM en PIN-binding gebruiken. Nieuwe migratierecords gebruiken dezelfde primaire GUID waar mogelijk.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5053,6 +5373,7 @@
           "default": "",
           "meaning": "Bestaande access_hash; nooit het onversleutelde linkgeheim.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5067,6 +5388,7 @@
           "default": "",
           "meaning": "Bestaande HMAC pin_hash. Geen platte PIN.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5081,6 +5403,7 @@
           "default": "",
           "meaning": "Exacte bestaande sealed_credentials. Encryptiesleutel blijft serverconfiguratie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5095,6 +5418,7 @@
           "default": "Nee",
           "meaning": "Bestaande enabled-status.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         }
       ],
@@ -5142,6 +5466,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5156,6 +5481,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5163,13 +5489,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5184,6 +5511,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -5198,6 +5526,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5212,6 +5541,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_zaalbijdrage_gewijzigddoor"
         },
         {
@@ -5226,6 +5556,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5240,6 +5571,7 @@
           "default": "",
           "meaning": "Eigenaar van de externe sectie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_zaalbijdrage_showbeheer"
         },
         {
@@ -5254,6 +5586,7 @@
           "default": "",
           "meaning": "Vier bestaande secties.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5268,6 +5601,7 @@
           "default": "Leeg (158620000)",
           "meaning": "Bestaande leeg/concept/afgerond-status.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -5282,6 +5616,7 @@
           "default": "",
           "meaning": "Gereserveerd voor reeds bestaande inhoud; blijft nu leeg. Nieuwe formulierinhoud vereist eigen ontwerp/validatie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -5324,6 +5659,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5338,6 +5674,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5345,13 +5682,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5366,6 +5704,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -5380,6 +5719,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5394,6 +5734,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_tijdschemaregel_gewijzigddoor"
         },
         {
@@ -5408,6 +5749,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5422,6 +5764,7 @@
           "default": "",
           "meaning": "Exacte uitvoering.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_tijdschemaregel_concert"
         },
         {
@@ -5436,6 +5779,7 @@
           "default": "",
           "meaning": "Bestaande bron-/regelidentiteit, bijvoorbeeld doors, support of start; geen nieuwe labels verzinnen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5450,6 +5794,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zichtbare label.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5457,13 +5802,14 @@
           "label": "Volgorde",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Bestaande bron-/presentatievolgorde.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5478,6 +5824,7 @@
           "default": "",
           "meaning": "Gepland of feitelijk; geen feitelijke tijden uit geplande tijden raden.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5492,6 +5839,7 @@
           "default": "",
           "meaning": "Oorspronkelijke tekst inclusief onbekend/afwijkend label.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5506,6 +5854,7 @@
           "default": "",
           "meaning": "Alleen geldig HH:mm indien daadwerkelijk bekend; anders null.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5520,6 +5869,7 @@
           "default": "",
           "meaning": "0 = concertdatum, 1 = volgende kalenderdag; alleen bepalen uit expliciete chronologie, geen gok.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5534,6 +5884,7 @@
           "default": "",
           "meaning": "Alleen als de bron de datum expliciet geeft.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5548,6 +5899,7 @@
           "default": "",
           "meaning": "Eventueel exact bronbestand.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_tijdschemaregel_brondocument"
         }
       ],
@@ -5583,6 +5935,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5597,6 +5950,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5604,13 +5958,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5625,6 +5980,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -5639,6 +5995,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5653,6 +6010,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_integratiestatus_gewijzigddoor"
         },
         {
@@ -5667,6 +6025,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5681,6 +6040,7 @@
           "default": "",
           "meaning": "Bijvoorbeeld mojo-shows, research-import, show-inventory.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5695,6 +6055,7 @@
           "default": "",
           "meaning": "Bestaande resource/batch/locatie-scope.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5709,6 +6070,7 @@
           "default": "Niet gestart (158620000)",
           "meaning": "Bestaande of nieuwe gecontroleerde voortgang.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -5723,6 +6085,7 @@
           "default": "",
           "meaning": "Laatste paginacursor, bronwatermark of bestaand importmanifest-deel, zonder tokens.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5737,6 +6100,7 @@
           "default": "",
           "meaning": "Alleen toegestane technische instellingen; geen appcredentials.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5744,13 +6108,14 @@
           "label": "Aantal gelezen",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Gecontroleerde aantallen.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5758,13 +6123,14 @@
           "label": "Aantal bevestigd",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Teruggelezen/bevestigde doelen.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5772,13 +6138,14 @@
           "label": "Aantal conflicten",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Niet overschreven afwijkende doelen.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5793,6 +6160,7 @@
           "default": "",
           "meaning": "Laatste daadwerkelijke start.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5807,6 +6175,7 @@
           "default": "",
           "meaning": "Laatste bevestigde volledige uitvoering.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5821,6 +6190,7 @@
           "default": "",
           "meaning": "Vaste veilige code; geen ruwe providerfout of gevoelige broninhoud.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5835,6 +6205,7 @@
           "default": "",
           "meaning": "Afgeschermd manifestbestand als de gestructureerde manifestinhoud te groot is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_integratiestatus_manifestdocument"
         }
       ],
@@ -5877,6 +6248,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5891,6 +6263,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5898,13 +6271,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -5919,6 +6293,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -5933,6 +6308,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5947,6 +6323,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_historie_gewijzigddoor"
         },
         {
@@ -5961,6 +6338,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5975,6 +6353,7 @@
           "default": "",
           "meaning": "Vaste gevalideerde bron-/doelentiteit, bijvoorbeeld analyse of barrierbeoordeling.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -5989,6 +6368,7 @@
           "default": "",
           "meaning": "Server-gevalideerde Dataverse-record-ID; polymorfe historische verwijzing, niet door client vrij te kiezen.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6003,6 +6383,7 @@
           "default": "",
           "meaning": "Oorspronkelijke bronidentiteit, ook als het actieve record niet meer bestaat.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6017,6 +6398,7 @@
           "default": "",
           "meaning": "Oorspronkelijke revisie/versie; niet verwarren met importvolgorde.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6031,6 +6413,7 @@
           "default": "",
           "meaning": "Bestaande handeling / gecontroleerde import.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6045,6 +6428,7 @@
           "default": "",
           "meaning": "Bekende reeks als geschiedenis daartoe behoort.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_historie_concertreeks"
         },
         {
@@ -6059,6 +6443,7 @@
           "default": "",
           "meaning": "Bekende uitvoering indien van toepassing.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_historie_concert"
         },
         {
@@ -6073,6 +6458,7 @@
           "default": "",
           "meaning": "Gevalideerde oorspronkelijke voor/na-snapshot of verandering met schema-versie. Geen base64.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6087,6 +6473,7 @@
           "default": "",
           "meaning": "JSON-bron als File als de oorspronkelijke snapshot niet in een tekstkolom past.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_historie_snapshotdocument"
         },
         {
@@ -6101,6 +6488,7 @@
           "default": "",
           "meaning": "Controlehash van exact gekozen snapshot-/broncontract.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6115,6 +6503,7 @@
           "default": "",
           "meaning": "Bestaande actor-ID als die nog niet aan een Medewerker kan worden gekoppeld. Geen fictieve auteur.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6122,13 +6511,14 @@
           "label": "Snapshot-schemaversie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 1; max 2147483647",
+          "settings": "Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "1",
           "meaning": "Contract waarmee de historische inhoud gelezen moet worden.",
           "default_value": 1,
+          "default_scope": "application",
           "relationship_schema": ""
         }
       ],
@@ -6164,6 +6554,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6178,6 +6569,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6185,13 +6577,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -6206,6 +6599,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -6220,6 +6614,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6234,6 +6629,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_opdracht_gewijzigddoor"
         },
         {
@@ -6248,6 +6644,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6262,6 +6659,7 @@
           "default": "",
           "meaning": "Bestaand command-ID/hash of nieuwe stabiele idempotentiesleutel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6276,6 +6674,7 @@
           "default": "",
           "meaning": "Vaste code, bijvoorbeeld pdf-generate, import of show-save.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6290,6 +6689,7 @@
           "default": "",
           "meaning": "Gevalideerde scope van de opdracht.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6304,6 +6704,7 @@
           "default": "Wachtend (158620000)",
           "meaning": "Bevestigd pas na daadwerkelijk teruglezen/afhandeling.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -6318,6 +6719,7 @@
           "default": "",
           "meaning": "Relevante reeks indien van toepassing.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_opdracht_concertreeks"
         },
         {
@@ -6332,6 +6734,7 @@
           "default": "",
           "meaning": "Relevante uitvoering indien van toepassing.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_opdracht_concert"
         },
         {
@@ -6346,6 +6749,7 @@
           "default": "",
           "meaning": "Doel-/resultaatbestand indien van toepassing.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_opdracht_document"
         },
         {
@@ -6360,6 +6764,7 @@
           "default": "",
           "meaning": "Bronversies en afhankelijkheden van de opdracht.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6374,6 +6779,7 @@
           "default": "",
           "meaning": "Alleen gevalideerd noodzakelijke commando-invoer; geen secrets/base64.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6388,6 +6794,7 @@
           "default": "",
           "meaning": "Oorspronkelijk bevestigd resultaat, nodig voor idempotente retries. Grote legacyresultaten via Resultaatdocument.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6402,6 +6809,7 @@
           "default": "",
           "meaning": "Exact groot legacyresultaat als tekstgrens wordt overschreden.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_opdracht_resultaatdocument"
         },
         {
@@ -6409,13 +6817,14 @@
           "label": "Pogingen",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Aantal uitvoeringspogingen.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -6430,6 +6839,7 @@
           "default": "",
           "meaning": "Server-only technische UUID; geen openbaar toegangstoken.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6444,6 +6854,7 @@
           "default": "",
           "meaning": "Bestaande/geldige technische lease.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6458,6 +6869,7 @@
           "default": "",
           "meaning": "Werkelijke start.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6472,6 +6884,7 @@
           "default": "",
           "meaning": "Werkelijke bevestiging.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6486,6 +6899,7 @@
           "default": "",
           "meaning": "Vaste veilige diagnosecode.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -6527,6 +6941,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6541,6 +6956,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6548,13 +6964,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -6569,6 +6986,7 @@
           "default": "Openbaar (158620000)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620000,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -6583,6 +7001,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6597,6 +7016,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_routealias_gewijzigddoor"
         },
         {
@@ -6611,6 +7031,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6625,6 +7046,7 @@
           "default": "",
           "meaning": "Vaste code, bijvoorbeeld concert-id, artist-id, route-slug of research-show-key.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6639,6 +7061,7 @@
           "default": "",
           "meaning": "Exacte oorspronkelijke waarde.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6653,6 +7076,7 @@
           "default": "",
           "meaning": "Het ene canonieke doel van deze alias.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_routealias_artiest"
         },
         {
@@ -6667,6 +7091,7 @@
           "default": "",
           "meaning": "Het ene canonieke doel van deze alias.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_routealias_concertreeks"
         },
         {
@@ -6681,6 +7106,7 @@
           "default": "",
           "meaning": "Het ene canonieke doel van deze alias.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_routealias_concert"
         },
         {
@@ -6695,6 +7121,7 @@
           "default": "",
           "meaning": "Het ene canonieke doel van deze alias.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_routealias_document"
         },
         {
@@ -6709,6 +7136,7 @@
           "default": "Nee",
           "meaning": "Alleen binnen bestaande geautoriseerde routes; geen bypass van module-/accountcontrole.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         }
       ],
@@ -6751,6 +7179,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6765,6 +7194,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6772,13 +7202,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -6793,6 +7224,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -6807,6 +7239,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6821,6 +7254,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_paginaweergave_gewijzigddoor"
         },
         {
@@ -6835,6 +7269,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6849,6 +7284,7 @@
           "default": "",
           "meaning": "Vast contract, bijvoorbeeld show-workspace, shows-menu of home-planning.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6863,6 +7299,7 @@
           "default": "",
           "meaning": "Gevalideerde publicatie-/module-/accountscope; geen privéprojectie publiek maken.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6877,6 +7314,7 @@
           "default": "",
           "meaning": "Eigenaar van de gedeelde voorbereidingsbundel.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_paginaweergave_concertreeks"
         },
         {
@@ -6891,6 +7329,7 @@
           "default": "",
           "meaning": "Eigenaar van datumgebonden gegevens indien nodig.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_paginaweergave_concert"
         },
         {
@@ -6905,6 +7344,7 @@
           "default": "",
           "meaning": "Alleen indien bestaande gedeelde projectie dit nodig heeft.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_paginaweergave_artiest"
         },
         {
@@ -6912,13 +7352,14 @@
           "label": "Contractversie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 1; max 2147483647",
+          "settings": "Min 1; max 2147483647; appstandaard 1 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "1",
           "meaning": "Versie van het JSON-responsecontract.",
           "default_value": 1,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -6926,13 +7367,14 @@
           "label": "Generatie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Gecoördineerde gepubliceerde generatie.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -6947,6 +7389,7 @@
           "default": "",
           "meaning": "Versiegebonden bronset van deze projectie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6961,6 +7404,7 @@
           "default": "",
           "meaning": "Uitsluitend toegestane compacte schermgegevens; geen PDF-bytes, secrets of onnodige historie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -6975,6 +7419,7 @@
           "default": "Ja",
           "meaning": "Dirty-flag; aanmaak staat op Ja tot de bundel gecontroleerd is gepubliceerd.",
           "default_value": true,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -6989,6 +7434,7 @@
           "default": "",
           "meaning": "Publicatiemoment van deze versie.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],
@@ -7024,6 +7470,7 @@
           "default": "",
           "meaning": "Primaire naamkolom: leesbare omschrijving; niet de identiteit.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7038,6 +7485,7 @@
           "default": "",
           "meaning": "Stabiele applicatiesleutel: lowercase SHA-256 van tabel + canonieke scope + bron-/onderwerpidentiteit. Niet opnieuw berekenen uit een gewijzigde naam.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7045,13 +7493,14 @@
           "label": "Revisie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Eigen ESMOJO-domeinrevisie; onafhankelijk van native Dataverse RowVersion.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -7066,6 +7515,7 @@
           "default": "Vertrouwelijk (158620001)",
           "meaning": "Classificatie van de inhoud; afgeleide records erven de strengste bron.",
           "default_value": 158620001,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -7080,6 +7530,7 @@
           "default": "",
           "meaning": "Oorspronkelijk zakelijk vastleggings-/wijzigingsmoment, indien bekend. Native createdon blijft importtijd; onbekend blijft leeg.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7094,6 +7545,7 @@
           "default": "",
           "meaning": "Werkelijke ESMOJO-auteur, indien bekend; native CreatedBy is de technische app. Geen huidige beheerder invullen als oorspronkelijke auteur onbekend is.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_technischestatus_gewijzigddoor"
         },
         {
@@ -7108,6 +7560,7 @@
           "default": "",
           "meaning": "Niet-geheime oorspronkelijke bronsoort/record-ID/bestands-ID voor herleidbaarheid. Nooit tokens, PIN, wachtwoord of sleutelmateriaal.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7122,6 +7575,7 @@
           "default": "",
           "meaning": "Bijvoorbeeld show-write, floor-basis, show-management-attempt of storage-cutover.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7136,6 +7590,7 @@
           "default": "",
           "meaning": "Gevalideerde stabiele scope, geen losse secrets.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7150,6 +7605,7 @@
           "default": "",
           "meaning": "Reeks indien relevant.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_technischestatus_concertreeks"
         },
         {
@@ -7164,6 +7620,7 @@
           "default": "",
           "meaning": "Externe toegang bij PIN-pogingslimiet.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": "esmojo_technischestatus_showbeheer"
         },
         {
@@ -7171,13 +7628,14 @@
           "label": "Generatie",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Gecoördineerde bron-/guardgeneratie.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -7192,6 +7650,7 @@
           "default": "",
           "meaning": "Server-only lease-UUID; niet als browsergeheim exporteren.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7206,6 +7665,7 @@
           "default": "",
           "meaning": "Technisch verloopmoment.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7213,13 +7673,14 @@
           "label": "Teller",
           "type": "Geheel getal",
           "required": "Ja",
-          "settings": "Min 0; max 2147483647",
+          "settings": "Min 0; max 2147483647; appstandaard 0 (geen native getalstandaard)",
           "relationship": "",
           "target": "",
           "choice": "",
           "default": "0",
           "meaning": "Bestaande gedeelde pogingsteller of noodzakelijke technische teller.",
           "default_value": 0,
+          "default_scope": "application",
           "relationship_schema": ""
         },
         {
@@ -7234,6 +7695,7 @@
           "default": "",
           "meaning": "Bestaande attempt_until / rate-limitvenster.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7248,6 +7710,7 @@
           "default": "Nee",
           "meaning": "Oorspronkelijke pending-markering; uitsluitend tijdens gecontroleerde overgang.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -7262,6 +7725,7 @@
           "default": "Nee",
           "meaning": "Oorspronkelijke archive_error; niet stil wissen.",
           "default_value": false,
+          "default_scope": "metadata",
           "relationship_schema": ""
         },
         {
@@ -7276,6 +7740,7 @@
           "default": "",
           "meaning": "Bestaande external_command-hash indien nog niet verzoend.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         },
         {
@@ -7290,6 +7755,7 @@
           "default": "",
           "meaning": "Oorspronkelijke external_started.",
           "default_value": null,
+          "default_scope": "none",
           "relationship_schema": ""
         }
       ],

@@ -50,7 +50,7 @@ test('Algemene Dataverse-discovery blijft achter Shows/MFA; Westlife krijgt meta
  const opened=await run({action:'show-open',method:'POST',body:{concertId:key},researchService,showsSource});assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Westlife-concept');
 });
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', tableService, choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -63,6 +63,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     },
   } });
   const handler = makeAccountsHandler({
+    ...(tableService?{dataverseTables:tableService}:{}),
     ...(choiceService?{dataverseChoices:choiceService}:{}),
     ...(transitionService?{dataTransition:transitionService}:{}), env: configuration, clientFactory, dataverseResearch:researchService, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
@@ -374,4 +375,16 @@ test('keuzelijstsetup vereist admin/Shows/activatie/MFA en laat providerfouten n
  const denied=await run({action:'dataverse-choices',method:'GET',choiceService});assert.equal(denied.response.code,405);assert.equal(count,1);
  const fail=await run({action:'dataverse-choices',method:'POST',body:{operation:'list'},choiceService:async()=>{throw Error('private provider credentials');}});assert.equal(fail.response.code,503);assert.doesNotMatch(JSON.stringify(fail.response.data),/private provider credentials/);
  const invalid=await run({action:'dataverse-choices',method:'POST',body:{operation:'delete',name:'arbitrary'}});assert.equal(invalid.response.code,400);
+});
+
+
+test('tabelsetup vereist actuele admin/Shows/activatie/MFA en accepteert geen vrije metadata',async()=>{
+ let calls=0;const tableService=async()=>{calls++;return{tableCount:30,steps:[]};};
+ for(const params of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{own:{...profile,modules:['artists']}},{origin:'https://evil.invalid'}]){
+  const {response}=await run({...params,action:'dataverse-tables',method:'POST',body:{operation:'plan'},tableService});assert.ok([401,403].includes(response.code));
+ }
+ assert.equal(calls,0);const ok=await run({action:'dataverse-tables',method:'POST',body:{operation:'plan'},tableService});assert.equal(ok.response.code,200);assert.equal(calls,1);assert.match(ok.response.headers['Cache-Control'],/no-store/);
+ assert.equal((await run({action:'dataverse-tables',method:'GET',tableService})).response.code,405);assert.equal(calls,1);
+ const bad=await run({action:'dataverse-tables',method:'POST',body:{operation:'apply',stepId:'arbitrary',body:{}}});assert.equal(bad.response.code,400);
+ const failure=await run({action:'dataverse-tables',method:'POST',body:{operation:'plan'},tableService:async()=>{throw Error('private provider data');}});assert.equal(failure.response.code,503);assert.doesNotMatch(JSON.stringify(failure.response.data),/private provider data/);
 });

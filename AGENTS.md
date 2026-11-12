@@ -1,3 +1,20 @@
+## Geautoriseerde tabelsetup (12 november 2026)
+
+Na geslaagde setup van 24 globale keuzelijsten autoriseert gebruiker dezelfde
+beheerknop voor alle tabellen uit het Shows-schema. Op /beheerder/datatransitie,
+achter actuele admin/Shows/activatie/MFA: 29 ontbrekende tabellen met kolommen,
+89 N:1-relaties en unieke sleutels aanmaken; bestaande onderzoekstabel behouden.
+Alleen schema uit docs/dataverse/shows-schema.json; geen vrije metadata in requests.
+Bestaande verkeerde definities niet aanpassen; stop op conflict. Onderzoekstabel
+krijgt alleen optionele Concertreeks-lookup; bestaande kolommen/inhoud/sleutel behouden.
+Geen PUT/PATCH/DELETE of bedrijfsrecord-writes, geen gegevensmigratie/cutover.
+Publiceer alleen de 30 toegestane tabellen na servervalidatie van hun schema;
+geen PublishAll. Sleutelindex pas bevestigd bij Active; Pending niet als succes.
+Integer-standaarden uit schema zijn appstandaarden, geen ondersteunde native
+IntegerAttributeMetadata.DefaultValue. Latere CRUD-code moet die expliciet zetten.
+Gedeelde setupverbinding behoudt vaste omgeving/ESMOJO/publisher-/taalcontrole.
+Inventaris-WIP uit andere taakbranch blijft geparkeerd; niet mee samenvoegen.
+
 ## Geautoriseerde keuzelijstsetup (12 november 2026)
 
 Gebruiker vraagt setupknop op /beheerder/datatransitie. Achter actuele admin,

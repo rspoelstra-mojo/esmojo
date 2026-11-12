@@ -34,6 +34,47 @@ Geen extra geheimen of Graph/Drive-toegang nodig voor deze functie.
 De eerste werkelijke setup gebeurt via de ingelogde beheerpagina; lokale tests
 gebruiken synthetische Microsoft-antwoorden en maken geen echte opties aan.
 
+## Tabellen automatisch voorbereiden
+
+Op dezelfde pagina staat **Tabellen aanmaken en controleren**. Gebruik deze na
+een geslaagde keuzelijstsetup. De knop voert 564 vaste schemastappen uit:
+
+1. De 24 globale keuzelijsten opnieuw vergelijken, zonder ze te wijzigen.
+2. 29 nieuwe organisatie-eigendom-tabellen aanmaken of controleren; bestaande
+   Onderzoeksresultaat alleen herkennen en behouden.
+3. 339 overige gewone kolommen aanmaken/controleren. De 29 primaire naamkolommen
+   horen al bij tabelaanmaak. Keuze-, datum-, File-, tekst- en getaltypen blijven echt.
+4. 89 N:1-lookups en restrictieve relaties aanmaken/controleren; de onderzoekstabel
+   krijgt uitsluitend de optionele lookup naar Concertreeks.
+5. Alle vereiste definities per tabel opnieuw server-side controleren en alleen
+   de 30 overeengekomen tabellen publiceren. Geen PublishAll.
+6. 52 sleuteldefinities controleren: 51 nieuwe, plus de bestaande onderzoekssleutel.
+   Nieuwe indexen mogen asynchroon Pending/InProgress zijn, maar tellen pas als
+   bevestigd wanneer Dataverse Active meldt. Bestaande onderzoekssleutel niet wijzigen.
+
+Houd de pagina open; de verwerking kan enige tijd duren. Er staat per stap wat
+wordt gecontroleerd. Bij een afwijkend type, lengte, verplichting, relatie,
+eigendom of sleutel stopt de ronde. Er is geen automatische correctie van een
+bestaande definitie. Eerder aangemaakte metadata blijft behouden. Opnieuw klikken
+leest alles opnieuw en maakt geen dubbele definities. Sleutelindexen worden na
+de aanmaakfase opnieuw gecontroleerd, maximaal drie minuten; daarna kan dezelfde
+knop later opnieuw gebruikt worden als Dataverse nog bezig is.
+
+De JSON-schemafile wordt expliciet in de Vercel access-functie meegeleverd.
+De app moet de betreffende metadata mogen lezen/aanmaken en gericht publiceren.
+Schema-aanmaak voegt geen showrecords toe en verandert geen live opslagprovider.
+Getalstandaarden (bijvoorbeeld revisie 0) worden straks door recordschrijvers
+gezet; daarvoor bestaat geen native IntegerAttributeMetadata.DefaultValue.
+Native defaults voor Ja/Nee en globale keuzekolommen worden wel gecontroleerd.
+
+API-vormen gecontroleerd tegen Microsofts documentatie:
+[tabellen](https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-entity-definitions-using-web-api),
+[kolommen](https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-column-definitions-using-web-api),
+[relaties](https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-entity-relationships-using-web-api),
+[File-kolommen](https://learn.microsoft.com/power-apps/developer/data-platform/file-attributes),
+[asynchrone sleutels](https://learn.microsoft.com/power-apps/developer/data-platform/define-alternate-keys-entity).
+Lokale native-API-simulaties bewijzen niet dat de live setup al is uitgevoerd.
+
 ## Alles in één keer
 
 Klik **Alle AI-analyses overzetten**. Geen voorafgaande showselectie nodig.
