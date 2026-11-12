@@ -10,7 +10,7 @@ const chrome=process.env.CHROME_BIN||['google-chrome','google-chrome-stable','ch
 assert.ok(chrome,'Chrome nodig voor artiestcontrole');
 const userData=mkdtempSync(join(tmpdir(),'artist-preview-'));
 const root=fileURLToPath(new URL('../../',import.meta.url)).replace(/\/$/,'');
-const html=`<!doctype html><html><head><link rel="stylesheet" href="/src/style.css"></head><body><main></main><script type="module">import{createDataTransitionView}from'/src/data-transition.js';window.operations=[];window.fail=true;window.cleanup=createDataTransitionView(document.querySelector('main'),{request:async(action,{body})=>{window.operations.push(body);if(body.operation==='list')return{shows:[{concertId:'antoon',name:'Antoon',venue:'Gashouder',date:'2026-11-23'},{concertId:'other',name:'Andere artiest',venue:'AFAS Live',date:'2026-11-24'}]};if(body.operation==='preview')return{number:body.number,status:body.number<3?'ready':'missing',checksum:'a'.repeat(64),markdown:body.number<3?'Samenvatting <img src=x onerror=alert(1)>':undefined};if(body.number===2&&window.fail)throw Error('Onderbroken');return{status:'verified',verified:true};}});window.ready=true;</script></body></html>`;
+const html=`<!doctype html><html><head><link rel="stylesheet" href="/src/style.css"></head><body><main></main><script type="module">import{createDataTransitionView}from'/src/data-transition.js';window.operations=[];window.fail=true;window.cleanup=createDataTransitionView(document.querySelector('main'),{request:async(action,{body})=>{window.operations.push(body);if(body.operation==='list')return{shows:[{concertId:'antoon',name:'Antoon',venue:'Gashouder',date:'2026-11-23'},{concertId:'other',name:'Andere artiest',venue:'AFAS Live',date:'2026-11-24'}]};if(body.operation==='inventory')return{numbers:body.concertId==='antoon'?[1,2]:[1]};if(body.operation==='bulk-import'){if(body.concertId==='other'&&!window.bulkRetry){window.bulkRetry=true;throw Error('Bulk onderbroken');}return body.concertId==='antoon'&&body.number===2?{status:'conflict'}:{status:'verified',verified:true,created:body.concertId==='other'};}if(body.operation==='preview')return{number:body.number,status:body.number<3?'ready':'missing',checksum:'a'.repeat(64),markdown:body.number<3?'Samenvatting <img src=x onerror=alert(1)>':undefined};if(body.number===2&&window.fail)throw Error('Onderbroken');return{status:'verified',verified:true};}});window.ready=true;</script></body></html>`;
 const server=createServer((req,res)=>{if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end(html);return;}const file=resolve(root,'.'+req.url);if(!file.startsWith(root+'/src/')){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'text/javascript');res.end(file.endsWith('.js')?readFileSync(file,'utf8').replace(/^import .*;\n/gm,''):readFileSync(file));});await new Promise(done=>server.listen(0,'127.0.0.1',done));
 const probe=createTcpServer();await new Promise(done=>probe.listen(0,'127.0.0.1',done));const debugPort=probe.address().port;await new Promise(done=>probe.close(done));
 let diagnostics='';
@@ -48,9 +48,18 @@ try{
  assert.match(await evaluate("document.querySelector('[role=status]').textContent"),/2 analyses bevestigd/);
  assert.equal(await evaluate("window.operations.filter(row=>row.operation==='import'&&row.number===1).length"),1,'Resume repeats only unconfirmed rows');
  assert.equal(await evaluate("document.querySelectorAll('button')[2].disabled"),true);
+ await evaluate("document.querySelectorAll('button')[3].click();document.querySelectorAll('button')[3].click()");await pause(100);
+ assert.equal(await evaluate("document.querySelector('[role=status]').textContent"),'Bulk onderbroken');
+ assert.equal(await evaluate("document.querySelectorAll('button')[3].textContent"),'Alle AI-analyses hervatten');
+ assert.equal(await evaluate("window.operations.filter(row=>row.operation==='inventory'&&row.concertId==='antoon').length"),1);
+ await evaluate("document.querySelectorAll('button')[3].click()");await pause(100);
+ assert.match(await evaluate("document.querySelector('[role=status]').textContent"),/2 shows gecontroleerd. 2 analyses bevestigd \(1 nieuw\), 19 niet aanwezig in Drive, 1 conflicten/);
+ assert.equal(await evaluate("window.operations.filter(row=>row.operation==='bulk-import'&&row.concertId==='antoon'&&row.number===1).length"),1);
+ assert.equal(await evaluate("window.operations.filter(row=>row.operation==='bulk-import').length"),4,'Only available files, with a single retry');
+ assert.match(await evaluate("document.querySelector('main').textContent"),/afwijkende inhoud in Dataverse; niet overschreven/);
  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
  assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);
- console.log('Datatransitie browser: selectie, veilige preview, gedeeltelijke import, hervatten en mobiel geslaagd.');
+ console.log('Datatransitie browser: selectie, veilige preview, gedeeltelijke import, hervatten bulk over alle shows, conflicten, hervatten en mobiel geslaagd.');
 
 }finally{
  ws?.close();try{if(process.platform==='win32')child.kill('SIGTERM');else process.kill(-child.pid,'SIGTERM');}catch{}if(child.exitCode===null)await Promise.race([new Promise(done=>child.once('exit',done)),pause(1000)]);

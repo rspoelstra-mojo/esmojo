@@ -1,3 +1,15 @@
+## Eénknopsimport alle AI-analyses (12 november 2026)
+
+Gebruiker autoriseert een knop om alle bestaande openbare Drive AI-analyses naar
+Dataverse over te zetten. Dit vervangt de beperking tot handmatige showselectie
+voor deze beheerpagina. Knop start bewust; geen automatische import bij laden.
+Alle primaire shows uit bestaande Drive-index, onafhankelijk van zoekfilter.
+Per show inventariseren, alleen bestaande vragen verwerken, create-only en
+teruglezen. Conflicten melden en overslaan; onzekere writes stoppen en veilig
+hervatten. Tabblad openhouden; herladen herkent bestaande Dataverse-inhoud opnieuw.
+Geen bronverwijdering, eigen analyses, nieuwe onderzoeken of opruimvrijgave.
+Bestaande beheerder/Shows/MFA-controles en Drive-bronnamespace blijven gelden.
+
 ## Beheerder datatransitie Drive → Dataverse (12 november 2026)
 
 Gebruiker vraagt expliciet een beheerpagina voor de komende migratiedagen en

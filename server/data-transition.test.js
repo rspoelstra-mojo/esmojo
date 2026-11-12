@@ -27,3 +27,23 @@ test('sources remain in body, unsafe URLs rejected and existing links not duplic
  const answer='Analyse [bron](https://example.invalid/bron)';assert.equal(researchMarkdown({answer,sources:[{title:'Bron',url:'https://example.invalid/bron'}]}),answer);
  assert.throws(()=>researchMarkdown({answer,sources:[{title:'X',url:'javascript:alert(1)'}]}));
 });
+
+test('bulk imports server-read sources without browser content; missing files are skipped',async()=>{
+ const {service,writes}=fixture();const result=await service({operation:'bulk-import',concertId,number:1});assert.equal(result.verified,true);assert.equal(writes.length,1);
+ assert.equal((await service({operation:'bulk-import',concertId,number:2})).status,'missing');
+ await assert.rejects(service({operation:'bulk-import',concertId,number:1,markdown:'browser'}),/VALIDATION/);
+});
+test('bulk reports conflicts but propagates unconfirmed writes and authentication errors',async()=>{
+ for(const code of ['CONFLICT','DATAVERSE_WRITE']){
+  const {document}=fixture();const service=createDataTransition({research:async()=>({storage:{concertId,artist:'Antoon',venue:'Gashouder',date:'2026-11-23'},document}),dataverse:{importDrive:async()=>{throw Error(code);}}});
+  if(code==='CONFLICT')assert.equal((await service({operation:'bulk-import',concertId,number:1})).status,'conflict');
+  else await assert.rejects(service({operation:'bulk-import',concertId,number:1}),/DATAVERSE_WRITE/);
+ }
+});
+test('inventory accepts only explicit valid question numbers, with no writes',async()=>{
+ for(const numbers of [[1,3,11],[],[1,1],[0],[12],['1']]){
+  const service=createDataTransition({research:async()=>({completedQuestions:numbers}),dataverse:{importDrive:()=>assert.fail('Inventory cannot write')}});
+  if(numbers.every(n=>Number.isInteger(n)&&n>=1&&n<=11)&&new Set(numbers).size===numbers.length)assert.deepEqual((await service({operation:'inventory',concertId})).numbers,numbers);
+  else await assert.rejects(service({operation:'inventory',concertId}),/SOURCE_INVALID/);
+ }
+});

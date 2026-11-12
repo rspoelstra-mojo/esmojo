@@ -18,21 +18,31 @@ export function researchMarkdown(document){
 export function createDataTransition({env=process.env,shows=createShowsStore({env,active:false}),research=createResearchStore({env}),dataverse=createDataverseResearch({env})}={}){
  return async function transition(input){
   if(!input||Array.isArray(input))throw Error('VALIDATION');
-  const operation=input.operation,expected={list:['operation'],preview:['operation','concertId','number'],import:['operation','concertId','number','checksum']}[operation];
+  const operation=input.operation,expected={list:['operation'],inventory:['operation','concertId'],preview:['operation','concertId','number'],import:['operation','concertId','number','checksum'],'bulk-import':['operation','concertId','number']}[operation];
   if(!expected||Object.keys(input).sort().join(',')!==expected.sort().join(','))throw Error('VALIDATION');
   if(operation==='list'){
    const data=await shows('migration-list');
    return{shows:data.concerts.map(row=>({concertId:row.concertId,name:row.artist,venue:row.venue,date:row.date})).sort((a,b)=>a.name.localeCompare(b.name)||a.date.localeCompare(b.date))};
   }
+  if(operation==='inventory'){
+   if(typeof input.concertId!=='string'||input.concertId.length>240||/[\x00-\x1f/\\]/.test(input.concertId))throw Error('VALIDATION');
+   const data=await research({operation:'context',concertId:input.concertId});
+   const numbers=data.completedQuestions;if(!Array.isArray(numbers)||numbers.length>11||numbers.some(n=>!Number.isInteger(n)||n<1||n>11)||new Set(numbers).size!==numbers.length)throw Error('SOURCE_INVALID');
+   return{numbers};
+  }
   if(typeof input.concertId!=='string'||input.concertId.length>240||/[\x00-\x1f/\\]/.test(input.concertId)||!Number.isInteger(input.number)||input.number<1||input.number>11||operation==='import'&&!/^[a-f0-9]{64}$/.test(input.checksum||''))throw Error('VALIDATION');
   let source;
   try{source=await research({operation:'read',concertId:input.concertId,questionNumber:input.number});}
-  catch(error){if(error.message==='NOT_FOUND'&&operation==='preview')return{number:input.number,status:'missing'};throw error;}
+  catch(error){if(error.message==='NOT_FOUND'&&['preview','bulk-import'].includes(operation))return{number:input.number,status:'missing'};throw error;}
   const {document,storage}=source;
   const sourceKey=researchKeyForConcert(storage||{});if(!sourceKey)throw Error('SOURCE_INVALID');
   if(document.concertId!==storage.concertId||document.questionNumber!==input.number||document.classification!=='openbaar'||document.managedBy!=='ESMOJO/Research-v1')throw Error('SOURCE_INVALID');
   const markdown=researchMarkdown(document),checksum=hash(sourceKey+'\n'+input.number+'\n'+markdown);
   if(operation==='preview')return{number:input.number,status:'ready',sourceKey,markdown,checksum};
+  if(operation==='bulk-import'){
+   try{return{number:input.number,status:'verified',...await dataverse.importDrive({sourceKey,number:input.number,markdown})};}
+   catch(error){if(error.message==='CONFLICT')return{number:input.number,status:'conflict'};throw error;}
+  }
   if(checksum!==input.checksum)throw Error('SOURCE_CHANGED');
   return{number:input.number,status:'verified',...await dataverse.importDrive({sourceKey,number:input.number,markdown})};
  };

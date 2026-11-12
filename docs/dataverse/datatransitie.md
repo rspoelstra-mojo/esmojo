@@ -5,6 +5,23 @@ en bestaande tweestapsverificatie. De pagina draait via de bestaande ESMOJO-serv
 met de bestaande Drive-brug en DATAVERSE_TEST_* configuratie. Geen nieuwe secrets,
 tabellen of kolommen nodig. De app moet aanmaakrecht op Onderzoeksresultaten hebben.
 
+## Alles in één keer
+
+Klik **Alle AI-analyses overzetten**. Geen voorafgaande showselectie nodig.
+De pagina laadt de volledige Drive-showcatalogus, ongeacht het zoekfilter,
+inventariseert aanwezige analyses en importeert die één voor één. Voortgang toont
+show/vraag, bevestigde analyses, nieuwe records, ontbrekende vragen en conflicten.
+Conflicten worden per show/vraag gemeld en niet overschreven; andere analyses gaan
+door. Afwezige vragen zijn geen fouten en er worden geen nieuwe onderzoeken gestart.
+
+Houd dit tabblad open. Bij een onzekere schrijf-/verbindingsfout stopt de verwerking.
+Klik **Alle AI-analyses hervatten** om in hetzelfde tabblad verder te gaan vanaf de
+onbevestigde analyse. Na verversen of weggaan kun je de hele knop opnieuw starten;
+bestaande identieke inhoud wordt gecontroleerd en niet dubbel aangemaakt. Een
+nieuwe ronde na voltooiing haalt de catalogus opnieuw op, inclusief nieuwe shows.
+
+## Eén show controleren
+
 1. Klik **Shows laden**. De bestaande Drive-index levert ook historische shows.
    Opeenvolgende reeksdatums delen onderzoek: alleen de primaire datum staat hier.
 2. Zoek bijvoorbeeld **Antoon** en kies de juiste zaal/datum.
