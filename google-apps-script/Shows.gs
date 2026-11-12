@@ -14,10 +14,18 @@ function esmojoShows_(input) {
   // Deze webapp draait altijd als de eigenaar. Een eigen UserLock serialiseert
   // imports, zonder de ScriptLock van accountbeheer tijdens Drive-I/O te bezetten.
   // Lezers gebruiken de laatst atomair gepubliceerde index en hoeven niet te wachten.
-  const lock = (['pilot-ensure','sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save','biography-initial-save','biography-initial-batch','incident-counts','incident-daily-start','incident-daily-publish'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
+  const lock = (['dataverse-ensure','pilot-ensure','sync', 'profile-save','show-open','home-photo-cache','reference-install','biography-save','biography-initial-save','biography-initial-batch','incident-counts','incident-daily-start','incident-daily-publish'].includes(JSON.parse(input.body).operation) || /^(active-|ticket-|final-|report-|risk-|measure-|barrier-|floor-)/.test(String(JSON.parse(input.body).operation))) ? LockService.getUserLock() : null;
   if (lock && !lock.tryLock(20000)) return esmojoReply_({ ok: false, code: 'BUSY' });
   try {
     const request = JSON.parse(input.body);
+    if(request.operation==='research-identities'){
+      if(Object.keys(request).sort().join(',')!=='operation,sourceKeys'||!Array.isArray(request.sourceKeys)||request.sourceKeys.length>500||request.sourceKeys.some(key=>typeof key!=='string'||key.length>200||/[\x00-\x1f/\\]/.test(key)))throw Error('VALIDATION');
+      return esmojoReply_({ok:true,data:esmojoDataverseIdentities_(request.sourceKeys)});
+    }
+    if(request.operation==='dataverse-ensure'){
+      const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
+      return esmojoReply_({ok:true,data:esmojoEnsureDataverseShow_(request)});
+    }
     if(request.operation==='pilot-ensure'){
       const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);
       return esmojoReply_({ok:true,data:esmojoEnsureDataversePilot_(request)});
@@ -124,7 +132,7 @@ function esmojoShows_(input) {
     const groups = [];
     for (const row of rows) {
       const group = groups[groups.length - 1], last = group && group[group.length - 1];
-      if (last && esmojoArtistKey_(last.artist) === esmojoArtistKey_(row.artist) && last.venue === row.venue && Date.parse(row.date) - Date.parse(last.date) === 86400000) group.push(row);
+      if (last && !last.dataverseSourceKey && !row.dataverseSourceKey && esmojoArtistKey_(last.artist) === esmojoArtistKey_(row.artist) && last.venue === row.venue && Date.parse(row.date) - Date.parse(last.date) === 86400000) group.push(row);
       else groups.push([row]);
     }
     // Twee al bestaande reeksen niet stilzwijgend samenvoegen: hun latere
@@ -215,6 +223,38 @@ function esmojoEnsureDataversePilot_(request){
   row.generalFileId=general.getId();state.concerts.push(row);
   esmojoWriteShowJson_(production,file,'_esmojo_shows_v1.json',state);
   return{ready:true};
+}
+function esmojoDataverseSlug_(value){return value.normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');}
+function esmojoDataverseIdentities_(keys){
+ const concerts=[];
+ if(typeof ESMOJO_ONTRACK_FOLDER_ID!=='undefined'){
+  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoShowFile_(folder,'_esmojo_ontrack_concerts_v1.json');
+  if(file){const state=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(state.version!==1||!Array.isArray(state.concerts))throw Error('CONFLICT');
+   for(const row of state.concerts){const key=esmojoDataverseSlug_(row.artist)+'_'+esmojoDataverseSlug_(row.venue)+'_'+row.date.replace(/-/g,'');if(keys.some(source=>source===key))concerts.push({artist:row.artist,venue:row.venue,city:row.city,date:row.date,sourceUrl:row.sourceUrl});}}
+ }
+ return{concerts};
+}
+function esmojoEnsureDataverseShow_(request){
+ const show=request.show,validText=(value,max)=>typeof value==='string'&&value.trim()&&value.length<=max&&!/[\x00-\x1f]/.test(value);
+ if(Object.keys(request).sort().join(',')!=='operation,show'||!show||!validText(show.sourceKey,200)||/[\/\\<>]/.test(show.sourceKey)||!validText(show.name,160)||!validText(show.venue,160)||typeof show.city!=='string'||show.city.length>120||/[\x00-\x1f]/.test(show.city)||!Array.isArray(show.dates)||show.dates.length!==1)throw Error('VALIDATION');
+ const key=/^(.+)_([^_]+)_(\d{4})(\d{2})(\d{2})$/.exec(show.sourceKey),date=show.dates[0];
+ if(!key||date!==key[3]+'-'+key[4]+'-'+key[5]||!Number.isFinite(Date.parse(date))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date||esmojoDataverseSlug_(show.name)!==esmojoDataverseSlug_(key[1])||esmojoDataverseSlug_(show.venue)!==esmojoDataverseSlug_(key[2])&&!(esmojoDataverseSlug_(show.venue)==='rotterdamahoy'&&esmojoDataverseSlug_(key[2])==='ahoy'))throw Error('VALIDATION');
+ if(show.key!=='dataverse_'+show.sourceKey&&!(show.key==='Hatsune-Miku_AFAS-Live_15112026'&&show.sourceKey==='hatsunemiku_afaslive_20261115'))throw Error('VALIDATION');
+ const root=DriveApp.getFolderById(ESMOJO_FOLDER_ID);if(root.isTrashed())throw Error('NOT_FOUND');
+ const folders=root.getFoldersByName('Productie');let production=folders.hasNext()?folders.next():null;if(folders.hasNext())throw Error('CONFLICT');if(!production)production=root.createFolder('Productie');
+ const file=esmojoShowFile_(production,'_esmojo_shows_v1.json');
+ const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,concerts:[],active:[],checkedAt:null};
+ if(state.version!==1||!Array.isArray(state.concerts)||!Array.isArray(state.active))throw Error('CONFLICT');
+ const matches=state.concerts.filter(row=>row.concertId===show.key||row.date===date&&esmojoDataverseSlug_(row.artist)===esmojoDataverseSlug_(show.name)&&esmojoDataverseSlug_(row.venue)===esmojoDataverseSlug_(show.venue));
+ if(matches.length){if(matches.length!==1||matches[0].date!==date||esmojoDataverseSlug_(matches[0].artist)!==esmojoDataverseSlug_(show.name)||esmojoDataverseSlug_(matches[0].venue)!==esmojoDataverseSlug_(show.venue))throw Error('CONFLICT');return{concertId:matches[0].concertId};}
+ const artists=production.getFoldersByName(show.name);let artist=artists.hasNext()?artists.next():null;if(artists.hasNext())throw Error('CONFLICT');if(!artist)artist=production.createFolder(show.name);
+ const canonical=show.venue==='Gashouder'?esmojoConcertId_(show.name,date):show.key;
+ const children=artist.getFoldersByName(canonical);let folder=children.hasNext()?children.next():null;if(children.hasNext())throw Error('CONFLICT');if(!folder)folder=artist.createFolder(canonical);
+ const row={concertId:canonical,artist:show.name,date,venue:show.venue,city:show.city,sourceUrl:show.sourceUrl||'',dataverseSourceKey:show.sourceKey,folderId:folder.getId(),generalConcertId:show.key,generalFolderId:folder.getId()};
+ const general=esmojoWriteShowJson_(folder,esmojoShowFile_(folder,'algemeen.json'),'algemeen.json',{version:1,concertId:row.concertId,artist:row.artist,venue:row.venue,city:row.city,dates:[date],sources:row.sourceUrl?[row.sourceUrl]:[]});
+ esmojoWriteShowJson_(folder,esmojoShowFile_(folder,'concert.json'),'concert.json',{version:1,concertId:row.concertId,date,generalConcertId:row.concertId,generalFolderId:row.folderId});
+ row.generalFileId=general.getId();state.concerts.push(row);esmojoWriteShowJson_(production,file,'_esmojo_shows_v1.json',state);
+ return{concertId:row.concertId};
 }
 function esmojoArtistKey_(name) { return name.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function esmojoConcertId_(artist, date) { return artist.normalize('NFC').trim().replace(/[\s_/\\]+/g, '-') + '_Gashouder_' + date.slice(8, 10) + date.slice(5, 7) + date.slice(0, 4); }

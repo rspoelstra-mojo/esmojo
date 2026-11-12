@@ -24,13 +24,13 @@ test('volgt alle paginering en maand/jaargrenzen; ontdubbelt concerten', async (
   const duplicate = await scrapeMojo({ now: new Date('2026-11-01T10:00:00Z'), request: async () => new Response(page(item('A', 4) + item('A', 4))) });
   assert.equal(duplicate.concerts.length, 1);
 });
-test('365 dagen import en 90 dagen menu zijn Nederlandse kalendergrenzen, inclusief vandaag', async () => {
+test('365 dagen import en 45 dagen menu zijn Nederlandse kalendergrenzen, inclusief vandaag', async () => {
   const now = new Date('2026-11-01T10:00:00Z');
   const html = page(item('Verleden', 31), '', 'oktober 2026') + page(item('Vandaag', 1)) + page(item('Dag364', 31), '', 'oktober 2027') + page(item('Dag365', 1), '', 'november 2027');
   const result = await scrapeMojo({ now, request: async () => new Response(html) });
   assert.deepEqual(result.concerts.map(row => row.artist), ['Vandaag', 'Dag364']);
   const row = { artist: 'A', venue: 'Gashouder', city: 'Amsterdam' };
-  assert.deepEqual(upcomingArtists([{ ...row, date: addDays('2026-11-01', 89) }, { ...row, artist: 'B', date: addDays('2026-11-01', 90) }, { ...row, artist: 'C', date: '2026-10-31' }, { ...row, date: '2026-11-01' }, { ...row, artist: 'D', date: '2026-11-02', venue: 'Paradiso' }], now), [{ key: 'a', name: 'A', group: 'week' }]);
+  assert.deepEqual(upcomingArtists([{ ...row, date: addDays('2026-11-01', 44) }, { ...row, artist: 'B', date: addDays('2026-11-01', 45) }, { ...row, artist: 'C', date: '2026-10-31' }, { ...row, date: '2026-11-01' }, { ...row, artist: 'D', date: '2026-11-02', venue: 'Paradiso' }], now), [{ key: 'a', name: 'A', group: 'week' }]);
   assert.equal(calendarDate(new Date('2026-10-31T23:30:00Z')), '2026-11-01');
   assert.equal(addDays('2027-03-27', 2), '2027-03-29');
 });

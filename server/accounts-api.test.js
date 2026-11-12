@@ -37,8 +37,20 @@ test('Onderzoeksdiagnose vereist beheerder en accepteert geen vrije tabel/filter
  assert.equal((await run({method:'POST',action:'dataverse-test',body:{operation:'research-read',table:'vrij'},researchService})).response.code,400);
  assert.equal((await run({method:'POST',action:'dataverse-test',body:{operation:'research-read'},researchService})).response.data.code,'RESEARCH_NO_VISIBLE_ROWS');assert.equal(calls,1);
 });
+test('Algemene Dataverse-discovery blijft achter Shows/MFA; Westlife krijgt metadata en showbundel',async()=>{
+ const {createDataverseResearch}=await import('./dataverse-research.js');let reads=0;
+ const source='westlife_ziggodome_20261123',key='dataverse_'+source;
+ const researchService={...createDataverseResearch({env:{}}),configured:()=>true,sourceKeys:async()=>{reads++;return[source];},load:async()=>({researchByNumber:{1:{answer:'Westlife-concept'}},researchErrors:{}})};
+ const showsSource=async(op,input)=>op==='list'?{checkedAt:'2026-11-12T10:00Z',concerts:[]}:op==='research-identities'?{concerts:[]}:op==='dataverse-ensure'?{concertId:input.show.key}:{profile:{revision:0,analyses:{},researchByNumber:{}},tickets:{preserved:true}};
+ for(const params of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker',modules:['artists']}}]){
+  assert.ok([401,403].includes((await run({...params,action:'shows',researchService,showsSource})).response.code));
+ }
+ assert.equal(reads,0);
+ const listed=await run({action:'shows',researchService,showsSource});assert.equal(listed.response.code,200);assert.equal(listed.response.data.shows[0].name,'Westlife');assert.equal(listed.response.data.shows[0].venue,'Ziggo Dome');assert.doesNotMatch(JSON.stringify(listed.response.data),/answer|markdown|sourceKey/);
+ const opened=await run({action:'show-open',method:'POST',body:{concertId:key},researchService,showsSource});assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Westlife-concept');
+});
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false}, researchService, showResult, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -54,7 +66,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
-    shows:async(operation,input)=>{calls.push(['shows',operation,input]);return showResult??(operation==='list'?{shows:[]}:{record:{revision:0}});},
+    shows:async(operation,input)=>{calls.push(['shows',operation,input]);return showsSource?showsSource(operation,input):showResult??(operation==='list'?{shows:[]}:{record:{revision:0}});},
     profiles: async (operation, actor, input) => {
       calls.push([operation, actor, input]);
       if (operation === failOperation) throw new Error('FORBIDDEN');

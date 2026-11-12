@@ -77,7 +77,7 @@ export async function scrapeMojo({ request = fetch, now = new Date(), venue:venu
 }
 
 export function upcomingArtists(concerts, now = new Date()) {
-  const from = calendarDate(now), until = addDays(from, 90), weekUntil = addDays(from, 7), names = new Map();
+  const from = calendarDate(now), until = addDays(from, 45), weekUntil = addDays(from, 7), names = new Map();
   for (const row of concerts) if (row.date >= from && row.date < until && row.venue === 'Gashouder' && row.city === 'Amsterdam') {
     const key = artistKey(row.artist);
     if (!names.has(key)) names.set(key, { key, name: row.artist, group: row.date < weekUntil ? 'week' : 'period' });
@@ -88,7 +88,7 @@ export function upcomingArtists(concerts, now = new Date()) {
 
 // Bouw reeksen vóór het 90-dagenfilter, zodat een lopende reeks haar vaste URL behoudt.
 export function upcomingShows(concerts, now = new Date()) {
-  const from = calendarDate(now), until = addDays(from, 90), weekUntil = addDays(from, 7);
+  const from = calendarDate(now), until = addDays(from, 45), weekUntil = addDays(from, 7);
   const artists = new Map();
   for (const row of concerts) {
     if ((row.venue !== 'Gashouder' || row.city !== 'Amsterdam') && !isDataversePilot(row.concertId)) continue;

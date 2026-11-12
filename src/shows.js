@@ -3,11 +3,10 @@ import { loadShowPhoto } from './show-photo.js';
 import { createShowPage, formatShowDates } from './show-page.js';
 
 import seed from './data/show-menu.json';
-import { createShowMenuCache,visibleMenu } from './lib/show-menu-cache.js';
-import {dataversePilot,pilotShow} from '../shared/dataverse-pilot.js';
+import { createShowMenuCache } from './lib/show-menu-cache.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
 let storage;try{storage=localStorage;}catch{}
-const catalogue=createShowMenuCache({seed,request:()=>access('shows'),storage});
+const catalogue=createShowMenuCache({seed,request:()=>access('shows'),storage,revalidateOnOpen:true});
 export function refreshShowsMenu(){return catalogue.refresh();}
 export function createShowsSubmenu(navigation, selected = '', content = null) {
   let disposed = false, disposeShow = () => {}, pageKey=null, direct=null, resolving=false, metadataLoading=null;
@@ -17,8 +16,6 @@ export function createShowsSubmenu(navigation, selected = '', content = null) {
     content.classList.add('show-selection-empty'); content.replaceChildren(prompt);
   }
   function render(shows){
-    // De eenmalige proef staat ook direct in een nog geldige oudere menucache.
-    if(!shows.some(show=>show.key===dataversePilot.concertId))shows=[...shows,...visibleMenu([pilotShow()])].sort((a,b)=>a.name.localeCompare(b.name,'nl'));
     const links = [], existing=new Map([...navigation.querySelectorAll('a.submenu-link')].map(link=>[link.getAttribute('href'),link]));
     for (const [group, title] of [['week', 'Komende week'], ['period', 'Komende periode']]) {
       const heading = document.createElement('h3'); heading.className = 'submenu-group-heading';

@@ -1,3 +1,4 @@
+import {isDataverseShowId} from '../shared/dataverse-shows.js';
 import {createActiveRepository,createActiveShowService} from './active-show-store.js';
 import {isDataversePilot,pilotShow} from '../shared/dataverse-pilot.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
@@ -26,7 +27,7 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
       pilotReady ||= drive('pilot-ensure',{concertId:payload.concertId}).catch(error=>{pilotReady=null;throw error;});
       await pilotReady;
     }
-    const data=await (service&&!isDataversePilot(payload.concertId)?service.request(operation,payload):drive(operation,payload));
+    const data=await (service&&!isDataverseShowId(payload.concertId)?service.request(operation,payload):drive(operation,payload));
     return operation==='home-dashboard'&&service?service.planning(data):data;
   };
   shows.activeStorage=service;

@@ -3,6 +3,23 @@ import assert from 'node:assert/strict';
 import {harness} from './test-support/production-drive.js';
 import {createShowData} from '../src/lib/show-data.js';
 const actor='show-open-local-fixture';
+test('Iedere Dataverse-show krijgt de gewone showbundel, eigen analyses en onafhankelijke zaal/datum',async()=>{
+ const {researchShow}=await import('./dataverse-shows.js');
+ const h=harness();h.indexFile.content=JSON.stringify({...h.index,active:[]});h.indexFile.setContent=function(value){this.content=value;};
+ Object.getPrototypeOf(h.folder).createFolder=function(name){return new this.constructor(name,this);};
+ const west=researchShow('westlife_ziggodome_20261123'),other=researchShow('westlife_afaslive_20261124');
+ for(const show of [west,other]){
+  const target=await h.shows('dataverse-ensure',{show});assert.equal(target.concertId,show.key);
+  const bundle=await h.shows('show-open',{concertId:show.key,actor});assert.ok(bundle.tickets&&bundle.barrier&&bundle.floor&&bundle.risks);assert.equal(bundle.profile.revision,0);
+  const resolved=h.ctx.esmojoResearchTarget_(show.key);assert.equal(resolved.primary.venue,show.venue);assert.equal(resolved.primary.date,show.dates[0]);
+ }
+ await h.shows('profile-save',{concertId:west.key,questionNumber:1,summary:'Eigen Westlife-beoordeling',status:'draft',revision:0});
+ await h.shows('dataverse-ensure',{show:west});
+ assert.equal((await h.shows('show-open',{concertId:west.key,actor})).profile.analyses[1].summary,'Eigen Westlife-beoordeling');
+ assert.deepEqual((await h.shows('show-open',{concertId:other.key,actor})).profile.analyses,{});
+ const legacy=await h.shows('dataverse-ensure',{show:researchShow('test_gashouder_20261106')});assert.equal(legacy.concertId,h.concertId,'Bestaande show hergebruiken');
+ await assert.rejects(h.shows('dataverse-ensure',{show:{...west,sourceKey:'ander_ziggodome_20261123'}}),/VALIDATION/);
+});
 test('AFAS Live-proef opent dezelfde volledige showbundel en bewaart eigen analyse',async()=>{
  const h=harness(),id='Hatsune-Miku_AFAS-Live_15112026';
  h.indexFile.content=JSON.stringify({...h.index,active:[]});

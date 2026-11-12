@@ -1,4 +1,3 @@
-import {dataversePilot,isDataversePilot} from '../../shared/dataverse-pilot.js';
 // Uitsluitend openbare menunamen/dagen/locaties. Nooit profiel, token of analyse.
 const KEY='esmojo-public-show-menu-v1';
 const day=date=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
@@ -10,21 +9,22 @@ export function menuWindow(now=new Date()){
 export function cleanMenu(value){
  if(!Array.isArray(value)||value.length>1000)throw Error('MENU_FORMAT');
  const seen=new Set();return value.map(row=>{
-  if(!row||typeof row.key!=='string'||!row.key||row.key.length>240||/[\x00-\x1f/\\]/.test(row.key)||seen.has(row.key)||typeof row.name!=='string'||!row.name.trim()||row.name.length>160||(row.venue!=='Gashouder'&&!(isDataversePilot(row.key)&&row.venue===dataversePilot.venue&&row.name===dataversePilot.artist&&row.dates?.length===1&&row.dates[0]===dataversePilot.date))||row.city!=='Amsterdam'||!Array.isArray(row.dates)||!row.dates.length||row.dates.length>365||row.dates.some(date=>typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date))throw Error('MENU_FORMAT');
+  if(!row||typeof row.key!=='string'||!row.key||row.key.length>240||/[\x00-\x1f/\\]/.test(row.key)||seen.has(row.key)||typeof row.name!=='string'||!row.name.trim()||row.name.length>160||typeof row.venue!=='string'||!row.venue.trim()||row.venue.length>160||typeof row.city!=='string'||row.city.length>120||/[\x00-\x1f]/.test(row.venue+row.city)||!Array.isArray(row.dates)||!row.dates.length||row.dates.length>365||row.dates.some(date=>typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date))throw Error('MENU_FORMAT');
   seen.add(row.key);return{key:row.key,name:row.name,dates:[...new Set(row.dates)].sort(),venue:row.venue,city:row.city};
  });
 }
 export function visibleMenu(rows,now=new Date()){
- const from=day(now),until=plus(from,90),week=plus(from,7);
+ const from=day(now),until=plus(from,45),week=plus(from,7);
  return rows.filter(row=>row.dates.some(date=>date>=from&&date<until)).map(row=>({...row,group:row.dates.some(date=>date>=from&&date<week)?'week':'period'})).sort((a,b)=>a.name.localeCompare(b.name,'nl')||a.dates[0].localeCompare(b.dates[0]));
 }
-export function createShowMenuCache({seed,request,storage,now=()=>new Date()}){
+export function createShowMenuCache({seed,request,storage,now=()=>new Date(),revalidateOnOpen=false}){
  let rows=cleanMenu(seed.shows),checked=null,pending=null;const listeners=new Set();
  try{const saved=JSON.parse(storage?.getItem(KEY)||'null');if(saved?.version===1&&Number.isFinite(Date.parse(saved.checkedAt))&&Date.parse(saved.checkedAt)<=now().getTime()){rows=cleanMenu(saved.shows);checked=saved.checkedAt;}}catch{/* De beginlijst blijft beschikbaar bij geblokkeerde/corrupte opslag. */}
  const current=()=>visibleMenu(rows,now());
  function refresh(){
-  if(pending)return pending;if(checked&&menuWindow(new Date(checked))===menuWindow(now()))return Promise.resolve(false);
-  // Per middagvenster maximaal één poging; bij fouten blijft de eerdere lijst staan.
+  if(pending)return pending;if(!revalidateOnOpen&&checked&&menuWindow(new Date(checked))===menuWindow(now()))return Promise.resolve(false);
+  // Standaard de bestaande middagcache; reguliere laadhercontrole kan deze verversen.
+  // De bekende lijst blijft zichtbaar tijdens het verzoek en bij fouten.
   checked=now().toISOString();
   const persist=()=>{try{storage?.setItem(KEY,JSON.stringify({version:1,checkedAt:checked,shows:rows}));}catch{}};persist();
   pending=Promise.resolve().then(request).then(data=>{rows=cleanMenu(data.shows);persist();for(const callback of listeners)callback(current());return true;}).catch(()=>false).finally(()=>{pending=null;});return pending;

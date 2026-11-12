@@ -16,7 +16,7 @@ function setup(rows=Array.from({length:11},(_,i)=>row(i+1)),extra={}){
  }});return{service,calls};
 }
 test('Exacte testshow, alle elf AI-concepten in één query, geen verzonnen onderzoeksdatum',async()=>{
- const {service,calls}=setup();assert.equal(await service.load('Andere_AFAS-Live_15112026'),null);assert.equal(calls.length,0);
+ const {service,calls}=setup();assert.equal(await service.load('Ongeldige_showreferentie'),null);assert.equal(calls.length,0);
  const result=await service.load(pilot.concertId);assert.equal(Object.keys(result.researchByNumber).length,11);assert.deepEqual(result.researchErrors,{});
  assert.equal(result.researchByNumber[1].status,'ai-concept');assert.equal(result.researchByNumber[1].source,'dataverse');assert.equal(result.researchByNumber[1].researchedAt,undefined);
  const query=new URL(calls[2].url);assert.match(query.searchParams.get('$filter'),/esmojo_bronbibliotheekid eq/);assert.equal(calls.length,3);
@@ -55,9 +55,9 @@ test('Paginering blijft op de vaste Dataverse-tabel; geen token naar externe hos
  const {service,calls}=setup([],{response:()=>Response.json({value:[row(1)],'@odata.nextLink':'https://evil.invalid/token'})});assert.deepEqual((await service.load(pilot.concertId)).researchByNumber,{});assert.equal(calls.length,3);
  let page=0;const good=setup([],{response:()=>Response.json(++page===1?{value:[row(1)],'@odata.nextLink':env.DATAVERSE_TEST_URL+'/api/data/v9.2/esmojo_onderzoeksresultaats?$skiptoken=next'}:{value:[row(2)]})});assert.equal(Object.keys((await good.service.load(pilot.concertId)).researchByNumber).length,2);
 });
-test('Menu toont alleen de exacte AFAS Live-uitzondering naast bestaande Gashouder-shows',()=>{
+test('MOJO-only menu blijft begrensd; de publieke menucache accepteert andere zalen',()=>{
  const shows=upcomingShows([pilot,{...pilot,concertId:'Andere_AFAS-Live_15112026',artist:'Andere'}],new Date('2026-11-11T12:00:00Z'));assert.equal(shows.length,1);assert.equal(shows[0].venue,'AFAS Live');assert.equal(cleanMenu(shows).length,1);
- assert.throws(()=>cleanMenu([{...pilotShow(),key:'Ander'}]),/MENU_FORMAT/);
+ assert.equal(cleanMenu([{...pilotShow(),key:'dataverse_westlife_ziggodome_20261123',name:'Westlife',venue:'Ziggo Dome'}]).length,1);
 });
 test('Bewuste diagnose onderscheidt lege tabel, bronverschil en randspaties zonder bronwaarden terug te geven',async()=>{
  for(const [rows,code]of [[[],'RESEARCH_NO_VISIBLE_ROWS'],[[row(1)],'RESEARCH_MATCH_FOUND'],[[{...row(1),esmojo_showsleutel:'ander'}],'RESEARCH_KEYS_DIFFER'],[[{...row(1),esmojo_showsleutel:'\t'+pilot.sourceKey}],'RESEARCH_WHITESPACE']]){

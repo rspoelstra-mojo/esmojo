@@ -17,3 +17,7 @@ test('Opslag/netwerkfouten laten het menu staan en worden niet elke paginawissel
  let calls=0;const cache=createShowMenuCache({seed:{shows:[show]},storage:{getItem(){throw Error();},setItem(){throw Error();}},request:async()=>{calls++;throw Error();},now:()=>new Date('2026-11-01T12:00:00Z')});assert.equal(await cache.refresh(),false);await cache.refresh();assert.equal(calls,1);assert.equal(cache.current().length,1);
  assert.throws(()=>cleanMenu([{...show,dates:['2026-02-30']}]));assert.throws(()=>cleanMenu([{...show,key:'../accounts'}]));
 });
+test('Dataverse-menu ververst ook binnen hetzelfde middagvenster en houdt alleen openbare menuvelden',async()=>{
+ let calls=0;const storage=memory(),cache=createShowMenuCache({seed:{shows:[show]},storage,revalidateOnOpen:true,now:()=>new Date('2026-11-01T12:00Z'),request:async()=>{calls++;return{shows:calls===1?[show]:[show,{key:'dataverse_westlife_ziggodome_20261123',name:'Westlife',venue:'Ziggo Dome',city:'Amsterdam',dates:['2026-11-23'],answer:'PRIVE'}]};}});
+ await cache.refresh();await cache.refresh();assert.equal(calls,2);assert.equal(cache.current().length,2);assert.equal([...storage.values.values()].join('').includes('PRIVE'),false);
+});

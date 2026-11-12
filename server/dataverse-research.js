@@ -1,4 +1,5 @@
-import {dataversePilot as pilot,isDataversePilot} from '../shared/dataverse-pilot.js';
+import {dataversePilot as pilot} from '../shared/dataverse-pilot.js';
+import {RESEARCH_LIBRARY,parseResearchKey,researchKeyForId,isDataverseShowId} from '../shared/dataverse-shows.js';
 
 const table='esmojo_onderzoeksresultaat';
 const columns=['esmojo_showsleutel','esmojo_vraagnummer','esmojo_markdowninhoud','esmojo_bronbibliotheekid','esmojo_bronbestanditemnummer','esmojo_bronversie','esmojo_bronbestandpad','createdon'];
@@ -30,30 +31,40 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
   if(!response.ok){if(response.status===401)session=null;throw Error('DATAVERSE_READ');}
   return response.json();
  }
- async function read(){
-  const {headers,entity}=await connect();
-  // Power Automate kan randspaties/newlines in een tekstveld opslaan. De query
-  // selecteert kandidaten; alleen de exacte getrimde sleutel wordt gekoppeld.
-  const params=new URLSearchParams({'$select':columns.join(','),'$filter':`contains(esmojo_showsleutel,'${pilot.sourceKey}') and esmojo_bronbibliotheekid eq '${pilot.libraryId}'`,'$top':'501'});
-  let url=base+entity+'?'+params,rows=[],pages=0;
+ async function query(params,{limit=500}={}){
+  const {headers,entity}=await connect();let url=base+entity+'?'+new URLSearchParams(params),rows=[],pages=0;
   while(url){
-   if(++pages>11)throw Error('DATAVERSE_LIMIT');
-   const data=await get(url,headers);
-   if(!Array.isArray(data.value)||rows.length+data.value.length>500)throw Error('DATAVERSE_LIMIT');
+   if(++pages>Math.ceil(limit/50)+1)throw Error('DATAVERSE_LIMIT');
+   const data=await get(url,params.fetchXml?{...headers,Prefer:'odata.maxpagesize=5000'}:headers);
+   if(!Array.isArray(data.value)||rows.length+data.value.length>limit)throw Error('DATAVERSE_LIMIT');
    rows.push(...data.value);url=data['@odata.nextLink'];
    if(url){const next=new URL(url);if(next.origin!==origin||next.pathname!=='/api/data/v9.2/'+entity||next.username||next.password||next.hash)throw Error('DATAVERSE_RESPONSE');}
   }
+  return rows;
+ }
+ const configured=()=>Boolean(env.DATAVERSE_TEST_CLIENT_SECRET);
+ async function sourceKeys(){
+  if(!configured())return[];
+  const xml='<fetch aggregate="true"><entity name="'+table+'"><attribute name="esmojo_showsleutel" alias="show_key" groupby="true"/><filter><condition attribute="esmojo_bronbibliotheekid" operator="eq" value="'+RESEARCH_LIBRARY+'"/></filter></entity></fetch>';
+  const rows=await query({fetchXml:xml},{limit:5000});
+  return [...new Set(rows.map(row=>parseResearchKey(row.show_key??row.showKey)?.sourceKey).filter(Boolean))];
+ }
+ async function read(sourceKey){
+  const escaped=sourceKey.replaceAll("'","''");
+  const rows=await query({'$select':columns.join(','),'$filter':`contains(esmojo_showsleutel,'${escaped}') and esmojo_bronbibliotheekid eq '${RESEARCH_LIBRARY}'`,'$top':'501'});
   const selected=new Map();let bytes=0;
   for(const row of rows){
-   if(typeof row.esmojo_showsleutel!=='string'||row.esmojo_showsleutel.trim()!==pilot.sourceKey)continue;
+   if(typeof row.esmojo_showsleutel!=='string'||row.esmojo_showsleutel.trim()!==sourceKey)continue;
    const number=row.esmojo_vraagnummer,v=version(row.esmojo_bronversie),text=row.esmojo_markdowninhoud;
-   if(row.esmojo_bronbibliotheekid!==pilot.libraryId||!Number.isInteger(number)||number<1||number>11||!v||!Number.isSafeInteger(row.esmojo_bronbestanditemnummer)||row.esmojo_bronbestanditemnummer<1||typeof text!=='string'||!text.trim()||text.length>1048576||!Number.isFinite(Date.parse(row.createdon)))throw Error('DATAVERSE_RESPONSE');
+   if(row.esmojo_bronbibliotheekid!==RESEARCH_LIBRARY||!Number.isInteger(number)||number<1||number>11||!v||!Number.isSafeInteger(row.esmojo_bronbestanditemnummer)||row.esmojo_bronbestanditemnummer<1||typeof text!=='string'||!text.trim()||text.length>1048576||!Number.isFinite(Date.parse(row.createdon)))throw Error('DATAVERSE_RESPONSE');
    const path=row.esmojo_bronbestandpad;
-   if(typeof path!=='string'||!path.replace(/^\//,'').startsWith('Shared Documents/General/NIEUWE_SHOW_RESULTAAT/'+pilot.sourceKey+'/')||!path.endsWith('.md'))throw Error('DATAVERSE_RESPONSE');
+   if(typeof path!=='string'||!path.replace(/^\//,'').startsWith('Shared Documents/General/NIEUWE_SHOW_RESULTAAT/'+sourceKey+'/')||!path.endsWith('.md'))throw Error('DATAVERSE_RESPONSE');
    bytes+=Buffer.byteLength(text);if(bytes>2*1024*1024)throw Error('DATAVERSE_LIMIT');
    const old=selected.get(number);
    // Versies zijn alleen binnen hetzelfde bronbestand vergelijkbaar.
-   if(old&&old.esmojo_bronbestanditemnummer!==row.esmojo_bronbestanditemnummer)throw Error('DATAVERSE_AMBIGUOUS');
+   if(old&&old.esmojo_bronbestanditemnummer!==row.esmojo_bronbestanditemnummer){
+    const newer=Date.parse(row.createdon)-Date.parse(old.createdon);if(!newer)throw Error('DATAVERSE_AMBIGUOUS');if(newer>0)selected.set(number,row);continue;
+   }
    if(old&&compare(v,version(old.esmojo_bronversie))===0)throw Error('DATAVERSE_AMBIGUOUS');
    if(!old||compare(v,version(old.esmojo_bronversie))>0)selected.set(number,row);
   }
@@ -63,10 +74,12 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
    if(!row){researchErrors[number]='Dit onderzoeksresultaat is nog niet beschikbaar in Dataverse.';continue;}
    researchByNumber[number]={questionNumber:number,answer:row.esmojo_markdowninhoud,sources:[],source:'dataverse',status:'ai-concept',sourceVersion:row.esmojo_bronversie,importedAt:row.createdon};
   }
-  return{researchByNumber,researchErrors};
+  return{researchByNumber,researchErrors,...(selected.size?{}:{empty:true})};
  }
  return{
-  applies:isDataversePilot,
+  applies:id=>Boolean(researchKeyForId(id)),
+  configured,
+  sourceKeys,
   async diagnose(){
    const result={environment:origin,table,configuration:false,tableRead:false,sampleRows:0,showMatches:0,libraryMatches:0,combinedMatches:0,normalizedMatches:0};
    try{
@@ -87,8 +100,9 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
    }catch(error){return{...result,code:['DATAVERSE_CONFIG','DATAVERSE_AUTH','DATAVERSE_SCHEMA','DATAVERSE_READ','DATAVERSE_RESPONSE'].includes(error.message)?error.message:'RESEARCH_UNAVAILABLE'};}
   },
   async load(concertId){
-   if(!isDataversePilot(concertId))return null;
-   try{return await read();}catch{
+   const key=researchKeyForId(concertId);if(!key||!configured()&&!isDataverseShowId(concertId))return null;
+   try{const result=await read(key);if(result.empty&&!isDataverseShowId(concertId))return null;delete result.empty;return result;}catch{
+    if(!isDataverseShowId(concertId))return null;
     // Geen stille terugval naar oude Drive-resultaten of ruwe providerfouten.
     return{researchByNumber:{},researchErrors:Object.fromEntries(Array.from({length:11},(_,i)=>[i+1,'Dataverse-onderzoek kon niet worden geladen. Vernieuw de pagina of controleer de apprechten en tabelconfiguratie.']))};
    }

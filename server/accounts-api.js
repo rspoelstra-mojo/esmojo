@@ -1,5 +1,6 @@
+import {createDataverseShows} from './dataverse-shows.js';
+import {researchKeyForConcert} from '../shared/dataverse-shows.js';
 import {createDataverseResearch} from './dataverse-research.js';
-import {dataversePilot} from '../shared/dataverse-pilot.js';
 import {createDataverseTest} from './dataverse-test.js';
 import {createShowManagementService} from './show-management.js';
 import {createIncidentMetricsService} from './incident-metrics.js';
@@ -37,7 +38,11 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = createShowProfilePdfService({ shows }), background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=createBarrierReferenceService({shows}), artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=createShowManagementService({env,shows}), dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}) } = {}) {
+  shows=createDataverseShows({shows,research:dataverseResearch});
+  pdfService ||=createShowProfilePdfService({shows});
+  referenceService ||=createBarrierReferenceService({shows});
+  showManagement ||=createShowManagementService({env,shows});
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -268,8 +273,9 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (action === 'shows' && req.method === 'GET') {
         const data = await shows('list');
         if (!data.checkedAt) return reply(503, { error: 'De concertagenda is nog niet geïmporteerd.' });
-        const concerts=data.concerts.some(row=>row.concertId===dataversePilot.concertId)?data.concerts:[...data.concerts,dataversePilot];
-        return reply(200, { artists: upcomingArtists(data.concerts), shows: upcomingShows(concerts), checkedAt: data.checkedAt });
+        const legacy=upcomingShows(data.concerts||[]),imported=(data.dataverseShows||[]).filter(row=>!legacy.some(show=>show.dates.some(date=>researchKeyForConcert({artist:show.name,venue:show.venue,date})===row.sourceKey)));
+        const publicShows=[...legacy,...imported.map(({key,name,dates,venue,city})=>({key,name,dates,venue,city}))];
+        return reply(200, { artists: upcomingArtists(data.concerts), shows: publicShows, checkedAt: data.checkedAt });
       }
       if (action === 'photo' && req.method === 'PATCH') {
         const input = req.body;

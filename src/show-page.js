@@ -32,7 +32,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       const meta=document.createElement('div');meta.className='show-meta';
       for(const [paths,text]of [
         ['<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',formatShowDates(show.dates)],
-        ['<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',`${show.venue}, ${show.city}`],
+        ['<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',[show.venue,show.city].filter(Boolean).join(', ')],
       ]){const item=document.createElement('div');item.className='show-meta-item';item.innerHTML=svg(paths);const label=document.createElement('span');label.textContent=text;item.append(label);meta.append(item);}
       const photo=document.createElement('a');photo.className='show-artist-photo';photo.hidden=true;photo.target='_blank';photo.rel='noopener noreferrer';photo.setAttribute('aria-label',`Foto van ${show.name} op MOJO`);
       const image=document.createElement('img');image.alt=show.name;image.width=600;image.height=338;image.decoding='async';image.referrerPolicy='no-referrer';photo.append(image);

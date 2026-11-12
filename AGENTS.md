@@ -1,3 +1,29 @@
+## Algemene Dataverse-showkoppeling (12 november 2026)
+
+Nieuwste gebruikersopdracht vervangt de beperking tot Hatsune Miku: iedere show
+met onderzoeksresultaten in de afgesproken Dataverse-tabel/bibliotheek krijgt
+automatisch een showpagina. Correctie gebruiker: geen algemene ontsluiting van
+andere MOJO-zalen; bestaande Gashouder-shows behouden. De broncatalogus leest
+uitsluitend gegroepeerde show-sleutels, geen onderzoektekst. Nieuwe showroutes
+zijn dataverse_<show-sleutel>; de bestaande Hatsune Miku-route blijft geldig.
+Menuverversing leest nieuwe imports opnieuw en bevat geen onderzoek-/accountdata.
+Nieuwste menucorrectie: geen periodieke verversing, geen extra Dataverse-groep.
+Komende week en Komende periode tonen samen vandaag tot45 dagen vooruit;
+andere Dataverse-shows houden wel een oplosbare directe pagina.
+
+Gebruik bestaande publieke MOJO-identiteiten voor naam/zaal/datum als die exact
+overeenkomen. Zonder match blijft de compacte bronnaam zichtbaar; geen identiteit
+uit AI-proza raden. Zaalnamen/stad van de vaste locaties blijven canoniek.
+Showstructuur wordt idempotent aangemaakt bij openen en hergebruikt bestaande
+shows bij dezelfde artiest/zaal/datum; eigen analyses nooit overschrijven.
+Andere zalen blijven buiten het uitsluitend-Gashouder actieve Supabase-model;
+de Dataverse-onderzoekstekst blijft in Dataverse. Geen algemene datamigratie.
+Alle routes behouden account/MFA/Shows-controles. Showbeheer blijft uitsluitend
+Gashouder zoals apart afgesproken; geen nieuwe toegang zonder account.
+De gebruiker heeft de automatische Power Automate-import inmiddels getest:
+elke15 minuten, bronopruiming na terugleescontrole, resultaten blijven in Dataverse.
+De website leest resultaten onafhankelijk van opruimstatus of SharePoint-bestaan.
+
 ## Dataverse onderzoeksproef (11 november 2026)
 
 Op expliciet verzoek gebruikt Hatsune Miku, AFAS Live, 15 november 2026 dezelfde

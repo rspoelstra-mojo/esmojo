@@ -43,6 +43,7 @@ jobs:
           node --test server/dataverse-test.test.js
           node --test server/dataverse-write-probe.test.js
           node --test server/dataverse-research.test.js
+          node --test server/dataverse-shows.test.js
           node --test src/lib/copy-activation-link.test.js
           node --test src/lib/activation-verification.test.js
           node server/account-modules.test.js
@@ -175,3 +176,5 @@ jobs:
         run: node tools/ui/check-dataverse-test.mjs
       - name: Dataverse research concepts and eleven cached subjects
         run: node tools/ui/check-dataverse-research.mjs
+      - name: Dataverse show discovery and multi-venue full-page loading
+        run: node tools/ui/check-dataverse-shows.mjs
