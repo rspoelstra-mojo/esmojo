@@ -69,7 +69,12 @@ komen uit een domeingescheiden bronidentiteit. Voor ieder record wordt eerst
 gelezen. Ontbrekende records krijgen een create-only PATCH met `If-None-Match: *`;
 bestaande afwijkende gegevens worden nooit automatisch overschreven.
 
-Elke bedoelde kolom en lookup wordt na aanmaak teruggelezen. Alleen de twee
+Elke bedoelde kolom en lookup wordt na aanmaak teruggelezen. Lege optionele
+tekst mag als native null terugkomen; een native tijdstip zonder milliseconden
+mag dezelfde bronseconde vertegenwoordigen. Andere tekst, getallen (ook nul),
+andere seconden en datums blijven exacte conflicten. Oorspronkelijke
+bron-tijdstippen blijven volledig in Historie. Bij een recordconflict toont de
+beheerpagina alleen de vaste tabel-/kolomlabels, geen bron- of doelinhoud. Alleen de twee
 expliciete aanvullingen mogen bestaande records aanpassen: een lege relatie
 invullen, of een migratiedocument na succesvolle bytecontrole van Pending naar
 Verified zetten. Beide gebruiken `If-Match` en terugleescontrole.

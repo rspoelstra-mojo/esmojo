@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mapPeople,mapShow,documentRecord} from './show-migration-map.js';
-import {record,reference,validateRecord,digest,createMigrationWriter,choice} from './show-migration-writer.js';
+import {record,reference,validateRecord,digest,createMigrationWriter,choice,migrationDifferences,migrationConflictDetails} from './show-migration-writer.js';
 import {migrationTokens,createShowMigration} from './show-migration.js';
 import {migrateFileStep} from './show-migration-files.js';
 import {tableSetupSteps,tableByName} from './dataverse-table-schema.js';
@@ -57,11 +57,11 @@ test('native writer uses actual metadata collections/navigation and create-only 
   if(method==='PATCH'){
    assert.equal(headers['If-None-Match'],'*');const id=/\(([^)]+)\)/.exec(base)[1],body=options.body,row={...body,set,[table+'_native_id']:id,'@odata.etag':'W/"1"'};
    for(const [key,value]of Object.entries(body))if(key.endsWith('@odata.bind'))row['_'+key.slice(4,-11)+'_value']=/\(([^)]+)\)/.exec(value)[1];
-   for(const column of tableByName.get(table).columns.filter(c=>c.type==='Datum en tijd'))if(row[column.logical_name])row[column.logical_name]+='T00:00:00Z';rows.set(id,row);if(loseReply){loseReply=false;throw Error('MIGRATION_UNCONFIRMED');}return new Response(null,{status:204});
+   for(const column of tableByName.get(table).columns.filter(c=>c.type==='Datum en tijd'))if(row[column.logical_name])row[column.logical_name]=column.settings.startsWith('Gedrag Alleen datum;')?row[column.logical_name]+'T00:00:00Z':row[column.logical_name].replace(/\.\d{3}Z$/,'Z');for(const column of tableByName.get(table).columns.filter(c=>['Eén tekstregel','Meerdere tekstregels'].includes(c.type)&&c.required!=='Ja'))if(row[column.logical_name]==='')row[column.logical_name]=null;rows.set(id,row);if(loseReply){loseReply=false;throw Error('MIGRATION_UNCONFIRMED');}return new Response(null,{status:204});
   }
   throw Error('unsupported request');
  }};
- const writer=createMigrationWriter({connection}),artist=record('artiest','artist','Artist'),venue=record('locatie','venue','Venue',{locatiecode:'venue'});
+ const writer=createMigrationWriter({connection}),artist=record('artiest','artist','Artist',{biografie:'',biografieopgehaaldop:'2026-11-12T10:20:30.789Z'}),venue=record('locatie','venue','Venue',{locatiecode:'venue'});
  await writer.ensure(artist);await writer.ensure(venue);
  const series=record('concertreeks','series','Series',{eerstedatum:'2026-11-23',laatstedatum:'2026-11-23'},{artiest:reference('artiest','artist'),locatie:reference('locatie','venue')});
  const result=await writer.ensure(series);assert.equal(result.verified,true);const creates=calls.filter(c=>c.options.method==='PATCH').length;await writer.ensure(series);assert.equal(calls.filter(c=>c.options.method==='PATCH').length,creates);
@@ -104,4 +104,19 @@ test('pinned super-administrator maps to the ordinary Dataverse administrator ro
  assert.deepEqual(source,before,'Source roles and policy remain unchanged');
  assert.throws(()=>mapPeople({...source,superAdminId:'different-person'}),/MIGRATION_SOURCE/);
  assert.throws(()=>mapPeople({...source,superAdminId:null}),/MIGRATION_SOURCE/);
+});
+
+test('native empty text and subsecond readback representations are equivalent; actual content and different seconds still conflict',()=>{
+ const row=record('artiest','precision','Artist',{biografie:'',biografieopgehaaldop:'2026-11-12T10:20:30.789Z'}),native={...row.fields,esmojo_biografie:null,esmojo_biografieopgehaaldop:'2026-11-12T10:20:30Z'};
+ assert.deepEqual(migrationDifferences(row,native),[]);
+ assert.deepEqual(migrationDifferences(row,{...native,esmojo_biografie:'Actual text'}).map(d=>d.column),['esmojo_biografie']);
+ assert.deepEqual(migrationDifferences(row,{...native,esmojo_biografieopgehaaldop:'2026-11-12T10:20:31Z'}).map(d=>d.column),['esmojo_biografieopgehaaldop']);
+ assert.deepEqual(migrationDifferences(row,{...native,esmojo_biografieopgehaaldop:'2026-11-12T10:20:30.123Z'}).map(d=>d.column),['esmojo_biografieopgehaaldop']);
+ assert.deepEqual(migrationDifferences(row,{...native,esmojo_naam:null}).map(d=>d.column),['esmojo_naam']);
+ const count=record('ticketverkoop','zero','Tickets',{aantal:0},{bezoekersgegeven:reference('bezoekersgegeven','visitor'),concert:reference('concert','show')});assert.ok(migrationDifferences(count,{...count.fields,esmojo_aantal:null}).length);
+});
+test('conflict diagnostics contain only approved schema names/labels and fixed reasons; exact source timestamps remain in history',()=>{
+ const error=Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:'esmojo_artiest',differences:[{column:'esmojo_biografieopgehaaldop',reason:'DATETIME_DIFFERENCE',actual:'secret actual value',expected:'secret source value'},{column:'unknown',reason:'VALUE_DIFFERENCE'}],private:'sensitive'}});
+ const details=migrationConflictDetails(error);assert.equal(details.differences.length,1);assert.equal(details.differences[0].column,'esmojo_biografieopgehaaldop');assert.doesNotMatch(JSON.stringify(details),/secret|sensitive|actual|expected|unknown/);assert.equal(migrationConflictDetails({migration:{table:'unapproved',differences:[]}}),null);
+ const source=fixture();source.biography={text:'Original biography',capturedAt:'2026-11-12T10:20:30.789Z'};const result=mapShow(source,people),history=result.records.find(row=>row.fields.esmojo_entiteitsoort==='artist-source');assert.equal(JSON.parse(history.fields.esmojo_snapshot_json).biography.capturedAt,source.biography.capturedAt);
 });

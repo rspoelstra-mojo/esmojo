@@ -406,3 +406,8 @@ test('full Shows migration requires admin, current Shows access, MFA and allowed
  const bad=await run({action:'show-migration',method:'POST',body:{operation:'start'},migrationService:async()=>{throw Error('private source text and secrets');}});assert.equal(bad.response.code,503);assert.doesNotMatch(JSON.stringify(bad.response.data),/private source|secrets/);
  const conflict=await run({action:'show-migration',method:'POST',body:{operation:'start'},migrationService:async()=>{throw Error('MIGRATION_CONFLICT');}});assert.equal(conflict.response.code,424);
 });
+
+test('migration conflict response identifies approved table/columns without source or target content',async()=>{
+ const migrationService=async()=>{throw Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:'esmojo_artiest',differences:[{column:'esmojo_biografieopgehaaldop',reason:'DATETIME_DIFFERENCE',expected:'private source',actual:'private target'}]}});};
+ const result=await run({action:'show-migration',method:'POST',body:{operation:'start'},migrationService});assert.equal(result.response.code,424);assert.match(result.response.data.error,/Tabel: Artiest/);assert.equal(result.response.data.details.differences[0].column,'esmojo_biografieopgehaaldop');assert.doesNotMatch(JSON.stringify(result.response.data),/private source|private target|expected|actual/);
+});

@@ -27,6 +27,32 @@ export function validateRecord(row){
  for(const [name,ref]of Object.entries(row.links)){const column=schema.columns.find(c=>c.logical_name===name);if(!column?.target||column.target!==ref.table||!/^[a-f0-9]{64}$/.test(ref.key))throw Error('MIGRATION_MAPPING');}
  return row;
 }
+// Native Dataverse bewaart lege optionele tekst als null en tijdstippen op seconden.
+// Accepteer uitsluitend die representatie; oorspronkelijke tijd staat in de bronhistorie.
+export function migrationDifferences(row,actual,expected=row.fields){
+ const schema=tableByName.get(row.table);if(!schema)throw Error('MIGRATION_MAPPING');const differences=[];
+ for(const [key,value]of Object.entries(expected)){
+  const name=key.startsWith('_')&&key.endsWith('_value')?key.slice(1,-6):key,column=schema.columns.find(c=>c.logical_name===name),observed=actual[key]??null;
+  if(isDeepStrictEqual(observed,value))continue;
+  if(row.table==='esmojo_document'&&key==='esmojo_documentstatus'&&value===choice('bronstatus','pending')&&observed===choice('bronstatus','verified'))continue;
+  if(column&&['String','Memo'].includes(attributeKind(column))&&column.required!=='Ja'&&value===''&&observed===null)continue;
+  if(column?.target&&guid(value)&&guid(observed)&&value.toLowerCase()===observed.toLowerCase())continue;
+  if(column?.type==='Datum en tijd'&&typeof value==='string'&&typeof observed==='string'){
+   const source=Date.parse(value),destination=Date.parse(observed);
+   if(Number.isFinite(source)&&Number.isFinite(destination)){
+    if(source===destination)continue;
+    if(!column.settings.startsWith('Gedrag Alleen datum;')&&destination%1000===0&&Math.floor(source/1000)*1000===destination)continue;
+   }
+  }
+  differences.push({column:name,reason:column?.type==='Datum en tijd'?'DATETIME_DIFFERENCE':column?.target?'LOOKUP_DIFFERENCE':'VALUE_DIFFERENCE'});
+ }
+ return differences;
+}
+export function migrationConflictDetails(error){
+ const schema=tableByName.get(error?.migration?.table);if(!schema||!Array.isArray(error.migration.differences))return null;
+ const differences=error.migration.differences.slice(0,8).flatMap(difference=>{const column=schema.columns.find(c=>c.logical_name===difference.column);return column&&['VALUE_DIFFERENCE','DATETIME_DIFFERENCE','LOOKUP_DIFFERENCE'].includes(difference.reason)?[{column:column.logical_name,label:column.label,reason:difference.reason}]:[];});
+ return differences.length?{table:schema.logical_name,label:schema.label,differences}:null;
+}
 export function createMigrationWriter({env=process.env,request=fetch,connection=createDataverseSetupConnection({env,request})}={}){
  const metadata=new Map(),resolved=new Map();let context;
  async function ctx(){return context||(context=await connection.connect());}
@@ -42,10 +68,10 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
  async function ensure(row){
   validateRecord(row);const m=await meta(row.table),payload={...row.fields},expected={...row.fields};
   for(const [name,ref]of Object.entries(row.links)){const target=await resolve(ref),nav=m.ManyToOneRelationships.find(r=>r.ReferencingAttribute===name)?.ReferencingEntityNavigationPropertyName;if(!identifier(nav))throw Error('MIGRATION_SCHEMA');payload[nav+'@odata.bind']='/'+target.set+'('+target.id+')';expected['_'+name+'_value']=target.id;}
-  const compare=actual=>Object.entries(expected).every(([key,value])=>{const observed=actual[key]??null;if(row.table==='esmojo_document'&&key==='esmojo_documentstatus'&&value===choice('bronstatus','pending')&&observed===choice('bronstatus','verified'))return true;if(tableByName.get(row.table).columns.some(c=>c.logical_name===key&&c.type==='Datum en tijd')&&typeof value==='string'&&Number.isFinite(Date.parse(value))&&Number.isFinite(Date.parse(observed)))return Date.parse(value)===Date.parse(observed);return isDeepStrictEqual(observed,value);});
+
   let actual=await find(row),created=false;
   if(!actual){const hex=row.key,id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-4'+hex.slice(13,16)+'-8'+hex.slice(17,20)+'-'+hex.slice(20,32);const response=await connection.call(m.EntitySetName+'('+id+')',{...(await ctx()).headers,'If-None-Match':'*'},{method:'PATCH',body:payload,code:'MIGRATION_UNCONFIRMED',timeoutMs:60000});if(!response.ok&&![409,412].includes(response.status))throw Error('MIGRATION_REJECTED');created=response.ok;actual=await find(row);}
-  if(!actual)throw Error('MIGRATION_UNCONFIRMED');if(!compare(actual))throw Error('MIGRATION_CONFLICT');const id=actual[m.PrimaryIdAttribute];if(!guid(id))throw Error('MIGRATION_SCHEMA');resolved.set(row.table+row.key,{id,set:m.EntitySetName});return{verified:true,created,id};
+  if(!actual)throw Error('MIGRATION_UNCONFIRMED');const differences=migrationDifferences(row,actual,expected);if(differences.length)throw Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:row.table,differences}});const id=actual[m.PrimaryIdAttribute];if(!guid(id))throw Error('MIGRATION_SCHEMA');resolved.set(row.table+row.key,{id,set:m.EntitySetName});return{verified:true,created,id};
  }
  async function markFileVerified(file){const target=await resolve(reference('document',file.identity)),row=await json(target.set+'('+target.id+')?$select=esmojo_documentstatus,esmojo_sha256');if(row?.esmojo_sha256!==file.sha256)throw Error('MIGRATION_CONFLICT');if(row.esmojo_documentstatus===choice('bronstatus','verified'))return;if(row.esmojo_documentstatus!==choice('bronstatus','pending')||!row['@odata.etag'])throw Error('MIGRATION_CONFLICT');const response=await call(target.set+'('+target.id+')',{method:'PATCH',headers:{'If-Match':row['@odata.etag']},body:{esmojo_documentstatus:choice('bronstatus','verified')}});if(!response.ok)throw Error('MIGRATION_UNCONFIRMED');const confirmed=await json(target.set+'('+target.id+')?$select=esmojo_documentstatus');if(confirmed?.esmojo_documentstatus!==choice('bronstatus','verified'))throw Error('MIGRATION_UNCONFIRMED');}
  async function linkEmpty(source,field,target){
