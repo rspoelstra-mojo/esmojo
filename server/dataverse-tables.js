@@ -5,9 +5,12 @@ import {setupTables,tableByName,compileAttribute,compileEntity,compileRelationsh
 const guid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
 const identifier=value=>typeof value==='string'&&/^[a-z][a-z0-9_]{0,127}$/i.test(value);
 const required=column=>column.required==='Ja'?'ApplicationRequired':'None';
+const requiredNames=['None','SystemRequired','ApplicationRequired','Recommended'];
+export const requiredLevelName=value=>Number.isInteger(value)?requiredNames[value]||'Unknown':requiredNames.includes(value)?value:'Unknown';
 const metaType=actual=>{const annotated=String(actual?.['@odata.type']||'').split('.').at(-1);if(annotated.endsWith('AttributeMetadata'))return annotated;const named=actual?.AttributeTypeName?.Value;if(typeof named==='string'&&/^(String|Memo|Integer|DateTime|Boolean|Picklist|Decimal|File|Lookup)Type$/.test(named))return named.slice(0,-4)+'AttributeMetadata';return /^(String|Memo|Integer|DateTime|Boolean|Picklist|Decimal|Lookup)$/.test(actual?.AttributeType||'')?actual.AttributeType+'AttributeMetadata':'';};
 const choiceByName=new Map(dataverseChoiceDefinitions.map(definition=>[definition.name,definition]));
-const conflict=difference=>({status:'conflict',verified:false,difference});
+const conflict=(difference,details)=>({status:'conflict',verified:false,difference,...(details?{details}:{})});
+const requiredDetails=(actual,column)=>({column:column.logical_name,expectedRequired:required(column),actualRequired:requiredLevelName(actual?.RequiredLevel?.Value)});
 const sameKey=(left,right)=>Array.isArray(left)&&left.length===right.length&&[...left].sort().join(',')===[...right].sort().join(',');
 export function compareTable(actual,table){
  if(!actual||actual.LogicalName!==table.logical_name||!guid(actual.MetadataId)||!identifier(actual.PrimaryIdAttribute)||!identifier(actual.PrimaryNameAttribute)||actual.IsManaged===true)return'TABLE_STRUCTURE';
@@ -17,7 +20,9 @@ export function compareTable(actual,table){
 export function compareAttribute(actual,column,expected,{primary=false}={}){
  if(!actual||actual.LogicalName!==column.logical_name||actual.IsManaged===true||metaType(actual)!==attributeKind(column)+'AttributeMetadata')return'COLUMN_TYPE';
  if(actual.SourceType!==undefined&&actual.SourceType!==null&&Number(actual.SourceType)!==0)return'COLUMN_CALCULATED';
- if(actual.RequiredLevel?.Value!==required(column))return'COLUMN_REQUIRED';
+ const actualRequired=requiredLevelName(actual.RequiredLevel?.Value),expectedRequired=required(column);
+ // A system-required PRIMARY name is stronger than business-required, not a schema defect.
+ if(actualRequired!==expectedRequired&&!(primary&&actual.IsPrimaryName===true&&expectedRequired==='ApplicationRequired'&&actualRequired==='SystemRequired'))return'COLUMN_REQUIRED';
  if(primary&&actual.IsPrimaryName!==true)return'COLUMN_PRIMARY';
  const kind=attributeKind(column);
  if(['String','Memo'].includes(kind)&&actual.MaxLength!==expected.MaxLength)return'COLUMN_LENGTH';
@@ -49,6 +54,28 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
   if(metaType(base)!==attributeKind(column)+'AttributeMetadata')return base;
   const expanded=await get(path+'/Microsoft.Dynamics.CRM.'+attributeKind(column)+'AttributeMetadata'+(column.choice?'?$expand=GlobalOptionSet($select=Name,MetadataId)':''),ctx);return expanded?{...expanded,'@odata.type':expanded['@odata.type']||base['@odata.type'],AttributeTypeName:expanded.AttributeTypeName||base.AttributeTypeName,AttributeType:expanded.AttributeType||base.AttributeType}:null;
  }
+ async function normalizePrimaryDefaults(table,entityMetadata,column,actual,ctx){
+  // Only the witnessed Dataverse-created default: genuine primary text, optional, 850 chars.
+  // Other mismatches and all populated/protected tables remain untouched.
+  if(table.existing||column.logical_name!=='esmojo_naam'||actual?.MaxLength!==850||requiredLevelName(actual?.RequiredLevel?.Value)!=='None'||!guid(actual?.MetadataId))return{actual,normalized:false};
+  const defaultColumn={...column,required:'Nee'},defaultPayload={...compileAttribute(defaultColumn,ctx.language,{primary:true}),MaxLength:850};
+  if(compareAttribute(actual,defaultColumn,defaultPayload,{primary:true}))return{actual,normalized:false};
+  if(!identifier(entityMetadata.EntitySetName))throw Error('TABLE_PRIMARY_UNCONFIRMED');
+  const sample=await get(entityMetadata.EntitySetName+'?'+new URLSearchParams({'$select':entityMetadata.PrimaryIdAttribute,'$top':'1'}),ctx);
+  if(!sample||!Array.isArray(sample.value)||sample.value.length>1)throw Error('TABLE_PRIMARY_UNCONFIRMED');
+  if(sample.value.length)return{actual,normalized:false,blocked:true};
+  if(sample['@odata.nextLink'])throw Error('TABLE_PRIMARY_UNCONFIRMED');
+  // Metadata updates require PUT of the entire current definition, preserving all other settings/labels.
+  const payload=Object.fromEntries(Object.entries(actual).filter(([key])=>!key.startsWith('@odata.')||key==='@odata.type'));
+  for(const name of ['DisplayName','Description'])if(payload[name]){payload[name]={...payload[name]};delete payload[name].UserLocalizedLabel;}
+  payload.MaxLength=compileAttribute(column,ctx.language,{primary:true}).MaxLength;
+  payload.RequiredLevel={...actual.RequiredLevel,Value:required(column)};
+  const response=await call(entityPath(table)+"/Attributes(LogicalName='esmojo_naam')",{...ctx.headers,'MSCRM.SolutionUniqueName':ctx.solution,'MSCRM.MergeLabels':'true'},{method:'PUT',body:payload,code:'TABLE_PRIMARY_UNCONFIRMED'});
+  if(!response.ok)throw Error('TABLE_PRIMARY_UNCONFIRMED');
+  await publish(table,ctx);
+  const confirmed=await attribute(table,column,ctx);if(compareAttribute(confirmed,column,compileAttribute(column,ctx.language,{primary:true}),{primary:true}))throw Error('TABLE_PRIMARY_UNCONFIRMED');
+  return{actual:confirmed,normalized:true};
+ }
  async function relationship(table,column,ctx){return get("RelationshipDefinitions(SchemaName='"+column.relationship_schema+"')/Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",ctx);}
  async function verifyColumn(table,column,ctx){
   const choice=column.choice?await globalChoice('esmojo_keuze_'+column.choice,ctx):null;if(column.choice&&!choice)return'GLOBAL_CHOICE';
@@ -70,8 +97,16 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
    let actual=await entity(table,ctx);
    if(!actual){if(table.existing)return conflict('EXISTING_RESEARCH_MISSING');created=await post('EntityDefinitions',compileEntity(table,ctx.language),ctx);actual=await entity(table,ctx);if(!actual)throw Error('TABLE_CREATE_UNCONFIRMED');}
    const difference=compareTable(actual,table);if(difference)return conflict(difference);
-   if(!table.existing){const primary=table.columns.find(column=>column.logical_name==='esmojo_naam'),column=await attribute(table,primary,ctx),difference=compareAttribute(column,primary,compileAttribute(primary,ctx.language,{primary:true}),{primary:true});if(difference)return conflict(difference);}
-   await includeInSolution(actual,ctx,1);return{status:'verified',verified:true,created};
+   let normalizedPrimary=false;
+   if(!table.existing){
+    const primary=table.columns.find(column=>column.logical_name==='esmojo_naam');let column=await attribute(table,primary,ctx);
+    if(compareAttribute(column,primary,compileAttribute(primary,ctx.language,{primary:true}),{primary:true})){
+     const normalized=await normalizePrimaryDefaults(table,actual,primary,column,ctx);column=normalized.actual;normalizedPrimary=normalized.normalized;
+     if(normalized.blocked)return conflict('PRIMARY_HAS_RECORDS',requiredDetails(column,primary));
+    }
+    const difference=compareAttribute(column,primary,compileAttribute(primary,ctx.language,{primary:true}),{primary:true});if(difference)return conflict(difference,difference==='COLUMN_REQUIRED'?requiredDetails(column,primary):{column:primary.logical_name});
+   }
+   await includeInSolution(actual,ctx,1);return{status:'verified',verified:true,created,normalizedPrimary};
   }
   await validatedEntity(table,ctx);
   if(step.kind==='column'){
@@ -79,7 +114,7 @@ export function createDataverseTables({env=process.env,request=fetch,now=Date.no
    const choice=column.choice?await globalChoice('esmojo_keuze_'+column.choice,ctx):null;if(column.choice&&!choice)return conflict('GLOBAL_CHOICE');
    const expected=compileAttribute(column,ctx.language,{choiceId:choice?.MetadataId});let actual=await attribute(table,column,ctx);
    if(!actual){created=await post(entityPath(table)+'/Attributes',expected,ctx);actual=await attribute(table,column,ctx);if(!actual)throw Error('TABLE_CREATE_UNCONFIRMED');}
-   const difference=compareAttribute(actual,column,expected);if(difference)return conflict(difference);if(!guid(actual.MetadataId))throw Error('TABLE_RESPONSE');
+   const difference=compareAttribute(actual,column,expected);if(difference)return conflict(difference,difference==='COLUMN_REQUIRED'?requiredDetails(actual,column):{column:column.logical_name});if(!guid(actual.MetadataId))throw Error('TABLE_RESPONSE');
    await includeInSolution(actual,ctx,2);return{status:'verified',verified:true,created};
   }
   if(step.kind==='relationship'){

@@ -1,3 +1,19 @@
+## Gerichte correctie primaire Naam-standaard (12 november 2026)
+
+Gebruiker meldt COLUMN_REQUIRED bij Artiest en toont Naam als Optioneel,
+850 tekens. De setup mag deze herkenbare standaard bij een lege nieuwe schematabel
+normaliseren naar het overeengekomen Bedrijfsvereist/200. Alleen esmojo_naam,
+IsPrimaryName=true, type String/Text, optioneel/850, organisatie-eigendom,
+onbeheerde tabel uit de vaste allowlist; nooit de bestaande onderzoekstabel.
+Bevestig leegte met $top=1/$select primaire ID uit de echte EntitySetName; geen
+recordinhoud naar browser/log. Bij aanwezige records of andere afwijkingen stoppen.
+Uitzondering op oude no-PUT-regel: alleen deze volledige actuele kolommetadata via
+PUT, met uitsluitend MaxLength/RequiredLevel.Value gewijzigd en labels behouden,
+gerichte publicatie en Strong-readback. Geen andere metadatareparaties of datawrites.
+Systeemvereist mag voor een echte primaire naam als sterkere verplichting worden
+geaccepteerd. Gewone kolommen blijven exact gecontroleerd. Veilige enumdiagnostiek
+bij mismatch; Consistency: Strong voor setup-reads tegen verouderde metadatacache.
+
 ## Geautoriseerde tabelsetup (12 november 2026)
 
 Na geslaagde setup van 24 globale keuzelijsten autoriseert gebruiker dezelfde

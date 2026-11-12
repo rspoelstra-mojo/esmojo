@@ -1,10 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createDataverseTables} from './dataverse-tables.js';
+import {createDataverseTables,compareAttribute,requiredLevelName} from './dataverse-tables.js';
 import {setupTables,tableSetupSteps,tableByName,compileAttribute,compileEntity,compileRelationship} from './dataverse-table-schema.js';
 import {dataverseChoiceDefinitions} from './dataverse-choice-definitions.js';
 const env={DATAVERSE_TEST_TENANT_ID:'11111111-1111-4111-8111-111111111111',DATAVERSE_TEST_CLIENT_ID:'22222222-2222-4222-8222-222222222222',DATAVERSE_TEST_CLIENT_SECRET:'synthetic-secret',DATAVERSE_TEST_URL:'https://org5bab852a.crm.dynamics.com'};
-function fixture({pendingKeys=false,intercept=null}={}){
+function fixture({pendingKeys=false,intercept=null,primaryRequired='ApplicationRequired',primaryMaxLength=200}={}){
  let sequence=0;const nextId=()=>`44444444-4444-4444-8444-${String(++sequence).padStart(12,'0')}`;
  const entities=new Map(),relationships=new Map(),components=new Set(),calls=[],choices=new Map(dataverseChoiceDefinitions.map(d=>[d.name,{Name:d.name,MetadataId:nextId(),IsGlobal:true,IsManaged:false,OptionSetType:'Picklist',Options:d.options.map(o=>({Value:o.value,Label:{LocalizedLabels:[{Label:o.label,LanguageCode:1043}]}}))}]));
  const attribute=(body,extra={})=>{
@@ -14,16 +14,17 @@ function fixture({pendingKeys=false,intercept=null}={}){
   if(body['GlobalOptionSet@odata.bind']){const id=/\(([a-f0-9-]+)\)/.exec(body['GlobalOptionSet@odata.bind'])[1],choice=[...choices.values()].find(row=>row.MetadataId===id);assert.ok(choice);row.GlobalOptionSet={Name:choice.Name,MetadataId:id};}
   return row;
  };
- const seed=table=>{const body=compileEntity(table,1043);const primary=attribute(body.Attributes[0]);const result={meta:{MetadataId:nextId(),LogicalName:table.logical_name,PrimaryIdAttribute:table.logical_name+'id',PrimaryNameAttribute:'esmojo_naam',OwnershipType:'OrganizationOwned',IsManaged:false,IsActivity:false,HasNotes:false},attributes:new Map([['esmojo_naam',primary]]),keys:[]};entities.set(table.logical_name,result);return result;};
+ const seed=table=>{const body=compileEntity(table,1043);const primary=attribute(body.Attributes[0]);primary.RequiredLevel.Value=primaryRequired;primary.MaxLength=primaryMaxLength;const result={meta:{MetadataId:nextId(),LogicalName:table.logical_name,PrimaryIdAttribute:table.logical_name+'id',EntitySetName:table.logical_name+'_native_collection',PrimaryNameAttribute:'esmojo_naam',OwnershipType:'OrganizationOwned',IsManaged:false,IsActivity:false,HasNotes:false},attributes:new Map([['esmojo_naam',primary]]),keys:[]};entities.set(table.logical_name,result);return result;};
  const legacy=setupTables.find(t=>t.existing),research={meta:{MetadataId:nextId(),LogicalName:legacy.logical_name,PrimaryIdAttribute:legacy.logical_name+'id',PrimaryNameAttribute:'esmojo_originaltitle',OwnershipType:'UserOwned',IsManaged:false,HasNotes:true},attributes:new Map([['esmojo_markdowninhoud',{LogicalName:'esmojo_markdowninhoud',MaxLength:1048576,existing:'do not change'}]]),keys:[{MetadataId:nextId(),SchemaName:'existing_source_key',KeyAttributes:['esmojo_bronbibliotheekid','esmojo_bronbestanditemnummer','esmojo_bronversie'],EntityKeyIndexStatus:'Active'}]};entities.set(legacy.logical_name,research);
  const create=createDataverseTables({env,request:async(url,options)=>{
-  calls.push({url,options});assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');
+  calls.push({url,options});assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');if(options.method==='GET')assert.equal(options.headers.Consistency,'Strong');
   const override=await intercept?.(url,options,{entities,choices,seed,attribute,nextId});if(override)return override;
   if(url.includes('/oauth2/'))return Response.json({token_type:'Bearer',access_token:'synthetic-token',expires_in:3600});
   assert.equal(options.headers.Authorization,'Bearer synthetic-token');const u=new URL(url),path=decodeURIComponent(u.pathname.split('/api/data/v9.2/')[1]||'');assert.ok(path);
   if(path==='solutions')return Response.json({value:[{uniquename:'ESMOJO',solutionid:'33333333-3333-4333-8333-333333333333',ismanaged:false,publisherid:{customizationprefix:'esmojo'}}]});
   if(path==='organizations')return Response.json({value:[{languagecode:1043}]});
   if(path.startsWith('GlobalOptionSetDefinitions('))return choices.has(/Name='([^']+)'/.exec(path)[1])?Response.json(choices.get(/Name='([^']+)'/.exec(path)[1])):new Response(null,{status:404});
+  if(path.endsWith('_native_collection')){assert.equal(options.method,'GET');assert.equal(u.searchParams.get('$top'),'1');assert.ok(u.searchParams.get('$select'));return Response.json({value:[]});}
   if(path==='solutioncomponents'){const filter=u.searchParams.get('$filter'),id=/objectid eq ([a-f0-9-]+)/.exec(filter)[1],type=/componenttype eq (\d+)/.exec(filter)[1];return Response.json({value:components.has(type+':'+id)?[{objectid:id}]:[]});}
   if(path==='AddSolutionComponent'){const body=JSON.parse(options.body);assert.equal(body.SolutionUniqueName,'ESMOJO');assert.ok([1,2,10,14].includes(body.ComponentType));components.add(body.ComponentType+':'+body.ComponentId);return Response.json({});}
   if(path==='PublishXml'){assert.match(JSON.parse(options.body).ParameterXml,/^<importexportxml><entities><entity>esmojo_[a-z]+<\/entity><\/entities><\/importexportxml>$/);return new Response(null,{status:204});}
@@ -42,6 +43,7 @@ function fixture({pendingKeys=false,intercept=null}={}){
    if(path.endsWith('/Attributes')&&options.method==='POST'){
     assert.notEqual(name,legacy.logical_name);const body=JSON.parse(options.body);assert.notEqual(body.IsPrimaryName,true);if(entry.attributes.has(body.SchemaName))return new Response(null,{status:409});entry.attributes.set(body.SchemaName,attribute(body));return new Response(null,{status:204});
    }
+   if(path.includes('/Attributes(')&&options.method==='PUT'){const body=JSON.parse(options.body);assert.equal(body.LogicalName,'esmojo_naam');assert.equal(body.MaxLength,200);assert.equal(body.RequiredLevel.Value,'ApplicationRequired');assert.equal(options.headers['MSCRM.MergeLabels'],'true');const previous=entry.attributes.get('esmojo_naam');assert.equal(previous.MaxLength,850);assert.equal(previous.RequiredLevel.Value,'None');entry.attributes.set('esmojo_naam',structuredClone(body));return new Response(null,{status:204});}
    if(path.includes('/Attributes(')){const column=/Attributes\(LogicalName='([^']+)'/.exec(path)[1],row=entry.attributes.get(column);if(!row)return new Response(null,{status:404});const copy=structuredClone(row);if(path.includes('/Microsoft.Dynamics.CRM.'))delete copy['@odata.type'];return Response.json(copy);}
    if(path.endsWith('/Keys')){
     if(options.method==='POST'){assert.notEqual(name,legacy.logical_name);const body=JSON.parse(options.body);assert.equal(body['@odata.type'],'Microsoft.Dynamics.CRM.EntityKeyMetadata');for(const field of body.KeyAttributes)assert.ok(entry.attributes.has(field),name+':'+field);entry.keys.push({...body,MetadataId:nextId(),IsManaged:false,EntityKeyIndexStatus:pendingKeys?'Pending':'Active',polls:0});return new Response(null,{status:204});}
@@ -110,4 +112,36 @@ test('wrong cascade and key columns are detected, never repaired destructively',
  const rel=step('relationship','esmojo_artiest','esmojo_gewijzigddoor'),definition=tableByName.get(rel.table).columns.find(c=>c.logical_name===rel.column);
  f.relationships.get(definition.relationship_schema).CascadeConfiguration.Delete='Cascade';assert.equal((await f.service({operation:'apply',stepId:rel.id})).status,'conflict');
  const key=step('key','esmojo_artiest');f.entities.get(key.table).keys[0].KeyAttributes=['wrong'];assert.equal((await f.service({operation:'apply',stepId:key.id})).status,'conflict');assert.ok(f.calls.every(row=>row.options.method==='GET'));
+});
+
+
+test('Dataverse system-required primary names satisfy the complete schema without repairs',async()=>{
+ const f=fixture({primaryRequired:'SystemRequired'});for(const s of tableSetupSteps)assert.equal((await f.service({operation:'apply',stepId:s.id})).status,'verified',s.id);
+ assert.ok(!f.calls.some(row=>['PATCH','PUT','DELETE'].includes(row.options.method)));
+});
+test('stronger requirement is accepted only for a genuine primary name; optional remains a clear conflict',async()=>{
+ const table=tableByName.get('esmojo_artiest'),column=table.columns.find(c=>c.logical_name==='esmojo_naam'),expected=compileAttribute(column,1043,{primary:true});
+ for(const value of ['SystemRequired',1,'ApplicationRequired',2]){
+  const actual={...expected,LogicalName:column.logical_name,IsManaged:false,IsPrimaryName:true,RequiredLevel:{Value:value}};
+  assert.equal(compareAttribute(actual,column,expected,{primary:true}),null);
+  if(value==='SystemRequired'||value===1){assert.equal(compareAttribute({...actual,IsPrimaryName:false},column,expected,{primary:true}),'COLUMN_REQUIRED');assert.equal(compareAttribute(actual,column,expected),'COLUMN_REQUIRED');}
+ }
+ const f=fixture({primaryRequired:'None'});f.seed(table);const result=await f.service({operation:'apply',stepId:step('table',table.logical_name).id});
+ assert.equal(result.status,'conflict');assert.deepEqual(result.details,{column:'esmojo_naam',expectedRequired:'ApplicationRequired',actualRequired:'None'});assert.ok(f.calls.filter(c=>!c.url.includes('oauth2')).every(c=>c.options.method==='GET'));
+ assert.equal(requiredLevelName(0),'None');assert.equal(requiredLevelName('provider-private-data'),'Unknown');
+});
+
+test('witnessed optional/850 primary defaults are corrected only on empty new tables; retry is idempotent',async()=>{
+ const f=fixture({primaryRequired:'None',primaryMaxLength:850}),target=tableByName.get('esmojo_artiest'),entry=f.seed(target),before=structuredClone(entry.attributes.get('esmojo_naam'));
+ before.DisplayName.LocalizedLabels.push({Label:'Name',LanguageCode:1033});before.ImeMode='Auto';entry.attributes.set('esmojo_naam',before);
+ const s=step('table',target.logical_name),result=await f.service({operation:'apply',stepId:s.id});assert.equal(result.verified,true);assert.equal(result.normalizedPrimary,true);
+ const after=entry.attributes.get('esmojo_naam');assert.equal(after.MaxLength,200);assert.equal(after.RequiredLevel.Value,'ApplicationRequired');assert.deepEqual(after.DisplayName,before.DisplayName);assert.equal(after.ImeMode,'Auto');
+ assert.equal((await f.service({operation:'apply',stepId:s.id})).normalizedPrimary,false);assert.equal(f.calls.filter(call=>call.options.method==='PUT').length,1);
+ const writes=f.calls.filter(call=>call.options.method==='PUT');assert.ok(writes.every(call=>call.url.endsWith("/Attributes(LogicalName='esmojo_naam')")));
+});
+test('all platform-default primary names are normalized, while research and populated tables remain protected',async()=>{
+ const f=fixture({primaryRequired:'None',primaryMaxLength:850});for(const s of tableSetupSteps)assert.equal((await f.service({operation:'apply',stepId:s.id})).status,'verified',s.id);
+ assert.equal(f.calls.filter(call=>call.options.method==='PUT').length,29);assert.ok(!f.calls.some(call=>call.options.method==='PUT'&&call.url.includes('esmojo_onderzoeksresultaat')));
+ const populated=fixture({primaryRequired:'None',primaryMaxLength:850,intercept:url=>url.includes('_native_collection?')?Response.json({value:[{id:'private-not-returned'}]}):null});populated.seed(tableByName.get('esmojo_artiest'));
+ const result=await populated.service({operation:'apply',stepId:step('table','esmojo_artiest').id});assert.equal(result.status,'conflict');assert.equal(result.difference,'PRIMARY_HAS_RECORDS');assert.doesNotMatch(JSON.stringify(result),/private-not-returned/);assert.ok(!populated.calls.some(call=>call.options.method==='PUT'));
 });

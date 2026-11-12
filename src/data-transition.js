@@ -69,10 +69,10 @@ export function createDataTransitionView(content,{request=access,setupDelay=ms=>
    let line=lines.get(step.id);if(!line){line=el('p',step.title+' · Bezig…');lines.set(step.id,line);results.append(line);}
    let result;try{result=await request('dataverse-tables',{method:'POST',body:{operation:'apply',stepId:step.id}});}catch(error){if(!disposed)line.textContent=step.title+' · Niet bevestigd; start opnieuw om te controleren en te hervatten.';throw error;}
    if(disposed)return null;if(result.created)createdSteps.add(step.id);
-   if(result.status==='conflict'){line.textContent=step.title+' · Afwijking ('+result.difference+'); niet aangepast.';throw Error('Setup gestopt bij '+step.title+'. Los de gemelde schema-afwijking op en start daarna opnieuw. Er zijn geen bestaande definities overschreven.');}
+   if(result.status==='conflict'){const details=result.details;const requiredLabels={None:'Optioneel',SystemRequired:'Systeemvereist',ApplicationRequired:'Bedrijfsvereist',Recommended:'Aanbevolen',Unknown:'Onbekend'};const explanation=details?.expectedRequired?` Kolom ${details.column}: verwacht ${requiredLabels[details.expectedRequired]||'Onbekend'}, ontvangen ${requiredLabels[details.actualRequired]||'Onbekend'}.`:details?.column?' Kolom '+details.column+'.':'';line.textContent=step.title+' · Afwijking ('+result.difference+'); niet aangepast.'+explanation;throw Error('Setup gestopt bij '+step.title+'. Los de gemelde schema-afwijking op en start daarna opnieuw. Er zijn geen bestaande definities overschreven.');}
    if(result.status==='pending'&&result.reason==='KEY_INDEX_PENDING'){line.textContent=step.title+' · Sleutelindex wordt door Dataverse opgebouwd…';return false;}
    if(result.status!=='verified'||result.verified!==true)throw Error('Deze setupstap is nog niet bevestigd. Start opnieuw om veilig te hervatten.');
-   line.textContent=step.title+' · Gecontroleerd'+(createdSteps.has(step.id)?' (nieuw)':'');return true;
+   line.textContent=step.title+' · Gecontroleerd'+(result.normalizedPrimary?' (standaard Naam gecorrigeerd)':createdSteps.has(step.id)?' (nieuw)':'');return true;
   };
   for(const [index,step] of plan.steps.entries()){const done=await apply(step,index);if(disposed)return;if(done)verified++;else pending.push({step,index});}
   const until=Date.now()+180000;

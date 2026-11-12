@@ -4,7 +4,7 @@ const origin='https://org5bab852a.crm.dynamics.com',base=origin+'/api/data/v9.2/
 export function createDataverseSetupConnection({env=process.env,request=fetch,now=Date.now}={}){
  let context=null,pending=null;
  async function call(path,headers,{method='GET',body,code='CHOICE_READ'}={}){
-  let response;try{response=await request(base+path,{method,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000),headers:{...headers,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});}catch{throw Error(code);}
+  let response;try{response=await request(base+path,{method,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000),headers:{...headers,...(method==='GET'?{Consistency:'Strong'}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});}catch{throw Error(code);}
   if(response.status===401){context=null;throw Error('CHOICE_AUTH');}
   if(response.status===403)throw Error('CHOICE_FORBIDDEN');
   return response;

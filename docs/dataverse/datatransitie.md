@@ -75,6 +75,27 @@ API-vormen gecontroleerd tegen Microsofts documentatie:
 [asynchrone sleutels](https://learn.microsoft.com/power-apps/developer/data-platform/define-alternate-keys-entity).
 Lokale native-API-simulaties bewijzen niet dat de live setup al is uitgevoerd.
 
+### Primaire naamkolom: standaardinstelling herstellen
+
+Bij Artiest is de werkelijke primaire kolom Naam aangetroffen als Optioneel met
+850 tekens. Dat wijkt af van het overeengekomen Bedrijfsvereist/200. Alleen bij
+een lege, onbeheerde nieuwe tabel met precies deze standaardconfiguratie mag de
+setup dit corrigeren. De leegtecontrole gebruikt de echte EntitySetName en leest
+maximaal één primaire ID; geen recordinhoud wordt geretourneerd of gelogd.
+
+De server haalt de gehele actuele String-kolommetadata op, behoudt de andere
+instellingen en labels en wijzigt alleen MaxLength en RequiredLevel.Value via
+PUT (zoals Microsoft vereist voor kolommetadata). Daarna volgt gerichte publicatie
+en terugleescontrole. Dit is de enige automatische correctie van bestaande
+instellingen. Andere afwijkingen, de onderzoekstabel en niet-lege tabellen worden
+niet aangepast. Bij niet-lege tabellen meldt de setup PRIMARY_HAS_RECORDS.
+
+Een systeemvereiste primaire naam voldoet ook aan de gewenste verplichte invoer;
+die strengere eis wordt niet teruggezet. Gewone kolommen blijven exact getoetst.
+Metadata-reads gebruiken Consistency: Strong om verouderde definities direct na
+een wijziging te voorkomen. Foutmeldingen tonen bij een verplichtingsverschil
+alleen de veilige kolomnaam en verwachte/werkelijke enumwaarde.
+
 ## Alles in één keer
 
 Klik **Alle AI-analyses overzetten**. Geen voorafgaande showselectie nodig.

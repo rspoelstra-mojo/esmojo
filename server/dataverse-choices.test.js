@@ -9,7 +9,7 @@ const metadata=(definition,language=1043)=>({Name:definition.name,MetadataId:'44
 function fixture({stored=[],language=1043,prefix='esmojo',managedSolution=false,intercept=null}={}){
  const calls=[],store=new Map(stored.map(row=>[row.Name,row])),members=new Set();let publishes=0;
  const service=createDataverseChoices({env,request:async(url,options)=>{
-  calls.push({url,options});assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');
+  calls.push({url,options});assert.equal(options.redirect,'error');assert.equal(options.cache,'no-store');if(options.method==='GET')assert.equal(options.headers.Consistency,'Strong');
   const overridden=await intercept?.(url,options,{store,members});if(overridden)return overridden;
   if(url.includes('/oauth2/'))return Response.json({token_type:'Bearer',access_token:'synthetic-token',expires_in:3600});
   assert.equal(options.headers.Authorization,'Bearer synthetic-token');const path=new URL(url).pathname.split('/api/data/v9.2/')[1];assert.ok(path);
