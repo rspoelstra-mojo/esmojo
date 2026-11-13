@@ -47,7 +47,7 @@ test('48 hour delegation is absolute and live legacy checkpoints extend without 
  const f=fixture(),engine=f.build();await engine.control(command(),'admin');let row=await f.store.get('example-task');const started=row.state.startedAt;
  assert.equal(row.state.expiresAt,started+48*3600000);
  // Simuleer de al lopende, versleuteld bewaarde 24-uursversie.
- await f.store.save(row,{...row.state,expiresAt:started+24*3600000+2,cursor:'1'});
+ await f.store.save(row,{...row.state,authorizationVersion:undefined,expiresAt:started+24*3600000+2,cursor:'1'});
  f.advance(25*3600000);await engine.run({maxSteps:1});row=await f.store.get('example-task');
  assert.equal(row.state.cursor,'2');assert.equal(row.state.expiresAt,started+48*3600000);assert.equal(row.state.startedAt,started);
  f.advance(3600000);await engine.run({maxSteps:1});row=await f.store.get('example-task');assert.equal(row.state.expiresAt,started+48*3600000);
@@ -58,7 +58,18 @@ test('legacy extension cannot revive revoked access or execute after 48 hours',a
   // Alleen de teststore legt een bestaande taak vast; echte start vereist rechten.
   if(revoked){f.registry['example-task'].version=1;const allowed=createBackgroundTasks({store:f.store,registry:f.registry,authorize:async()=>true,now:()=>1000000});await allowed.control(command(),'admin');}
   else await engine.control(command(),'admin');
-  const row=await f.store.get('example-task');await f.store.save(row,{...row.state,expiresAt:row.state.startedAt+24*3600000});f.advance((revoked?25:49)*3600000);await engine.run();
+  const row=await f.store.get('example-task');await f.store.save(row,{...row.state,authorizationVersion:undefined,expiresAt:row.state.startedAt+24*3600000});f.advance((revoked?25:49)*3600000);await engine.run();
   assert.equal(calls,0);assert.equal(f.store.rows.get('example-task').state.public.code,revoked?'TASK_ACCESS_REVOKED':'TASK_EXPIRED');
  }
+});
+
+test('inherited validation delegation is never enlarged by legacy compatibility',async()=>{
+ const f=fixture(),engine=f.build();await engine.control(command(),'admin',{authorizationExpiresAt:1000000+24*3600000});
+ await engine.run({maxSteps:1});const row=await f.store.get('example-task');assert.equal(row.state.expiresAt,1000000+24*3600000);assert.equal(row.state.authorizationVersion,2);
+});
+
+test('validation-only worker cannot execute an unrelated ready migration',async()=>{
+ const store=memoryStore(),calls=[],registry=Object.fromEntries(['migration','validation'].map(type=>[type,{title:type,module:'shows',version:1,idempotent:true,step:async()=>{calls.push(type);return{status:'complete'};}}]));
+ const engine=createBackgroundTasks({store,registry,authorize:async()=>true,now:()=>1000000});for(const type of Object.keys(registry))await engine.control({operation:'start',type},'admin');
+ await engine.run({types:['validation']});assert.deepEqual(calls,['validation']);assert.equal((await store.get('migration')).state.status,'ready');
 });

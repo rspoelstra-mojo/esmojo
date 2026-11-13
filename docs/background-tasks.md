@@ -149,3 +149,15 @@ Dezelfde opslag, worker, autorisatie, statusweergave en retry worden hergebruikt
 Test per adapter de echte mapping en rechten, herhaling na verloren antwoorden,
 conflictstop en bronbehoud. Test nieuwe externe bijwerkingen afzonderlijk; voeg
 bijvoorbeeld geen e-mailverzending toe als impliciet onderdeel van een datataak.
+
+## Eindvalidatie Shows (13 november 2026)
+
+`shows-validation.yml` en `/api/shows-validation-sync` vergelijken na expliciete
+opdracht de bestaande kopie opnieuw met de huidige bron. Alleen een voltooide
+migratie met nog geldige delegatie is toegestaan; actuele beheerders-/Showsrechten
+blijven per stap vereist. De worker voert uitsluitend `shows-validation-v1` uit.
+Opdracht-checkpoints delen de bestaande encryptie/sloten; geen bedrijfsdatawrites.
+Ontbrekende records, bestanden of onderzoeksrelaties worden niet gerepareerd.
+Schema/veldwaarden/relaties en bestandsblokken moeten opnieuw overeenkomen.
+Maximaal vier onafhankelijke metadata- en acht recordreads lopen tegelijk.
+Een geslaagde kopie/eindvalidatie schakelt op zichzelf geen runtimeprovider om.
