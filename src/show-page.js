@@ -29,6 +29,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
       const context=await lease.ready;
       const photoData=earlyPhoto||context.photo||null;
+      if(context.show)show={...show,...context.show,key:show.key};
       if(disposed)return;
       data=context;if(photoData)lease.view.photo=photoData;const requestAccess=data.request;
       const page=document.createElement('section');page.className='show-page';

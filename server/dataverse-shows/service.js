@@ -31,7 +31,7 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
   if(!operations.has(operation))throw Error('VALIDATION');
   if(operation==='show-open'&&state.loadOpening){
    const fast=await state.loadOpening(payload.concertId);
-   if(fast)try{const output=execute(fast.source,operation,{...payload,concertId:fast.concert.esmojo_oudconcertid},new Map());if(!output.changed)return{...output.result,...photoFor(fast.source)};}catch(error){if(error.message!=='DOCUMENT_BYTES_REQUIRED')throw error;}
+   if(fast)try{const output=execute(fast.source,operation,{...payload,concertId:fast.concert.esmojo_oudconcertid},new Map());if(!output.changed)return{...output.result,...photoFor(fast.source),show:metadataFor(fast.source,payload.concertId)};}catch(error){if(error.message!=='DOCUMENT_BYTES_REQUIRED')throw error;}
   }
   if(trustedProfile&&!readOnly(operation))await state.syncActor(trustedProfile);
   const loaded=await state.load(payload.concertId),command=digest(JSON.stringify({operation,payload,...(operation==='show-open'?{generation:loaded.source.nativeGeneration||0}:{})}));
@@ -43,7 +43,7 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
    catch(error){if(error.message!=='DOCUMENT_BYTES_REQUIRED'||binary.has(error.fileId))throw error;const file=loaded.source.files.find(file=>file.fileId===error.fileId);if(!file)throw Error('ATTACHMENT_INVALID');const downloaded=await state.repo.downloadDocument(file.key,{seriesId:loaded.seriesId});binary.set(file.fileId,downloaded.bytes);}
   }
   if(!output)throw Error('REPORT_UNAVAILABLE');
-  if(!output.changed){if(operation==='show-open'&&!diagnostic&&state.cacheOpening)try{await state.cacheOpening(loaded,verified);}catch{/* A failed derived cache never replaces authoritative native reads. */}return operation==='show-open'?{...output.result,...photoFor(loaded.source)}:output.result;}
+  if(!output.changed){if(operation==='show-open'&&!diagnostic&&state.cacheOpening)try{await state.cacheOpening(loaded,verified);}catch{/* A failed derived cache never replaces authoritative native reads. */}return operation==='show-open'?{...output.result,...photoFor(loaded.source),show:metadataFor(loaded.source,payload.concertId)}:output.result;}
   if(diagnostic)throw Error('READ_REQUIRES_WRITE');
   if(operation==='show-open'&&trustedProfile)await state.syncActor(trustedProfile);
   const next={...loaded.source,documents:output.documents,files:[...loaded.source.files]},references=documentReferences(output.documents);
@@ -58,3 +58,5 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
 }
 
 function photoFor(source){const imageUrl=source.photo?.imageUrl,sourceUrl=source.shows.find(row=>row.concertId===source.concertId)?.sourceUrl||source.shows[0]?.sourceUrl;const photo=publicShowPhoto({imageUrl,sourceUrl});return photo?{photo}:{};}
+
+function metadataFor(source,key){const first=source.shows.find(row=>row.concertId===source.concertId)||source.shows[0];return{key,name:first.artist,dates:[...new Set(source.shows.map(row=>row.date))].sort(),venue:first.venue,city:first.city||'',sourceUrl:first.sourceUrl||null};}

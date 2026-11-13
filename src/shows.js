@@ -1,4 +1,4 @@
-import {prefetchShow} from './show-memory.js';
+import {prefetchShow,showMemory} from './show-memory.js';
 import { access } from './auth.js';
 import { loadShowPhoto } from './show-photo.js';
 import { createShowPage, formatShowDates } from './show-page.js';
@@ -57,7 +57,8 @@ export function createShowsSubmenu(navigation, selected = '', content = null) {
         resolving=true;content.setAttribute('aria-busy','true');
         metadataLoading=createSubmenuLoading(document.querySelector('#submenu-title'),content);
         const finish=metadataLoading.start();
-        void access('home-metadata',{method:'POST',body:{concertId:selected}}).then(data=>{if(disposed||pageKey!==null)return;direct=data.show;finish();render(catalogue.current());}).catch(()=>{if(disposed||pageKey!==null)return;const message=document.createElement('p');message.textContent='Deze show kon niet worden geladen.';message.setAttribute('role','alert');const retry=document.createElement('button');retry.type='button';retry.className='secondary-button';retry.textContent='Opnieuw laden';retry.onclick=()=>{metadataLoading?.dispose();resolving=false;content.replaceChildren();render(catalogue.current());};content.replaceChildren(message,retry);}).finally(()=>{finish();if(!disposed&&pageKey===null)content.removeAttribute('aria-busy');});
+        const lease=showMemory.acquire(selected);
+        void lease.ready.then(async data=>data.show||((await access('home-metadata',{method:'POST',body:{concertId:selected}})).show)).then(show=>{if(disposed||pageKey!==null)return;direct={...show,key:selected};finish();render(catalogue.current());}).catch(()=>{if(disposed||pageKey!==null)return;const message=document.createElement('p');message.textContent='Deze show kon niet worden geladen.';message.setAttribute('role','alert');const retry=document.createElement('button');retry.type='button';retry.className='secondary-button';retry.textContent='Opnieuw laden';retry.onclick=()=>{metadataLoading?.dispose();resolving=false;content.replaceChildren();render(catalogue.current());};content.replaceChildren(message,retry);}).finally(()=>{lease.release();finish();if(!disposed&&pageKey===null)content.removeAttribute('aria-busy');});
       }
     }
   }

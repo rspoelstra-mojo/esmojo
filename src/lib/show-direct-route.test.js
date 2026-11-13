@@ -6,7 +6,7 @@ function setup(){
  let resolve,reject,notify,rows=[];const pending=new Promise((yes,no)=>{resolve=yes;reject=no;}),requests=[],opened=[];
  const catalogue={current:()=>rows,subscribe:fn=>{notify=fn;return()=>{};},refresh:async()=>{}};
  const heading=new Element();
- const ctx=vm.createContext({visibleMenu,dataversePilot,pilotShow,document:{createElement:tag=>Object.assign(new Element(),{tag}),querySelector:()=>heading},navigator:{},createShowMenuCache:()=>catalogue,seed:{},access:async(action,options)=>{requests.push({action,options});return pending;},createShowPage:(content,show)=>{opened.push(show);content.replaceChildren({show:show.key});content.setAttribute('aria-busy','true');return()=>{};}});
+ const ctx=vm.createContext({visibleMenu,dataversePilot,pilotShow,document:{createElement:tag=>Object.assign(new Element(),{tag}),querySelector:()=>heading},navigator:{},showMemory:{acquire:key=>{requests.push({action:'show-open',options:{method:'POST',body:{concertId:key}}});return{ready:pending,release(){}};}},createShowMenuCache:()=>catalogue,seed:{},access:async(action,options)=>{requests.push({action,options});return pending;},createShowPage:(content,show)=>{opened.push(show);content.replaceChildren({show:show.key});content.setAttribute('aria-busy','true');return()=>{};}});
  vm.runInContext(readFileSync('src/lib/submenu-loading.js','utf8').replaceAll('export ',''),ctx);
  const source=readFileSync('src/shows.js','utf8').replace(/^import .*;\n/gm,'').replaceAll('export ','');vm.runInContext(source,ctx);
  const content=new Element(),navigation=new Element(),show={key:'Verder_Gashouder_01022027',name:'Verder',dates:['2027-02-01'],venue:'Gashouder',city:'Amsterdam'};
@@ -15,7 +15,7 @@ function setup(){
 }
 const flush=()=>new Promise(done=>setImmediate(done));
 test('Directe show buiten het 90-dagenmenu opent de bestaande showcomponent; late reactie na verlaten doet niets',async()=>{
- const h=setup();assert.equal(h.requests[0].action,'home-metadata');assert.equal(h.heading.attributes['aria-busy'],'true');h.resolve({show:h.show});await flush();assert.equal(h.opened.length,1);assert.equal(h.heading.children.length,0);assert.equal(h.content.children[0].show,h.show.key);assert.equal(h.content.attributes['aria-busy'],'true','showcomponent beheert verdere laadstatus');h.dispose();
+ const h=setup();assert.equal(h.requests[0].action,'show-open');assert.equal(h.heading.attributes['aria-busy'],'true');h.resolve({show:h.show});await flush();assert.equal(h.opened.length,1);assert.equal(h.heading.children.length,0);assert.equal(h.content.children[0].show,h.show.key);assert.equal(h.content.attributes['aria-busy'],'true','showcomponent beheert verdere laadstatus');h.dispose();
  const late=setup();late.dispose();late.resolve({show:late.show});await flush();assert.equal(late.opened.length,0);
 });
 test('Laatst vernieuwde gewone menubron gaat voor; mislukte metadata mag een inmiddels geopende show niet vervangen',async()=>{
