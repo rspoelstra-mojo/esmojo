@@ -57,6 +57,14 @@ function esmojoAccounts_(input) {
       if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}
       let homeDashboard=null;
       if(request.includeHome===true&&actor.activated&&hasModule(actor,'shows')){try{homeDashboard=esmojoHomeDashboard_({operation:'home-dashboard',actor:actor.id},folder);}catch{/* Fout in de homepage blokkeert nooit aanmelden. */}}
+      // The show-opening route only needs fresh authorization and actor metadata.
+      // Keep the canonical register read/role checks above; do not send an unused
+      // base64 avatar or private email-test configuration on every show request.
+      if(request.authorizationOnly===true){
+        const result={};
+        for(const key of ['id','firstName','lastName','email','company','jobTitle','role','modules','activated','disabled'])if(Object.prototype.hasOwnProperty.call(actor,key))result[key]=actor[key];
+        return esmojoReply_({ok:true,data:result});
+      }
       const copy=state.emailTestCopy;
       const result=Object.assign({},actor,request.includeHome===true?{homeDashboard}:{},actor.id===superId&&isSuperAdministrator(actor)&&copy?.actor===actor.id&&typeof copy.address==='string'?{emailTestCopyTo:copy.address}:{});
       return esmojoReply_({ok:true,data:result});

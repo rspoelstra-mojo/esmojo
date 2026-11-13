@@ -90,7 +90,7 @@ export function createNativeCatalogue({state,now=()=>new Date()}={}){
   if(operation==='dataverse-ensure')return ensure(payload.show);
   if(operation==='sync')return sync(payload.snapshot);
   const data=await all();
-  if(operation==='list'){if(!data.clock)throw Error('DATAVERSE_SHOWS_NOT_INITIALIZED');return{concerts:data.rows.filter(row=>row.active).map(({native,...row})=>row),checkedAt:data.clock};}
+  if(operation==='list'){if(!data.clock)throw Error('DATAVERSE_SHOWS_NOT_INITIALIZED');return{concerts:data.rows.filter(row=>row.active).map(({native,...row})=>{const artist=data.artists.find(a=>a.esmojo_naam===row.artist);return{...row,...(artist?.esmojo_fotobronurl&&row.sourceUrl?{photo:{imageUrl:artist.esmojo_fotobronurl,sourceUrl:row.sourceUrl}}:{})};}),checkedAt:data.clock};}
   if(operation==='research-identities')return{concerts:data.rows.filter(row=>payload.sourceKeys?.includes(researchKeyForConcert(row))).map(({native,...row})=>row)};
   if(operation==='home-dashboard'||operation==='home-metadata'){
    if(typeof payload.actor!=='string'||!data.clock)throw Error('VALIDATION');
@@ -100,7 +100,7 @@ export function createNativeCatalogue({state,now=()=>new Date()}={}){
   }
   if(operation==='home-photo-cache'){
    if(!sameKeys(payload,['photos'])||!Array.isArray(payload.photos)||payload.photos.length>400)throw Error('VALIDATION');const seen=new Set(),updates=[];
-   for(const entry of payload.photos){const show=data.rows.find(row=>row.generalConcertId===entry.key),artist=data.artists.find(a=>a.esmojo_naam===show?.artist);if(!sameKeys(entry,['key','photo'])||seen.has(entry.key)||!artist||!photoValid(entry.photo)||show.sourceUrl!==entry.photo.sourceUrl)throw Error('VALIDATION');seen.add(entry.key);const m=await repo.meta('esmojo_artiest');const previous=updates.find(row=>row.id===artist[m.PrimaryIdAttribute]);if(previous&&previous.payload.esmojo_fotobronurl!==entry.photo.imageUrl)throw Error('DATAVERSE_SHOWS_CONFLICT');if(!previous)updates.push({table:'esmojo_artiest',id:artist[m.PrimaryIdAttribute],method:'PATCH',etag:artist['@odata.etag'],payload:{esmojo_fotobronurl:entry.photo.imageUrl}});}
+   for(const entry of payload.photos){const show=data.rows.find(row=>row.generalConcertId===entry.key),artist=data.artists.find(a=>a.esmojo_naam===show?.artist);if(!sameKeys(entry,['key','photo'])||seen.has(entry.key)||!artist||!photoValid(entry.photo)||show.sourceUrl!==entry.photo.sourceUrl)throw Error('VALIDATION');seen.add(entry.key);const m=await repo.meta('esmojo_artiest');const previous=updates.find(row=>row.id===artist[m.PrimaryIdAttribute]);if(previous&&previous.payload.esmojo_fotobronurl!==entry.photo.imageUrl)throw Error('DATAVERSE_SHOWS_CONFLICT');if(!previous&&artist.esmojo_fotobronurl!==entry.photo.imageUrl)updates.push({table:'esmojo_artiest',id:artist[m.PrimaryIdAttribute],method:'PATCH',etag:artist['@odata.etag'],payload:{esmojo_fotobronurl:entry.photo.imageUrl}});}
    if(updates.length)await repo.atomic(updates);return{cached:payload.photos.length};
   }
   if(operation==='biography-candidates')return{concerts:data.rows.map(({artist,date,venue,sourceUrl})=>({artist,date,venue,sourceUrl})),saved:await savedBiographies(data)};

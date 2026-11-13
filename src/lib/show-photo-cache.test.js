@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createShowPhotoCache } from './show-photo-cache.js';
-const photo = { imageUrl: 'https://www.mojo.nl/media/artist.jpg', sourceUrl: 'https://www.mojo.nl/concerten/artist' };
+const photo = { imageUrl: 'https://www.mojo.nl/media/artist.jpg?format=webp&height=338&quality=80&width=600', sourceUrl: 'https://www.mojo.nl/concerten/artist' };
 test('Menuvoorladen en openen delen één verzoek; terugkeren hergebruikt data en afbeelding tot verversen', async () => {
   let calls = 0, images = 0, time = 0;
   const get = createShowPhotoCache({ load: async () => { calls++; return { photo }; }, createImage: () => { images++; return {}; }, now: () => time });
@@ -15,4 +15,10 @@ test('Fouten blijven niet gecachet en ongeldige externe afbeeldingen worden nooi
   const get = createShowPhotoCache({ load: async () => { calls++; if (calls === 1) throw Error(); return { photo: { ...photo, imageUrl: 'https://evil.invalid/a.jpg' } }; }, createImage: () => { images++; return {}; } });
   assert.equal(await get('show'), null); assert.equal(await get('show'), null);
   assert.equal(calls, 2); assert.equal(images, 0);
+});
+test('openbare menu- of homepagefoto wordt direct hergebruikt zonder tweede metadatarequest',async()=>{
+ let calls=0,images=0;const get=createShowPhotoCache({load:async()=>{calls++;return{photo};},createImage:()=>{images++;return{};}});
+ assert.deepEqual(get.prime('show',photo),photo);assert.equal(images,0,'Menu niet alle afbeeldingen laten downloaden');assert.deepEqual(get.peek('show'),photo);
+ assert.deepEqual(await get('show'),photo);assert.equal(calls,0);assert.equal(images,1);await get('show');assert.equal(images,1);
+ assert.equal(get.prime('bad',{...photo,imageUrl:'https://evil.invalid/a.jpg'}),null);
 });

@@ -3,7 +3,7 @@ import {createShowData} from './show-data.js';
 // Geen browseropslag. Een lease houdt de geopende show in geheugen; na verlaten
 // vervalt die na 15 minuten. Lopende writes mogen altijd hun bevestiging verwerken.
 export function createShowMemory({request,createData=createShowData,now=Date.now,ttl=15*60*1000,limit=5,setTimer=setTimeout,clearTimer=clearTimeout}){
-  const entries=new Map();let timer=null;
+  const entries=new Map();let timer=null,prefetching=null;
   function drop(entry){
     if(entries.get(entry.key)===entry)entries.delete(entry.key);
     entry.live=false;entry.data?.dispose();
@@ -41,7 +41,8 @@ export function createShowMemory({request,createData=createShowData,now=Date.now
       prune();
       return{ready,view:entry.view,release(){if(released)return;released=true;if(!entry.live)return;entry.users--;if(!entry.users){entry.until=now()+ttl;if(entry.data?.busy)afterWrites(entry);}prune();}};
     },
+    prefetch(key){if(prefetching){if(prefetching.key===key)return prefetching.promise;return Promise.resolve(null);}const lease=this.acquire(key),job={key};job.promise=lease.ready.finally(()=>{lease.release();if(prefetching===job)prefetching=null;});prefetching=job;return job.promise;},
     get size(){return entries.size;},
-    clear(){for(const entry of entries.values())drop(entry);if(timer!==null)clearTimer(timer);timer=null;},
+    clear(){prefetching=null;for(const entry of entries.values())drop(entry);if(timer!==null)clearTimer(timer);timer=null;},
   };
 }

@@ -20,3 +20,10 @@ test('research menu wrapper cannot turn a native storage failure into an empty s
 test('managed routing denies both old and new calls during the freeze without invoking either storage',async()=>{
  const {createManagedShowsRouting}=await import('./routing.js');let mode='legacy',old=0,native=0;const route=createManagedShowsRouting({env:{},repository:{byKey:async()=>({esmojo_configuratie_json:JSON.stringify({mode})})}}),actions={legacy:()=>++old,native:()=>++native};assert.equal(await route(actions),1);mode='freeze';await assert.rejects(route(actions),/STORAGE_BUSY/);assert.equal(old,1);assert.equal(native,0);
 });
+test('confirmed native aliases bypass the research catalogue without weakening the authority gate',async()=>{
+ let catalogues=0,allowed=true,calls=0;const native=async()=>{calls++;return{complete:true};};
+ const raw=createShowsStore({env:{SHOWS_STORAGE_PROVIDER:'dataverse'},nativeService:native,authority:async()=>{if(!allowed)throw Error('DATAVERSE_SHOWS_NOT_ACTIVE');},request:async()=>assert.fail('Legacy access')});
+ const wrapped=createDataverseShows({shows:raw,research:{configured:()=>true,sourceKeys:async()=>{catalogues++;return[];}}});
+ assert.deepEqual(await wrapped('show-open',{concertId:'Test_Gashouder_15112026'}),{complete:true});assert.equal(catalogues,0);assert.equal(calls,1);
+ allowed=false;await assert.rejects(wrapped('show-open',{concertId:'Test_Gashouder_15112026'}),/NOT_ACTIVE/);assert.equal(calls,1);
+});

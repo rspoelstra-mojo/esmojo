@@ -51,6 +51,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
   referenceService ||=createBarrierReferenceService({shows});
   showManagement ||=createShowManagementService({env,shows});
   return async function handler(req, res) {
+    const requestBegan=performance.now();let sessionReady=requestBegan,profileReady=requestBegan;
     let verifiedProfile=null;
     const scopedShows=(operation,payload={})=>shows(operation,{...payload,...(['dataverse','managed'].includes(shows.provider)&&verifiedProfile?{__actor:verifiedProfile}:{})});
     res.setHeader('Cache-Control', 'no-store, private');
@@ -97,12 +98,17 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       }
       if(!isFluidPreview(env)&&!hasAppMfa(req,env,claims))return reply(403,{error:'Bevestig je aanmelding opnieuw met je authenticator.',code:'MFA_REQUIRED'});
       const actor = data.user.id;
+      if(action==='show-open'&&!isFluidPreview(env)&&(shows.prepareRead||dataverseResearch.configured?.())){
+        // Technical OAuth/schema warmup only, no business or account read. Current
+        // Drive rights are still awaited below before any show data is requested.
+        const warm=Promise.resolve(shows.prepareRead?.()).then(()=>dataverseResearch.warm?.()).catch(()=>{});try{background(warm);}catch{/* The awaited service shares the same pending connection. */}
+      }
       const previewReads=isFluidPreview(env)?(previewSource||createFluidPreviewSource({token,mfaCookie:(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>/^__Host-esmojo-mfa=[A-Za-z0-9_-]{1,2000}$/.test(x))})):null;
       let previewDeadline=null,homeDashboard=null,emailTestCopyTo=null;
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          const result=await profiles('self',actor,!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
+          const result=await profiles('self',actor,action==='show-open'?{authorizationOnly:true}:!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
           const {homeDashboard:home,emailTestCopyTo:copyTo,...profile}=result;emailTestCopyTo=copyTo||null;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
@@ -111,7 +117,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }
       };
       // Drive controleert de actuele rol opnieuw; gebruikersmetadata is geen autorisatiebron.
-      const own = await ownProfile();
+      sessionReady=performance.now();
+      const own = await ownProfile();profileReady=performance.now();
       verifiedProfile=own;
       if(isFluidPreview(env)){
         if(!isAdministrator(own)||!own.activated)return reply(403,{error:'Deze testomgeving vereist een geactiveerd beheerderaccount met MFA.'});
@@ -212,7 +219,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
       const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
       if(action==='show-open'&&req.method==='POST'){
-        try{const input=validateRiskViewRequest(req.body);const [bundle,research]=await Promise.all([scopedShows('show-open',{...input,actor}),dataverseResearch.load(input.concertId)]);return reply(200,{...bundle,profile:dataverseResearch.merge(bundle.profile,research)});}
+        try{const input=validateRiskViewRequest(req.body),began=performance.now();const [bundle,research]=await Promise.all([scopedShows('show-open',{...input,actor}),dataverseResearch.load(input.concertId)]);res.setHeader('Server-Timing',`session;dur=${(sessionReady-requestBegan).toFixed(1)},rights;dur=${(profileReady-sessionReady).toFixed(1)},show;dur=${(performance.now()-began).toFixed(1)},total;dur=${(performance.now()-requestBegan).toFixed(1)}`);return reply(200,{...bundle,profile:dataverseResearch.merge(bundle.profile,research)});}
         catch(error){return reply(error.message==='VALIDATION'?400:503,{error:error.message==='VALIDATION'?'Ongeldige show.':'De show kon niet volledig worden geladen. Probeer opnieuw.'});}
       }
       if(['barrier-layout','floor-pressure'].includes(action)&&req.method==='POST'){
@@ -285,7 +292,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if (!data.checkedAt) return reply(503, { error: 'De concertagenda is nog niet geïmporteerd.' });
         const legacy=upcomingShows(data.concerts||[]),imported=(data.dataverseShows||[]).filter(row=>!legacy.some(show=>show.dates.some(date=>researchKeyForConcert({artist:show.name,venue:show.venue,date})===row.sourceKey)));
         const publicShows=[...legacy,...imported.map(({key,name,dates,venue,city})=>({key,name,dates,venue,city}))];
-        return reply(200, { artists: upcomingArtists(data.concerts), shows: publicShows, checkedAt: data.checkedAt });
+        return reply(200, { artists: upcomingArtists(data.concerts), shows: publicShows, photos:publicShows.flatMap(show=>{const photo=(data.concerts||[]).find(row=>row.concertId===show.key)?.photo;return photo?[{key:show.key,photo}]:[];}), checkedAt: data.checkedAt });
       }
       if (action === 'photo' && req.method === 'PATCH') {
         const input = req.body;

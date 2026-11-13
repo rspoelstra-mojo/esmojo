@@ -1,3 +1,4 @@
+import {nativeConnection} from './dataverse-shows/connection.js';
 import {createHash} from 'node:crypto';
 import {dataversePilot as pilot} from '../shared/dataverse-pilot.js';
 import {RESEARCH_LIBRARY,DRIVE_RESEARCH_LIBRARY,parseResearchKey,researchKeyForId,isDataverseShowId} from '../shared/dataverse-shows.js';
@@ -10,7 +11,7 @@ const version=value=>typeof value==='string'&&/^\d{1,8}\.\d{1,8}$/.test(value)?v
 const compare=(a,b)=>a[0]-b[0]||a[1]-b[1];
 
 // Geen persistente inhoudscache: alleen token en schema in tijdelijk servergeheugen.
-export function createDataverseResearch({env=process.env,request=fetch,now=Date.now}={}){
+export function createDataverseResearch({env=process.env,request=fetch,now=Date.now,connection=request===fetch?nativeConnection(env):null}={}){
  let session=null,pending=null;
  const origin='https://org5bab852a.crm.dynamics.com',base=origin+'/api/data/v9.2/';
  async function connect(){
@@ -18,13 +19,17 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
   if(pending)return pending;
   pending=(async()=>{
    if(!guid(env.DATAVERSE_TEST_TENANT_ID)||!guid(env.DATAVERSE_TEST_CLIENT_ID)||!env.DATAVERSE_TEST_CLIENT_SECRET||env.DATAVERSE_TEST_URL?.replace(/\/$/,'')!==origin)throw Error('DATAVERSE_CONFIG');
+   let headers,until;
+   if(connection){const context=await connection.connect();headers=context.headers;until=context.until;}else{
    const response=await request('https://login.microsoftonline.com/'+env.DATAVERSE_TEST_TENANT_ID+'/oauth2/v2.0/token',{method:'POST',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'client_credentials',client_id:env.DATAVERSE_TEST_CLIENT_ID,client_secret:env.DATAVERSE_TEST_CLIENT_SECRET,scope:origin+'/.default'}).toString()});
    if(!response.ok)throw Error('DATAVERSE_AUTH');
    const token=await response.json();if(token.token_type?.toLowerCase()!=='bearer'||typeof token.access_token!=='string'||!token.access_token||token.access_token.length>32000)throw Error('DATAVERSE_AUTH');
-   const headers={Authorization:'Bearer '+token.access_token,Accept:'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0',Prefer:'odata.maxpagesize=50'};
+   headers={Authorization:'Bearer '+token.access_token,Accept:'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0',Prefer:'odata.maxpagesize=50'};
+   until=now()+Math.max(0,Math.min(Number(token.expires_in)||0,3600)-60)*1000;
+   }
    const meta=await get(base+"EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName,PrimaryNameAttribute",headers);
    if(meta.LogicalName!==table||!name(meta.EntitySetName))throw Error('DATAVERSE_SCHEMA');
-   session={headers,entity:meta.EntitySetName,primary:meta.PrimaryNameAttribute,until:now()+Math.max(0,Math.min(Number(token.expires_in)||0,3600)-60)*1000};return session;
+   session={headers,entity:meta.EntitySetName,primary:meta.PrimaryNameAttribute,until};return session;
   })().finally(()=>{pending=null;});return pending;
  }
  async function get(url,headers){
@@ -80,6 +85,7 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
  return{
   applies:id=>Boolean(researchKeyForId(id)),
   configured,
+  warm:()=>configured()?connect().then(()=>undefined):Promise.resolve(),
   sourceKeys,
   read,
   async importDrive({sourceKey,number,markdown}){

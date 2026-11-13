@@ -7,7 +7,7 @@ export const browserHeaders=[{key:'X-Frame-Options',value:'DENY'},{key:'X-Conten
 export function appCsp(html){
  const inline=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].filter(([,attrs])=>! /\bsrc\s*=/.test(attrs));
  const hashes=inline.map(([, ,source])=>"'sha256-"+createHash('sha256').update(source).digest('base64')+"'");
- return ["default-src 'self'",["script-src 'self'",...hashes].join(' '),"style-src 'self' 'unsafe-inline'","img-src 'self' data: blob: https://www.mojo.nl","font-src 'self' data:","connect-src 'self' https://*.supabase.co wss://*.supabase.co","object-src 'none'","frame-src 'none'","frame-ancestors 'none'","base-uri 'none'","form-action 'self'","worker-src 'self' blob:","manifest-src 'self'","upgrade-insecure-requests"].join('; ');
+ return ["default-src 'self'",["script-src 'self'",...hashes].join(' '),"style-src 'self' 'unsafe-inline'","img-src 'self' data: blob: https://www.mojo.nl","font-src 'self' data:","connect-src 'self' https://www.mojo.nl https://*.supabase.co wss://*.supabase.co","object-src 'none'","frame-src 'none'","frame-ancestors 'none'","base-uri 'none'","form-action 'self'","worker-src 'self' blob:","manifest-src 'self'","upgrade-insecure-requests"].join('; ');
 }
 export function expectedSecurityHeaders(html){return[{source:'/:path*',headers:browserHeaders},...appDocuments.map(source=>({source,headers:[...browserHeaders,{key:'Content-Security-Policy',value:appCsp(html)},...(source==='/test/fluid-layout'?[{key:'X-Robots-Tag',value:'noindex, nofollow, noarchive'},{key:'Cache-Control',value:'no-store'}]:[])]}))];}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

@@ -1,3 +1,5 @@
+import {nativeConnection} from './connection.js';
+import {openingRecord,openingKey,readOpening,manifestFingerprint} from './opening.js';
 import {createHash} from 'node:crypto';
 import {record,reference,recordKey,canonical,digest,validateRecord,migrationDifferences,choice} from '../show-migration-writer.js';
 import {mapPeople,mapShow as mapRawShow} from '../show-migration-map.js';
@@ -13,7 +15,7 @@ const date=value=>{if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}(?:T00:00:00(
 const parse=text=>{try{return JSON.parse(text);}catch{throw Error('DATAVERSE_SHOWS_RESPONSE');}};
 const boundedId=value=>typeof value==='string'&&value.length>0&&value.length<=240&&!/[\x00-\x1f/\\]/.test(value);
 const parallel=async(values,fn)=>{const result=[];for(let n=0;n<values.length;n+=8)result.push(...await Promise.all(values.slice(n,n+8).map(fn)));return result;};
-export function createNativeShowState({env=process.env,repository,connection=createDataverseSetupConnection({env})}={}){
+export function createNativeShowState({env=process.env,repository,connection=nativeConnection(env)}={}){
  const repo=repository||createNativeShowsRepository({connection}),writer=createMigrationWriter({env,connection}),cipher=taskCipher({env});
  async function syncActor(profile){
   if(!profile||!profile.activated||profile.disabled||!Array.isArray(profile.modules)||!profile.modules.includes('shows'))throw Error('FORBIDDEN');
@@ -28,8 +30,9 @@ export function createNativeShowState({env=process.env,repository,connection=cre
  }
  async function resolve(concertId){
   if(!boundedId(concertId))throw Error('VALIDATION');
-  const alias=await repo.byKey('esmojo_routealias',recordKey('esmojo_routealias','route/show/'+concertId));if(!alias||alias.esmojo_aliassoort!=='show'||alias.esmojo_aliaswaarde!==concertId)throw Error('NOT_FOUND');
-  const series=await repo.byId('esmojo_concertreeks',alias._esmojo_concertreeks_value),concert=await repo.byId('esmojo_concert',alias._esmojo_concert_value),m=await repo.meta('esmojo_concertreeks');
+  const expanded=repo.resolveAlias?await repo.resolveAlias(recordKey('esmojo_routealias','route/show/'+concertId)):null;
+  const alias=expanded?.alias||await repo.byKey('esmojo_routealias',recordKey('esmojo_routealias','route/show/'+concertId));if(!alias||alias.esmojo_aliassoort!=='show'||alias.esmojo_aliaswaarde!==concertId)throw Error('NOT_FOUND');
+  const [series,concert,m]=await Promise.all([expanded?.series||repo.byId('esmojo_concertreeks',alias._esmojo_concertreeks_value),expanded?.concert||repo.byId('esmojo_concert',alias._esmojo_concert_value),repo.meta('esmojo_concertreeks')]);
   if(concert._esmojo_concertreeks_value!==series[m.PrimaryIdAttribute])throw Error('DATAVERSE_SHOWS_CONFLICT');return{series,seriesId:series[m.PrimaryIdAttribute],concert};
  }
  async function fileMetadata(documents,seriesId){
@@ -43,6 +46,43 @@ export function createNativeShowState({env=process.env,repository,connection=cre
    return{fileId:ref.fileId,identity,key,name:row.esmojo_bestandsnaam,mime:row.esmojo_mimetype,size:row.esmojo_bestandsgrootte,sha256:row.esmojo_sha256,kind:ref.kind,owner:ref.owner,revision:ref.revision,version:row.esmojo_versienummer,uploadId:ref.uploadId||null};
   });
  }
+ async function currentLeases(primaryId){
+  const rows=await repo.query('esmojo_opdracht',{filter:"esmojo_opdrachtsoort eq 'shows-native-ticket-lease-v1' and esmojo_resourcecode eq '"+digest(primaryId)+"'"}),leases={};
+  for(const row of rows){const lease=cipher.open('native-ticket-lease/'+primaryId,row.esmojo_payload_json);if(lease.field&&!['ticket_sales','visitor_origins','domestic_origins'].includes(lease.field))throw Error('DATAVERSE_SHOWS_CONFLICT');if(lease.token){const {field,...value}=lease;leases[field]=value;}}
+  return{rows,leases};
+ }
+ function applyLeases(source,leases){
+  if(source.documents['bezoekersdata.json'])source.documents['bezoekersdata.json'].leases={};
+  if(Object.keys(leases).length){source.documents['bezoekersdata.json']||={managedBy:'ESMOJO/TicketData-v1',classification:'vertrouwelijk',concertId:source.concertId,workflow_json:JSON.stringify({visitors:{fields:{}}}),leases:{},history:[]};source.documents['bezoekersdata.json'].leases=leases;}
+ }
+ async function loadOpening(concertId){
+  const scope=await resolve(concertId),[row,leases,control]=await Promise.all([repo.byKey('esmojo_integratiestatus',openingKey(scope.seriesId)),currentLeases(scope.series.esmojo_oudalgemeenconcertid),repo.byKey('esmojo_integratiestatus',recordKey('esmojo_integratiestatus','native-state/'+scope.series.esmojo_oudalgemeenconcertid))]);
+  const opening=readOpening(row,scope.series,scope.seriesId,{env});if(!opening)return null;
+  if(control?manifestFingerprint(parse(control.esmojo_configuratie_json))!==opening.manifestHash:opening.hadControl)return null;
+  const root={table:'esmojo_concertreeks'};if(migrationDifferences(root,scope.series,opening.rootFields).length||!await repo.sameVersions(opening.proof))return null;
+  const source=opening.source;applyLeases(source,leases.leases);return{...scope,source};
+ }
+ async function publishOpening(loaded,entries){
+  const proof=entries.filter(entry=>entry.row.table!=='esmojo_concertreeks').map(entry=>({table:entry.row.table,id:entry.actual[entry.metadata.PrimaryIdAttribute],etag:entry.actual['@odata.etag']}));
+  const history=await parallel(Object.entries(loaded.pointers),async([name,key])=>{
+   const row=await repo.byKey('esmojo_historie',key),m=await repo.meta('esmojo_historie');if(!row)throw Error('VERIFY');const value=parse(row.esmojo_snapshot_json),expected=structuredClone(loaded.source.documents[name]),observed=structuredClone(value.document);
+   if(name==='bezoekersdata.json'){if(expected)expected.leases={};if(observed)observed.leases={};}
+   if(digest(value)!==row.esmojo_fingerprint||value.fileName!==name||canonical(expected)!==canonical(observed))throw Error('VERIFY');
+   return{table:'esmojo_historie',id:row[m.PrimaryIdAttribute],etag:row['@odata.etag']};
+  });proof.push(...history);
+  const manifest=loaded.control?parse(loaded.control.esmojo_configuratie_json):{version:1,seriesId:loaded.seriesId,generation:loaded.series.esmojo_revisie,documents:loaded.pointers,extras:loaded.source.activeAudit?{activeAudit:loaded.source.activeAudit}:{}};
+  if(manifest.generation!==loaded.series.esmojo_revisie||canonical(manifest.documents)!==canonical(loaded.pointers))throw Error('VERIFY');
+  const root=entries.find(entry=>entry.row.table==='esmojo_concertreeks'),generation=loaded.series.esmojo_revisie;
+  const rootFields={...root.expected,esmojo_revisie:generation},row=openingRecord(loaded.source,loaded.seriesId,generation,{env,proof,rootFields,manifest,hadControl:Boolean(loaded.control)});
+  const stampHash=rows=>digest(rows.map(({table,id,etag})=>({table,id,etag})).sort((a,b)=>(a.table+a.id).localeCompare(b.table+b.id)));
+  const same=actual=>{try{const value=readOpening(actual,loaded.series,loaded.seriesId,{env});return value&&value.manifestHash===manifestFingerprint(manifest)&&canonical(value.rootFields)===canonical(rootFields)&&stampHash(value.proof)===stampHash(proof);}catch{return false;}};
+  // A racing business write invalidates the generation/proof on read. Do not
+  // change business ETags for a cache; concurrent equivalent preparations win.
+  const previous=await repo.byKey(row.table,row.key);if(previous?.esmojo_revisie>generation)throw Error('DATAVERSE_SHOWS_CONFLICT');if(same(previous))return{prepared:true};
+  const operations=await recordOperations(repo,[row]);try{if(operations.length)await repo.atomic(operations);}catch(error){if(error.message!=='DATAVERSE_SHOWS_CONFLICT'||!same(await repo.byKey(row.table,row.key)))throw error;}
+  const confirmed=await repo.byKey(row.table,row.key);if(!same(confirmed))throw Error('VERIFY');return{prepared:true};
+ }
+ async function refreshOpening(loaded){const entries=await verifyPlan(mapShow(loaded.source,loaded.people),loaded.source.nativeGeneration||0);return publishOpening(loaded,entries);}
  async function load(concertId){
   const scope=await resolve(concertId),{series,seriesId}=scope,primaryId=series.esmojo_oudalgemeenconcertid;
   const controlKey=recordKey('esmojo_integratiestatus','native-state/'+primaryId),control=await repo.byKey('esmojo_integratiestatus',controlKey),documents={},pointers={};let sourceExtras={};
@@ -61,10 +101,7 @@ export function createNativeShowState({env=process.env,repository,connection=cre
   const source={version:1,nativeGeneration:series.esmojo_revisie,concertId:primaryId,artistId:artist.esmojo_bronartiestid,shows,documents,files,unknown:[],timetables,...sourceExtras,activeRevision:series.esmojo_voorbereidingsgeneratie,...(artist.esmojo_biografie?{biography:{text:artist.esmojo_biografie,sourceUrl:artist.esmojo_biografiebron||null,capturedAt:artist.esmojo_biografieopgehaaldop}}:{}),...(artist.esmojo_fotobronurl?{photo:{imageUrl:artist.esmojo_fotobronurl}}:{})};
   const team=await repo.inSeries('esmojo_projectteam',seriesId),employeeMeta=await repo.meta('esmojo_medewerker'),concertMeta=await repo.meta('esmojo_concert');
   for(const row of team){const employee=await repo.byId('esmojo_medewerker',row._esmojo_medewerker_value),concert=concerts.find(c=>c[concertMeta.PrimaryIdAttribute]===row._esmojo_concert_value);if(!concert||!employee[employeeMeta.PrimaryIdAttribute])throw Error('DATAVERSE_SHOWS_CONFLICT');people.assignments.push({concertId:concert.esmojo_oudconcertid,userId:employee.esmojo_authuserid,role:row.esmojo_functiecode,createdAt:row.esmojo_vastgelegdop});}
-  const leaseRows=await repo.query('esmojo_opdracht',{filter:"esmojo_opdrachtsoort eq 'shows-native-ticket-lease-v1' and esmojo_resourcecode eq '"+digest(primaryId)+"'"});
-  if(source.documents['bezoekersdata.json'])source.documents['bezoekersdata.json'].leases={};
-  const leases={};for(const row of leaseRows){const lease=cipher.open('native-ticket-lease/'+primaryId,row.esmojo_payload_json);if(lease.field&&!['ticket_sales','visitor_origins','domestic_origins'].includes(lease.field))throw Error('DATAVERSE_SHOWS_CONFLICT');if(lease.token){const {field,...value}=lease;leases[field]=value;}}
-  if(Object.keys(leases).length){source.documents['bezoekersdata.json']||={managedBy:'ESMOJO/TicketData-v1',classification:'vertrouwelijk',concertId:primaryId,workflow_json:JSON.stringify({visitors:{fields:{}}}),leases:{},history:[]};source.documents['bezoekersdata.json'].leases=leases;}
+  const {rows:leaseRows,leases}=await currentLeases(primaryId);applyLeases(source,leases);
   return{...scope,source,people,control,controlKey,pointers,leaseRows};
  }
  async function materialize(rows,known=new Map()){
@@ -116,7 +153,11 @@ export function createNativeShowState({env=process.env,repository,connection=cre
   for(const row of before.records.filter(row=>!kept.has(row.key)&&!['esmojo_historie','esmojo_integratiestatus'].includes(row.table)).reverse()){const actual=await repo.byKey(row.table,row.key);if(actual){const m=await repo.meta(row.table);operations.push({table:row.table,id:actual[m.PrimaryIdAttribute],method:'DELETE',etag:actual['@odata.etag']});}}
   operations.push(...await leaseOperations(loaded,next));
   try{await repo.atomic(operations);}catch(error){const committed=await repo.byKey('esmojo_opdracht',receiptKey).catch(()=>null);if(committed)return parse(committed.esmojo_resultaat_json);throw error;}
-  const committed=await repo.byKey('esmojo_opdracht',receiptKey);if(!committed||canonical(parse(committed.esmojo_resultaat_json))!==canonical(result))throw Error('VERIFY');await verifyPlan(after,generation);return result;
+  const committed=await repo.byKey('esmojo_opdracht',receiptKey);if(!committed||canonical(parse(committed.esmojo_resultaat_json))!==canonical(result))throw Error('VERIFY');const verified=await verifyPlan(after,generation),root=verified.find(entry=>entry.row.table==='esmojo_concertreeks');
+  // A cache failure must not turn an already confirmed business write into an
+  // uncertain save. The old cache has a different generation and cannot be used.
+  try{const control=await repo.byKey('esmojo_integratiestatus',loaded.controlKey);await publishOpening({...loaded,source:{...next,nativeGeneration:generation},series:root.actual,pointers,control},verified);}catch{/* Verified native slow path remains authoritative. */}
+  return result;
  }
  async function leaseOperations(loaded,next){
   const before=loaded.source.documents['bezoekersdata.json']?.leases||{},after=next.documents['bezoekersdata.json']?.leases||{},operations=[];
@@ -141,5 +182,5 @@ export function createNativeShowState({env=process.env,repository,connection=cre
   const m=await repo.meta(row.table),operations=[{table:'esmojo_concertreeks',id:loaded.seriesId,method:'PATCH',etag:loaded.series['@odata.etag'],payload:{esmojo_revisie:generation}},{table:row.table,id:loaded.control?.[m.PrimaryIdAttribute]||guid(row.key),method:'PATCH',payload:row.fields,...(loaded.control?{etag:loaded.control['@odata.etag']}:{create:true})}];
   await repo.atomic(operations);return planning;
  }
- return{repo,load,resolve,verifyPlan,commit,receipt,commitLease,employeeSource,refreshPlanning,syncActor};
+ return{repo,load,loadOpening,refreshOpening,cacheOpening:publishOpening,resolve,verifyPlan,commit,receipt,commitLease,employeeSource,refreshPlanning,syncActor};
 }

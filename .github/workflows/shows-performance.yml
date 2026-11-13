@@ -1,0 +1,26 @@
+name: Prepare and measure complete Shows opening
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        required: true
+        default: measure
+        options: [prepare, measure]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: approved-background-tasks-production
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Prepare or measure the explicitly approved Shows read model
+        env:
+          SHOWS_PERFORMANCE_OPERATION: ${{ inputs.operation }}
+        run: node tools/background/shows-performance.mjs

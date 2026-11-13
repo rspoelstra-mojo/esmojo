@@ -1,3 +1,4 @@
+import {publicShowPhoto} from '../shared/public-show-photo.js';
 import {createShowManagement} from './show-management.js';
 import './show-tabs.css';
 import {requestedShowTab} from '../shared/show-navigation.js';
@@ -19,12 +20,16 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
   let disposed=false,opening=false,releasePage=()=>{};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]')||document.querySelector('#submenu-title'),loading=menu?createSubmenuLoading(menu,content):null;
   async function open(){
-    if(disposed||opening)return;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
+    if(disposed||opening)return;const began=globalThis.performance?.now?.()??Date.now();opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
     let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},risks=null,observer=null,frame=null;
     const cleanup=()=>{disposeManagement();disposePlanning();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
-      const [context,photoData]=await Promise.all([lease.ready,lease.view.photo?Promise.resolve(lease.view.photo):loadPhoto(show.key).catch(()=>null)]);
+      const earlyPhoto=lease.view.photo||loadPhoto.peek?.(show.key)||null;
+      if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
+      const context=await lease.ready;
+      const photoData=earlyPhoto||context.photo||null;
+      if(context.show)show={...show,...context.show,key:show.key};
       if(disposed)return;
       data=context;if(photoData)lease.view.photo=photoData;const requestAccess=data.request;
       const page=document.createElement('section');page.className='show-page';
@@ -35,15 +40,18 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
         ['<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',[show.venue,show.city].filter(Boolean).join(', ')],
       ]){const item=document.createElement('div');item.className='show-meta-item';item.innerHTML=svg(paths);const label=document.createElement('span');label.textContent=text;item.append(label);meta.append(item);}
       const photo=document.createElement('a');photo.className='show-artist-photo';photo.hidden=true;photo.target='_blank';photo.rel='noopener noreferrer';photo.setAttribute('aria-label',`Foto van ${show.name} op MOJO`);
-      const image=document.createElement('img');image.alt=show.name;image.width=600;image.height=338;image.decoding='async';image.referrerPolicy='no-referrer';photo.append(image);
-      if(photoData){
+      const image=document.createElement('img');image.alt=show.name;image.width=600;image.height=338;image.decoding='async';image.fetchPriority='high';image.referrerPolicy='no-referrer';photo.append(image);
+      function attachPhoto(photoData){photoData=publicShowPhoto(photoData);if(disposed||!photoData)return;try{
         const url=new URL(photoData.imageUrl),source=new URL(photoData.sourceUrl);
         if(url.origin==='https://www.mojo.nl'&&url.pathname.startsWith('/media/')&&source.origin==='https://www.mojo.nl'){
           photo.href=source.href;image.src=url.href;
-          // Een onbereikbare optionele foto mag de show niet onbeperkt tegenhouden.
-          let timer;try{await Promise.race([image.decode(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Foto niet beschikbaar')),10000);})]);photo.hidden=false;}catch{image.removeAttribute('src');}finally{clearTimeout(timer);}
+          image.fetchPriority='high';image.loading='eager';photo.hidden=false;
+          image.onerror=()=>{photo.hidden=true;image.removeAttribute('src');};
+          loadPhoto.prime?.(show.key,photoData);
         }
-      }
+      }catch{/* Invalid optional public photo metadata never blocks the show. */}}
+      if(photoData)attachPhoto(photoData);
+      else void Promise.resolve(loadPhoto(show.key)).then(attachPhoto).catch(()=>{});
       if(disposed)return;
       const bar=document.createElement('div');bar.className='show-tabs';bar.setAttribute('role','tablist');bar.setAttribute('aria-label','Showonderdelen');
       const indicator=document.createElement('span');indicator.className='show-tab-indicator';indicator.setAttribute('aria-hidden','true');
@@ -69,7 +77,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       const heading=document.createElement('div');heading.className='show-heading';const intro=document.createElement('div');intro.className='show-heading-intro';intro.append(title,meta);bar.append(indicator);heading.append(intro,photo,bar);page.append(heading,panels);
       // Bouw onzichtbaar; publiceer pas wanneer alle bestaande controllers gereed zijn.
       await Promise.all([disposeProfile.ready,risks.prepare()]);if(disposed)return;
-      select(active);content.replaceChildren(page);position();document.title=`${show.name} · Shows · ESMOJO`;
+      select(active);content.replaceChildren(page);position();try{performance.measure('esmojo-show-ready',{start:began,end:performance.now()});}catch{/* Diagnostics must never block navigation. */}document.title=`${show.name} · Shows · ESMOJO`;
       observer=new ResizeObserver(position);observer.observe(bar);frame=requestAnimationFrame(()=>bar.classList.add('show-tabs-ready'));
     }catch{
       cleanup();if(disposed)return;
