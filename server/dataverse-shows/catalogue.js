@@ -90,7 +90,7 @@ export function createNativeCatalogue({state,now=()=>new Date()}={}){
   if(operation==='dataverse-ensure')return ensure(payload.show);
   if(operation==='sync')return sync(payload.snapshot);
   const data=await all();
-  if(operation==='list'){if(!data.clock)throw Error('DATAVERSE_SHOWS_NOT_INITIALIZED');return{concerts:data.rows.filter(row=>row.active).map(({native,...row})=>row),checkedAt:data.clock};}
+  if(operation==='list'){if(!data.clock)throw Error('DATAVERSE_SHOWS_NOT_INITIALIZED');return{concerts:data.rows.filter(row=>row.active).map(({native,...row})=>{const artist=data.artists.find(a=>a.esmojo_naam===row.artist);return{...row,...(artist?.esmojo_fotobronurl&&row.sourceUrl?{photo:{imageUrl:artist.esmojo_fotobronurl,sourceUrl:row.sourceUrl}}:{})};}),checkedAt:data.clock};}
   if(operation==='research-identities')return{concerts:data.rows.filter(row=>payload.sourceKeys?.includes(researchKeyForConcert(row))).map(({native,...row})=>row)};
   if(operation==='home-dashboard'||operation==='home-metadata'){
    if(typeof payload.actor!=='string'||!data.clock)throw Error('VALIDATION');

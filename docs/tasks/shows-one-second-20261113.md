@@ -10,3 +10,10 @@ privacyveilige timings/tests. Accounts/Auth behouden actuele beveiligde bron.
 Verwachte diensten: bestaande Vercel/Dataverse/GitHub; geen nieuwe credentials.
 Privécontext uitsluitend bestaand tijdelijk sessiegeheugen; geen persistente
 privébrowsercache en geen persoons-/inhoud-/tokenlogs. Maak geen fictieve shows.
+
+Implementatie: versleutelde gecomprimeerde afgeleide opening in bestaande Dataverse
+Integratiestatus, actuele rijversiebatch/veldleases, geen accountcache, gezamenlijke
+technische sessie/metadata, alle tabbladen gereed, één WebP-variant/intent-prefetch.
+Vaste production-only main/OIDC performanceworkflow voor voorbereiding en meting.
+Vercel-functie momenteel iad1 vastgesteld; Dataverse-regio eerst vaststellen, geen
+regiowijziging op basis van een onbevestigde aanname. V1.100 volgt V1.99.

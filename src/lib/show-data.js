@@ -30,6 +30,7 @@ export function createShowData(bundle,request,concertId){
   }
   function overview(data){if(data.overview&&(values.has('show-risks')||Array.isArray(data.overview.risks)&&['ready','pending','not-ready'].includes(data.overview.state))){values.set('show-risks',{...values.get('show-risks'),...data.overview});if(data.overview.production)productionChoices.sync(data.overview.production);riskVersion++;}}
   const context={
+    photo:bundle.photo||null,
     async request(action,options){
       const body=options.body||{},read=isRead(action,body);
       if(read&&disposed)throw Error('Show gesloten.');

@@ -1,3 +1,23 @@
+## Volledige Shows-opening en openbare foto (13 november 2026)
+
+Gebruiker autoriseert optimalisatie/publicatie binnen Shows, zonder verdere migraties.
+Alle tabbladen moeten bij openen gereed zijn; geen functionele lazy tabs. Eén seconde
+meten vanaf klik tot bruikbare inhoud en foto, geen skeleton als gehaald presenteren.
+Bestaande Auth/MFA en actuele Drive-rechten behouden; geen accountcache als rechtenbron.
+Bestaande vertrouwelijke Dataverse-Integratiestatus mag een versleutelde afgeleide
+Shows-leesprojectie bewaren. Actuele rootvelden/generatie en alle getypeerde/document-
+rijversies bij iedere read controleren; eigen schrijvers onderhouden de projectie na
+bevestigde opslag. Veldleases altijd vers per actor; cachefout nooit zakelijke write
+onzeker maken. Geen zakelijke ETag-mutatie uitsluitend voor cache, geen bronwijziging.
+Vaste main/OIDC shows-performance.yml mag binnen oorspronkelijke48u en actuele admin/
+Shows-rechten bestaande shows controleren, de afgeleide projecties voorbereiden en
+privacyveilige fase-duren meten. Geen fictieve shows of extra modulemigratie. Alle
+browserprivédata uitsluitend bestaand sessiegeheugen; openbare fotometadata alleen
+RAM in submenu. Maximaal één intent-prefetch tegelijk, vijf contexten/15min behouden.
+Hergebruik openbare MOJO-CDN-foto als600×338 WebP; foto/decode mag de complete pagina
+niet blokkeren. Backend- en browsermetingen apart rapporteren, 1s niet claimen zonder
+passend bewijs. V1.99 wordt V1.100 als vervolg binnen het bestaande hoofdnummer.
+
 ## Expliciete productie-activering Shows (13 november 2026)
 
 Gebruiker autoriseert nu expliciet publicatie én daadwerkelijke activering van

@@ -69,3 +69,8 @@ test('Een showprofielwijziging wist PDF-gereedheid maar verliest geen bevestigde
  const state=data.planningSnapshot();assert.equal(state.pdf,undefined);assert.equal(state.risks.assessments.barrier.completed,true);assert.equal(state.risks.assessments.floor.completed,true);assert.deepEqual(state.risks.production.choices,{});
  lease.release();memory.clear();
 });
+test('expliciete navigatie-intentie deelt de volledige context en begrenst voorladen tot één show',async()=>{
+ const calls=[],wait=deferred(),base=bundle(),memory=createShowMemory({request:async(action,options)=>{calls.push(options.body.concertId);await wait.promise;return base;},...timers});
+ const first=memory.prefetch('A'),again=memory.prefetch('A');assert.equal(first,again);assert.equal(await memory.prefetch('B'),null);await Promise.resolve();assert.deepEqual(calls,['A']);
+ const opened=memory.acquire('A');wait.resolve();await first;await opened.ready;assert.equal(calls.length,1);opened.release();memory.clear();assert.equal(memory.size,0);
+});

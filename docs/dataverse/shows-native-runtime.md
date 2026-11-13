@@ -179,3 +179,34 @@ native inhoud moet eerst bewezen gelijk zijn; bronbeweging of een gewijzigd/verw
 bestaand schema blokkeert. Regels en ongewijzigde bronsnapshot worden samen atomair
 met reeks-ETag opgeslagen en teruggelezen. De finale vergelijking onder schrijfstop
 controleert ze opnieuw. Dit is geen algemene overschrijf-/reconciliatieroute.
+
+## Volledige snelle opening (V1.100)
+
+Shows houdt alle tabbladen gereed in één antwoord. De native-opslag heeft een
+versleutelde afgeleide leesprojectie in de bestaande vertrouwelijke Integratiestatus,
+gebonden aan reeks, schema en bedrijfsgeneratie. Geen werknemersprofielen, tokens of
+bestandsbytes in die projectie. Ze wordt na een bevestigde zakelijke write bijgewerkt;
+een optionele cachefout verandert een bevestigde businessopslag niet in een fout.
+Bij iedere opening worden de actuele reeksvelden en alle onderliggende getypeerde
+rij-/documentversies gecontroleerd via één read-only OData-batch. Geen TTL-vertrouwen
+voor rechten of zakelijke inhoud; gewijzigde rijen/generatie gebruiken de volledige
+native verificatie. Reserveringen worden altijd vers uit afzonderlijke versleutelde
+Opdracht gelezen en per actor toegepast. Een corrupte projectie stopt gesloten.
+De projectie verandert geen zakelijke ETags, accountrechten of brongegevens.
+
+`shows-performance.yml` op main biedt `prepare` en `measure` via één vaste OIDC-route.
+Prepare schrijft uitsluitend de gecontroleerde afgeleide leesprojectie. De oorspronkelijke
+48u-machtiging van de voltooide migratie en actuele admin/Shows/activatie worden per
+stap gecontroleerd; na verlopen machtiging geen nieuwe write. Andere migraties starten
+niet. Measure controleert alle volledige bundels inclusief het Dataverse-onderzoek en
+rapporteert alleen aantallen en duur per fase; geen inhoud, account- of concert-ID's.
+Deze backendmeting omvat de actuele Drive-rechtenread maar niet de Supabase-sessieread,
+browsernetwerktijd of rendering. De echte account-API geeft hiervoor `Server-Timing`.
+
+De browser meet `esmojo-show-ready` zonder identifiers in tijdelijk performancegeheugen.
+Een expliciete hover/focus/pointerdown mag één show tegelijk voorladen, binnen de
+bestaande vijf contexten/15min-regels en wisregels. Geen persistente privébrowsercache.
+De foto heeft één openbare MOJO-CDN-variant (600×338, WebP, kwaliteit80), hoge prioriteit,
+voorladen bij navigatie-intentie en dezelfde URL op homepage/show. Openbare fotometadata
+wordt bij menuverversing alleen in geheugen bewaard. Geen aparte foto-API of decode-
+wachtstap vóór het tonen van de volledige show. Alle functionele tabbladen blijven klaar.

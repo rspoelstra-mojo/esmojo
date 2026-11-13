@@ -1,3 +1,4 @@
+import {nativeConnection} from './connection.js';
 import {createHash,randomBytes} from 'node:crypto';
 import {createDataverseSetupConnection} from '../dataverse-setup-client.js';
 import {choice} from '../show-migration-writer.js';
@@ -9,8 +10,9 @@ const key=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const checksum=bytes=>createHash('sha256').update(bytes).digest('hex');
 // Interne repository: uitsluitend het vaste Shows-schema en vaste Dataverse-host.
 // De bestaande API-poort blijft verantwoordelijk voor actuele account/MFA/modules.
-export function createNativeShowsRepository({env=process.env,connection=createDataverseSetupConnection({env})}={}){
- const metadata=new Map();
+const schemaSessions=new WeakMap();
+export function createNativeShowsRepository({env=process.env,connection=nativeConnection(env)}={}){
+ let metadata=schemaSessions.get(connection);if(!metadata){metadata=new Map();schemaSessions.set(connection,metadata);}
  const limiter=maximum=>{let active=0;const pending=[];return async run=>{if(active>=maximum)await new Promise(resolve=>pending.push(resolve));else active++;try{return await run();}finally{const next=pending.shift();if(next)next();else active--;}};};
  const metadataRead=limiter(4),recordRead=limiter(8);
 
@@ -30,6 +32,17 @@ export function createNativeShowsRepository({env=process.env,connection=createDa
   if(!key(value))throw Error('VALIDATION');const m=await meta(table),result=await json(m.EntitySetName+'?'+new URLSearchParams({'$filter':"esmojo_sleutel eq '"+value+"'",'$top':'2'}));
   if(!Array.isArray(result.value)||result.value.length>1||result['@odata.nextLink'])throw Error('DATAVERSE_SHOWS_CONFLICT');
   const row=result.value[0]||null;if(row&&(!guid(row[m.PrimaryIdAttribute])||!/^W\/"[0-9]+"$/.test(row['@odata.etag']||'')||row.esmojo_sleutel!==value))throw Error('DATAVERSE_SHOWS_RESPONSE');return row;
+ }
+ async function resolveAlias(value){
+  if(!key(value))throw Error('VALIDATION');const m=await meta('esmojo_routealias'),sm=await meta('esmojo_concertreeks'),cm=await meta('esmojo_concert');
+  const nav=field=>m.ManyToOneRelationships.find(row=>row.ReferencingAttribute===field)?.ReferencingEntityNavigationPropertyName,seriesNav=nav('esmojo_concertreeks'),concertNav=nav('esmojo_concert');
+  if(!identifier(seriesNav)||!identifier(concertNav))throw Error('DATAVERSE_SHOWS_SCHEMA');
+  const result=await json(m.EntitySetName+'?'+new URLSearchParams({'$filter':"esmojo_sleutel eq '"+value+"'",'$top':'2','$expand':seriesNav+','+concertNav}));
+  if(!Array.isArray(result.value)||result.value.length>1||result['@odata.nextLink'])throw Error('DATAVERSE_SHOWS_CONFLICT');const alias=result.value[0];if(!alias)return null;if(alias.esmojo_sleutel!==value||!guid(alias[m.PrimaryIdAttribute])||!/^W\/"[0-9]+"$/.test(alias['@odata.etag']||''))throw Error('DATAVERSE_SHOWS_RESPONSE');
+  const series=alias[seriesNav],concert=alias[concertNav];if(!series||!concert||!guid(series[sm.PrimaryIdAttribute])||series[sm.PrimaryIdAttribute]!==alias._esmojo_concertreeks_value||concert[cm.PrimaryIdAttribute]!==alias._esmojo_concert_value)throw Error('DATAVERSE_SHOWS_CONFLICT');
+  // Some Dataverse responses omit expanded ETags. Obtain those freshly in that
+  // case rather than inventing a concurrency token for later business writes.
+  return{alias,series:/^W\/"[0-9]+"$/.test(series['@odata.etag']||'')?series:await byId('esmojo_concertreeks',alias._esmojo_concertreeks_value),concert:/^W\/"[0-9]+"$/.test(concert['@odata.etag']||'')?concert:await byId('esmojo_concert',alias._esmojo_concert_value)};
  }
  async function inSeries(table,seriesId){
   const schema=tableByName.get(table);if(!schema?.columns.some(column=>column.logical_name==='esmojo_concertreeks'&&column.target==='esmojo_concertreeks')||!guid(seriesId))throw Error('VALIDATION');
@@ -69,6 +82,24 @@ export function createNativeShowsRepository({env=process.env,connection=createDa
    path=null;if(result['@odata.nextLink']){const next=new URL(result['@odata.nextLink']);if(next.origin!=='https://org5bab852a.crm.dynamics.com'||next.pathname!=='/api/data/v9.2/'+m.EntitySetName||next.username||next.password||next.hash)throw Error('DATAVERSE_SHOWS_RESPONSE');path=m.EntitySetName+next.search;}
   }return rows;
  }
+ // One read-only OData batch carries compact current row versions. No cached
+ // business snapshot is trusted when any typed row/document has changed.
+ async function sameVersions(proof){
+  if(!Array.isArray(proof)||!proof.length||proof.length>1000)throw Error('DATAVERSE_SHOWS_CONFLICT');
+  const groups=new Map();for(const stamp of proof){if(!tableByName.has(stamp.table)||!guid(stamp.id)||!/^W\/"[0-9]+"$/.test(stamp.etag||''))throw Error('DATAVERSE_SHOWS_CONFLICT');if(!groups.has(stamp.table))groups.set(stamp.table,[]);groups.get(stamp.table).push(stamp);}
+  const queries=[];for(const [table,rows]of groups){const m=await meta(table);for(let n=0;n<rows.length;n+=40){const part=rows.slice(n,n+40),params=new URLSearchParams({'$select':m.PrimaryIdAttribute,'$filter':part.map(row=>m.PrimaryIdAttribute+' eq '+row.id).join(' or '),'$top':String(part.length)});queries.push({path:m.EntitySetName+'?'+params,rows:part,primary:m.PrimaryIdAttribute});}}
+  if(queries.length>100)throw Error('DATAVERSE_SHOWS_LIMIT');
+  const boundary='batch_'+randomBytes(16).toString('hex'),lines=[];
+  for(let i=0;i<queries.length;i++)lines.push('--'+boundary,'Content-Type: application/http','Content-Transfer-Encoding: binary','Content-ID: '+(i+1),'','GET /api/data/v9.2/'+queries[i].path+' HTTP/1.1','Accept: application/json','Consistency: Strong','','');
+  lines.push('--'+boundary+'--','');
+  const response=await call('$batch',{method:'POST',multipart:{boundary,body:lines.join('\r\n')}}),type=response.headers.get('content-type')||'',match=/boundary="?([a-z0-9_.-]+)"?/i.exec(type);if(!match)throw Error('DATAVERSE_SHOWS_RESPONSE');
+  const parts=(await response.text()).split('--'+match[1]).filter(part=>/HTTP\/1\.[01] /.test(part));if(parts.length!==queries.length)throw Error('DATAVERSE_SHOWS_RESPONSE');
+  for(let i=0;i<parts.length;i++){
+   const part=parts[i],http=part.indexOf('HTTP/1.'),payload=part.slice(http),status=/^HTTP\/1\.[01] ([0-9]{3})/.exec(payload),separator=payload.indexOf('\r\n\r\n');if(status?.[1]!=='200'||separator<0)throw Error('DATAVERSE_SHOWS_UNAVAILABLE');
+   let data;try{data=JSON.parse(payload.slice(separator+4).trim());}catch{throw Error('DATAVERSE_SHOWS_RESPONSE');}
+   const query=queries[i];if(!Array.isArray(data.value)||data['@odata.nextLink']||data.value.length!==query.rows.length||query.rows.some(row=>data.value.filter(actual=>actual[query.primary]===row.id&&actual['@odata.etag']===row.etag).length!==1))return false;
+  }return true;
+ }
  async function validatePatch(table,payload,metadata){
   const schema=tableByName.get(table);if(!schema||schema.existing||!payload||typeof payload!=='object'||Array.isArray(payload)||!Object.keys(payload).length)throw Error('VALIDATION');
   for(const [name,value]of Object.entries(payload)){
@@ -102,5 +133,5 @@ export function createNativeShowsRepository({env=process.env,connection=createDa
   const response=await call('$batch',{method:'POST',multipart:{boundary,body:lines.join('\r\n')}}),text=await response.text(),statuses=[...text.matchAll(/^HTTP\/1\.[01] ([0-9]{3})/gm)].map(match=>Number(match[1]));
   if(statuses.length!==operations.length||statuses.some(status=>status<200||status>=300))throw Error(statuses.includes(412)?'DATAVERSE_SHOWS_CONFLICT':'DATAVERSE_SHOWS_UNCONFIRMED');
  }
- return{meta,byKey,byId,query,inSeries,downloadDocument,atomic};
+ return{meta,byKey,byId,query,inSeries,downloadDocument,atomic,sameVersions,resolveAlias};
 }
