@@ -52,7 +52,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
   showManagement ||=createShowManagementService({env,shows});
   return async function handler(req, res) {
     let verifiedProfile=null;
-    const scopedShows=(operation,payload={})=>shows(operation,{...payload,...(shows.provider==='dataverse'&&verifiedProfile?{__actor:verifiedProfile}:{})});
+    const scopedShows=(operation,payload={})=>shows(operation,{...payload,...(['dataverse','managed'].includes(shows.provider)&&verifiedProfile?{__actor:verifiedProfile}:{})});
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const reply = (status, data) => res.status(status).json(data);
@@ -102,7 +102,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          const result=await profiles('self',actor,shows.provider!=='dataverse'&&['session','restore','login'].includes(action)?{includeHome:true}:{});
+          const result=await profiles('self',actor,!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
           const {homeDashboard:home,emailTestCopyTo:copyTo,...profile}=result;emailTestCopyTo=copyTo||null;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
@@ -299,11 +299,12 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         if(previewReads)return reply(403,{error:'Achtergrondtaken zijn uitsluitend beschikbaar in de productie-beheerdersomgeving.'});
         try{
+          if(req.body?.operation!=='status'&&shows.allowLegacyMaintenance)await shows.allowLegacyMaintenance();
           const result=await tasks.control(req.body,actor);
           if(req.body.operation!=='status'&&result.task&&['queued','running','waiting'].includes(result.task.status))try{background(tasks.run().catch(()=>{}));}catch{/* De duurzame worker pakt de opgeslagen taak alsnog op. */}
           return reply(200,result);
         }catch(error){
-          const messages={VALIDATION:'Ongeldige achtergrondtaak.',FORBIDDEN:'Geen actuele toegang tot deze taak.',TASK_BUSY:'Deze taak wordt al uitgevoerd. De voortgang is op de server bewaard.',TASK_NOT_FOUND:'Deze taak is nog niet gestart.',TASK_EXPIRED:'De taakmachtiging is verlopen. Start de taak opnieuw.',TASK_VERSION:'Deze taak gebruikt een oudere versie. Start opnieuw na controle.',TASK_SCHEMA:'De Opdracht-tabel of haar actieve sleutels is niet bevestigd. Controleer eerst de tabelsetup.',TASK_CORRUPT:'De opgeslagen taak is niet betrouwbaar leesbaar. Laat deze controleren; er zijn geen brongegevens verwijderd.',TASK_CONFIG:'De bestaande beveiligde taakverbinding is niet geconfigureerd.',TASK_STALE:'De taak is inmiddels door een andere serverronde gewijzigd. Vernieuw de status.',CHOICE_FORBIDDEN:'Dataverse weigert de achtergrondtaak. Controleer de bestaande apprechten.'};
+          const messages={STORAGE_ACTIVE:'Shows gebruikt Dataverse. De oude bronmigratie kan niet opnieuw worden gestart.',STORAGE_BUSY:'Shows worden omgeschakeld; wacht op het afronden van de controle.',VALIDATION:'Ongeldige achtergrondtaak.',FORBIDDEN:'Geen actuele toegang tot deze taak.',TASK_BUSY:'Deze taak wordt al uitgevoerd. De voortgang is op de server bewaard.',TASK_NOT_FOUND:'Deze taak is nog niet gestart.',TASK_EXPIRED:'De taakmachtiging is verlopen. Start de taak opnieuw.',TASK_VERSION:'Deze taak gebruikt een oudere versie. Start opnieuw na controle.',TASK_SCHEMA:'De Opdracht-tabel of haar actieve sleutels is niet bevestigd. Controleer eerst de tabelsetup.',TASK_CORRUPT:'De opgeslagen taak is niet betrouwbaar leesbaar. Laat deze controleren; er zijn geen brongegevens verwijderd.',TASK_CONFIG:'De bestaande beveiligde taakverbinding is niet geconfigureerd.',TASK_STALE:'De taak is inmiddels door een andere serverronde gewijzigd. Vernieuw de status.',CHOICE_FORBIDDEN:'Dataverse weigert de achtergrondtaak. Controleer de bestaande apprechten.'};
           const code=Object.hasOwn(messages,error.message)?error.message:'TASK_UNCONFIRMED';return reply(code==='VALIDATION'?400:code==='FORBIDDEN'?403:code==='TASK_UNCONFIRMED'?503:409,{code,error:messages[code]||'De taakopdracht is nog niet bevestigd. Bekijk de status voordat je opnieuw start.'});
         }
       }
@@ -311,6 +312,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         if(previewReads)return reply(403,{error:'Start de migratie vanuit de productie-beheerderspagina.'});
         try{
+          if(shows.allowLegacyMaintenance)await shows.allowLegacyMaintenance();
           if(env.DATAVERSE_TEST_URL){const {task}=await tasks.control({operation:'status',type:'shows-migration-v1'},actor);if(task&&['queued','running','waiting'].includes(task.status))return reply(409,{error:'Deze migratie loopt al op de server. Ververs de beheerpagina om de opgeslagen voortgang te bekijken.'});}
           return reply(200,await showMigration(req.body,actor));
         }catch(error){
@@ -337,8 +339,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       }
       if(action==='data-transition'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-        try{return reply(200,await dataTransition(req.body));}catch(error){
-          const messages={VALIDATION:'Ongeldig migratieverzoek.',CONFLICT:'Dataverse bevat afwijkende inhoud. Er is niets overschreven.',SOURCE_CHANGED:'De bron is gewijzigd. Bekijk het voorbeeld opnieuw.',SOURCE_INVALID:'De Drive-bron kan niet veilig worden verwerkt.',VERIFY:'De import is nog niet bevestigd. Herhaal de import om te controleren.',DATAVERSE_WRITE:'Dataverse heeft de import niet bevestigd. Controleer de schrijfrechten en probeer opnieuw.'};
+        try{if(['import','bulk-import'].includes(req.body?.operation)&&shows.allowLegacyMaintenance)await shows.allowLegacyMaintenance();return reply(200,await dataTransition(req.body));}catch(error){
+          const messages={STORAGE_ACTIVE:'Shows gebruikt Dataverse. De oude bronimport is afgesloten.',STORAGE_BUSY:'Shows worden omgeschakeld; wacht op de controle.',VALIDATION:'Ongeldig migratieverzoek.',CONFLICT:'Dataverse bevat afwijkende inhoud. Er is niets overschreven.',SOURCE_CHANGED:'De bron is gewijzigd. Bekijk het voorbeeld opnieuw.',SOURCE_INVALID:'De Drive-bron kan niet veilig worden verwerkt.',VERIFY:'De import is nog niet bevestigd. Herhaal de import om te controleren.',DATAVERSE_WRITE:'Dataverse heeft de import niet bevestigd. Controleer de schrijfrechten en probeer opnieuw.'};
           const code=Object.hasOwn(messages,error.message)?error.message:'UNAVAILABLE';
           return reply(code==='VALIDATION'?400:['CONFLICT','SOURCE_CHANGED'].includes(code)?409:503,{code,error:messages[code]||'Migratie niet gelukt. Eerder bevestigde imports blijven behouden. Probeer opnieuw.'});
         }

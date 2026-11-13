@@ -1,3 +1,4 @@
+import {createManagedShowsRouting,managedShowsRouting} from './dataverse-shows/routing.js';
 import {createNativeShowState} from './dataverse-shows/state.js';
 import {createNativeManagementRepository} from './dataverse-shows/management.js';
 import {nativeShowsSelected,assertNativeAuthority} from './dataverse-shows/authority.js';
@@ -10,6 +11,7 @@ export const validManagementLink=value=>typeof value==='string'&&/^[a-f0-9]{64}$
 const digest=value=>createHash('sha256').update(value).digest('hex');
 export function createShowManagementRepository({env=process.env,clientFactory=createClient,legacy=false}={}){
  if(!legacy&&nativeShowsSelected(env)){const state=createNativeShowState({env}),native=createNativeManagementRepository({env,state});return Object.fromEntries(Object.entries(native).map(([name,method])=>[name,async(...args)=>{await assertNativeAuthority({env,repository:state.repo});return method(...args);} ]));}
+ if(!legacy&&managedShowsRouting(env)){const route=createManagedShowsRouting({env}),old=createShowManagementRepository({env,clientFactory,legacy:true}),native=createNativeManagementRepository({env});return Object.fromEntries(Object.keys(old).map(name=>[name,(...args)=>route({legacy:()=>old[name](...args),native:()=>native[name](...args)})]));}
  let client;const db=()=>client||(client=clientFactory(env.VITE_SUPABASE_URL,env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}}));
  const check=result=>{if(result.error)fail(['42P01','PGRST205','PGRST202'].includes(result.error.code)?'MANAGEMENT_SCHEMA_REQUIRED':'MANAGEMENT_UNAVAILABLE');return result.data;};
  return{

@@ -1,6 +1,6 @@
 # Native lees- en schrijflaag voor Shows
 
-De provider is gebouwd, maar is niet automatisch actief na publicatie. De bestaande
+De provider is gebouwd. Publicatie start de omschakeling niet automatisch. De bestaande
 website houdt zijn huidige opslag tot de afzonderlijke gecontroleerde omschakeling.
 `server/shows-store.js` kiest expliciet één provider; onbekende instellingen stoppen.
 
@@ -107,3 +107,37 @@ Bestaande encryptiesleutels blijven server-only nodig: de bestaande server-root 
 veldleases/checkpoints en de bestaande Showbeheer-cryptosleutel/AAD niet verwijderen
 als Drive-bedrijfsopslag vervalt. Rotatie vereist afzonderlijke herencryptie; geen
 credentials naar frontend of gedeelde cloudomgeving kopiëren.
+
+## Goedgekeurde gecontroleerde omschakeling
+
+Gebruiker heeft publicatie en activering expliciet toegestaan. De productie-router
+kiest de bron aan de hand van het vaste getoetste technische authority-record:
+legacy → freeze → dataverse. Hiervoor hoeven beide Codex-accounts geen productie-
+credentials te kopiëren of Vercel-variabelen te wijzigen. De bestaande expliciete
+serverinstelling blijft beschikbaar, maar kan een actieve native autoriteit niet
+naar oude schrijvers omleiden. Er is geen foutgestuurde terugval.
+
+GitHub Actions → Controlled Shows Dataverse cutover → main. `status` leest veilige
+voortgang; `start` voert de expliciet goedgekeurde procedure uit; `resume` herhaalt
+na een inhoudelijk opgeloste blokkade. Geen taak bij deploy of pagina laden.
+Elke ronde gebruikt de actuele rechten van de initiatiefnemer van de afgeronde
+kopie en diens oorspronkelijke machtiging; geen verversing van de48u-termijn.
+De workflow deelt het globale uitvoeringsslot met andere achtergrondtaken.
+
+De procedure vergelijkt eerst alle actuele bronvelden, relaties en bestandsbytes.
+Daarna sluit zij beide opslagproviders voor normale Shows-verzoeken, wacht elf
+minuten op oude Vercel/GAS-verzoeken en vergelijkt opnieuw onder deze schrijfstop.
+De bestaande migratie heeft het schema en de sleutels al bewezen: de nieuwe
+onafhankelijke eindcontrole herhaalt geen honderden metadata-setupverzoeken.
+Afwijkende gegevens worden niet stil overschreven. Bij een bevestigde fout vóór
+activering wordt de oude site vrijgegeven en de controle geblokkeerd. Bij een
+onbevestigde uitkomst of na native activering geldt geen blinde terugschakeling.
+
+Daarna worden native planning en de werkelijke agenda-checkedAt opgebouwd. Alleen
+na volledige verificatie wordt een echt versleuteld completed-validatiecheckpoint
+vastgelegd en de authority gepubliceerd. Normale API-, research-, Showbeheer- en
+workerfactory’s gebruiken vervolgens dezelfde native provider. Oude actieve
+Supabase-mirror/archivewriters en oude bronmigratiestarts zijn dan afgesloten.
+De procedure leest aansluitend alle bestaande native showprofielen/tickets/risico’s.
+Dit bewijst serverroutes; een persoonlijke ingelogde browsercontrole moet afzonderlijk
+als zodanig worden gerapporteerd.
