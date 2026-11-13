@@ -93,9 +93,10 @@ MCP-, research-, Showbeheer-, migratie- en domeintests, `npm run build` en
    De provider leest ook het bijbehorende versleutelde checkpoint terug en eist
    complete, exact dezelfde epoch/sequence en geen resterende lease.
    Geen browserroute kan dit record of deze vlag nu vrij instellen.
-6. Eén gecoördineerde productie-uitrol met servervariabele
-   `SHOWS_STORAGE_PROVIDER=dataverse`; geen VITE-prefix. Alle normale Shows-workers
-   kiezen dezelfde provider. Legacy-export voor eindcontrole is expliciet `legacy:true`.
+6. De productie-router leest dezelfde getoetste `native-authority/v1` bij alle
+   Shows-workers. De beheerde route vereist geen nieuwe Vercel-variabele;
+   `SHOWS_STORAGE_PROVIDER=dataverse` blijft uitsluitend een expliciete selectie
+   met dezelfde authority-controle. Legacy-export voor eindcontrole is expliciet `legacy:true`.
 7. Ingelogde bevoegde lees-/schrijfrookproef en vergelijking van oude URLs, menu,
    verkoop, beoordelingen, PDF, bijlagen en Showbeheer. Originele bronnen behouden.
 
@@ -171,3 +172,10 @@ native snapshotintegriteit volledig bewezen. De historische kopiegeneratie blijf
 behouden; de actuele actieve/archief-bronrevisie en haar hash blijven afzonderlijk
 in het versleutelde broncontinuïteitsbewijs. Een lagere bronrevisie of een echte
 inhoudswijziging wordt nooit onder deze regel toegelaten.
+
+Nieuwe tijdschema’s die de bestaande capture na de kopie voor het eerst publiceerde,
+mogen tijdens de gecontroleerde cutover create-only worden aangevuld. Alle bestaande
+native inhoud moet eerst bewezen gelijk zijn; bronbeweging of een gewijzigd/verwijderd
+bestaand schema blokkeert. Regels en ongewijzigde bronsnapshot worden samen atomair
+met reeks-ETag opgeslagen en teruggelezen. De finale vergelijking onder schrijfstop
+controleert ze opnieuw. Dit is geen algemene overschrijf-/reconciliatieroute.

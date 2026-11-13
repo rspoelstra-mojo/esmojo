@@ -14,6 +14,10 @@ globaal uitvoeringsslot plus taaklease/ETag; geen actor/cursor/query vanuit de c
 Vóór activering mag een mislukte vergelijking de oude site weer vrijgeven; na
 native activering nooit stil terugschakelen. Geen fictieve zakelijke testwrites.
 Bronverschillen niet blind overschrijven: stoppen, veilig diagnosticeren en oplossen.
+Cutover mag uitsluitend een sinds de kopie nieuw opgehaald tijdschema create-only
+met regels/historie toevoegen, na bestaande native integriteit en actuele broncheck.
+Bestaande schemawijzigingen/verwijderingen blokkeren; atomair met reeks-ETag,
+teruglezen en opnieuw vergelijken onder schrijfstop. Geen algemene deltareparatie.
 De vaste productie-providerrouter volgt uitsluitend het getoetste technische
 native-authority/v1-record, zonder nieuwe Vercel-secrets of frontendvariabelen.
 Oude migratie-/importstarts worden na activering server-side geweigerd.
