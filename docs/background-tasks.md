@@ -212,3 +212,9 @@ geen onzekere write of actieve lease, actuele admin/Reports en nog geldige
 originele48u-delegatie. De read-only diagnose moet volledig slagen. De server
 bindt de resume conditioneel aan de gelezen generatie; geen start/restart of
 machtigingsverlenging. Alle overige inhoudelijke conflicten blijven geblokkeerd.
+
+De technische OIDC-status toont daarnaast uitsluitend de bestaande tellers
+`verifiedRecords` en `verifiedFiles`. De Reports-eindcontrole mag alleen de gesloten
+operationele OnTrack-heartbeat normaliseren tegen de hash-gecontroleerde, versleutelde
+originele instellingen; alle zakelijke bronvelden blijven strikt. Zie de
+Rapportages-migratiehandleiding voor deze beperkte versheidscontrole.

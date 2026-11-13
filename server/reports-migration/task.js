@@ -72,7 +72,17 @@ export function createReportsMigrationTask({env=process.env,now=Date.now,source=
     s.auditIndex++;s.entryIndex++;if(s.entryIndex===page.length){s.pageIndex++;s.entryIndex=0;}if(s.auditIndex===s.total)s.phase='finish';return reply('Onafhankelijke eindcontrole · '+s.auditIndex+' van '+s.total+' rapportages');
    }
    if(s.phase==='finish'){
-    const current=await inventory(actor);if(current.fingerprint!==s.inventoryHash||current.entries.length!==s.total)throw Error('MIGRATION_SOURCE_CHANGED');
+    const current=await inventory(actor);if(current.entries.length!==s.total)throw Error('MIGRATION_SOURCE_CHANGED');
+    if(current.fingerprint!==s.inventoryHash){
+     // Routine workers touch only their transient pipeline heartbeat. Prove the
+     // original inventory again with exactly that sealed baseline substituted;
+     // every other current source/register/mail field must still match.
+     if(typeof source.matchesInventory!=='function')throw Error('MIGRATION_SOURCE_CHANGED');
+     const selected=await manifest.get(s.run,'selection',0,actor,authorizationExpiresAt);if(!Number.isSafeInteger(selected.settingsPages)||selected.settingsPages!==s.settingsPages||selected.settingsPages<1||selected.settingsPages>10000)throw Error('TASK_CORRUPT');
+     const parts=[];for(let index=0;index<selected.settingsPages;index++)parts.push(await manifest.get(s.run,'settings',index,actor,authorizationExpiresAt));
+     const text=parts.join('');if(digest(text)!==selected.settingsHash)throw Error('TASK_CORRUPT');const settings=JSON.parse(text),present=Object.hasOwn(settings,'pipeline'),baseline={present,value:present?settings.pipeline:null};
+     if(!await source.matchesInventory(s.inventoryHash,baseline,actor))throw Error('MIGRATION_SOURCE_CHANGED');
+    }
     s.phase='complete';bundleCache=null;datasetCache=null;return output(s,'Alle bestaande Rapportages-bronnen, gegevens en bestanden zijn gekopieerd en teruggelezen. Originelen en huidige opslagroutes zijn behouden.','complete');
    }
    if(s.phase==='complete')return output(s,'Rapportages-kopie is volledig gecontroleerd; de bestaande websitebron is behouden.','complete');

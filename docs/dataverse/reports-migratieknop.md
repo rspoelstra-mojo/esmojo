@@ -95,7 +95,7 @@ het checkpoint; oude sessies worden veilig opnieuw geopend.
 Daarna worden alle module-records read-only teruggelezen en de bron opnieuw vergeleken.
 Een aparte eindronde controleert de bronvingerafdruk en header/version-binding per
 concert en daarna de gehele inventaris/validatie-/mailregistratie opnieuw. Verandert
-de bron tijdens de kopie (ook door een gewone worker), dan stopt de taak voor controle.
+de zakelijke bron tijdens de kopie (ook door een gewone worker), dan stopt de taak voor controle.
 Dit is een gecontroleerde kopie, geen stille deltareplicatie of bron-schrijfstop.
 
 Een onzekere write behoudt vijftien minuten uitsluiting. Hervatten gebruikt hetzelfde
@@ -134,3 +134,18 @@ Oorspronkelijke reeksinformatie wordt daarom pas na een exacte identiteitsoveree
 uit de gesloten bronregisters toegevoegd. Een echt verschil in artiest/zaal/datum/
 stad binnen de Reports-catalogus blijft een harde controlestop. Geen bronrij
 verwijderen, aanpassen of willekeurig als winnaar aanwijzen.
+
+## Operationele heartbeat versus bronwijzigingen
+
+De normale OnTrack-worker wijzigt ook zonder nieuwe rapportages het tijdelijke
+`pipeline`-object. De oorspronkelijke instellingen worden ongewijzigd gekopieerd.
+Bij een afwijkende eindvingerafdruk leest de migratie de versleutelde oorspronkelijke
+instellingen terug en controleert eerst hun volledige opgeslagen hash. Alleen het
+gesloten object `pipeline` (status idle/running/assets-missing en geldige updatedAt)
+mag bij een tweede actuele bronvergelijking door die oorspronkelijke baseline
+worden vervangen. De ondertekende Apps Script-route geeft uitsluitend matches terug.
+Alle andere huidige inventaris-, bron-, context-, versie-, ontvanger- en mailvelden
+moeten exact dezelfde oorspronkelijke vingerafdruk opleveren. Extra pipelinevelden,
+verwijdering van een bestaande pipeline of zakelijke wijzigingen blijven blokkeren.
+Geen gewijzigde bron of doelinhoud wordt gerepareerd, en de bestaande taakgeneratie
+en oorspronkelijke48u-eindtijd blijven behouden.
