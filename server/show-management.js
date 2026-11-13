@@ -1,3 +1,6 @@
+import {createNativeShowState} from './dataverse-shows/state.js';
+import {createNativeManagementRepository} from './dataverse-shows/management.js';
+import {nativeShowsSelected,assertNativeAuthority} from './dataverse-shows/authority.js';
 import {createClient} from '@supabase/supabase-js';
 import {createHash,createHmac,randomBytes,randomInt,randomUUID,hkdfSync,createCipheriv,createDecipheriv,timingSafeEqual} from 'node:crypto';
 import {upcomingShows} from './mojo-agenda.js';
@@ -5,7 +8,8 @@ const fail=code=>{throw Error(code);};
 const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 export const validManagementLink=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const digest=value=>createHash('sha256').update(value).digest('hex');
-export function createShowManagementRepository({env=process.env,clientFactory=createClient}={}){
+export function createShowManagementRepository({env=process.env,clientFactory=createClient,legacy=false}={}){
+ if(!legacy&&nativeShowsSelected(env)){const state=createNativeShowState({env}),native=createNativeManagementRepository({env,state});return Object.fromEntries(Object.entries(native).map(([name,method])=>[name,async(...args)=>{await assertNativeAuthority({env,repository:state.repo});return method(...args);} ]));}
  let client;const db=()=>client||(client=clientFactory(env.VITE_SUPABASE_URL,env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}}));
  const check=result=>{if(result.error)fail(['42P01','PGRST205','PGRST202'].includes(result.error.code)?'MANAGEMENT_SCHEMA_REQUIRED':'MANAGEMENT_UNAVAILABLE');return result.data;};
  return{

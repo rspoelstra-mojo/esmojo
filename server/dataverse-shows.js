@@ -24,7 +24,7 @@ export function createDataverseShows({shows,research,now=Date.now}={}){
    const keys=await research.sourceKeys(),signature=[...keys].sort().join('\n');if(!keys.length){cached={rows:[],signature,until:now()+15000,identitiesUntil:now()+900000};return[];}
    if(cached?.signature===signature&&cached.identitiesUntil>now()){cached.until=now()+15000;return cached.rows;}
    const identities={concerts:[]};
-   for(let offset=0;offset<keys.length;offset+=500){const batch=await shows('research-identities',{sourceKeys:keys.slice(offset,offset+500)}).catch(()=>({concerts:[]}));identities.concerts.push(...(batch.concerts||[]));}
+   for(let offset=0;offset<keys.length;offset+=500){const batch=await shows('research-identities',{sourceKeys:keys.slice(offset,offset+500)}).catch(error=>{if(shows.provider==='dataverse')throw error;return{concerts:[]};});identities.concerts.push(...(batch.concerts||[]));}
    const rows=keys.map(key=>researchShow(key,identities.concerts||[])).filter(Boolean);
    cached={rows,signature,until:now()+15000,identitiesUntil:now()+900000};return rows;
   })().finally(()=>{pending=null;});return pending;
@@ -37,7 +37,7 @@ export function createDataverseShows({shows,research,now=Date.now}={}){
  }
  const wrapped=async(operation,payload={})=>{
   if(operation==='list'){
-   const [legacy,imported]=await Promise.all([shows('list').catch(error=>{if(error.message==='FORBIDDEN'||!research.configured?.())throw error;return{concerts:[],checkedAt:null};}),catalogue(true)]);
+   const [legacy,imported]=await Promise.all([shows('list').catch(error=>{if(shows.provider==='dataverse'||error.message==='FORBIDDEN'||!research.configured?.())throw error;return{concerts:[],checkedAt:null};}),catalogue(true)]);
    return{...legacy,dataverseShows:imported,checkedAt:legacy.checkedAt||(imported.length?new Date(now()).toISOString():null)};
   }
   if(!payload.concertId)return shows(operation,payload);
@@ -53,5 +53,5 @@ export function createDataverseShows({shows,research,now=Date.now}={}){
   const result=await shows(operation,{...payload,concertId:target.concertId});
   return operation==='report-reserve'&&result.state==='reserved'?{...result,selectedConcertId:payload.concertId}:result;
  };
- wrapped.activeStorage=shows.activeStorage;return wrapped;
+ wrapped.provider=shows.provider;wrapped.activeStorage=shows.activeStorage;return wrapped;
 }

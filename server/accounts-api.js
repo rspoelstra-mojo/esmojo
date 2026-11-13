@@ -51,6 +51,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
   referenceService ||=createBarrierReferenceService({shows});
   showManagement ||=createShowManagementService({env,shows});
   return async function handler(req, res) {
+    let verifiedProfile=null;
+    const scopedShows=(operation,payload={})=>shows(operation,{...payload,...(shows.provider==='dataverse'&&verifiedProfile?{__actor:verifiedProfile}:{})});
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const reply = (status, data) => res.status(status).json(data);
@@ -100,7 +102,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          const result=await profiles('self',actor,['session','restore','login'].includes(action)?{includeHome:true}:{});
+          const result=await profiles('self',actor,shows.provider!=='dataverse'&&['session','restore','login'].includes(action)?{includeHome:true}:{});
           const {homeDashboard:home,emailTestCopyTo:copyTo,...profile}=result;emailTestCopyTo=copyTo||null;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
@@ -110,6 +112,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       };
       // Drive controleert de actuele rol opnieuw; gebruikersmetadata is geen autorisatiebron.
       const own = await ownProfile();
+      verifiedProfile=own;
       if(isFluidPreview(env)){
         if(!isAdministrator(own)||!own.activated)return reply(403,{error:'Deze testomgeving vereist een geactiveerd beheerderaccount met MFA.'});
         if(!fluidAccountRead(action,req.method,req.body))return reply(403,{error:'Deze testomgeving is uitsluitend alleen-lezen.'});
@@ -175,7 +178,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!==method){res.setHeader('Allow',method);return reply(405,{error:'Niet toegestaan.'});}
         try{
           if(!metadata&&req.body&&Object.keys(req.body).length)throw Error('VALIDATION');
-          return reply(200,await shows(action,{...(metadata?validateRiskViewRequest(req.body):{}),actor}));
+          return reply(200,await scopedShows(action,{...(metadata?validateRiskViewRequest(req.body):{}),actor}));
         }catch(error){const code=error.message,status=code==='FORBIDDEN'?403:code==='VALIDATION'?400:code==='NOT_FOUND'?404:503;
           return reply(status,{error:status===403?'Je hebt geen toegang tot Shows.':status===400?'Ongeldig verzoek.':status===404?'Deze show is niet beschikbaar.':'Het planningdashboard kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'shows'}:{})});}
       }
@@ -209,31 +212,31 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const schedulePdf = task => { try { background(task); } catch { void task.catch(()=>{}); } };
       const pdfManager = () => [own.firstName,own.lastName].filter(Boolean).join(' ').trim();
       if(action==='show-open'&&req.method==='POST'){
-        try{const input=validateRiskViewRequest(req.body);const [bundle,research]=await Promise.all([shows('show-open',{...input,actor}),dataverseResearch.load(input.concertId)]);return reply(200,{...bundle,profile:dataverseResearch.merge(bundle.profile,research)});}
+        try{const input=validateRiskViewRequest(req.body);const [bundle,research]=await Promise.all([scopedShows('show-open',{...input,actor}),dataverseResearch.load(input.concertId)]);return reply(200,{...bundle,profile:dataverseResearch.merge(bundle.profile,research)});}
         catch(error){return reply(error.message==='VALIDATION'?400:503,{error:error.message==='VALIDATION'?'Ongeldige show.':'De show kon niet volledig worden geladen. Probeer opnieuw.'});}
       }
       if(['barrier-layout','floor-pressure'].includes(action)&&req.method==='POST'){
-        try{const input=action==='barrier-layout'?validateBarrierRequest(req.body):validateFloorRequest(req.body),{operation,...payload}=input;return reply(200,await shows((action==='barrier-layout'?'barrier-':'floor-')+operation,{...payload,actor}));}
+        try{const input=action==='barrier-layout'?validateBarrierRequest(req.body):validateFloorRequest(req.body),{operation,...payload}=input;return reply(200,await scopedShows((action==='barrier-layout'?'barrier-':'floor-')+operation,{...payload,actor}));}
         catch(error){const code=error.message;return reply(code==='VALIDATION'?400:['ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?409:503,{code:['VALIDATION','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID'].includes(code)?code:'UNAVAILABLE',error:code==='VALIDATION'?(action==='barrier-layout'?'Controleer de verplichte velden en kies een geldige PNG of PDF (maximaal 2 MB).':'Controleer de publieksvakken, bezoekersaantallen, oppervlakten en verplichte beoordeling.'):code==='ASSESSMENT_CONFLICT'?'Deze beoordeling of de brongegevens zijn intussen gewijzigd. Laad opnieuw; je invoer is behouden.':code==='ASSESSMENT_COMPLETED'?'Dit onderdeel is al afgerond. Open de actuele beoordeling of kies eerst Bewerken.':'Laden of opslaan is niet gelukt. Je invoer is behouden. Probeer opnieuw.'});}
       }
       if(action==='measure'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Methode niet toegestaan.'});}
-        try{const input=validateMeasureRequest(req.body);if(input.operation==='upload'){const bytes=Buffer.from(input.base64,'base64');if(bytes.length>measureUploadLimit||!measureFileSignature(bytes,input.mime)||createHash('sha256').update(bytes).digest('hex')!==input.sha256)throw Error('VALIDATION');}const {operation,...payload}=input;return reply(200,await shows('measure-'+operation,{...payload,actor}));}
+        try{const input=validateMeasureRequest(req.body);if(input.operation==='upload'){const bytes=Buffer.from(input.base64,'base64');if(bytes.length>measureUploadLimit||!measureFileSignature(bytes,input.mime)||createHash('sha256').update(bytes).digest('hex')!==input.sha256)throw Error('VALIDATION');}const {operation,...payload}=input;return reply(200,await scopedShows('measure-'+operation,{...payload,actor}));}
         catch(error){const code=error.message;return reply(code==='FORBIDDEN'?403:code==='VALIDATION'?400:['SOURCE_CHANGED','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?409:503,{error:code==='VALIDATION'?'Controleer de verplichte beoordeling en kies een PDF, PNG of JPG van maximaal 2 MB.':code==='FORBIDDEN'?'Je hebt geen toegang tot deze module.':['SOURCE_CHANGED','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?'Het risico of de maatregel is intussen gewijzigd. Je invoer is behouden; laad de actuele maatregel.':'Opslag of documentcontrole niet bevestigd. Je invoer is behouden; probeer opnieuw.'});}
       }
       if(action==='operational-risk'&&req.method==='POST'){
-        try{return reply(200,await shows('risk-operational-save',{...validateOperationalReview(req.body),actor}));}
+        try{return reply(200,await scopedShows('risk-operational-save',{...validateOperationalReview(req.body),actor}));}
         catch(error){const conflict=['SOURCE_CHANGED','ASSESSMENT_CONFLICT','CONFLICT','REPORT_NOT_READY'].includes(error.message);return reply(error.message==='VALIDATION'?400:conflict?409:503,{error:error.message==='VALIDATION'?'Kies een risicoklasse en vul de verplichte toelichting of beheersmaatregel in.':conflict?'Het risico of de beoordeling is intussen gewijzigd. Laad de actuele risico’s; je invoer is behouden.':'Opslag niet bevestigd. Je invoer is behouden; probeer opnieuw.'});}
       }
       if (action === 'show-risks' && req.method === 'POST') {
-        try { return reply(200, await shows('risk-view', validateRiskViewRequest(req.body))); }
+        try { return reply(200, await scopedShows('risk-view', validateRiskViewRequest(req.body))); }
         catch (error) { return reply(error.message === 'VALIDATION' ? 400 : 503, {
           error: error.message === 'VALIDATION' ? 'Ongeldige show.' : 'Risicoanalyse laden is niet gelukt. Probeer opnieuw.',
         }); }
       }
       if (action === 'production-risks' && req.method === 'POST') {
         try {
-          const saved=await shows('risk-production-save',{...validateProductionRiskSelection(req.body),actor});
+          const saved=await scopedShows('risk-production-save',{...validateProductionRiskSelection(req.body),actor});
           // Een reeds geopende oudere client verwacht uitsluitend de keuze.
           // Nieuwe clients verwerken de homepage-envelop vóór domeinvalidatie.
           const {homePlanning,...state}=saved;
@@ -249,26 +252,26 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }catch(error){return reply(error.message==='VALIDATION'?400:['REPORT_NOT_READY','REPORT_CONFLICT'].includes(error.message)?409:503,{error:error.message==='VALIDATION'?'Ongeldig PDF-verzoek.':'Het showprofiel is niet beschikbaar. Vernieuw de show; je gegevens zijn behouden.'});}
       }
       if (action === 'analysis-finalization' && req.method === 'POST') {
-        try { const input = validateFinalRequest(req.body); const {operation,...payload}=input; const result=await shows('final-'+operation,payload);if(operation==='complete'&&result.finalization?.categories.visitors.completedAt&&result.finalization?.categories.artist.completedAt)schedulePdf(pdfService.ensure(input.concertId,pdfManager()).catch(()=>{}));return reply(200,result); }
+        try { const input = validateFinalRequest(req.body); const {operation,...payload}=input; const result=await scopedShows('final-'+operation,payload);if(operation==='complete'&&result.finalization?.categories.visitors.completedAt&&result.finalization?.categories.artist.completedAt)schedulePdf(pdfService.ensure(input.concertId,pdfManager()).catch(()=>{}));return reply(200,result); }
         catch(error) { const code=error.message; return reply(code==='VALIDATION'?400:['FINAL_CONFLICT','FINAL_NOT_READY'].includes(code)?409:503,{error:code==='VALIDATION'?'Kies een cijfer van 1 tot en met 10 en vul een samenvatting in (maximaal 2000 tekens).':code==='FINAL_NOT_READY'?'Nog niet alle vereiste stappen zijn afgerond. Vernieuw het overzicht.':code==='FINAL_CONFLICT'?'De analyse is intussen gewijzigd of al afgerond. Vernieuw het overzicht; je invoer is behouden.':'Afronden of laden is niet gelukt. Je invoer is behouden.'}); }
       }
       if (action === 'ticket-data' && req.method === 'POST') {
-        try { const input = validateTicketRequest(req.body); return reply(200, await shows(input.operation, { ...input.payload, actor })); }
+        try { const input = validateTicketRequest(req.body); return reply(200, await scopedShows(input.operation, { ...input.payload, actor })); }
         catch (error) { const code = error.message; return reply(code === 'VALIDATION' ? 400 : code === 'TICKET_CONFLICT' ? 409 : 503, { error: code === 'TICKET_CONFLICT' ? 'Dit veld is gereserveerd of intussen gewijzigd. Je invoer is behouden. Ga terug en laad de laatste gegevens.' : code === 'VALIDATION' ? 'Controleer de ingevoerde waarden en showdagen.' : 'Laden of opslaan is niet gelukt. Je invoer is behouden.' }); }
       }
       if (action === 'show-photo' && req.method === 'POST') {
         const input = req.body;
         if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });
-        const index = await shows('list');
+        const index = await scopedShows('list');
         let concert = index.concerts.find(row => row.concertId === input.concertId);
-        if(!concert){try{concert=(await shows('home-metadata',{concertId:input.concertId,actor})).show;}catch{/* Geen vrije URL/andere zaal als fallback. */}}
+        if(!concert){try{concert=(await scopedShows('home-metadata',{concertId:input.concertId,actor})).show;}catch{/* Geen vrije URL/andere zaal als fallback. */}}
         return reply(200, { photo: concert ? await photoService(concert.sourceUrl) : null });
       }
       if (action === 'show-profile' && req.method === 'POST') {
         try {
           const input = validateShowProfile(req.body);
-          if(input.operation!=='profile-read')return reply(200,await shows(input.operation,input.payload));
-          const [profile,research]=await Promise.all([shows(input.operation,input.payload),dataverseResearch.load(input.payload.concertId)]);
+          if(input.operation!=='profile-read')return reply(200,await scopedShows(input.operation,input.payload));
+          const [profile,research]=await Promise.all([scopedShows(input.operation,input.payload),dataverseResearch.load(input.payload.concertId)]);
           return reply(200,dataverseResearch.merge(profile,research,input.payload.questionNumber));
         } catch (error) {
           const code = error.message;
@@ -278,7 +281,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         }
       }
       if (action === 'shows' && req.method === 'GET') {
-        const data = await shows('list');
+        const data = await scopedShows('list');
         if (!data.checkedAt) return reply(503, { error: 'De concertagenda is nog niet geïmporteerd.' });
         const legacy=upcomingShows(data.concerts||[]),imported=(data.dataverseShows||[]).filter(row=>!legacy.some(show=>show.dates.some(date=>researchKeyForConcert({artist:show.name,venue:show.venue,date})===row.sourceKey)));
         const publicShows=[...legacy,...imported.map(({key,name,dates,venue,city})=>({key,name,dates,venue,city}))];

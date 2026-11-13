@@ -3,8 +3,9 @@ const guid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f
 const origin='https://org5bab852a.crm.dynamics.com',base=origin+'/api/data/v9.2/';
 export function createDataverseSetupConnection({env=process.env,request=fetch,now=Date.now}={}){
  let context=null,pending=null;
- async function call(path,headers,{method='GET',body,code='CHOICE_READ',timeoutMs=15000}={}){
-  let response;try{response=await request(base+path,{method,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(Math.max(1000,Math.min(timeoutMs,120000))),headers:{...headers,...(method==='GET'?{Consistency:'Strong'}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});}catch{throw Error(code);}
+ async function call(path,headers,{method='GET',body,code='CHOICE_READ',timeoutMs=15000,multipart}={}){
+  if(multipart&&(path!=='$batch'||method!=='POST'||body!==undefined||!/^batch_[a-f0-9]{32}$/.test(multipart.boundary)||typeof multipart.body!=='string'||Buffer.byteLength(multipart.body)>8*1024*1024))throw Error('DATAVERSE_BATCH_INVALID');
+  let response;try{response=await request(base+path,{method,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(Math.max(1000,Math.min(timeoutMs,120000))),headers:{...headers,...(method==='GET'?{Consistency:'Strong'}:{}),...(multipart?{'Content-Type':'multipart/mixed; boundary='+multipart.boundary}:body?{'Content-Type':'application/json'}:{})},...(multipart?{body:multipart.body}:body?{body:JSON.stringify(body)}:{})});}catch{throw Error(code);}
   if(response.status===429){const error=Error('SETUP_THROTTLED'),raw=response.headers.get('Retry-After'),seconds=Number(raw);error.retryAfterSeconds=raw&&Number.isFinite(seconds)&&seconds>0?Math.ceil(seconds):raw&&Number.isFinite(Date.parse(raw))?Math.max(1,Math.ceil((Date.parse(raw)-now())/1000)):3;throw error;}
   if(response.status>=500)throw Error('SETUP_TEMPORARY');
   if(response.status===401){context=null;throw Error('CHOICE_AUTH');}
