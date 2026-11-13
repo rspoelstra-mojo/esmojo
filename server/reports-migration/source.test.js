@@ -35,3 +35,7 @@ test('both historical source formats retain ticket/visitor meaning, validated an
   audit.setContent(JSON.stringify({managedBy:'untrusted',classification:'vertrouwelijk',concertId:id}));await assert.rejects(source.bundle(inventory.entries[0],admin),/REPORT_CONFLICT/);
  }
 });
+test('fixed probe is read-only and returns only counters and fixed stages for invalid mail shapes',async()=>{
+ const f=setup(),show=f.addShow(),csv=f.addCsv(show);const before=f.byteReads(),original=String(f.mail.content),source=createReportsMigrationSource({env:{},store:f.store}),good=await source.probe(admin);assert.equal(good.stage,'complete');assert.equal(good.code,null);assert.equal(good.counts.entries,1);assert.equal(f.byteReads(),before);assert.equal(String(f.mail.content),original);assert.doesNotMatch(JSON.stringify(good),/fixture_|Synthetische|reader|receipt/);
+ const data=JSON.parse(f.mail.content);data.reports.push({id:'a'.repeat(64),sourceHash:'b'.repeat(64),show:{key:show.concertId,name:show.artist,venue:show.venue,dates:[show.date,'2026-11-04']},deliveries:[]});f.mail.setContent(JSON.stringify(data));const invalid=await source.probe(admin);assert.equal(invalid.stage,'mail');assert.equal(invalid.code,'REPORT_CATALOG');assert.equal(invalid.counts.multiDateGroups,1);await assert.rejects(source.probe('reader'),/FORBIDDEN/);
+});

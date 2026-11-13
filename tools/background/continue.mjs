@@ -4,7 +4,7 @@ const keys=['steps','completed','blocked','waiting','failed'];
 // Eén workflow houdt meerdere korte serverrondes gaande. De server blijft
 // eigenaar van machtiging, checkpoints, leases, Retry-After en conflictstops.
 export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,log=console.log,budgetMs=40*60000,maxRounds=160,mode='tasks',operation='continue',wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
- const endpoint=endpoints[mode];if(!endpoint||!['continue','status'].includes(operation)||operation==='status'&&mode!=='tasks')throw Error('Onbekende vaste worker.');
+ const endpoint=endpoints[mode];if(!endpoint||!['continue','status','reports-check'].includes(operation)||operation!=='continue'&&mode!=='tasks')throw Error('Onbekende vaste worker.');
  const deadline=now()+Math.min(budgetMs,40*60000);
  for(let round=1;round<=maxRounds&&now()+280000<=deadline;round++){
   let response,data;
@@ -12,9 +12,14 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
    const url=new URL(env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
    const identity=await fetcher(url,{headers:{Authorization:`Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`},signal:AbortSignal.timeout(30000)});
    if(!identity.ok)throw Error();const {value}=await identity.json();if(typeof value!=='string'||!value)throw Error();log(`::add-mask::${value}`);
-   response=await fetcher(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:operation==='status'?JSON.stringify({operation:'status'}):'{}',signal:AbortSignal.timeout(280000)});
+   response=await fetcher(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:operation!=='continue'?JSON.stringify({operation}):'{}',signal:AbortSignal.timeout(280000)});
    data=await response.json();
   }catch{throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');}
+  if(operation==='reports-check'){
+   const d=data?.diagnostic;if(!response.ok||data?.ok!==true||!d||!/^[a-z-]{1,40}$/.test(d.stage)||!(d.code===null||/^[A-Z][A-Z0-9_]{0,63}$/.test(d.code))||!d.counts||Object.values(d.counts).some(v=>!Number.isSafeInteger(v)||v<0))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
+   const allowed=['groups','multiDateGroups','missingShow','badGroupId','badSourceHash','catalogue','historical','validations','sources','available','unlinked','entries','grouped','manifestPages','settingsPages'];
+   log(JSON.stringify({stage:d.stage,code:d.code,counts:Object.fromEntries(allowed.filter(k=>Object.hasOwn(d.counts,k)).map(k=>[k,d.counts[k]]))}));return;
+  }
   const continuation=data?.continuation;
   if(continuation!==undefined){
    if(!continuation||typeof continuation.active!=='boolean'||!Array.isArray(continuation.tasks)||continuation.active&&(!Number.isSafeInteger(continuation.pollAfterMs)||continuation.pollAfterMs<1000||continuation.pollAfterMs>60000))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');

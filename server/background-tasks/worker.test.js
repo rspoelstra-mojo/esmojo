@@ -13,3 +13,6 @@ test('fixed status operation cannot start or advance tasks and rejects mixed par
  for(const body of [true,42,'status',{operation:'start'},{operation:'status',type:'reports-schema-v1'},{operation:'status',actor:'other'},[]]){const res=response();await handler({method:'POST',headers:{},body},res);assert.equal(res.code,400);}
  const res=response();await handler({method:'POST',headers:{},body:{operation:'status'}},res);assert.equal(res.code,200);assert.equal(runs,0);assert.equal(reads,1);assert.equal(res.body.continuation.active,false);
 });
+test('fixed Reports check calls only the existing-delegation diagnosis, never control or run',async()=>{
+ let checks=0;const handler=makeBackgroundTasksSync({tasks:{diagnoseReports:async()=>{checks++;return{stage:'complete',code:null,counts:{entries:1}};},run:async()=>assert.fail('no worker'),control:async()=>assert.fail('no new task')},identify:async()=>{}}),res=response();await handler({method:'POST',headers:{},body:{operation:'reports-check'}},res);assert.equal(res.code,200);assert.equal(checks,1);
+});

@@ -24,7 +24,17 @@ export function createReportsMigrationTask({env=process.env,now=Date.now,source=
   const batch=[];for(const row of records.slice(s[indexName],s[indexName]+32)){if(row.table!==first.table||Buffer.byteLength(canonical([...batch,row]))>1800000)break;batch.push(row);}if(!batch.length)throw Error('MIGRATION_MAPPING');
   if(service.attachEmployees)await service.attachEmployees(batch);await service.ensureMany(batch);s[indexName]+=batch.length;if(service===writer)s.records+=batch.length;return s[indexName]===records.length;
  }
+ const safeCode=error=>['ARTIST_CATALOGUE','MIGRATION_SOURCE','MIGRATION_SOURCE_LIMIT','MIGRATION_SOURCE_CHANGED','REPORTS_UNLINKED','REPORT_CATALOG','REGISTER_INVALID','TASK_UNCONFIRMED','TASK_CORRUPT'].includes(error.message)?error.message:'UNCONFIRMED';
  return{title:'Rapportages-migratie',module:'reports',version:1,idempotent:true,
+  async diagnose({actor}){
+   const counts={};let stage='source-probe';
+   try{
+    const result=await source.probe(actor);if(result.code)return result;
+    Object.assign(counts,result.counts);stage='node-source';const value=await source.catalogue(actor);stage='grouping';const entries=groupReportEntries(value.entries);counts.grouped=entries.length;
+    stage='manifest';const plan=splitManifest(entries,value.selection);counts.manifestPages=plan.pages.length;counts.settingsPages=plan.settings.length;
+    return{stage:'complete',code:null,counts};
+   }catch(error){return{stage,code:safeCode(error),counts};}
+  },
   async step({cursor,actor,runId,authorizationExpiresAt}){
    let s=cursor?JSON.parse(cursor):{version:1,schema:reportsSchemaHash,run:runId,phase:'schema',checkIndex:0,pageIndex:0,entryIndex:0,reportIndex:0,records:0,files:0,total:0};
    if(s.version!==1||s.schema!==reportsSchemaHash||s.run!==runId||!phases.includes(s.phase)||!['checkIndex','pageIndex','entryIndex','reportIndex','records','files','total'].every(k=>Number.isSafeInteger(s[k])&&s[k]>=0))throw Error('REPORTS_MIGRATION_CURSOR');
