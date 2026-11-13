@@ -52,7 +52,9 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
   const planning=showPlanning(next),result={...output.result,homePlanning:planning};next.planning=planning;
   return state.commit(loaded,next,result,command);
  };
- service.prepareRead=()=>Promise.all([...tableByName.keys()].map(table=>state.repo.meta(table))).then(()=>undefined);
+ // Rights and source authority must not queue behind unrelated cold metadata.
+ // All tables are still warmed; functional tabs remain part of one full bundle.
+ service.prepareRead=()=>{const first=['esmojo_integratiestatus','esmojo_opdracht','esmojo_routealias','esmojo_concertreeks','esmojo_concert'];return Promise.all([...first,...[...tableByName.keys()].filter(table=>!first.includes(table))].map(table=>state.repo.meta(table))).then(()=>undefined);};
  service.related=createRelatedShows({state,catalogue:publicCatalogue});
  service.provider='dataverse';service.activeStorage={alerts:async()=>[],verify:async()=>({enabled:false,provider:'dataverse',archiveDisabled:true}),run:async()=>({enabled:false,mirrored:0,archived:0,failed:0})};return service;
 }

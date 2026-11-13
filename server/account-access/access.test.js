@@ -103,3 +103,9 @@ test('restart never reuses an elapsed Node-only drain when source freeze was unc
  const result=await task.step({actor:admin,runId:'retry'});assert.equal(src.mode(),'freeze');assert.ok(JSON.parse(result.cursor).drainUntil>=at+11*60000);assert.equal((await store.policy()).sourceFrozen,true);
  const waiting=await task.step({actor:admin,runId:'retry',cursor:result.cursor});assert.equal(waiting.status,'waiting');
 });
+
+test('cold technical warmup prioritizes authorization and authority metadata',async()=>{
+ const {createNativeShowsService}=await import('../dataverse-shows/service.js');const calls=[];
+ const service=createNativeShowsService({state:{repo:{meta:async table=>{calls.push(table);}}},catalogue:{}});await service.prepareRead();
+ assert.deepEqual(calls.slice(0,4),['esmojo_integratiestatus','esmojo_opdracht','esmojo_routealias','esmojo_concertreeks']);assert.equal(new Set(calls).size,calls.length);assert.ok(calls.length>=30);
+});
