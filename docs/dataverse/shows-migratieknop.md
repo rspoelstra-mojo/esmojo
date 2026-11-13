@@ -73,6 +73,11 @@ aangewezen gebruiker vertaald naar de gewone Dataverse-keuze `Beheerder`. Een
 Historie-record bewaart bronrol en mapping. De vaste superbeheerderpolicy blijft
 ongewijzigd; er komt geen extra bewerkbare rolkeuze of nieuwe rechtentoekenning.
 
+Tijdschemaregels gebruiken hun expliciete `localDate` als datumveld
+`esmojo_brondatum`, inclusief de volgende kalenderdag na middernacht. Het
+volledige `capturedAt`-tijdstip blijft ongewijzigd in de bestaande Historie-snapshot;
+het ophaaltijdstip wordt niet als uitvoeringsdatum geïnterpreteerd.
+
 ## Schrijf- en bestandscontrole
 
 De server gebruikt uitsluitend het vaste schema en haalt echte EntitySetName,
