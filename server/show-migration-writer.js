@@ -53,6 +53,10 @@ export function migrationConflictDetails(error){
  const differences=error.migration.differences.slice(0,8).flatMap(difference=>{const column=schema.columns.find(c=>c.logical_name===difference.column);return column&&['VALUE_DIFFERENCE','DATETIME_DIFFERENCE','LOOKUP_DIFFERENCE'].includes(difference.reason)?[{column:column.logical_name,label:column.label,reason:difference.reason}]:[];});
  return differences.length?{table:schema.logical_name,label:schema.label,differences}:null;
 }
+export function migrationDependencyDetails(error){
+ const table=tableByName.get(error?.dependency?.table),stage=error?.dependency?.stage;
+ return table&&['lookup','record'].includes(stage)?{table:table.logical_name,label:table.label,stage}:null;
+}
 export function createMigrationWriter({env=process.env,request=fetch,connection=createDataverseSetupConnection({env,request}),readOnly=false}={}){
  const metadata=new Map(),resolved=new Map();let context;
  async function ctx(){return context||(context=await connection.connect());}
@@ -64,13 +68,13 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
   if(value?.LogicalName!==name||!identifier(value.EntitySetName)||!identifier(value.PrimaryIdAttribute)||!Array.isArray(value.ManyToOneRelationships))throw Error('MIGRATION_SCHEMA');metadata.set(name,value);return value;
  }
  async function find(ref){const m=await meta(ref.table);const rows=await json(m.EntitySetName+'?'+new URLSearchParams({'$filter':"esmojo_sleutel eq '"+ref.key+"'",'$top':'2'}));if(!Array.isArray(rows?.value)||rows.value.length>1||rows['@odata.nextLink'])throw Error('MIGRATION_CONFLICT');return rows.value[0]||null;}
- async function resolve(ref){const cache=ref.table+ref.key;if(resolved.has(cache))return resolved.get(cache);const m=await meta(ref.table),actual=await find(ref),id=actual?.[m.PrimaryIdAttribute];if(!guid(id))throw Error('MIGRATION_DEPENDENCY');const result={id,set:m.EntitySetName};resolved.set(cache,result);return result;}
+ async function resolve(ref){const cache=ref.table+ref.key;if(resolved.has(cache))return resolved.get(cache);const m=await meta(ref.table),actual=await find(ref),id=actual?.[m.PrimaryIdAttribute];if(!guid(id))throw Object.assign(Error('MIGRATION_DEPENDENCY'),{dependency:{table:ref.table,stage:'lookup'}});const result={id,set:m.EntitySetName};resolved.set(cache,result);return result;}
  async function ensure(row){
   validateRecord(row);const m=await meta(row.table),payload={...row.fields},expected={...row.fields};
   for(const [name,ref]of Object.entries(row.links)){const target=await resolve(ref),nav=m.ManyToOneRelationships.find(r=>r.ReferencingAttribute===name)?.ReferencingEntityNavigationPropertyName;if(!identifier(nav))throw Error('MIGRATION_SCHEMA');payload[nav+'@odata.bind']='/'+target.set+'('+target.id+')';expected['_'+name+'_value']=target.id;}
 
   let actual=await find(row),created=false;
-  if(!actual&&readOnly)throw Error('MIGRATION_DEPENDENCY');
+  if(!actual&&readOnly)throw Object.assign(Error('MIGRATION_DEPENDENCY'),{dependency:{table:row.table,stage:'record'}});
   if(!actual){const hex=row.key,id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-4'+hex.slice(13,16)+'-8'+hex.slice(17,20)+'-'+hex.slice(20,32);const response=await connection.call(m.EntitySetName+'('+id+')',{...(await ctx()).headers,'If-None-Match':'*'},{method:'PATCH',body:payload,code:'MIGRATION_UNCONFIRMED',timeoutMs:60000});if(!response.ok&&![409,412].includes(response.status))throw Error('MIGRATION_REJECTED');created=response.ok;actual=await find(row);}
   if(!actual)throw Error('MIGRATION_UNCONFIRMED');const differences=migrationDifferences(row,actual,expected);if(differences.length)throw Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:row.table,differences}});const id=actual[m.PrimaryIdAttribute];if(!guid(id))throw Error('MIGRATION_SCHEMA');resolved.set(row.table+row.key,{id,set:m.EntitySetName});return{verified:true,created,id};
  }

@@ -23,3 +23,9 @@ test('an active monotone provider revision is harmless only with equal documents
 test('a backward active provider generation remains a conflict',async()=>{
  const f=fixture({sourceMode:'active',revision:6}),cursor=await f.validate(null,'synthetic-esm');await assert.rejects(f.validate(cursor,'synthetic-esm'),error=>error.message==='MIGRATION_CONFLICT'&&error.sourceMode==='active');
 });
+test('dependency diagnostics expose only schema allowlisted table and fixed stage',async()=>{
+ const {migrationDependencyDetails}=await import('../show-migration-writer.js');
+ assert.deepEqual(migrationDependencyDetails({dependency:{table:'esmojo_concert',stage:'lookup',secret:'must not leak'}}),{table:'esmojo_concert',label:'Concert',stage:'lookup'});
+ assert.equal(migrationDependencyDetails({dependency:{table:'private-secret',stage:'lookup'}}),null);
+ assert.equal(migrationDependencyDetails({dependency:{table:'esmojo_concert',stage:'private-secret'}}),null);
+});
