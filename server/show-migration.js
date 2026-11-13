@@ -78,7 +78,7 @@ export function createShowMigration({env=process.env,now=Date.now,readOnly=false
   throw Error('MIGRATION_TOKEN');
  };
 }
-async function linkResearch(writer,keys,series,readOnly=false){
+export async function linkResearch(writer,keys,series,readOnly=false){
  const metadata=await writer.meta('esmojo_onderzoeksresultaat'),target=await writer.resolve(series),nav=metadata.ManyToOneRelationships.find(row=>row.ReferencingAttribute==='esmojo_concertreeks')?.ReferencingEntityNavigationPropertyName;
  if(typeof nav!=='string'||!/^[a-z][a-z0-9_]+$/i.test(nav))throw Error('MIGRATION_SCHEMA');
  for(const key of keys){const filter="esmojo_showsleutel eq '"+key.replaceAll("'","''")+"' and (esmojo_bronbibliotheekid eq '8d4b3512-7f82-4d51-a98a-a0c67d629184' or esmojo_bronbibliotheekid eq '9c30d516-2487-48fe-bbd8-40fcee494bea')";

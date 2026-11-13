@@ -17,3 +17,6 @@ test('authority requires successful validation, the exact schema and stopped leg
 test('research menu wrapper cannot turn a native storage failure into an empty successful menu',async()=>{
  const raw=async()=>{throw Error('DATAVERSE_SHOWS_UNAVAILABLE');};raw.provider='dataverse';const store=createDataverseShows({shows:raw,research:{configured:()=>true,sourceKeys:async()=>[]}});await assert.rejects(store('list'),/UNAVAILABLE/);
 });
+test('managed routing denies both old and new calls during the freeze without invoking either storage',async()=>{
+ const {createManagedShowsRouting}=await import('./routing.js');let mode='legacy',old=0,native=0;const route=createManagedShowsRouting({env:{},repository:{byKey:async()=>({esmojo_configuratie_json:JSON.stringify({mode})})}}),actions={legacy:()=>++old,native:()=>++native};assert.equal(await route(actions),1);mode='freeze';await assert.rejects(route(actions),/STORAGE_BUSY/);assert.equal(old,1);assert.equal(native,0);
+});

@@ -1,3 +1,23 @@
+## Expliciete productie-activering Shows (13 november 2026)
+
+Gebruiker autoriseert nu expliciet publicatie én daadwerkelijke activering van
+Shows op Dataverse. Oude draft-only/publicatieblokkade vervalt voor deze scope.
+Behoud Auth, actuele accountrechten en overige modules op hun bestaande bron;
+geen originele concertgegevens verwijderen. Eén gecontroleerde main/OIDC-workflow
+shows-cutover.yml beheert server-side authority, schrijfstop, minstens elf minuten
+uitlopen van oude Vercel/GAS-verzoeken, volledige actuele bron/doel- en File-check,
+planning/catalogusinitialisatie, echte validation-checkpoint en native activering.
+De nieuwe snelle eindvergelijking hergebruikt het door de afgeronde kopie bewezen
+schema en controleert alle bronvelden/relaties/bytes; geen herhaalde metadata-setup.
+Huidige initiatiefnemer opnieuw autoriseren per stap, oorspronkelijke48u behouden,
+globaal uitvoeringsslot plus taaklease/ETag; geen actor/cursor/query vanuit de client.
+Vóór activering mag een mislukte vergelijking de oude site weer vrijgeven; na
+native activering nooit stil terugschakelen. Geen fictieve zakelijke testwrites.
+Bronverschillen niet blind overschrijven: stoppen, veilig diagnosticeren en oplossen.
+De vaste productie-providerrouter volgt uitsluitend het getoetste technische
+native-authority/v1-record, zonder nieuwe Vercel-secrets of frontendvariabelen.
+Oude migratie-/importstarts worden na activering server-side geweigerd.
+
 ## Eindvalidatie en Shows-omschakeling (13 november 2026)
 
 Gebruiker vraagt eerst eindvalidatie van de Dataverse-kopie en daarna gecontroleerde

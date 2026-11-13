@@ -1,0 +1,32 @@
+name: Controlled Shows Dataverse cutover
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Status, start or safely resume the explicitly approved cutover
+        required: true
+        default: status
+        type: choice
+        options: [status, start, resume]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: approved-background-tasks-production
+  cancel-in-progress: false
+jobs:
+  cutover:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Check the approved transition
+        if: inputs.operation == 'status'
+        run: node tools/background/cutover-shows.mjs
+      - name: Start the approved transition
+        if: inputs.operation == 'start'
+        run: node tools/background/cutover-shows.mjs --start
+      - name: Resume the approved transition
+        if: inputs.operation == 'resume'
+        run: node tools/background/cutover-shows.mjs --resume
