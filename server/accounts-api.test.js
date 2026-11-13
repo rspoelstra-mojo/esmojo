@@ -420,3 +420,9 @@ test('background-task controls require current admin/Shows/MFA and only explicit
  const start=await run({action:'background-tasks',method:'POST',body:{operation:'start',type:'shows-migration-v1'},taskService});assert.equal(start.response.code,200);assert.equal(runs,1);assert.ok(start.calls.some(call=>call[0]==='task-background'));assert.match(start.response.headers['Cache-Control'],/no-store/);
  assert.equal((await run({action:'background-tasks',method:'GET',taskService})).response.code,405);
 });
+
+test('native status-only own profile opens Shows but cannot authorize administrator endpoints',async()=>{
+ const own={id,activated:true,disabled:false,modules:['shows']};
+ const result=await run({own,action:'show-open',method:'POST',body:{concertId:'Test_Gashouder_15112026'},showResult:{profile:{},tickets:{},risks:{},barrier:{},floor:{}}});assert.equal(result.response.code,200);
+ const denied=await run({own,action:'accounts'});assert.equal(denied.response.code,403);
+});

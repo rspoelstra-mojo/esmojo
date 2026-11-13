@@ -9,12 +9,13 @@ const secret = 'test-only-secret-'.repeat(4);
 const admin = '11111111-1111-4111-8111-111111111111';
 const user = '22222222-2222-4222-8222-222222222222';
 const profile = (id, role = 'beheerder') => ({ id, email: `${id}@example.invalid`, firstName: 'Test', lastName: 'User', company:'MOJO Concerts',jobTitle: 'Event Safety Manager', role, activated: true, disabled: false });
-function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exists = true, failWrite = false,superAdminId,copyTo } = {}) {
+function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exists = true, failWrite = false,superAdminId,copyTo,accessMode } = {}) {
   let state = JSON.stringify({profiles,nonces:{},...(superAdminId?{superAdminId,emailTestCopy:{actor:superAdminId,address:copyTo},securityIdentityV1:true}:{})});
   let writes = 0, locked = false;
+  const properties={ESMOJO_SHARED_SECRET:secret,...(accessMode?{ESMOJO_ACCOUNT_ACCESS_MODE:accessMode}:{})};
   const file = { getBlob: () => ({ getDataAsString: () => state }), setContent: value => { assert.ok(locked); state = value; writes++; } };
   const context = vm.createContext({ Date, JSON, Number, Object,
-    PropertiesService: { getScriptProperties: () => ({ getProperty: () => secret }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: key => properties[key]||null,setProperty:(key,value)=>{assert.ok(locked);properties[key]=value;} }) },
     LockService: { getScriptLock: () => ({ tryLock: () => { locked = true; return true; }, releaseLock: () => { locked = false; } }) },
     Utilities: { Charset: { UTF_8: 'utf8' }, DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (algorithm, text) => [...createHash(algorithm).update(text).digest()], computeHmacSha256Signature: (message, key) => [...createHmac('sha256', key).update(message).digest()], newBlob: (content, mimeType, name) => ({ content, mimeType, name }) },
     DriveApp: { getFolderById: () => ({ isTrashed: () => false, getFilesByName: () => { let used = !exists; return { hasNext: () => !used, next: () => { used = true; return file; } }; }, createFile: blob => {
@@ -27,7 +28,7 @@ function harness(profiles = [profile(admin), profile(user, 'gebruiker')], { exis
   vm.runInContext(readFileSync(new URL('../google-apps-script/AccountModules.gs',import.meta.url),'utf8'),context);vm.runInContext(readFileSync(new URL('../google-apps-script/Code.gs', import.meta.url), 'utf8'), context);
   vm.runInContext(readFileSync(new URL('../google-apps-script/AccountEmployment.gs',import.meta.url),'utf8'),context);
   vm.runInContext(readFileSync(new URL('../google-apps-script/Accounts.gs', import.meta.url), 'utf8'), context);
-  return { send: input => context.doPost({ postData: { contents: JSON.stringify(input) } }), state: () => JSON.parse(state), writes: () => writes };
+  return { send: input => context.doPost({ postData: { contents: JSON.stringify(input) } }), state: () => JSON.parse(state), writes: () => writes,mode:()=>properties.ESMOJO_ACCOUNT_ACCESS_MODE||'legacy' };
 }
 function signed(body, extra = {}) {
   const timestamp = Date.now(), nonce = Math.random().toString(16).slice(2).padEnd(32, '0');
@@ -187,4 +188,47 @@ test('show authorization-only self keeps current permissions but never returns a
  h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules:['reports']}}));
  assert.deepEqual(h.send(signed({operation:'self',actor:user,authorizationOnly:true})).data.modules,['reports']);
  const invalid=signed({operation:'self',actor:admin,authorizationOnly:true});invalid.signature='0'.repeat(64);assert.equal(h.send(invalid).ok,false);
+});
+
+test('Drive access freeze blocks every ACL writer but preserves current profile reads',()=>{
+ const h=harness([profile(admin),profile(user,'gebruiker')],{accessMode:'freeze'});
+ for(const operation of ['create','bootstrap','update','disable','delete','activate'])assert.equal(h.send(signed({operation,actor:admin,id:user,profile:profile(user,'gebruiker')})).code,'ACCESS_FROZEN');
+ assert.equal(h.send(signed({operation:'self',actor:admin})).ok,true);
+});
+test('active source rejects old deployments and unsigned native claims',()=>{
+ const h=harness([{...profile(admin),modules:['shows']},{...profile(user,'gebruiker'),modules:['reports']}],{accessMode:'dataverse'});
+ for(const payload of [{},{accessContract:'account-access-v1'},{actorNativeAllowed:true}])assert.equal(h.send(signed({operation:'self',actor:admin,...payload})).ok,false);
+ assert.equal(h.send(signed({operation:'self',actor:admin,accessContract:'account-access-v1',actorNativeAllowed:true})).ok,true);
+});
+test('source snapshot exposes only status/modules to current administrator under freeze',()=>{
+ const h=harness([{...profile(admin),modules:['shows']},{...profile(user,'gebruiker'),modules:['reports']}],{accessMode:'freeze'});
+ assert.equal(h.send(signed({operation:'access-snapshot',actor:user,accessContract:'account-access-v1'})).ok,false);
+ const result=h.send(signed({operation:'access-snapshot',actor:admin,accessContract:'account-access-v1'}));assert.equal(result.ok,true);assert.deepEqual(Object.keys(result.data[0]).sort(),['activated','disabled','id','modules']);assert.ok(!JSON.stringify(result.data).includes('example.invalid'));
+});
+test('source activation is idempotent and cannot silently roll back to Drive',()=>{
+ const h=harness([{...profile(admin),modules:['shows']}]);const request=mode=>h.send(signed({operation:'access-policy',actor:admin,accessContract:'account-access-v1',actorNativeAllowed:true,mode}));
+ assert.equal(request('dataverse').ok,false);assert.equal(request('freeze').ok,true);assert.equal(h.mode(),'freeze');assert.equal(request('dataverse').ok,true);assert.equal(request('dataverse').ok,true);assert.equal(request('legacy').ok,false);
+});
+test('active source independently validates role and exact desired access state',()=>{
+ const h=harness([{...profile(admin),modules:['shows']},{...profile(user,'gebruiker'),modules:['reports']}],{accessMode:'dataverse'});
+ const payload={operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules:['artists']},accessContract:'account-access-v1',actorNativeAllowed:true,nativeAccessState:{id:user,activated:true,disabled:false,modules:['artists']}};
+ assert.equal(h.send(signed({...payload,actor:user})).ok,false);
+ assert.equal(h.send(signed({...payload,nativeAccessState:{...payload.nativeAccessState,activated:false}})).ok,false);
+ assert.equal(h.send(signed(payload)).ok,true);assert.deepEqual(h.state().profiles[1].modules,['artists']);
+});
+
+test('complete signed source/native cutover preserves roles and current module edits',async()=>{
+ const {createRawProfiles}=await import('./account-profiles.js'),{createAccessStore}=await import('./account-access/store.js'),{createAccessProfiles}=await import('./account-access/profiles.js'),{createAccessTask}=await import('./account-access/task.js');
+ const {nativeFixture,sampleSource,samplePeople}=await import('./dataverse-shows/test-fixture.js');
+ const f=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople)),env={GOOGLE_DRIVE_SHARED_SECRET:secret,GOOGLE_DRIVE_SCRIPT_URL:'https://script.google.com/macros/s/test/exec'},store=createAccessStore({env,repo:f.repo});
+ const h=harness([{...profile(admin),modules:['shows','reports']},{...profile(user,'gebruiker'),modules:['reports']}]);
+ let requests=0;const raw=createRawProfiles({env,request:async(url,options)=>{requests++;return{ok:true,json:async()=>h.send(JSON.parse(options.body))};}});let at=Date.now();
+ const task=createAccessTask({env,raw,store,now:()=>at});let state=await task.step({actor:admin,runId:'signed-e2e'});assert.equal(h.mode(),'freeze');at+=11*60000;
+ for(let n=0;n<12&&state.status!=='complete';n++)state=await task.step({actor:admin,runId:'signed-e2e',cursor:state.cursor});
+ assert.equal(state.status,'complete');assert.equal(h.mode(),'dataverse');
+ const profiles=createAccessProfiles({env,raw,store}),before=requests;const own=await profiles('self',admin,{authorizationOnly:true});assert.deepEqual(own.modules,['shows','reports']);assert.equal(requests,before);assert.equal(own.role,undefined);
+ assert.equal((await profiles('self',admin)).role,'beheerder');
+ await profiles('update',admin,{id:user,profile:{...profile(user,'gebruiker'),modules:['artists']}});assert.deepEqual((await profiles('self',user,{authorizationOnly:true})).modules,['artists']);assert.deepEqual(h.state().profiles.find(row=>row.id===user).modules,['artists']);
+ await profiles('disable',admin,{id:user});await assert.rejects(profiles('self',user,{authorizationOnly:true}),/FORBIDDEN/);
+ await assert.rejects(raw('self',admin),/FORBIDDEN/,'Missing native server attestation cannot use a stale Drive grant');
 });

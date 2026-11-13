@@ -62,6 +62,10 @@
     "api/shows-performance-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
       "maxDuration": 300
+    },
+    "api/account-access-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
+      "maxDuration": 300
     }
   },
   "headers": [

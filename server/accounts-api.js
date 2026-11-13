@@ -53,7 +53,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
   return async function handler(req, res) {
     const requestBegan=performance.now();let sessionReady=requestBegan,profileReady=requestBegan;
     let verifiedProfile=null;
-    const scopedShows=(operation,payload={})=>shows(operation,{...payload,...(['dataverse','managed'].includes(shows.provider)&&verifiedProfile?{__actor:verifiedProfile}:{})});
+    const scopedShows=(operation,payload={})=>shows(operation,{...payload,...(['dataverse','managed'].includes(shows.provider)&&verifiedProfile?.role&&verifiedProfile?.email?{__actor:verifiedProfile}:{})});
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const reply = (status, data) => res.status(status).json(data);
@@ -306,7 +306,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         if(previewReads)return reply(403,{error:'Achtergrondtaken zijn uitsluitend beschikbaar in de productie-beheerdersomgeving.'});
         try{
-          if(req.body?.operation!=='status'&&shows.allowLegacyMaintenance)await shows.allowLegacyMaintenance();
+          if(req.body?.operation!=='status'&&req.body?.type!=='account-access-v1'&&shows.allowLegacyMaintenance)await shows.allowLegacyMaintenance();
           const result=await tasks.control(req.body,actor);
           if(req.body.operation!=='status'&&result.task&&['queued','running','waiting'].includes(result.task.status))try{background(tasks.run().catch(()=>{}));}catch{/* De duurzame worker pakt de opgeslagen taak alsnog op. */}
           return reply(200,result);
@@ -427,8 +427,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         try {
           await profiles('create', actor, { profile: { ...profile, id, email } });
         } catch (failure) {
-          // Geen account zonder profiel achterlaten. Nooit credentialwaarden loggen.
-          await admin.deleteUser(id);
+          // A timed-out native/source commit is deliberately fenced. Keep the
+          // Auth identity until read-back resolves it; deleting it could orphan
+          // a profile whose source write actually succeeded.
+          if(['FORBIDDEN','CONFLICT','VALIDATION','ACCESS_FROZEN'].includes(failure.message))await admin.deleteUser(id);
           throw failure;
         }
         const link = `https://esmojo.nl/#/activeren?token=${encodeURIComponent(generated.data.properties.hashed_token)}`;
@@ -463,6 +465,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if(isFluidPreview(env)&&error.message==='PREVIEW_AUTH_REQUIRED'){clearSessionCookie(res);return reply(401,{error:'Log opnieuw in op de preview.',code:'SESSION_EXPIRED'});}
       if(isFluidPreview(env)&&error.message==='PREVIEW_SOURCE_UNAVAILABLE')return reply(503,{error:'De preview kan de bestaande ESMOJO-accountdienst niet bereiken. Probeer opnieuw.',code:'PREVIEW_SOURCE_UNAVAILABLE'});
       if (error.message === 'ACCOUNT_DISABLED') { clearSessionCookie(res); return reply(403, { error: 'Dit account heeft geen toegang. Neem contact op met je beheerder.', code: 'ACCOUNT_DISABLED' }); }
+      if(['ACCESS_FROZEN','ACCESS_PENDING','ACCESS_UNCONFIRMED'].includes(error.message))return reply(409,{code:error.message,error:error.message==='ACCESS_FROZEN'?'Accountwijzigingen zijn tijdelijk geblokkeerd tijdens de toegangscontrole. Shows blijven leesbaar.':'Deze accountwijziging wacht op terugleescontrole. Start de toegangscontrole op Datatransitie opnieuw zodra de veiligheidswachttijd is verstreken.'});
       const status = { FORBIDDEN: 403, CONFLICT: 409, VALIDATION: 400 }[error.message] || 503;
       return reply(status, { error: { 403: 'Geen toegang tot dit account.', 409: 'Deze wijziging is niet toegestaan. Je kunt jezelf of de laatste beheerder niet verwijderen of degraderen.', 400: 'Controleer de ingevulde velden en profielfoto.' }[status] || 'De accountdienst is tijdelijk niet beschikbaar.' });
     }

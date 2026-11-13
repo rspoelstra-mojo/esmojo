@@ -87,6 +87,7 @@ jobs:
           node server/auth-submission.test.js
           node server/session-cookie.test.js
           node server/account-profiles.test.js
+          node --test server/account-access/*.test.js
           node shared/artist-catalogue.test.js
           node shared/artist-names.test.js
           node shared/mojo-artist.test.js

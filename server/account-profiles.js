@@ -1,16 +1,17 @@
+import {createAccessProfiles} from './account-access/profiles.js';
 import {validateAccountEmployment} from '../shared/account-employment.js';
 import {validateAccountModules} from '../shared/account-modules.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 // Dit verkeer bevat vertrouwelijke profielen. Geen logging of persistente cache.
-export function createProfiles({ env = process.env, request = fetch } = {}) {
+export function createRawProfiles({ env = process.env, request = fetch } = {}) {
   return async function profiles(operation, actor, payload = {}) {
     const url = env.GOOGLE_DRIVE_SCRIPT_URL;
     const secret = env.GOOGLE_DRIVE_SHARED_SECRET;
     if (!url || !secret || secret.length < 32) throw new Error('DRIVE_CONFIG');
     const parsed = new URL(url);
     if (parsed.origin !== 'https://script.google.com' || !/^\/macros\/s\/[\w-]+\/exec$/.test(parsed.pathname) || parsed.search || parsed.hash) throw new Error('DRIVE_CONFIG');
-    const body = JSON.stringify({ operation, actor, ...payload });
+    const body = JSON.stringify({ ...payload, operation, actor, accessContract:'account-access-v1' });
     const timestamp = Date.now();
     const nonce = randomBytes(16).toString('hex');
     const digest = createHash('sha256').update(body).digest('hex');
@@ -19,9 +20,16 @@ export function createProfiles({ env = process.env, request = fetch } = {}) {
       body: JSON.stringify({ action: 'accounts', timestamp, nonce, signature, body }), signal: AbortSignal.timeout(25000) });
     if (!response.ok) throw new Error('DRIVE_UNAVAILABLE');
     const result = await response.json();
-    if (!result.ok) throw new Error(result.code === 'FORBIDDEN' ? 'FORBIDDEN' : result.code === 'CONFLICT' ? 'CONFLICT' : result.code === 'PROFILE_INVALID' ? 'VALIDATION' : 'DRIVE_UNAVAILABLE');
+    if (!result.ok) throw new Error(result.code === 'FORBIDDEN' ? 'FORBIDDEN' : result.code === 'CONFLICT' ? 'CONFLICT' : result.code === 'PROFILE_INVALID' ? 'VALIDATION' : result.code === 'ACCESS_FROZEN' ? 'ACCESS_FROZEN' : 'DRIVE_UNAVAILABLE');
     return result.data;
   };
+}
+
+export function createProfiles({env=process.env,request=fetch,access}={}){
+ const raw=createRawProfiles({env,request});
+ // Unconfigured/offline test environments retain their ordinary signed adapter.
+ if(!access&&![env.DATAVERSE_TEST_URL,env.DATAVERSE_TEST_TENANT_ID,env.DATAVERSE_TEST_CLIENT_ID,env.DATAVERSE_TEST_CLIENT_SECRET].every(Boolean))return raw;
+ return createAccessProfiles({env,raw,store:access});
 }
 
 export function validateProfile(input,{defaultRole}={}) {

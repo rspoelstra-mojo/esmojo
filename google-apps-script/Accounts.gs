@@ -31,6 +31,14 @@ function esmojoAccounts_(input) {
   let stage = 'REQUEST';
   try {
     const request = JSON.parse(input.body);
+    const properties=PropertiesService.getScriptProperties();
+    const configuredMode=properties.getProperty('ESMOJO_ACCOUNT_ACCESS_MODE');
+    const accessMode=['freeze','dataverse'].includes(configuredMode)?configuredMode:'legacy';
+    const contract=request.accessContract==='account-access-v1';
+    // Old deployments must not keep authorizing from a stale Drive mirror.
+    if(accessMode==='dataverse'&&(!contract||request.actorNativeAllowed!==true))return esmojoReply_({ok:false,code:'FORBIDDEN'});
+    if(accessMode==='freeze'&&['create','bootstrap','update','disable','delete','activate'].includes(request.operation))return esmojoReply_({ok:false,code:'ACCESS_FROZEN'});
+    const nativeActor=accessMode==='dataverse'&&contract&&request.actorNativeAllowed===true;
     stage = 'DRIVE_FOLDER';
     const folder = DriveApp.getFolderById(ESMOJO_FOLDER_ID);
     if (folder.isTrashed()) throw new Error();
@@ -42,14 +50,35 @@ function esmojoAccounts_(input) {
     const state = file ? JSON.parse(file.getBlob().getDataAsString('UTF-8')) : { profiles: [], nonces: {} };
     if (!Array.isArray(state.profiles) || !state.nonces || typeof state.nonces !== 'object') throw new Error();
     if (request.operation === 'bootstrap-check') return esmojoReply_({ ok: state.profiles.length === 0, code: state.profiles.length ? 'CONFLICT' : undefined, data: { empty: state.profiles.length === 0 } });
-    const actor=state.profiles.find(profile=>profile.id===request.actor&&!profile.disabled);
+    const actor=state.profiles.find(profile=>profile.id===request.actor&&(!profile.disabled||nativeActor));
     const denied=()=>esmojoReply_({ok:false,code:'FORBIDDEN'});
     const conflict=()=>esmojoReply_({ok:false,code:'CONFLICT'});
     // De eerder geverifieerde vaste identiteit staat uitsluitend in het private register.
     const superId=state.superAdminId;
     if(actor&&typeof superId==='string'){
       const pinned=state.profiles.find(profile=>profile.id===superId);
-      if(!pinned||pinned.disabled||pinned.role!=='superbeheerder')throw Error('REGISTER_INVALID');
+      if(!pinned||!nativeActor&&pinned.disabled||pinned.role!=='superbeheerder')throw Error('REGISTER_INVALID');
+    }
+    if(['access-policy','access-snapshot','access-state'].includes(request.operation)){
+      if(!contract||!actor||(!actor.activated&&!nativeActor))return denied();
+      if(request.operation==='access-state'){
+        if(request.id!==actor.id&&!isAdministrator(actor))return denied();
+        const found=state.profiles.find(profile=>profile.id===request.id);
+        return esmojoReply_({ok:true,data:found?{id:found.id,activated:found.activated,disabled:found.disabled,modules:isSuperAdministrator(found)?accountModules.map(module=>module.id):validateAccountModules(found.modules)}:null});
+      }
+      if(!isAdministrator(actor)||!hasModule(actor,'shows'))return denied();
+      if(request.operation==='access-snapshot'){
+        if(accessMode==='legacy')return denied();
+        return esmojoReply_({ok:true,data:state.profiles.map(profile=>{
+          if(typeof profile.activated!=='boolean'||typeof profile.disabled!=='boolean')throw Error('REGISTER_INVALID');
+          return{id:profile.id,activated:profile.activated,disabled:profile.disabled,modules:isSuperAdministrator(profile)?accountModules.map(module=>module.id):validateAccountModules(profile.modules)};
+        })});
+      }
+      if(request.mode===undefined)return esmojoReply_({ok:true,data:{mode:accessMode}});
+      if(!['legacy','freeze','dataverse'].includes(request.mode)||accessMode==='dataverse'&&request.mode!=='dataverse'||request.mode==='dataverse'&&accessMode!=='freeze'&&accessMode!=='dataverse')return conflict();
+      // Same ScriptLock as account writes: no source mutation can cross freeze.
+      properties.setProperty('ESMOJO_ACCOUNT_ACCESS_MODE',request.mode);
+      return esmojoReply_({ok:true,data:{mode:properties.getProperty('ESMOJO_ACCOUNT_ACCESS_MODE')}});
     }
     if (request.operation === 'self') {
       if(!actor)return denied();
@@ -72,10 +101,10 @@ function esmojoAccounts_(input) {
     if (request.operation === 'activate') {
       if (!actor) return denied();
     } else if (request.operation === 'photo') {
-      if (!actor || !actor.activated) return denied();
+      if (!actor || !actor.activated&&!nativeActor) return denied();
     } else if (request.operation === 'bootstrap') {
       if (state.profiles.length) return conflict();
-    } else if (!actor || !isAdministrator(actor) || !actor.activated) return denied();
+    } else if (!actor || !isAdministrator(actor) || !actor.activated&&!nativeActor) return denied();
     if(request.operation==='list'){const companyChanged=esmojoMigrateAccountCompanies_(state);if(esmojoMigrateAccountModules_(state)||companyChanged){stage='DRIVE_WRITE';file.setContent(JSON.stringify(state));}}
     if (request.operation === 'list') return esmojoReply_({ ok: true, data: state.profiles.map(profile => {
       const copy = Object.assign({}, profile); delete copy.photo; return copy;
@@ -86,6 +115,18 @@ function esmojoAccounts_(input) {
     state.nonces[input.nonce] = input.timestamp;
     const target = state.profiles.find(profile => profile.id === request.id);
     const profile = request.profile;
+    const nativeTargetId=request.operation==='create'?profile?.id:request.operation==='activate'?request.actor:request.id;
+    const nativeFlags=request.nativeAccessState;
+    if(accessMode==='dataverse'&&['create','update','disable','delete','activate'].includes(request.operation)){
+      if(!nativeActor||!nativeFlags||nativeFlags.id!==nativeTargetId||typeof nativeFlags.activated!=='boolean'||typeof nativeFlags.disabled!=='boolean')return denied();
+      try{validateAccountModules(nativeFlags.modules);}catch(_){return denied();}
+      const old=request.operation==='activate'?actor:target;
+      const expectedFlags=request.operation==='create'?{id:profile.id,activated:false,disabled:false,modules:profile.modules||[]}:
+        request.operation==='delete'?{id:request.id,activated:false,disabled:true,modules:[]}:
+        {id:old?.id,activated:request.operation==='activate'?true:old?.activated,disabled:request.operation==='disable'?true:old?.disabled,modules:request.operation==='update'&&profile.modules!==undefined?profile.modules:old?.modules};
+      if(request.operation==='update'&&profile.role==='superbeheerder')expectedFlags.modules=accountModules.map(module=>module.id);
+      if(nativeFlags.id!==expectedFlags.id||nativeFlags.activated!==expectedFlags.activated||nativeFlags.disabled!==expectedFlags.disabled||JSON.stringify(validateAccountModules(nativeFlags.modules))!==JSON.stringify(validateAccountModules(expectedFlags.modules)))return denied();
+    }
     if (['create', 'bootstrap', 'update'].includes(request.operation)) {
       if (!profile || !['beheerder', 'superbeheerder', 'gebruiker'].includes(profile.role)) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       if(profile.role==='superbeheerder'&&(request.operation!=='update'||!isSuperAdministrator(target)||!isSuperAdministrator(actor)||target.id!==actor.id||target.id!==superId))return denied();
@@ -104,7 +145,7 @@ function esmojoAccounts_(input) {
         lastName: profile.lastName, company:profile.company, jobTitle: profile.jobTitle, role: request.operation === 'bootstrap' ? 'beheerder' : profile.role,
         modules:profile.modules===undefined?[]:profile.modules, photo: profile.photo || '', activated: false, disabled: false });
     } else if (request.operation === 'photo') {
-      if (Object.keys(request).some(key => !['operation', 'actor', 'photo'].includes(key))
+      if (Object.keys(request).some(key => !['operation', 'actor', 'photo','accessContract','actorNativeAllowed'].includes(key))
           || typeof request.photo !== 'string' || request.photo.length > 100000
           || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(request.photo)) return esmojoReply_({ ok: false, code: 'PROFILE_INVALID' });
       actor.photo = request.photo;
@@ -121,6 +162,11 @@ function esmojoAccounts_(input) {
       } else if (request.operation === 'disable') target.disabled = true;
       else state.profiles = state.profiles.filter(item => item.id !== target.id);
     } else return denied();
+    if(accessMode==='dataverse'&&nativeFlags&&request.operation!=='delete'){
+      const saved=state.profiles.find(profile=>profile.id===nativeTargetId);
+      if(!saved)throw Error('REGISTER_INVALID');
+      saved.activated=nativeFlags.activated;saved.disabled=nativeFlags.disabled;saved.modules=validateAccountModules(nativeFlags.modules);
+    }
     esmojoMigrateAccountCompanies_(state);esmojoMigrateAccountModules_(state);
     const serialized = JSON.stringify(state);
     stage = 'DRIVE_WRITE';
