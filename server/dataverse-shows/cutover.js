@@ -34,7 +34,7 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
   if(row.state.status==='blocked'){
    if(input.operation!=='resume')return view(row,current);
    if(current.mode==='dataverse')throw Error('DATAVERSE_SHOWS_NOT_ACTIVE');
-   const cursor=row.state.cursor?.phase==='preflight'?row.state.cursor:{phase:'preflight',validation:null};
+   const cursor=row.state.cursor?.phase==='preflight'&&row.state.public?.code==='MIGRATION_CONFLICT'?row.state.cursor:{phase:'preflight',validation:null};
    row=await save(row,cursor,{status:'ready',attempts:0,lease:null});
   }
   if(row.state.lease?.until>now())return{...view(row,current),waiting:true};
@@ -78,7 +78,7 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
    }else throw Error('TASK_CONTRACT');
    row=await save(row,cursor,{lease:null});release=true;return view(row,await policy());
   }catch(error){
-   const latest=await policy().catch(()=>null),temporary=['SETUP_THROTTLED','SETUP_TEMPORARY','TASK_BUSY'].includes(error.message);
+   const latest=await policy().catch(()=>null),temporary=['SETUP_THROTTLED','SETUP_TEMPORARY','TASK_BUSY','STORAGE_BUSY'].includes(error.message);
    if(temporary){row=await save(row,row.state.cursor,{lease:null});release=true;return{...view(row,latest||current),waiting:true};}
    // Before native writes are opened, a failed comparison may safely leave the
    // old site available. After activation never switch back or hide the failure.
