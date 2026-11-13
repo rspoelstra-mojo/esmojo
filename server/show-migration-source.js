@@ -27,6 +27,13 @@ export function createMigrationSource({env=process.env,drive=createShowsStore({e
    const bundle=await drive('migration-v1-show',{concertId:show.concertId});if(bundle?.version!==1||bundle.concertId!==show.concertId)throw Error('MIGRATION_SOURCE');
    const after=await active.get(show.concertId);if(after&&(after.external_command||after.lease&&Date.parse(after.lease_until)>Date.now()))throw Error('STORAGE_BUSY');if(Boolean(before)!==Boolean(after)||before&&before.revision!==after.revision)throw Error('MIGRATION_SOURCE_CHANGED');
    if(bundle.marker&&!bundle.marker.archived&&!after)throw Error('MIGRATION_ORPHAN');
+   // A successful archive removes the temporary Supabase row, not its proven
+   // revision. The terminal signed Drive journal retains that source lineage.
+   if(!after&&bundle.marker?.archived===true){
+    const marker=bundle.marker;
+    if(marker.managedBy!=='ESMOJO/ActiveStorage-v1'||marker.version!==1||marker.classification!=='vertrouwelijk'||marker.mode!=='archive'||!Number.isSafeInteger(marker.revision)||marker.revision<0||!/^[a-f0-9]{64}$/.test(marker.command||'')||!Number.isFinite(Date.parse(marker.at)))throw Error('MIGRATION_SOURCE');
+    bundle.activeRevision=marker.revision;
+   }
    if(after){
     const receipts=await active.migrationReceipts(after.concert_id);if(!Array.isArray(receipts)||receipts.length>200)throw Error('MIGRATION_SOURCE_LIMIT');bundle.receipts=receipts;
     const snapshot=validateActiveSnapshot(after.snapshot),original=clone(bundle.documents['productionele-risicos.json']||{}),floorHistory=(original.history||[]).filter(row=>row.field==='floor_pressure'||row.field==='measure_text'&&row.measureId==='production:floor_pressure');

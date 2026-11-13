@@ -34,7 +34,8 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
   if(row.state.status==='blocked'){
    if(input.operation!=='resume')return view(row,current);
    if(current.mode==='dataverse')throw Error('DATAVERSE_SHOWS_NOT_ACTIVE');
-   row=await save(row,{phase:'preflight',validation:null},{status:'ready',attempts:0,lease:null});
+   const cursor=row.state.cursor?.phase==='preflight'?row.state.cursor:{phase:'preflight',validation:null};
+   row=await save(row,cursor,{status:'ready',attempts:0,lease:null});
   }
   if(row.state.lease?.until>now())return{...view(row,current),waiting:true};
   const lease={id:randomUUID(),until:Math.ceil((now()+15*60000)/1000)*1000},runner=await store.claimRunner(lease,now());if(!runner)return{...view(row,current),waiting:true};let release=false;
@@ -62,7 +63,7 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
      const index=await legacy('list');await catalogue.persistClock(index.checkedAt);const actual=await native('list');
      const ids=rows=>rows.map(row=>row.concertId).sort();if(canonical(ids(index.concerts))!==canonical(ids(actual.concerts)))throw Error('SOURCE_CHANGED');
      const old=await store.get('shows-validation-v1');if(old?.state.lease?.until>now())throw Error('TASK_BUSY');
-     const validationState={version:1,type:'shows-validation-v1',actor,epoch:randomUUID(),handlerVersion:1,status:'complete',cursor:null,sequence:(old?.state.sequence||0)+1,attempts:0,startedAt:row.state.startedAt,updatedAt:now(),expiresAt:row.state.expiresAt,nextAt:now(),lease:null,public:{label:'Volledige bron/doelcontrole onder schrijfstop geslaagd',total:cursor.validation.total,progress:{phase:'complete',current:cursor.validation.total,verifiedRecords:cursor.validation.records,verifiedFiles:cursor.validation.files}}};
+     const validationState={version:1,type:'shows-validation-v1',actor,epoch:randomUUID(),handlerVersion:1,status:'complete',cursor:{version:2,catalogueHash:cursor.validation.catalogueHash,peopleHash:cursor.validation.peopleHash,archiveLineage:cursor.validation.archiveLineage||[]},sequence:(old?.state.sequence||0)+1,attempts:0,startedAt:row.state.startedAt,updatedAt:now(),expiresAt:row.state.expiresAt,nextAt:now(),lease:null,public:{label:'Volledige bron/doelcontrole onder schrijfstop geslaagd',total:cursor.validation.total,progress:{phase:'complete',current:cursor.validation.total,verifiedRecords:cursor.validation.records,verifiedFiles:cursor.validation.files}}};
      const proof=old?await store.save(old,validationState):await store.create('shows-validation-v1','Shows-eindvalidatie',validationState);
      cursor.proof={status:'completed',taskId:proof.id,epoch:proof.state.epoch,sequence:proof.state.sequence};cursor.phase='activate';
     }
@@ -83,7 +84,7 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
    // old site available. After activation never switch back or hide the failure.
    if(latest?.mode==='freeze'&&latest.epoch===row.state.epoch)await setPolicy({mode:'legacy',epoch:row.state.epoch,abortedAt:new Date(now()).toISOString()});
    const details=migrationConflictDetails(error),code=/^[A-Z_]{1,60}$/.test(error.message)?error.message:'CUTOVER_UNCONFIRMED';
-   row=await save(row,row.state.cursor,{status:'blocked',lease:null,public:{label:'Omschakeling gestopt voor controle',code,...(details?{details}:{})}});release=true;return view(row,await policy());
+   row=await save(row,row.state.cursor,{status:'blocked',lease:null,public:{label:'Omschakeling gestopt voor controle',code,...(details?{details}:{}),...(['archived','active','legacy'].includes(error.sourceMode)?{sourceMode:error.sourceMode}:{})}});release=true;return view(row,await policy());
   }finally{if(release)await store.releaseRunner(runner,lease.id,now());}
  };
 }

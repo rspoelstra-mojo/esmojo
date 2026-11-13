@@ -29,3 +29,9 @@ test('people export includes only the pinned policy ID and minimal account field
  const result=context.esmojoShowMigration_({operation:'migration-v1-people'});
  assert.equal(result.superAdminId,'pinned-user');assert.equal(result.profiles[0].role,'superbeheerder');assert.doesNotMatch(JSON.stringify(result),/nonces|privateGrant|do-not-export/);
 });
+test('terminal archive retains the last source generation after its Supabase row is removed',async()=>{
+ const marker={managedBy:'ESMOJO/ActiveStorage-v1',classification:'vertrouwelijk',version:1,mode:'archive',archived:true,revision:7,command:'a'.repeat(64),at:'2026-11-13T10:00:00Z'},drive=async()=>({version:1,concertId:'show',marker:structuredClone(marker),documents:{}}),source=createMigrationSource({drive,active:{get:async()=>null},management:{get:async()=>null}});
+ assert.equal((await source.show({concertId:'show',source:'drive'})).bundle.activeRevision,7);
+ marker.revision=-1;await assert.rejects(source.show({concertId:'show',source:'drive'}),/MIGRATION_SOURCE/);
+ marker.revision=7;marker.mode='run';await assert.rejects(source.show({concertId:'show',source:'drive'}),/MIGRATION_SOURCE/);
+});

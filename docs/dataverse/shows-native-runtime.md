@@ -141,3 +141,18 @@ Supabase-mirror/archivewriters en oude bronmigratiestarts zijn dan afgesloten.
 De procedure leest aansluitend alle bestaande native showprofielen/tickets/risico’s.
 Dit bewijst serverroutes; een persoonlijke ingelogde browsercontrole moet afzonderlijk
 als zodanig worden gerapporteerd.
+
+### Archivering en broncontinuïteit
+
+De echte controle vond een verschil in de technische voorbereidingsgeneratie na
+het verwijderen van een gearchiveerde tijdelijke Supabase-rij. De terminale,
+servergebonden archiveringsmarker bewaart de laatste bronrevisie. De eindvergelijking
+behoudt de oorspronkelijke kopiegeneratie en het oude auditbewijs; zij vergelijkt
+alle actuele bedrijfsvelden, documenten, relaties en bytes onafhankelijk opnieuw.
+Alleen dezelfde productiehistorie in chronologische volgorde en oude verlopen
+veldleases worden genormaliseerd. Een inhoudelijke keuze-/tekst-/bestandswijziging
+blijft blokkeren. De historische importfingerprint wordt niet vervangen door een
+verzonnen actuele fingerprint. Gemeten archiveringscontinuïteit blijft uitsluitend
+in het versleutelde definitieve validatiecheckpoint bewaard. De controle zelf
+schrijft geen bedrijfsgegevens. Een preflight-resume bewaart eerder strenger
+gecontroleerde voortgang; de volledige controle onder schrijfstop begint opnieuw.
