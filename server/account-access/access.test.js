@@ -129,3 +129,9 @@ test('per-account scope satisfies the real compound unique index and repairs pre
  const original=await store.get(admin);const op={table:'esmojo_integratiestatus',id:third,method:'PATCH',create:true,payload:{...original.row,esmojo_sleutel:'f'.repeat(64)}};
  await assert.rejects(f.repo.atomic([op]),/UNCONFIRMED/,'fixture enforces compound unique index, not only primary IDs');
 });
+
+test('status diagnostics read only and expose safe lease/progress enums without actor data',async()=>{
+ let writes=0;const approve={state:{status:'complete',actor:admin,expiresAt:Date.now()+600000}},durable={state:{status:'ready',actor:admin,lease:{id:'private-lease',until:5000},nextAt:1000}};
+ const controller=createAccessController({store:{get:async type=>type==='shows-migration-v1'?approve:durable},access:{policy:async()=>({mode:'freeze',secret:'never exposed'})},tasks:{control:async()=>({task:{status:'running',total:2,progress:{phase:'copy',verifiedRecords:1}}}),run:async()=>{writes++;}}});
+ const result=await controller({operation:'status'});assert.equal(writes,0);assert.equal(result.storageMode,'freeze');assert.equal(result.recordStatus,'ready');assert.equal(result.leaseUntil,5000);assert.equal(result.phase,'copy');assert.ok(!JSON.stringify(result).includes(admin));assert.ok(!JSON.stringify(result).includes('private-lease'));assert.ok(!JSON.stringify(result).includes('never exposed'));
+});
