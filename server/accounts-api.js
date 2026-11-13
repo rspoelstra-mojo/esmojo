@@ -98,6 +98,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       }
       if(!isFluidPreview(env)&&!hasAppMfa(req,env,claims))return reply(403,{error:'Bevestig je aanmelding opnieuw met je authenticator.',code:'MFA_REQUIRED'});
       const actor = data.user.id;
+      if(action==='show-open'&&!isFluidPreview(env)&&(shows.prepareRead||dataverseResearch.configured?.())){
+        // Technical OAuth/schema warmup only, no business or account read. Current
+        // Drive rights are still awaited below before any show data is requested.
+        const warm=Promise.resolve(shows.prepareRead?.()).then(()=>dataverseResearch.warm?.()).catch(()=>{});try{background(warm);}catch{/* The awaited service shares the same pending connection. */}
+      }
       const previewReads=isFluidPreview(env)?(previewSource||createFluidPreviewSource({token,mfaCookie:(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>/^__Host-esmojo-mfa=[A-Za-z0-9_-]{1,2000}$/.test(x))})):null;
       let previewDeadline=null,homeDashboard=null,emailTestCopyTo=null;
       const ownProfile = async () => {

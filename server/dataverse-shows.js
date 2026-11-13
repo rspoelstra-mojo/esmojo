@@ -41,6 +41,7 @@ export function createDataverseShows({shows,research,now=Date.now}={}){
    return{...legacy,dataverseShows:imported,checkedAt:legacy.checkedAt||(imported.length?new Date(now()).toISOString():null)};
   }
   if(!payload.concertId)return shows(operation,payload);
+  if(operation==='show-open'&&shows.nativeRequest){const direct=await shows.nativeRequest(operation,payload);if(direct.handled)return direct.result;}
   const row=await resolve(payload.concertId);
   if(!row)return shows(operation,payload);
   if(operation==='home-metadata')return{show:row};
@@ -53,5 +54,5 @@ export function createDataverseShows({shows,research,now=Date.now}={}){
   const result=await shows(operation,{...payload,concertId:target.concertId});
   return operation==='report-reserve'&&result.state==='reserved'?{...result,selectedConcertId:payload.concertId}:result;
  };
- wrapped.provider=shows.provider;wrapped.allowLegacyMaintenance=shows.allowLegacyMaintenance;wrapped.activeStorage=shows.activeStorage;return wrapped;
+ wrapped.prepareRead=shows.prepareRead;wrapped.provider=shows.provider;wrapped.allowLegacyMaintenance=shows.allowLegacyMaintenance;wrapped.activeStorage=shows.activeStorage;return wrapped;
 }

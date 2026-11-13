@@ -32,7 +32,10 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
     const explicit=nativeShowsSelected(env),check=authority||(()=>assertNativeAuthority({env,repository:authorityRepo}));
     if(!explicit){
       const old=createShowsStore({env,request,active,repository,legacy:true}),route=createManagedShowsRouting({env,repository:authorityRepo});
-      const shows=(operation,payload={})=>route({legacy:()=>old(operation,payload),native:()=>{const clean={...payload};delete clean.__actor;return unrelated(operation)&&native.related?native.related(operation,clean,(body=clean)=>drive(operation,body)):native(operation,payload);}});
+      const invoke=(operation,payload)=>{const clean={...payload};delete clean.__actor;return unrelated(operation)&&native.related?native.related(operation,clean,(body=clean)=>drive(operation,body)):native(operation,payload);};
+      const shows=(operation,payload={})=>route({legacy:()=>old(operation,payload),native:()=>invoke(operation,payload)});
+      shows.nativeRequest=(operation,payload)=>route({legacy:()=>({handled:false}),native:async()=>{try{return{handled:true,result:await invoke(operation,payload)};}catch(error){if(error.message==='NOT_FOUND')return{handled:false};throw error;}}});
+      shows.prepareRead=native.prepareRead;
       shows.provider='managed';shows.nativeManaged=true;shows.allowLegacyMaintenance=()=>route({legacy:()=>true,native:()=>{throw Error('STORAGE_ACTIVE');}});
       shows.activeStorage=Object.fromEntries(['alerts','verify','run'].map(method=>[method,(...args)=>route({legacy:()=>old.activeStorage?old.activeStorage[method](...args):method==='alerts'?[]:{enabled:false,mirrored:0,archived:0,failed:0},native:()=>native.activeStorage[method](...args)})]));
       return shows;
@@ -45,6 +48,7 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
       }
       return native(operation,payload);
     };
+    shows.nativeRequest=async(operation,payload)=>{await check();try{const clean={...payload};delete clean.__actor;return{handled:true,result:unrelated(operation)&&native.related?await native.related(operation,clean,(body=clean)=>drive(operation,body)):await native(operation,payload)};}catch(error){if(error.message==='NOT_FOUND')return{handled:false};throw error;}};shows.prepareRead=native.prepareRead;
     shows.provider='dataverse';shows.allowLegacyMaintenance=async()=>{throw Error('STORAGE_ACTIVE');};shows.activeStorage=native.activeStorage;return shows;
   }
   const service=active&&env.VITE_SUPABASE_URL&&env.SUPABASE_SECRET_KEY?createActiveShowService({drive,repository:repository||createActiveRepository({env})}):null;

@@ -210,3 +210,11 @@ De foto heeft één openbare MOJO-CDN-variant (600×338, WebP, kwaliteit80), hog
 voorladen bij navigatie-intentie en dezelfde URL op homepage/show. Openbare fotometadata
 wordt bij menuverversing alleen in geheugen bewaard. Geen aparte foto-API of decode-
 wachtstap vóór het tonen van de volledige show. Alle functionele tabbladen blijven klaar.
+
+Bestaande native show-open aliases slaan de algemene onderzoekscatalogusronde over;
+de authority wordt wel iedere keer gecontroleerd. PDF-/virtuele-show-initialisatie
+en overige wrappercontracten behouden hun bestaande route. Alleen technische OAuth/
+schema-opwarming mag parallel met de actuele Drive-rechtenread starten na MFA; geen
+zakelijke data ophalen vóór de modulecontrole. Vercel-functieregio iad1 is vastgesteld;
+Dataverse-geo wordt gecontroleerd vóór een eventuele regionale wijziging. Geen
+veronderstelde Europese database op basis van alleen de organisatienaam.

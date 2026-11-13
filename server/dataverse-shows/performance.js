@@ -1,3 +1,4 @@
+import {createDataverseShows} from '../dataverse-shows.js';
 import {nativeConnection} from './connection.js';
 import {createNativeShowsService} from './service.js';
 import {performance} from 'node:perf_hooks';
@@ -13,7 +14,7 @@ import {digest} from '../show-migration-writer.js';
 // Exact-main/OIDC only. Writes only a verified encrypted derived read projection;
 // no business data, account rights, migration cursors or source files are changed.
 export function createShowsPerformance({env=process.env,store=createTaskStore({env}),profiles=createProfiles({env}),state=createNativeShowState({env}),shows=null,research=createDataverseResearch({env}),clock=()=>performance.now(),now=Date.now,authority=()=>assertNativeAuthority({env,repository:state.repo})}={}){
- const catalogue=createNativeCatalogue({state});shows ||=createShowsStore({env,nativeService:createNativeShowsService({env,state,diagnostic:true})});
+ const catalogue=createNativeCatalogue({state});shows=createDataverseShows({shows:shows||createShowsStore({env,nativeService:createNativeShowsService({env,state,diagnostic:true})}),research});
  return async input=>{
   if(!input||Array.isArray(input)||!['prepare','measure'].includes(input.operation)||!Number.isInteger(input.step)||input.step<0||Object.keys(input).some(key=>!['operation','step','catalogue'].includes(key)))throw Error('VALIDATION');
   await authority();

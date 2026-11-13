@@ -85,6 +85,7 @@ export function createDataverseResearch({env=process.env,request=fetch,now=Date.
  return{
   applies:id=>Boolean(researchKeyForId(id)),
   configured,
+  warm:()=>configured()?connect().then(()=>undefined):Promise.resolve(),
   sourceKeys,
   read,
   async importDrive({sourceKey,number,markdown}){

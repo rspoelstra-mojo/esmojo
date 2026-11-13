@@ -1,3 +1,4 @@
+import {tableByName} from '../dataverse-table-schema.js';
 import {publicShowPhoto} from '../../shared/public-show-photo.js';
 import {createRelatedShows} from './related.js';
 import {digest,recordKey} from '../show-migration-writer.js';
@@ -51,6 +52,7 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
   const planning=showPlanning(next),result={...output.result,homePlanning:planning};next.planning=planning;
   return state.commit(loaded,next,result,command);
  };
+ service.prepareRead=()=>Promise.all([...tableByName.keys()].map(table=>state.repo.meta(table))).then(()=>undefined);
  service.related=createRelatedShows({state,catalogue:publicCatalogue});
  service.provider='dataverse';service.activeStorage={alerts:async()=>[],verify:async()=>({enabled:false,provider:'dataverse',archiveDisabled:true}),run:async()=>({enabled:false,mirrored:0,archived:0,failed:0})};return service;
 }
