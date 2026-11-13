@@ -155,3 +155,13 @@ test('published timetable migration uses explicit row dates and preserves the fu
  // Een ongeldige tijdwaarde in een datumveld blijft geweigerd; geen validatorverruiming.
  const invalid=structuredClone(rows[0]);invalid.fields.esmojo_brondatum=snapshot.capturedAt;assert.throws(()=>validateRecord(invalid),/MIGRATION_MAPPING/);
 });
+
+test('independent final validation rechecks every mapped record without creating or repairing anything',async()=>{
+ const stored=new Map(),source={people:async()=>structuredClone(people),catalogue:async()=>[{concertId:'show'}],referenceFiles:()=>[],show:async()=>({bundle:fixture(),management:null})};
+ let readOnly=false,writes=0,reads=0;
+ const writer={ensure:async row=>{validateRecord(row);if(readOnly){reads++;assert.deepEqual(stored.get(row.key),row);}else{stored.set(row.key,structuredClone(row));writes++;}},meta:async()=>({EntitySetName:'research',PrimaryIdAttribute:'id',ManyToOneRelationships:[{ReferencingAttribute:'esmojo_concertreeks',ReferencingEntityNavigationPropertyName:'series'}]}),resolve:async()=>({id:'11111111-1111-4111-8111-111111111111',set:'series'}),json:async()=>({value:[]})};
+ const run=async(service)=>{let result=await service({operation:'start'},actor),steps=0;while(result.status==='running'&&steps++<800)result=await service({operation:'advance',token:result.token},actor);return result;};
+ const common={env,now,source,writerFactory:()=>writer,verify:async()=>({status:'verified',verified:true})};
+ const copied=await run(createShowMigration(common)),before=writes;readOnly=true;const checked=await run(createShowMigration({...common,readOnly:true}));
+ assert.equal(checked.status,'complete');assert.equal(checked.progress.verifiedRecords,copied.progress.verifiedRecords);assert.equal(writes,before);assert.equal(reads,checked.progress.verifiedRecords);
+});

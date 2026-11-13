@@ -1,3 +1,14 @@
+## Eindvalidatie en Shows-omschakeling (13 november 2026)
+
+Gebruiker vraagt eerst eindvalidatie van de Dataverse-kopie en daarna gecontroleerde
+omschakeling van Shows. De oude no-cutover-regel vervalt uitsluitend na geslaagde
+eindvalidatie en volledige geteste native lees-/schrijfdekking; originelen behouden.
+De aparte shows-validation.yml mag via vaste main/OIDC en de nog geldige delegatie
+van de afgeronde migratie uitsluitend een read-only vergelijking starten. Technische
+versleutelde Opdracht-checkpoints toegestaan; geen bedrijfsrecords wijzigen, bestanden
+uploaden of relaties repareren. Maximaal vier metadata-/acht recordreads tegelijk.
+Andere modules/Auth niet omschakelen; geen dubbele schrijvers of stille terugval.
+
 ## Herbruikbare server-achtergrondtaken (12 november 2026)
 
 Gebruiker autoriseert duurzame achtergrondtaken voor de Shows-migratie en een
