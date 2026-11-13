@@ -5,10 +5,11 @@ import {createMigrationSource} from '../show-migration-source.js';
 import {createMigrationWriter,digest,canonical} from '../show-migration-writer.js';
 import {migrateFileStep} from '../show-migration-files.js';
 import {linkResearch} from '../show-migration.js';
+import {newTimetableRows,addNewTimetables} from './timetable-delta.js';
 // Schema and unique indexes were proved by the completed copy. This independent
 // final check compares every current source field, relationship and file byte;
 // it does not replay hundreds of unrelated metadata setup operations per pass.
-export function createSourceValidation({env=process.env,source=createMigrationSource({env}),writer=null,nativeState=null,connection=createDataverseSetupConnection({env})}={}){
+export function createSourceValidation({env=process.env,source=createMigrationSource({env}),writer=null,nativeState=null,allowNewTimetables=false,connection=createDataverseSetupConnection({env})}={}){
  const limit=maximum=>{let active=0;const pending=[];return async run=>{if(active>=maximum)await new Promise(resolve=>pending.push(resolve));else active++;try{return await run();}finally{const next=pending.shift();if(next)next();else active--;}};};
  const metadata=limit(4),records=limit(8),bounded={...connection,call:(path,...args)=>(path.startsWith('EntityDefinitions(')?metadata:records)(()=>connection.call(path,...args))};
  nativeState ||= createNativeShowState({env,connection:bounded});
@@ -39,7 +40,8 @@ export function createSourceValidation({env=process.env,source=createMigrationSo
   const archived=monotone&&bundle.marker?.archived===true&&bundle.marker.mode==='archive';
   const active=monotone&&bundle.activeAudit?.revision===bundle.activeRevision;
   const samePreparation=archived||active;
-  const records=plan.records.filter(row=>!['esmojo_historie','esmojo_integratiestatus','esmojo_opdracht'].includes(row.table));
+  const additions=allowNewTimetables?newTimetableRows(bundle,loaded,plan):[],addedKeys=new Set(additions.map(row=>row.key));
+  const records=plan.records.filter(row=>!['esmojo_historie','esmojo_integratiestatus','esmojo_opdracht'].includes(row.table)&&!addedKeys.has(row.key));
   for(const row of records)if(row.table==='esmojo_concertreeks'){
    row.fields.esmojo_revisie=loaded.source.nativeGeneration||0;
    // This field records the copied provider generation. A terminal archive
@@ -54,7 +56,8 @@ export function createSourceValidation({env=process.env,source=createMigrationSo
   // During the drained write freeze, source.show already brackets Supabase
   // revisions and each File block is hash checked. A second full Drive-folder
   // export adds no writer protection and would double the maintenance window.
-  if(!stableSource){const after=await source.show(show);if(digest(after)!==digest({bundle,management}))throw Error('MIGRATION_SOURCE_CHANGED');}
+  if(!stableSource||additions.length){const after=await source.show(show);if(digest(after)!==digest({bundle,management}))throw Error('MIGRATION_SOURCE_CHANGED');}
+  if(additions.length){await addNewTimetables(nativeState,loaded,additions);await verify(additions);const confirmed=await nativeState.load(show.concertId);await nativeState.verifyPlan(mapShow(confirmed.source,confirmed.people),confirmed.source.nativeGeneration||0);}
   state.records+=plan.records.length;state.files+=plan.files.length;state.index++;return state;
  };
 }

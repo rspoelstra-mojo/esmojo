@@ -14,7 +14,7 @@ import {runtimeContract,runtimeSchema,assertNativeAuthority} from './authority.j
 const type='shows-cutover-v1',drainMs=11*60000;
 const policyKey=recordKey('esmojo_integratiestatus','native-authority/v1');
 const progress=cursor=>({phase:cursor.phase,current:cursor.validation?.index||0,verifiedRecords:cursor.validation?.records||0,verifiedFiles:cursor.validation?.files||0});
-export function createShowsCutover({env=process.env,store=createTaskStore({env}),state=createNativeShowState({env}),profiles=createProfiles({env}),validate=createSourceValidation({env}),legacy=createShowsStore({env,active:false,legacy:true}),now=Date.now}={}){
+export function createShowsCutover({env=process.env,store=createTaskStore({env}),state=createNativeShowState({env}),profiles=createProfiles({env}),validate=createSourceValidation({env,allowNewTimetables:true}),legacy=createShowsStore({env,active:false,legacy:true}),now=Date.now}={}){
  const repo=state.repo,catalogue=createNativeCatalogue({state}),native=createNativeShowsService({env,state,catalogue}),probe=createNativeRuntimeCheck({env,state,catalogue});
  async function authorize(actor){const profile=await profiles('self',actor);if(profile.id!==actor||!profile.activated||profile.disabled||!isAdministrator(profile)||!hasModule(profile,'shows'))throw Error('FORBIDDEN');return profile;}
  async function policy(){const row=await repo.byKey('esmojo_integratiestatus',policyKey);return row?JSON.parse(row.esmojo_configuratie_json):{mode:'legacy'};}

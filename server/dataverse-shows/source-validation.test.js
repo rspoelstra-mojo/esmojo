@@ -29,3 +29,28 @@ test('dependency diagnostics expose only schema allowlisted table and fixed stag
  assert.equal(migrationDependencyDetails({dependency:{table:'private-secret',stage:'lookup'}}),null);
  assert.equal(migrationDependencyDetails({dependency:{table:'esmojo_concert',stage:'private-secret'}}),null);
 });
+function timetableFixture({copied=false,change=false,allow=true,moving=false}={}){
+ const source=structuredClone(sampleSource),people=structuredClone(samplePeople),concertId=source.concertId;
+ const timetable={concertId,snapshot:{concertId,date:'2026-11-15',capturedAt:'2026-11-13T12:00:00Z',entries:[{kind:'doors',label:'Deuren',publishedLabel:'19:00',time:'19:00',localDate:'2026-11-15'}]}};
+ if(copied)source.timetables=[structuredClone(timetable)];
+ const db=nativeFixture(source,people),fresh=structuredClone(source);fresh.timetables=[timetable];if(change)timetable.snapshot.entries[0].time='20:00';let calls=0;
+ const exports={catalogue:async()=>[{...source.shows[0],source:'drive'}],people:async()=>people,referenceFiles:()=>[],show:async()=>{const bundle=structuredClone(fresh);if(moving&&++calls>1)bundle.timetables[0].snapshot.entries[0].time='21:00';return{bundle,management:null};}};
+ return{...db,source,people,exports,allow};
+}
+async function timetableValidator(f){const {createNativeShowState}=await import('./state.js');const state=createNativeShowState({env,repository:f.repo});return{state,validate:createSourceValidation({env,source:f.exports,connection:f.connection,nativeState:state,allowNewTimetables:f.allow})};}
+test('cutover can atomically copy only the first timetable, read it back and verify again',async()=>{
+ const f=timetableFixture(),{validate,state}=await timetableValidator(f);let cursor=await validate(null,'synthetic-esm');cursor=await validate(cursor,'synthetic-esm');assert.equal(cursor.index,1);assert.ok(f.writes()>0);
+ const loaded=await state.load(f.source.concertId);assert.equal(loaded.source.timetables.length,1);assert.equal(loaded.source.timetables[0].snapshot.entries[0].time,'19:00');
+ const before=f.writes();cursor=await validate(null,'synthetic-esm');await validate(cursor,'synthetic-esm',{stableSource:true});assert.equal(f.writes(),before);
+});
+test('normal read-only validation never imports a missing timetable',async()=>{
+ const f=timetableFixture({allow:false}),{validate}=await timetableValidator(f),cursor=await validate(null,'synthetic-esm');await assert.rejects(validate(cursor,'synthetic-esm'),/MIGRATION_DEPENDENCY/);assert.equal(f.writes(),0);
+});
+test('an existing changed timetable or moving source cannot be silently replaced',async()=>{
+ for(const options of [{copied:true,change:true},{moving:true}]){const f=timetableFixture(options),{validate}=await timetableValidator(f),cursor=await validate(null,'synthetic-esm');await assert.rejects(validate(cursor,'synthetic-esm'),/MIGRATION_CONFLICT|MIGRATION_SOURCE_CHANGED/);assert.equal(f.writes(),0);}
+});
+test('concurrent target change rolls back the complete timetable addition',async()=>{
+ const f=timetableFixture(),{state}=await timetableValidator(f),{mapShow}=await import('../show-migration-map.js'),{newTimetableRows,addNewTimetables}=await import('./timetable-delta.js');
+ const loaded=await state.load(f.source.concertId),{bundle}=await f.exports.show(),rows=newTimetableRows(bundle,loaded,mapShow(bundle,f.people));
+ const actual=f.tables.get('esmojo_concertreeks').get(loaded.seriesId);actual['@odata.etag']='W/"changed"';const before=f.writes();await assert.rejects(addNewTimetables(state,loaded,rows),/DATAVERSE_SHOWS_CONFLICT/);assert.equal(f.writes(),before);assert.equal(f.tables.get('esmojo_tijdschemaregel').size,0);
+});
