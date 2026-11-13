@@ -163,3 +163,11 @@ bestandsblokhashes. De dubbele volledige Drive-export blijft vóór de schrijfst
 behouden. Ook de gedeelde tijdschema-opname respecteert de schrijfstop, zodat deze
 gedurende de eindcontrole geen ondersteunende Shows-bron kan wijzigen. Dit halveert
 de langzaamste bron-I/O tijdens het onderhoud zonder velden of bytes over te slaan.
+
+Dezelfde continuïteitsregel geldt voor een gevalideerde, nog actieve Supabase-
+snapshot: een monotone opslagrevisie mag opschuiven bij synchronisatie zonder dat
+bedrijfsdocumenten of getypeerde velden wijzigen. Eerst worden die inhoud en de
+native snapshotintegriteit volledig bewezen. De historische kopiegeneratie blijft
+behouden; de actuele actieve/archief-bronrevisie en haar hash blijven afzonderlijk
+in het versleutelde broncontinuïteitsbewijs. Een lagere bronrevisie of een echte
+inhoudswijziging wordt nooit onder deze regel toegelaten.

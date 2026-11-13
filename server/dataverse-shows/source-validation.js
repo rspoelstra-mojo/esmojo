@@ -34,16 +34,20 @@ export function createSourceValidation({env=process.env,source=createMigrationSo
   const normalized=documents=>{const copy=structuredClone(documents);if(copy['bezoekersdata.json'])copy['bezoekersdata.json'].leases={};const history=copy['productionele-risicos.json']?.history;if(Array.isArray(history))history.sort((a,b)=>(a.at||'').localeCompare(b.at||'')||canonical(a).localeCompare(canonical(b)));return copy;};
   const sourceDocs=normalized(bundle.documents),nativeDocs=normalized(loaded.source.documents);
   if(canonical(sourceDocs)!==canonical(nativeDocs))throw Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:'esmojo_historie',differences:[{column:'esmojo_snapshot_json',reason:'VALUE_DIFFERENCE'}]}});
-  const archived=bundle.marker?.archived===true&&bundle.marker.mode==='archive'&&Number.isSafeInteger(bundle.activeRevision)&&bundle.activeRevision>=loaded.source.activeRevision&&(loaded.source.activeAudit?loaded.source.activeAudit.revision===loaded.source.activeRevision:loaded.source.activeRevision===0);
+  const baseline=loaded.source.activeAudit?loaded.source.activeAudit.revision===loaded.source.activeRevision:loaded.source.activeRevision===0;
+  const monotone=baseline&&Number.isSafeInteger(bundle.activeRevision)&&bundle.activeRevision>=loaded.source.activeRevision;
+  const archived=monotone&&bundle.marker?.archived===true&&bundle.marker.mode==='archive';
+  const active=monotone&&bundle.activeAudit?.revision===bundle.activeRevision;
+  const samePreparation=archived||active;
   const records=plan.records.filter(row=>!['esmojo_historie','esmojo_integratiestatus','esmojo_opdracht'].includes(row.table));
   for(const row of records)if(row.table==='esmojo_concertreeks'){
    row.fields.esmojo_revisie=loaded.source.nativeGeneration||0;
    // This field records the copied provider generation. A terminal archive
-   // may advance its storage protocol without changing any business content.
-   if(archived)row.fields.esmojo_voorbereidingsgeneratie=loaded.source.activeRevision;
+   // or an active sync may advance its protocol without changing business content.
+   if(samePreparation)row.fields.esmojo_voorbereidingsgeneratie=loaded.source.activeRevision;
   }
   try{await verify(records);}catch(error){error.sourceMode=bundle.marker?.archived?'archived':bundle.activeAudit?'active':'legacy';throw error;}
-  if(archived){state.archiveLineage ||= [];state.archiveLineage.push({concertHash:digest(show.concertId),copiedGeneration:loaded.source.activeRevision,archivedGeneration:bundle.activeRevision,markerHash:digest(bundle.marker)});}
+  if(samePreparation){state.sourceLineage ||= [];state.sourceLineage.push({concertHash:digest(show.concertId),kind:archived?'archived':'active',copiedGeneration:loaded.source.activeRevision,currentGeneration:bundle.activeRevision,proofHash:digest(archived?bundle.marker:bundle.activeAudit)});}
   await files(plan.files,show,actor);for(const link of plan.deferredLinks)await writer.linkEmpty(link.source,link.field,link.target);
   await linkResearch(writer,plan.researchKeys,plan.series,true);
   // Detect a source change during the native verification, not just between rounds.
