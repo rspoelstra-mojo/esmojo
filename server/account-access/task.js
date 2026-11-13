@@ -28,11 +28,16 @@ export function createAccessTask({env=process.env,store=createAccessStore({env})
    if(state.phase==='preflight'){
     await store.repo.meta('esmojo_integratiestatus');const source=await sourcePolicy(actor);
     if(source==='dataverse'&&policy.mode!=='freeze')throw Error('ACCESS_UNCONFIRMED');
-    const previous=await store.get(null);const drainUntil=policy.mode==='freeze'?policy.drainUntil:now()+drainMs;
-    await store.save(null,previous,{mode:'freeze',epoch:runId,drainUntil});
-    // A crash here is safe: Node already refuses account writes, and this
-    // idempotent step finishes the source-side freeze on the next attempt.
-    if(source!=='dataverse')await sourcePolicy(actor,'freeze');state={...state,phase:'drain',drainUntil};
+    const previous=await store.get(null);
+    const provenFreeze=policy.mode==='freeze'&&policy.sourceFrozen===true&&source!=='legacy'&&Number.isFinite(policy.drainUntil);
+    const provisional=provenFreeze?policy.drainUntil:now()+drainMs;
+    await store.save(null,previous,{mode:'freeze',epoch:runId,drainUntil:provisional,sourceFrozen:provenFreeze});
+    // The drain starts AFTER a confirmed source freeze. A failed first attempt
+    // must never reuse an elapsed Node-only timer when the source stayed open.
+    if(source!=='dataverse')await sourcePolicy(actor,'freeze');
+    const drainUntil=provenFreeze?provisional:now()+drainMs;
+    await store.save(null,await store.get(null),{mode:'freeze',epoch:runId,drainUntil,sourceFrozen:true});
+    state={...state,phase:'drain',drainUntil};
    }else if(state.phase==='drain'){
     if(policy.mode!=='freeze'||policy.epoch!==runId)throw Error('ACCESS_UNCONFIRMED');
     const source=await sourcePolicy(actor);if(!['freeze','dataverse'].includes(source))throw Error('ACCESS_UNCONFIRMED');

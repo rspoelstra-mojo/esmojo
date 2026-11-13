@@ -96,3 +96,10 @@ test('OIDC endpoint refuses callers before reading approvals or account data',as
  await handler({method:'POST',headers:{},body:{operation:'start'}},res);assert.equal(res.code,403);assert.equal(called,0);
  const controller=createAccessController({store:{get:async()=>({state:{status:'complete',expiresAt:1}})},now:()=>2,tasks:{control:async()=>{called++;}}});await assert.rejects(controller({operation:'start'}),/TASK_EXPIRED/);assert.equal(called,0);
 });
+
+test('restart never reuses an elapsed Node-only drain when source freeze was unconfirmed',async()=>{
+ const {store}=fixture(),src=source();let at=1000,fail=true;const task=createAccessTask({env,store,now:()=>at,raw:async(operation,actor,payload)=>{if(operation==='access-policy'&&payload.mode==='freeze'&&fail)throw Error('DRIVE_UNAVAILABLE');return src.raw(operation,actor,payload);}});
+ await assert.rejects(task.step({actor:admin,runId:'first'}),/DRIVE_UNAVAILABLE/);assert.equal(src.mode(),'legacy');at+=15*60000;fail=false;
+ const result=await task.step({actor:admin,runId:'retry'});assert.equal(src.mode(),'freeze');assert.ok(JSON.parse(result.cursor).drainUntil>=at+11*60000);assert.equal((await store.policy()).sourceFrozen,true);
+ const waiting=await task.step({actor:admin,runId:'retry',cursor:result.cursor});assert.equal(waiting.status,'waiting');
+});
