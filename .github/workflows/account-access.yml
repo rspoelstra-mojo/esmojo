@@ -11,7 +11,8 @@ permissions:
   contents: read
   id-token: write
 concurrency:
-  group: approved-background-tasks-production
+  # Status is read-only; a running mutating task must not hide its diagnostics.
+  group: ${{ inputs.operation == 'status' && 'account-access-status-production' || 'approved-background-tasks-production' }}
   cancel-in-progress: false
 jobs:
   access:

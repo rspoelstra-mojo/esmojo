@@ -1,4 +1,4 @@
-import {createAccessStore,accessFlags,accessContract,validAccountId} from './store.js';
+import {createAccessStore,accessFlags} from './store.js';
 import {createAccessProfiles} from './profiles.js';
 import {createRawProfiles} from '../account-profiles.js';
 import {canonical,digest} from '../show-migration-writer.js';
@@ -21,8 +21,8 @@ export function createAccessTask({env=process.env,store=createAccessStore({env})
    // Restart after confirmed activation only verifies; it never recopies Drive.
    if(policy.mode==='dataverse'){
     if(await sourcePolicy(actor)!=='dataverse')throw Error('ACCESS_UNCONFIRMED');
-    const entries=await store.repo.query('esmojo_integratiestatus',{filter:"esmojo_integratiecode eq '"+accessContract+"' and esmojo_scopecode eq 'account'"}),profiles=createAccessProfiles({env,raw,store,now});
-    for(const row of entries){const id=row.esmojo_bronidentiteit?.slice('account-access/v1/'.length),access=await store.get(id);if(access?.value.pending){if(now()<access.value.pending.until)return result({...state,phase:'reconcile'},'waiting',Math.min(60000,access.value.pending.until-now()));await profiles('access-reconcile',actor,{id});}}
+    const entries=await store.accounts(),profiles=createAccessProfiles({env,raw,store,now});
+    for(let access of entries){const id=access.value.id;if(access.row.esmojo_scopecode!==id)access=await store.save(id,access,access.value);if(access?.value.pending){if(now()<access.value.pending.until)return result({...state,phase:'reconcile'},'waiting',Math.min(60000,access.value.pending.until-now()));await profiles('access-reconcile',actor,{id});}}
     return result({...state,phase:'complete'},'complete');
    }
    if(state.phase==='preflight'){
@@ -48,7 +48,7 @@ export function createAccessTask({env=process.env,store=createAccessStore({env})
     if(policy.mode!=='freeze'||policy.epoch!==runId||!['freeze','dataverse'].includes(await sourcePolicy(actor)))throw Error('ACCESS_UNCONFIRMED');
     const rows=normalize(await raw('access-snapshot',actor,{actorNativeAllowed:true}));if(digest(rows)!==state.hash)throw Error('SOURCE_CHANGED');
     if(state.phase==='copy'){
-     for(const flags of rows.slice(state.checked,state.checked+8)){const previous=await store.get(flags.id);if(!previous||previous.value.pending||canonical(accessFlags(previous.value))!==canonical(flags))await store.save(flags.id,previous,{...flags,pending:null});}
+     for(const flags of rows.slice(state.checked,state.checked+8)){const previous=await store.get(flags.id);if(!previous||previous.row.esmojo_scopecode!==flags.id||previous.value.pending||canonical(accessFlags(previous.value))!==canonical(flags))await store.save(flags.id,previous,{...flags,pending:null});}
      state.checked=Math.min(rows.length,state.checked+8);if(state.checked===rows.length){state.phase='verify';state.checked=0;}
     }else if(state.phase==='verify'){
      for(const flags of rows.slice(state.checked,state.checked+8)){const actual=await store.get(flags.id);if(!actual||actual.value.pending||canonical(accessFlags(actual.value))!==canonical(flags))throw Error('ACCESS_UNCONFIRMED');}
@@ -56,8 +56,8 @@ export function createAccessTask({env=process.env,store=createAccessStore({env})
      if(state.checked===rows.length){
       // Tombstone leftovers from an interrupted preparation. Otherwise a source
       // account removed before retry could retain an unintended native grant.
-      const actual=await store.repo.query('esmojo_integratiestatus',{filter:"esmojo_integratiecode eq '"+accessContract+"' and esmojo_scopecode eq 'account'"}),ids=new Set(rows.map(row=>row.id));
-      for(const record of actual){const id=record.esmojo_bronidentiteit?.slice('account-access/v1/'.length);if(!validAccountId(id))throw Error('ACCESS_CORRUPT');if(!ids.has(id)){const previous=await store.get(id);await store.save(id,previous,{id,activated:false,disabled:true,modules:[],pending:null});}}
+      const actual=await store.accounts(),ids=new Set(rows.map(row=>row.id));
+      for(const previous of actual){const id=previous.value.id;if(!ids.has(id)){await store.save(id,previous,{id,activated:false,disabled:true,modules:[],pending:null});}}
       state.phase='activate';
      }
     }else{

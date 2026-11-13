@@ -78,3 +78,10 @@ accounteditor, login/MFA en bestaande Shows. `shows-performance.yml` meet opnieu
 de beheerderrol wordt buiten de getimede snelle eigen-statusread gecontroleerd.
 Native backendmetingen zijn geen bewijs van volledige ingelogde browserlaadtijd.
 Een seconde mag alleen met passend klik-tot-inhoud/foto-bewijs worden geclaimd.
+
+Integratiestatus heeft ook een unieke combinatie Integratiecode/Scopecode. Elke
+accountscope is daarom het eigen stabiele account-ID; het bronbeleid gebruikt
+policy. De geteste adapter kan een eerste voorbereide oude accountscope via CAS
+op dezelfde recordidentiteit corrigeren, zonder status of rechten te wijzigen.
+De vaste workflow met operation=status gebruikt een aparte read-only wachtrij,
+zodat diagnostiek niet achter de muterende omschakeling blijft wachten.

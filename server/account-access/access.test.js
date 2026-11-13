@@ -9,7 +9,16 @@ const env={GOOGLE_DRIVE_SHARED_SECRET:'synthetic-account-access-long-secret-1234
 const admin='11111111-1111-4111-8111-111111111111',user='22222222-2222-4222-8222-222222222222',third='33333333-3333-4333-8333-333333333333';
 const flags=(id=admin)=>({id,activated:true,disabled:false,modules:['shows','reports']});
 const profile=(id=admin)=>({...flags(id),role:id===admin?'beheerder':'gebruiker',email:id+'@example.invalid',firstName:'Test',lastName:'User',company:'MOJO Concerts',jobTitle:'Event Safety Manager'});
-function fixture(){const f=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople));return{...f,store:createAccessStore({env,repo:f.repo})};}
+function fixture(){
+ const f=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople)),atomic=f.repo.atomic;
+ f.repo.atomic=async operations=>{
+  const copies=new Map([...f.tables].map(([name,rows])=>[name,new Map([...rows].map(([id,value])=>[id,{...value}]))]));
+  for(const op of operations){if(op.method==='DELETE')copies.get(op.table).delete(op.id);else copies.get(op.table).set(op.id,{...copies.get(op.table).get(op.id),...op.payload});}
+  for(const [table,rows]of copies){if(table!=='esmojo_integratiestatus')continue;const seen=new Set();for(const row of rows.values()){const key=JSON.stringify([row.esmojo_integratiecode,row.esmojo_scopecode]);if(seen.has(key))throw Error('DATAVERSE_SHOWS_UNCONFIRMED');seen.add(key);}}
+  return atomic(operations);
+ };
+ return{...f,store:createAccessStore({env,repo:f.repo})};
+}
 async function active(store){await store.save(null,null,{mode:'dataverse',epoch:'synthetic-epoch',verified:true,sourceGuard:true,activatedAt:Date.now()});for(const id of [admin,user])await store.save(id,null,{...flags(id),pending:null});}
 function source(){let mode='legacy',fail=null;const rows=new Map([admin,user].map(id=>[id,profile(id)])),calls=[];
  return{rows,calls,mode:()=>mode,fail:error=>{fail=error;},raw:async(operation,actor,payload={})=>{calls.push({operation,actor,payload});if(fail){const error=fail;fail=null;throw Error(error);}
@@ -108,4 +117,15 @@ test('cold technical warmup prioritizes authorization and authority metadata',as
  const {createNativeShowsService}=await import('../dataverse-shows/service.js');const calls=[];
  const service=createNativeShowsService({state:{repo:{meta:async table=>{calls.push(table);}}},catalogue:{}});await service.prepareRead();
  assert.deepEqual(calls.slice(0,4),['esmojo_integratiestatus','esmojo_opdracht','esmojo_routealias','esmojo_concertreeks']);assert.equal(new Set(calls).size,calls.length);assert.ok(calls.length>=30);
+});
+
+test('per-account scope satisfies the real compound unique index and repairs prepared legacy scope',async()=>{
+ const f=fixture(),{store,tables}=f,src=source();const first=await store.save(admin,null,{...flags(admin),pending:null});tables.get('esmojo_integratiestatus').get(first.row.esmojo_integratiestatusid).esmojo_scopecode='account';
+ const task=createAccessTask({env,store,raw:src.raw,now:()=>1000000});await src.raw('access-policy',admin,{mode:'freeze'});await store.save(null,null,{mode:'freeze',epoch:'epoch',sourceFrozen:true,drainUntil:1});
+ let result=await task.step({actor:admin,runId:'epoch',cursor:JSON.stringify({phase:'drain',epoch:'epoch',drainUntil:1})});
+ for(let n=0;n<10&&result.status!=='complete';n++)result=await task.step({actor:admin,runId:'epoch',cursor:result.cursor});
+ assert.equal(result.status,'complete');assert.equal((await store.get(admin)).row.esmojo_scopecode,admin);assert.equal((await store.get(user)).row.esmojo_scopecode,user);
+ assert.equal((await store.accounts()).length,2);
+ const original=await store.get(admin);const op={table:'esmojo_integratiestatus',id:third,method:'PATCH',create:true,payload:{...original.row,esmojo_sleutel:'f'.repeat(64)}};
+ await assert.rejects(f.repo.atomic([op]),/UNCONFIRMED/,'fixture enforces compound unique index, not only primary IDs');
 });
