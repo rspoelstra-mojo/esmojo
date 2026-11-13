@@ -1,0 +1,26 @@
+name: Activate account status and module access in Dataverse
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        required: true
+        default: start
+        options: [start, resume, status]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: approved-background-tasks-production
+  cancel-in-progress: false
+jobs:
+  access:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Activate only the approved account status and modules
+        env:
+          ACCOUNT_ACCESS_OPERATION: ${{ inputs.operation }}
+        run: node tools/background/account-access.mjs

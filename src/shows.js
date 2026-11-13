@@ -10,6 +10,7 @@ let storage;try{storage=localStorage;}catch{}
 const catalogue=createShowMenuCache({seed,request:async()=>{const data=await access('shows');for(const entry of data.photos||[])loadShowPhoto.prime?.(entry.key,entry.photo);return data;},storage,revalidateOnOpen:true});
 export function refreshShowsMenu(){return catalogue.refresh();}
 export function createShowsSubmenu(navigation, selected = '', content = null) {
+  const startedAt=globalThis.performance?.now?.()??Date.now();
   let disposed = false, disposeShow = () => {}, pageKey=null, direct=null, resolving=false, metadataLoading=null;
   if (!selected && content) {
     const prompt = document.createElement('p');
@@ -52,7 +53,7 @@ export function createShowsSubmenu(navigation, selected = '', content = null) {
     navigation.replaceChildren(...links);
     if (selected && content) {
       const show = direct||shows.find(show => show.key === selected);
-      if (show&&pageKey!==show.key){disposeShow();metadataLoading?.dispose();direct=show;pageKey=show.key;disposeShow=createShowPage(content,show);}
+      if (show&&pageKey!==show.key){disposeShow();metadataLoading?.dispose();direct=show;pageKey=show.key;disposeShow=createShowPage(content,show,{startedAt});}
       else if(!show&&pageKey===null&&!resolving){
         resolving=true;content.setAttribute('aria-busy','true');
         metadataLoading=createSubmenuLoading(document.querySelector('#submenu-title'),content);

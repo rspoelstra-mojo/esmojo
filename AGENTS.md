@@ -1,3 +1,21 @@
+## Beperkte native accounttoegang (13 november 2026)
+
+Gebruiker autoriseert uitsluitend accountstatus en modulerechten in Dataverse.
+Dit vervangt daarvoor de oudere actuele-Drive-rechtenregel; rollen/profielen
+blijven Drive en login/TOTP/MFA behouden. Bestaande Vertrouwelijke Integratiestatus
+mag domeingescheiden AES-GCM account-ACLs en autoriteit bewaren, Opdracht de duurzame
+taak. Geen nieuwe tabellen/kolommen/keuzes nodig; een beveiligde fluid beheerkaart
+start voorbereiding/controle/activering in één klik. Alleen status/modules kopiëren,
+elf minuten accountschrijfstop, actuele bron/doelvergelijking en ondertekende
+Apps Script-protocolpoort die oude deployments weigert. Native medewerkerkopie
+blijft uitsluitend afhankelijkheid. Eén verse Dataverse-query per rechtencontrole;
+geen rechten-TTL/browsercache of terugval na activering. Accountwrites gebruiken
+pending-fence/CAS, actuele Drive-rol, bronvalidatie en exacte terugleescontrole;
+onzekere writes blokkeren minimaal15min tot veilige adminhercontrole. Originele
+bron behouden, geen mails/fictieve concerten. Nieuwe account-access-v1 taakadapter
+en vaste main/OIDC account-access.yml binnen oorspronkelijke48u zijn expliciet
+toegestaan. Zie docs/dataverse/account-access.md.
+
 ## Volledige Shows-opening en openbare foto (13 november 2026)
 
 Gebruiker autoriseert optimalisatie/publicatie binnen Shows, zonder verdere migraties.

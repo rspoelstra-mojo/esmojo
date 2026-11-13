@@ -16,11 +16,11 @@ import {createShowPlanning} from './show-planning.js';
 export function formatShowDates(dates){return dates.map(date=>new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(`${date}T12:00:00Z`))).join(' · ');}
 const tabs=['Overzicht','Showprofiel','Risicoanalyse','Maatregelen','Documenten'];
 const svg=paths=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
-export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,initialTab=requestedShowTab(globalThis.location?.search||''),memory=request===access?showMemory:createShowMemory({request})}={}){
-  let disposed=false,opening=false,releasePage=()=>{};
+export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,initialTab=requestedShowTab(globalThis.location?.search||''),memory=request===access?showMemory:createShowMemory({request}),startedAt=null}={}){
+  let firstOpen=true,disposed=false,opening=false,releasePage=()=>{};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]')||document.querySelector('#submenu-title'),loading=menu?createSubmenuLoading(menu,content):null;
   async function open(){
-    if(disposed||opening)return;const began=globalThis.performance?.now?.()??Date.now();opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
+    if(disposed||opening)return;const began=firstOpen&&Number.isFinite(startedAt)?startedAt:globalThis.performance?.now?.()??Date.now();firstOpen=false;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
     let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},risks=null,observer=null,frame=null;
     const cleanup=()=>{disposeManagement();disposePlanning();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;

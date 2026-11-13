@@ -19,8 +19,10 @@ export function createShowsPerformance({env=process.env,store=createTaskStore({e
   if(!input||Array.isArray(input)||!['prepare','measure'].includes(input.operation)||!Number.isInteger(input.step)||input.step<0||Object.keys(input).some(key=>!['operation','step','catalogue'].includes(key)))throw Error('VALIDATION');
   await authority();
   const approval=await store.get('shows-migration-v1');if(approval?.state.status!=='complete'||approval.state.expiresAt<=now())throw Error('TASK_EXPIRED');
-  const actor=approval.state.actor,start=clock(),profile=await profiles('self',actor,{authorizationOnly:true}),authorizationMs=Math.round(clock()-start);
-  if(profile.id!==actor||!profile.activated||profile.disabled||!isAdministrator(profile)||!hasModule(profile,'shows'))throw Error('FORBIDDEN');
+  const actor=approval.state.actor,administrator=await profiles('self',actor);
+  if(administrator.id!==actor||!administrator.activated||administrator.disabled||!isAdministrator(administrator)||!hasModule(administrator,'shows'))throw Error('FORBIDDEN');
+  const start=clock(),profile=await profiles('self',actor,{authorizationOnly:true}),authorizationMs=Math.round(clock()-start);
+  if(profile.id!==actor||!profile.activated||profile.disabled||!hasModule(profile,'shows'))throw Error('FORBIDDEN');
   const rows=await catalogue.primaryShows(),hash=digest(rows);
   if(input.step===0){if(input.catalogue!==undefined)throw Error('VALIDATION');let geo=null;if(env.VERCEL_ENV==='production')try{const connection=nativeConnection(env),context=await connection.connect(),response=await connection.call("RetrieveCurrentOrganization(AccessType=Microsoft.Dynamics.CRM.EndpointAccessType'Default')",context.headers),data=response.ok?await connection.json(response):null;const value=data?.Detail?.Geo;if(typeof value==='string'&&/^[A-Z0-9_-]{2,20}$/.test(value))geo=value;}catch{/* Optional diagnostic, never a guessed region. */}
    return{ok:true,total:rows.length,catalogue:hash,region:/^[a-z]{3}[0-9]$/.test(env.VERCEL_REGION||'')?env.VERCEL_REGION:null,dataverseGeo:geo};}
@@ -28,7 +30,7 @@ export function createShowsPerformance({env=process.env,store=createTaskStore({e
   if(input.operation==='prepare'){
    const loaded=await state.load(selected.key);await state.refreshOpening(loaded);return{ok:true,prepared:1};
   }
-  const begun=clock();const [bundle,results]=await Promise.all([shows('show-open',{concertId:selected.key,actor,__actor:profile}),research.load(selected.key)]);research.merge(bundle.profile,results);
+  const begun=clock();const [bundle,results]=await Promise.all([shows('show-open',{concertId:selected.key,actor,__actor:administrator}),research.load(selected.key)]);research.merge(bundle.profile,results);
   if(!bundle.profile||!bundle.tickets||!bundle.risks||!bundle.barrier||!bundle.floor)throw Error('VERIFY');
   return{ok:true,verified:1,timings:{authorizationMs,openingMs:Math.round(clock()-begun),authorizedOpeningMs:Math.round(clock()-begun)+authorizationMs}};
  };
