@@ -11,8 +11,11 @@ const checksum=bytes=>createHash('sha256').update(bytes).digest('hex');
 // De bestaande API-poort blijft verantwoordelijk voor actuele account/MFA/modules.
 export function createNativeShowsRepository({env=process.env,connection=createDataverseSetupConnection({env})}={}){
  const metadata=new Map();
+ const limiter=maximum=>{let active=0;const pending=[];return async run=>{if(active>=maximum)await new Promise(resolve=>pending.push(resolve));else active++;try{return await run();}finally{const next=pending.shift();if(next)next();else active--;}};};
+ const metadataRead=limiter(4),recordRead=limiter(8);
+
  async function call(path,options={}){
-  const context=await connection.connect();const {headers:extraHeaders,...settings}=options;const response=await connection.call(path,{...context.headers,...extraHeaders},{...settings,code:'DATAVERSE_SHOWS_UNAVAILABLE',timeoutMs:60000});
+  const context=await connection.connect();const {headers:extraHeaders,...settings}=options;const limit=path.startsWith('EntityDefinitions(')?metadataRead:recordRead;const response=await limit(()=>connection.call(path,{...context.headers,...extraHeaders},{...settings,code:'DATAVERSE_SHOWS_UNAVAILABLE',timeoutMs:60000}));
   if(!response.ok)throw Error(response.status===412?'DATAVERSE_SHOWS_CONFLICT':response.status===404?'NOT_FOUND':'DATAVERSE_SHOWS_UNAVAILABLE');return response;
  }
  async function json(path,options){return connection.json(await call(path,options),'DATAVERSE_SHOWS_RESPONSE');}
@@ -84,7 +87,7 @@ export function createNativeShowsRepository({env=process.env,connection=createDa
   }
  }
  async function atomic(operations){
-  if(!Array.isArray(operations)||!operations.length||operations.length>250)throw Error('VALIDATION');
+  if(!Array.isArray(operations)||!operations.length||operations.length>1000)throw Error('VALIDATION');
   const boundary='batch_'+randomBytes(16).toString('hex'),changeset='changeset_'+randomBytes(16).toString('hex'),lines=['--'+boundary,'Content-Type: multipart/mixed; boundary='+changeset,''];
   const targets=new Set();
   for(let index=0;index<operations.length;index++){
