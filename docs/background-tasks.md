@@ -13,9 +13,14 @@ migratie niet af te wachten. Het tabblad mag sluiten en de telefoon mag vergrend
 De vaste GitHub-workflow `background-tasks.yml` staat iedere vijf minuten gepland,
 maar GitHub kan starts aanzienlijk vertragen. Iedere uitvoering doet daarom tot
 maximaal veertig minuten meerdere korte serverrondes achter elkaar zolang er
-voortgang is. Iedere ronde gebruikt een verse OIDC-identiteit en dezelfde vaste
-productiepoort. Wachten, conflict, voltooiing, geen uitvoerbaar werk of een
-onbevestigde aanvraag beëindigt de lus; de server beheert wachttijden en leases.
+een expliciet gestarte taak actief is. Iedere ronde gebruikt een verse OIDC-
+identiteit en dezelfde vaste productiepoort. Korte wachttijden en tijdelijke
+leases worden binnen die begrensde workflow overbrugd (maximaal60s per wachtbeurt),
+ook wanneer een ronde nul stappen kan uitvoeren. De server blijft Retry-After,
+leases, actuele rechten en de oorspronkelijke machtiging controleren; er wordt
+nooit vóór de opgeslagen volgende poging uitgevoerd. Geen actieve taak of een
+onbevestigde aanvraag beëindigt de lus. Een geblokkeerde taak blijft geblokkeerd;
+een andere al actieve taak mag doorgaan. Na40min blijft cron het hervatvangnet.
 De periodieke planning is het hervatvangnet. Een onderbroken serverronde betekent
 niet dat de taak is verdwenen. De workflow start nooit zelf een nieuwe migratie.
 
@@ -76,8 +81,13 @@ checkpoint hervat. Native bestandsessies ouder dan tien minuten worden veilig
 opnieuw geïnitialiseerd, met terugleescontrole van reeds aanwezige bytes.
 
 De worker-API accepteert uitsluitend de vaste GitHub-OIDC-identiteit voor de eigen
-repository, main, eigen workflow en audience. Alleen POST met `{}`; geen vrije
-soort, cursor, URL, tabel of opdracht. CI ziet uitsluitend technische aantallen.
+repository, main, eigen workflow en audience. Alleen POST met `{}` voor uitvoeren of exact `{"operation":"status"}` voor lezen; geen vrije
+soort, cursor, URL, tabel of opdracht. CI ziet uitsluitend technische aantallen, vaste taaktypen/fase/foutcode en
+tijdstippen (laatste checkpoint, volgende poging, lease, oorspronkelijke eindtijd).
+Geen actor, cursor, profielgegevens, metadatawaarden, labels of providerbody.
+Een statusrun via workflow_dispatch → operation=status heeft een eigen read-only
+concurrencygroep en kan ook tijdens een lopende worker worden bekeken. Status
+maakt geen taak aan en wijzigt geen checkpoint of machtiging.
 Previewomgevingen mogen geen taken starten of uitvoeren. De oude browserrunner
 wordt geblokkeerd zolang de nieuwe achtergrondmigratie actief is.
 
