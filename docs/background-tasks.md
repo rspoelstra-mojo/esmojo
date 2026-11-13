@@ -204,3 +204,11 @@ hervatten of herschrijven. Alleen vaste fase-/foutcodes en technische aantallen
 komen in CI; geen CSV-bytes, namen, bron-/account-ID's of providerbody. De export
 leest alleen register-/bestandsmetadata en deelt de bestaande HMAC-brug. Dit kan
 naast een lopende worker worden gecontroleerd via de read-only concurrencygroep.
+
+Eenmalig herstel via `operation=reports-resume` is beperkt tot het bestaande
+geblokkeerde pre-write-inventory-controlepunt: exact490 schema/indexchecks,
+zelfde schema/handler/generatie, nul records/bestanden, geen eerdere inventaris,
+geen onzekere write of actieve lease, actuele admin/Reports en nog geldige
+originele48u-delegatie. De read-only diagnose moet volledig slagen. De server
+bindt de resume conditioneel aan de gelezen generatie; geen start/restart of
+machtigingsverlenging. Alle overige inhoudelijke conflicten blijven geblokkeerd.

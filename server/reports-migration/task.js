@@ -26,6 +26,7 @@ export function createReportsMigrationTask({env=process.env,now=Date.now,source=
  }
  const safeCode=error=>['ARTIST_CATALOGUE','MIGRATION_SOURCE','MIGRATION_SOURCE_LIMIT','MIGRATION_SOURCE_CHANGED','REPORTS_UNLINKED','REPORT_CATALOG','REGISTER_INVALID','TASK_UNCONFIRMED','TASK_CORRUPT'].includes(error.message)?error.message:'UNCONFIRMED';
  return{title:'Rapportages-migratie',module:'reports',version:1,idempotent:true,
+  canResumeInventory(cursor,run){try{const state=JSON.parse(cursor);return state.version===1&&state.schema===reportsSchemaHash&&state.run===run&&state.phase==='inventory'&&state.checkIndex===metadataPlan.length&&state.records===0&&state.files===0&&!state.inventoryHash;}catch{return false;}},
   async diagnose({actor}){
    const counts={};let stage='source-probe';
    try{

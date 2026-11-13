@@ -84,3 +84,12 @@ test('technical inspection is read-only, fresh-authorized and exposes safe count
 test('technical inspection respects unknown-write exclusion and never modifies authorization deadline',async()=>{
  const f=fixture({step:async()=>{throw Error('uncertain');},failure:()=>({retryable:true,uncertain:true,code:'TEMPORARY',error:'Safe'})}),engine=f.build();await engine.control(command(),'admin');await engine.run();const info=await engine.inspect();assert.equal(info.pollAfterMs,60000);assert.equal(info.tasks[0].nextAt,info.tasks[0].leaseUntil);assert.equal(info.tasks[0].authorizationExpiresAt,1000000+48*3600000);await engine.run();assert.equal(f.calls,0);
 });
+test('server-only epoch binding refuses to resume a replaced task generation',async()=>{
+ const f=fixture({step:async()=>({status:'blocked',public:{code:'EXAMPLE',error:'Check'}})}),engine=f.build();await engine.control(command(),'admin');await engine.run();const old=await f.store.get('example-task');await engine.control(command('restart'),'admin');await engine.run();
+ await assert.rejects(engine.control(command('resume'),'admin',{expectedEpoch:old.state.epoch}),/TASK_STALE/);assert.equal((await f.store.get('example-task')).state.status,'blocked');
+ const current=await f.store.get('example-task');await engine.control(command('resume'),'admin',{expectedEpoch:current.state.epoch});assert.equal((await f.store.get('example-task')).state.status,'ready');
+});
+
+test('server-only checkpoint sequence binding refuses same-epoch changes during read-only diagnosis',async()=>{
+ const f=fixture({step:async()=>({status:'blocked',public:{error:'Check'}})}),engine=f.build();await engine.control(command(),'admin');await engine.run();const old=await f.store.get('example-task');await f.store.save(old,{...old.state,sequence:old.state.sequence+1});await assert.rejects(engine.control(command('resume'),'admin',{expectedEpoch:old.state.epoch,expectedSequence:old.state.sequence}),/TASK_STALE/);assert.equal((await f.store.get('example-task')).state.status,'blocked');
+});

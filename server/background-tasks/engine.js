@@ -17,11 +17,11 @@ export function createBackgroundTasks({store,registry,authorize,now=Date.now,id=
  const fresh=(type,actor,definition,authorizationExpiresAt)=>{
   const startedAt=now();return{version:1,authorizationVersion:2,type,actor,epoch:id(),handlerVersion:definition.version,status:'ready',cursor:null,sequence:0,attempts:0,startedAt,updatedAt:startedAt,expiresAt:authorizationExpiresAt??startedAt+TASK_AUTHORIZATION_MS,nextAt:startedAt,lease:null,uncertain:false,public:publicProgress({label:'In de wachtrij; de server start de taak.'})};
  };
- async function control(input,actor,{authorizationExpiresAt}={}){
+ async function control(input,actor,{authorizationExpiresAt,expectedEpoch,expectedSequence}={}){
   if(authorizationExpiresAt!==undefined&&(!Number.isFinite(authorizationExpiresAt)||authorizationExpiresAt<=now()||authorizationExpiresAt>now()+TASK_AUTHORIZATION_MS))throw Error('TASK_EXPIRED');
   if(!input||Array.isArray(input)||Object.keys(input).sort().join(',')!=='operation,type'||!['status','start','resume','restart'].includes(input.operation)||typeof input.type!=='string'||!Object.hasOwn(registry,input.type)||typeof actor!=='string'||!actor)throw Error('VALIDATION');
   const definition=registry[input.type];if(!await authorize(actor,definition))throw Error('FORBIDDEN');
-  let row=await store.get(input.type);
+  let row=await store.get(input.type);if(expectedEpoch!==undefined&&(typeof expectedEpoch!=='string'||row?.state.epoch!==expectedEpoch))throw Error('TASK_STALE');if(expectedSequence!==undefined&&(!Number.isSafeInteger(expectedSequence)||row?.state.sequence!==expectedSequence))throw Error('TASK_STALE');
   if(input.operation==='status')return{task:taskView(row,definition,actor,now())};
   if(!row){if(input.operation!=='start')throw Error('TASK_NOT_FOUND');row=await store.create(input.type,definition.title,fresh(input.type,actor,definition,authorizationExpiresAt));return{task:taskView(row,definition,actor,now())};}
   if(input.operation==='start')return{task:taskView(row,definition,actor,now())};
