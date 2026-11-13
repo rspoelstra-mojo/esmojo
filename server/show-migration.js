@@ -1,3 +1,4 @@
+import {TASK_AUTHORIZATION_MS} from './task-authorization.js';
 import {createHash,createCipheriv,createDecipheriv,randomBytes} from 'node:crypto';
 import {createDataverseTables} from './dataverse-tables.js';
 import {tableSetupSteps,showTableSchema} from './dataverse-table-schema.js';
@@ -12,13 +13,21 @@ export function migrationTokens({env=process.env,now=Date.now}={}){
  function key(){if(typeof env.GOOGLE_DRIVE_SHARED_SECRET!=='string'||env.GOOGLE_DRIVE_SHARED_SECRET.length<32)throw Error('MIGRATION_CONFIG');return createHash('sha256').update('shows-migration-v1\n'+env.GOOGLE_DRIVE_SHARED_SECRET).digest();}
  return{
   seal(value){const nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key(),nonce);cipher.setAAD(Buffer.from(contract));return Buffer.concat([nonce,cipher.update(canonical(value)),cipher.final(),cipher.getAuthTag()]).toString('base64url');},
-  open(token,actor){try{if(typeof token!=='string'||token.length>50000)throw Error();const bytes=Buffer.from(token,'base64url');if(bytes.length<29)throw Error();const decipher=createDecipheriv('aes-256-gcm',key(),bytes.subarray(0,12));decipher.setAAD(Buffer.from(contract));decipher.setAuthTag(bytes.subarray(-16));const state=JSON.parse(Buffer.concat([decipher.update(bytes.subarray(12,-16)),decipher.final()]));if(state.version!==1||state.actor!==actor||state.expires<=now()||state.expires>now()+24*3600000)throw Error();return state;}catch{throw Error('MIGRATION_TOKEN');}}
+  open(token,actor,{authorizationExpiresAt}={}){try{if(typeof token!=='string'||token.length>50000)throw Error();const bytes=Buffer.from(token,'base64url');if(bytes.length<29)throw Error();const decipher=createDecipheriv('aes-256-gcm',key(),bytes.subarray(0,12));decipher.setAAD(Buffer.from(contract));decipher.setAuthTag(bytes.subarray(-16));const state=JSON.parse(Buffer.concat([decipher.update(bytes.subarray(12,-16)),decipher.final()]));if(state.version!==1||state.actor!==actor||!Number.isFinite(state.expires))throw Error();
+// De geauthenticeerde achtergrondtaak levert haar vaste absolute eindtijd.
+// Deze derde serverparameter kan nooit uit de browserpayload komen.
+if(authorizationExpiresAt!==undefined){
+ if(!Number.isFinite(authorizationExpiresAt)||authorizationExpiresAt<=now()||authorizationExpiresAt>now()+TASK_AUTHORIZATION_MS||state.expires>authorizationExpiresAt)throw Error();
+ state.expires=authorizationExpiresAt;
+}
+if(state.expires<=now()||state.expires>now()+TASK_AUTHORIZATION_MS)throw Error();return state;}catch{throw Error('MIGRATION_TOKEN');}}
  };
 }
 export function createShowMigration({env=process.env,now=Date.now,source=createMigrationSource({env}),writerFactory=()=>createMigrationWriter({env}),verify=createDataverseTables({env,readOnly:true}),tokens=migrationTokens({env,now})}={}){
- return async function migrate(input,actor){
+ return async function migrate(input,actor,{authorizationExpiresAt}={}){
   if(!input||Array.isArray(input)||typeof actor!=='string'||!actor||!['start','advance'].includes(input.operation)||Object.keys(input).sort().join(',')!==(input.operation==='start'?'operation':'operation,token'))throw Error('VALIDATION');
-  let state=input.operation==='start'?{version:1,actor,expires:now()+24*3600000,stage:'schema',index:0,verifiedRecords:0,verifiedFiles:0}:tokens.open(input.token,actor);
+  if(authorizationExpiresAt!==undefined&&(!Number.isFinite(authorizationExpiresAt)||authorizationExpiresAt<=now()||authorizationExpiresAt>now()+TASK_AUTHORIZATION_MS))throw Error('MIGRATION_TOKEN');
+  let state=input.operation==='start'?{version:1,actor,expires:authorizationExpiresAt??now()+TASK_AUTHORIZATION_MS,stage:'schema',index:0,verifiedRecords:0,verifiedFiles:0}:tokens.open(input.token,actor,{authorizationExpiresAt});
   const response=(extra={})=>({status:'running',token:tokens.seal(state),progress:{phase:state.stage,current:state.index,verifiedRecords:state.verifiedRecords,verifiedFiles:state.verifiedFiles},...extra});
   if(state.stage==='schema'){
    const step=checks[state.index];

@@ -39,6 +39,7 @@ jobs:
           ESMOJO_TEST_REDIS_PORT: '6379'
         run: |
           node --test server/background-tasks/*.test.js
+          node --test tools/background/continue.test.mjs
           node --test server/show-migration*.test.js
           node server/accounts-api.test.js
           node --test server/show-management.test.js

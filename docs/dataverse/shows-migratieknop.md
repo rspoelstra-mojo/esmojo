@@ -11,8 +11,11 @@ aangegeven. De code blijft ook automatische bronwijzigingen controleren.
 Klik één keer. De taak wordt op de server opgeslagen en op de achtergrond
 uitgevoerd; je mag de pagina sluiten of je telefoon vergrendelen. Bij terugkomst
 wordt de opgeslagen status opnieuw opgehaald. Tussen korte serverrondes kan een
-wachttijd zitten; de vaste worker draait ongeveer elke vijf minuten, met mogelijke
-vertraging door GitHub. Details: [herbruikbare achtergrondtaken](../background-tasks.md).
+wachttijd zitten. De vaste worker is iedere vijf minuten gepland, met mogelijke
+vertraging door GitHub, en voert per workflow tot veertig minuten opeenvolgende
+korte rondes uit zolang er uitvoerbaar werk is. De absolute taakmachtiging is
+48 uur vanaf de oorspronkelijke start; dit verlengt het handmatige wijzigingsvrije
+venster niet. Details: [herbruikbare achtergrondtaken](../background-tasks.md).
 
 Alle 52 unieke sleutelindexen worden eerst gelezen, inclusief de eerder lopende
 indexen voor Historieversie, Opdracht (twee) en Routealias. Zolang één niet Actief is,

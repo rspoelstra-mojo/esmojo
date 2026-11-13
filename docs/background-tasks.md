@@ -10,8 +10,13 @@ houden voorlopig hun eigen bestaande uitvoering.
 Een bewuste startklik bewaart eerst de opdracht duurzaam in Dataverse. Daarna
 start Vercel de eerste korte worker via `waitUntil`; het HTTP-antwoord hoeft de
 migratie niet af te wachten. Het tabblad mag sluiten en de telefoon mag vergrendelen.
-De vaste GitHub-workflow `background-tasks.yml` pakt elke vijf minuten bestaande
-taken op. GitHub kan die planning vertragen; een onderbroken serverronde betekent
+De vaste GitHub-workflow `background-tasks.yml` staat iedere vijf minuten gepland,
+maar GitHub kan starts aanzienlijk vertragen. Iedere uitvoering doet daarom tot
+maximaal veertig minuten meerdere korte serverrondes achter elkaar zolang er
+voortgang is. Iedere ronde gebruikt een verse OIDC-identiteit en dezelfde vaste
+productiepoort. Wachten, conflict, voltooiing, geen uitvoerbaar werk of een
+onbevestigde aanvraag beëindigt de lus; de server beheert wachttijden en leases.
+De periodieke planning is het hervatvangnet. Een onderbroken serverronde betekent
 niet dat de taak is verdwenen. De workflow start nooit zelf een nieuwe migratie.
 
 Open de beheerpagina opnieuw voor de laatst opgeslagen voortgang. Alleen een
@@ -28,7 +33,12 @@ behoudt het checkpoint. **Opnieuw controleren vanaf het begin** begint alleen na
 een bewuste extra klik een nieuwe uitvoering; reeds gekopieerde data wordt volgens
 de oorspronkelijke create-only controles herkend.
 
-De taakmachtiging loopt maximaal 24 uur vanaf de start. Bij iedere stap worden
+De taakmachtiging loopt maximaal 48 uur vanaf de oorspronkelijke start. Dit is
+geen glijdende termijn. De actieve oude 24-uursdelegatie wordt bij de volgende
+workerclaim met behoud van checkpoint naar die vaste 48-uursgrens gebracht;
+ook de versleutelde migratiecursor wordt aan dezelfde interne eindtijd gebonden.
+Geblokkeerde taken worden niet automatisch herstart en actuele rechten blijven
+per stap vereist. Bij iedere stap worden
 actuele geactiveerde beheerderstatus, blokkade en modulerechten opnieuw uit het
 bestaande Drive-profiel gecontroleerd. De start vereist de normale login/MFA-poort;
 de worker gebruikt daarna die beperkte taakdelegatie, geen bewaarde MFA-/sessiecookie.

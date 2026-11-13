@@ -8,8 +8,8 @@ export const taskDefinitions=Object.freeze({'shows-migration-v1':Object.freeze({
 export const backgroundTaskModule=type=>typeof type==='string'&&Object.hasOwn(taskDefinitions,type)?taskDefinitions[type].module:null;
 export function createTaskRegistry({env=process.env,migrate=createShowMigration({env})}={}){
  return{'shows-migration-v1':{...taskDefinitions['shows-migration-v1'],
-  async step({cursor,actor}){
-   const result=await migrate(cursor?{operation:'advance',token:cursor}:{operation:'start'},actor);
+  async step({cursor,actor,authorizationExpiresAt}){
+   const result=await migrate(cursor?{operation:'advance',token:cursor}:{operation:'start'},actor,{authorizationExpiresAt});
    if(typeof result?.token!=='string'||!['running','blocked','complete'].includes(result.status))throw Error('TASK_CONTRACT');
    const waiting=result.status==='blocked'&&result.reason==='KEY_INDEX_PENDING';
    return{cursor:result.token,status:waiting?'waiting':result.status==='running'?'ready':result.status,delayMs:waiting?300000:0,public:{label:result.label,total:result.total,progress:result.progress,...(result.status==='blocked'&&!waiting?{error:'De schemacontrole blokkeert de taak. Controleer de gemelde tabel of sleutel.',code:'MIGRATION_SCHEMA'}:{})}};

@@ -13,3 +13,8 @@ test('worker authorization uses current Drive profile rather than cached roles o
  }
  assert.equal(reads,4);
 });
+
+test('adapter binds the legacy migration cursor to the internally authorized task deadline',async()=>{
+ let observed;const registry=createTaskRegistry({migrate:async(input,actor,delegation)=>{observed={input,actor,delegation};return{status:'running',token:'encrypted',progress:{}};}});
+ await registry['shows-migration-v1'].step({cursor:'legacy',actor:'admin',authorizationExpiresAt:123456});assert.equal(observed.delegation.authorizationExpiresAt,123456);assert.deepEqual(observed.input,{operation:'advance',token:'legacy'});
+});
