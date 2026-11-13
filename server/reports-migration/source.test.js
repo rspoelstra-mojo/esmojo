@@ -21,3 +21,17 @@ test('migration exporter requires an actual Reports administrator and refuses ar
  f.advance(1000);csv.setContent(csv.content+'\n');await assert.rejects(source.bundle(entry,admin),/SOURCE_CHANGED/);
 });
 test('unlinked CSVs block migration instead of silently omitting them',async()=>{const f=setup();f.addFile(f.folder,'unknown.csv','text/csv',csvFixture('2026-09-01'));const source=createReportsMigrationSource({env:{},store:f.store});await assert.rejects(source.catalogue(admin),/REPORTS_UNLINKED/);});
+test('both historical source formats retain ticket/visitor meaning, validated ancestry and import-control provenance',async()=>{
+ for(const tsc of [false,true]){
+  const f=setup(),production=f.root.createFolder('Productie'),artist=production.createFolder('Historical Artist'),id='Historical-Artist_Ziggo-Dome_01022025',concert=artist.createFolder(id),file=f.addFile(concert,'incidents_'+id+'.csv','text/csv',csvFixture('2025-02-01')),showData={visitors:1234,evictions:0,arrests:null,doors:'18:00',start:'20:00',end:'00:30'};
+  const entry={concertId:id,artist:'Historical Artist',venue:'Ziggo Dome',city:'Amsterdam',date:'2025-02-01',performance:null,seriesId:id,ticket_sales:tsc?null:'1234',...(tsc?{sourceType:'tsc-historical',showData}:{}),source:{id:file.id,folderId:concert.id,name:file.name,size:file.getSize(),modifiedAt:file.getLastUpdated().toISOString(),sha256:digest(file.content)}};
+  f.addFile(production,'_esmojo_historical_reports_v1.json','application/json',JSON.stringify({version:1,managedBy:'ESMOJO/HistoricalReports-v1',classification:'vertrouwelijk',entries:[entry]}));
+  f.addFile(concert,'bezoekersdata.json','application/json',JSON.stringify({managedBy:'ESMOJO/TicketData-v1',classification:'vertrouwelijk',concertId:id,workflow_json:JSON.stringify({visitors:{fields:tsc?{}:{ticket_sales:{content:'1234',version:1,completed_at:'2025-02-02T12:00:00Z'}}}}),leases:{},history:[]}));
+  const audit=f.addFile(concert,'importcontrole.json','application/json',JSON.stringify({managedBy:'ESMOJO/HistoricalImportAudit-v1',classification:'vertrouwelijk',concertId:id,originalRows:[1,2,3]}));
+  if(tsc)f.addFile(concert,'showgegevens-tsc.json','application/json',JSON.stringify({managedBy:'ESMOJO/TscHistoricalShow-v1',classification:'vertrouwelijk',version:1,concertId:id,showData}));
+  await createWebCatalogueService({store:f.store}).synchronize(null,{historicalOnly:true});const source=createReportsMigrationSource({env:{},store:f.store}),inventory=await source.catalogue(admin),bundle=await source.bundle(inventory.entries[0],admin);
+  assert.equal(inventory.entries.length,1);assert.equal(inventory.selection.settings.historicalRegister[0].concertId,id);assert.equal(Object.keys(inventory.selection.settings.webIndex.entries).length,1);assert.deepEqual(bundle.provenance['importcontrole.json'].originalRows,[1,2,3]);assert.equal(bundle.general.tickets.sales,tsc?null:'1234');assert.equal(bundle.sources[0].source.show.sourceType,tsc?'tsc-historical':undefined);
+  if(tsc){assert.equal(bundle.sources[0].source.show.showData.evictions,0);assert.equal(bundle.sources[0].source.show.showData.arrests,null);assert.equal(bundle.timetable.entries.at(-1).localDate,'2025-02-02');}
+  audit.setContent(JSON.stringify({managedBy:'untrusted',classification:'vertrouwelijk',concertId:id}));await assert.rejects(source.bundle(inventory.entries[0],admin),/REPORT_CONFLICT/);
+ }
+});
