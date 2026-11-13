@@ -139,3 +139,19 @@ test('legacy cursor extension requires the internal fixed task delegation and pr
  assert.throws(()=>codec.open(token,actor,{authorizationExpiresAt:started+day}),/MIGRATION_TOKEN/);
  const endCodec=migrationTokens({env,now:()=>started+2*day+1});assert.throws(()=>endCodec.open(token,actor,{authorizationExpiresAt:started+2*day}),/MIGRATION_TOKEN/);
 });
+
+test('published timetable migration uses explicit row dates and preserves the full capture timestamp in history',()=>{
+ const source=fixture(),snapshot={concertId:'show',date:'2026-11-23',capturedAt:'2026-11-23T11:02:03.456Z',entries:[
+  {kind:'doors',label:'Deuren',publishedLabel:'19:00',time:'19:00',localDate:'2026-11-23'},
+  {kind:'end',label:'Einde',publishedLabel:'00:30',time:'00:30',localDate:'2026-11-24'}
+ ]};source.timetables=[{concertId:'show',snapshot}];
+ const result=mapShow(source,people),rows=result.records.filter(row=>row.table==='esmojo_tijdschemaregel');
+ assert.deepEqual(rows.map(row=>row.fields.esmojo_brondatum),['2026-11-23','2026-11-24']);
+ assert.deepEqual(rows.map(row=>row.fields.esmojo_dagoffset),[0,1]);
+ assert.deepEqual(rows.map(row=>row.fields.esmojo_tijd),['19:00','00:30']);
+ for(const row of rows)validateRecord(row);
+ const history=result.records.find(row=>row.table==='esmojo_historie'&&row.fields.esmojo_entiteitsoort==='timetable');
+ assert.deepEqual(JSON.parse(history.fields.esmojo_snapshot_json),snapshot);assert.equal(snapshot.capturedAt,'2026-11-23T11:02:03.456Z');
+ // Een ongeldige tijdwaarde in een datumveld blijft geweigerd; geen validatorverruiming.
+ const invalid=structuredClone(rows[0]);invalid.fields.esmojo_brondatum=snapshot.capturedAt;assert.throws(()=>validateRecord(invalid),/MIGRATION_MAPPING/);
+});
