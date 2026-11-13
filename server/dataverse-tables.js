@@ -8,7 +8,7 @@ const required=column=>column.required==='Ja'?'ApplicationRequired':'None';
 const requiredNames=['None','SystemRequired','ApplicationRequired','Recommended'];
 export const requiredLevelName=value=>Number.isInteger(value)?requiredNames[value]||'Unknown':requiredNames.includes(value)?value:'Unknown';
 const metaType=actual=>{const annotated=String(actual?.['@odata.type']||'').split('.').at(-1);if(annotated.endsWith('AttributeMetadata'))return annotated;const named=actual?.AttributeTypeName?.Value;if(typeof named==='string'&&/^(String|Memo|Integer|DateTime|Boolean|Picklist|Decimal|File|Lookup)Type$/.test(named))return named.slice(0,-4)+'AttributeMetadata';return /^(String|Memo|Integer|DateTime|Boolean|Picklist|Decimal|Lookup)$/.test(actual?.AttributeType||'')?actual.AttributeType+'AttributeMetadata':'';};
-const choiceByName=new Map(dataverseChoiceDefinitions.map(definition=>[definition.name,definition]));
+const defaultContract={setupTables,tableByName,tableSetupSteps,tableStepById,choices:dataverseChoiceDefinitions};
 const conflict=(difference,details)=>({status:'conflict',verified:false,difference,...(details?{details}:{})});
 const requiredDetails=(actual,column)=>({column:column.logical_name,expectedRequired:required(column),actualRequired:requiredLevelName(actual?.RequiredLevel?.Value)});
 const sameKey=(left,right)=>Array.isArray(left)&&left.length===right.length&&[...left].sort().join(',')===[...right].sort().join(',');
@@ -41,7 +41,9 @@ export function compareRelationship(actual,table,column,primaryId){
  if(!actual.CascadeConfiguration||['Assign','Merge','Reparent','Share','Unshare'].some(key=>actual.CascadeConfiguration[key]!=='NoCascade')||actual.CascadeConfiguration.Delete!=='Restrict')return'RELATIONSHIP_CASCADE';
  return null;
 }
-export function createDataverseTables({env=process.env,request=fetch,now=Date.now,readOnly=false}={}){
+export function createDataverseTables({env=process.env,request=fetch,now=Date.now,readOnly=false,contract=defaultContract}={}){
+ const {setupTables,tableByName,tableSetupSteps,tableStepById}=contract;
+ const choiceByName=new Map(contract.choices.map(definition=>[definition.name,definition]));
  const {connect,call,json,includeInSolution}=createDataverseSetupConnection({env,request,now});
  const entityPath=table=>"EntityDefinitions(LogicalName='"+table.logical_name+"')";
  async function get(path,ctx){const response=await call(path,ctx.headers,{code:'TABLE_READ'});if(response.status===404)return null;if(!response.ok)throw Error('TABLE_READ_REJECTED');return json(response);}

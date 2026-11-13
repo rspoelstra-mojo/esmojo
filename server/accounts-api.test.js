@@ -426,3 +426,11 @@ test('native status-only own profile opens Shows but cannot authorize administra
  const result=await run({own,action:'show-open',method:'POST',body:{concertId:'Test_Gashouder_15112026'},showResult:{profile:{},tickets:{},risks:{},barrier:{},floor:{}}});assert.equal(result.response.code,200);
  const denied=await run({own,action:'accounts'});assert.equal(denied.response.code,403);
 });
+
+test('Reports schema setup requires production admin Reports access and does not reopen legacy migration',async()=>{
+ let calls=0;const taskService={control:async input=>{calls++;return{task:{status:'queued',type:input.type}};},run:async()=>({steps:0})},body={operation:'start',type:'reports-schema-v1'},configuration={...env,VERCEL_ENV:'production'};
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,modules:['shows']}},{configuration:{...env,VERCEL_ENV:'development'}},{configuration:{...configuration,MFA_REPLAY_ENABLED:'true'}}]){const result=await run({configuration,action:'background-tasks',method:'POST',body,taskService,...input});assert.ok([401,403].includes(result.response.code),'Reports setup denial returned '+result.response.code);}
+ assert.equal(calls,0);
+ const showsSource=Object.assign(async()=>{throw Error('No Shows access needed');},{allowLegacyMaintenance:async()=>{throw Error('STORAGE_ACTIVE');}});
+ const result=await run({configuration,own:{...profile,modules:['reports']},action:'background-tasks',method:'POST',body,taskService,showsSource});assert.equal(result.response.code,200);assert.equal(calls,1);
+});

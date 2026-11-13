@@ -1,3 +1,26 @@
+## Rapportages-schema voorbereiden (13 november 2026)
+
+Gebruiker vraagt uitsluitend het Dataverse-opslagmodel en één beheerknop voor
+bestaande en toekomstige rapportages met hetzelfde CSV-per-showcontract. Geen
+CSV-aanlevering, datakopie, cutover, mails of nieuwe PDF's in deze stap. Hergebruik
+bestaande classificaties (CSV/incidenten/PDF/mailcontext Vertrouwelijk) en vaste
+Dataverse-omgeving/ESMOJO/publisher. Nieuw vast contract reports-schema.json:
+11 nieuwe tabellen, 222 kolommen inclusief29 Restrict-relaties, 24 unieke sleutels,
+3 nieuwe keuzes; 11 bestaande gedeelde tabellen uitsluitend lezen/controleren.
+Het actieve Shows-JSON/hash en gedeelde keuzeopties niet veranderen. Document
+File hergebruiken; geen base64/ruwe tokens in tekst. Middag/avond, nachtincidenten,
+bronversies, oorspronkelijke CSV17, nullable TSC-koptotalen en aparte ticket-/
+bezoekersaantallen behouden. Dynamische incidentlabels blijven tekst.
+Beveiligde productieknop op Beheerder/Datatransitie vereist actuele admin/Reports/
+activatie/MFA, geen Shows-toegang. Nieuwe reports-schema-v1 adapter mag uitsluitend
+vaste metadata op expliciete klik inrichten via de bestaande48u taakengine/worker;
+geen auto-start bij deploy/paginaladen. Gedeelde definities nooit aanpassen;
+nieuwe bekende primaire Naam-standaard alleen leeg/optioneel850 normaliseren naar
+200. Conflicten stoppen, Pending-index is geen succes, alles teruglezen en alleen
+exacte nieuwe onderdelen publiceren. Herhalen is idempotent. Servercheckpoint,
+lease/ETag/globaal slot behouden; geen browsercursors/vrije metadata. Handleiding:
+docs/dataverse/reports-schema.md. Codepublicatie betekent geen live schema-aanmaak.
+
 ## Beperkte native accounttoegang (13 november 2026)
 
 Gebruiker autoriseert uitsluitend accountstatus en modulerechten in Dataverse.

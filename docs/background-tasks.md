@@ -161,3 +161,13 @@ Ontbrekende records, bestanden of onderzoeksrelaties worden niet gerepareerd.
 Schema/veldwaarden/relaties en bestandsblokken moeten opnieuw overeenkomen.
 Maximaal vier onafhankelijke metadata- en acht recordreads lopen tegelijk.
 Een geslaagde kopie/eindvalidatie schakelt op zichzelf geen runtimeprovider om.
+
+## Rapportages-inrichting
+
+De expliciet geautoriseerde adapter `reports-schema-v1` hoort bij module Reports,
+niet Shows. Hij richt uitsluitend het vaste schema uit
+`docs/dataverse/reports-schema.json` in; geen CSV, rapportrecords, cutover of mails.
+Start via Beheerder → Datatransitie → Rapportages klaarzetten in Dataverse. Dezelfde
+worker/48u-machtiging/lease/ETag bewaart metadata-checkpoints en controleert actuele
+admin-/Reports-rechten per ronde. De elf gedeelde tabellen blijven read-only.
+Zie `docs/dataverse/reports-schema.md` voor grenzen en het volledige model.

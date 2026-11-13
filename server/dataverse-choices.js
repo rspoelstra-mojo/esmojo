@@ -1,7 +1,6 @@
 import {createDataverseSetupConnection} from './dataverse-setup-client.js';
-import {dataverseChoiceDefinitions as definitions} from './dataverse-choice-definitions.js';
+import {dataverseChoiceDefinitions as defaultDefinitions} from './dataverse-choice-definitions.js';
 const guid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
-const definitionFor=name=>definitions.find(row=>row.name===name);
 export function compareChoice(actual,expected,language){
  if(!actual||actual.Name!==expected.name||actual.IsGlobal!==true||actual.OptionSetType!=='Picklist'||actual.IsManaged===true||!guid(actual.MetadataId)||!Array.isArray(actual.Options))return'STRUCTURE';
  if(actual.Options.length!==expected.options.length||new Set(actual.Options.map(row=>row.Value)).size!==actual.Options.length)return'OPTION_COUNT';
@@ -10,7 +9,8 @@ export function compareChoice(actual,expected,language){
  }
  return null;
 }
-export function createDataverseChoices({env=process.env,request=fetch,now=Date.now}={}){
+export function createDataverseChoices({env=process.env,request=fetch,now=Date.now,definitions=defaultDefinitions}={}){
+ const definitionFor=name=>definitions.find(row=>row.name===name);
  const {connect,call,json,includeInSolution}=createDataverseSetupConnection({env,request,now});
  async function read(definition,ctx){
   const response=await call("GlobalOptionSetDefinitions(Name='"+definition.name+"')",ctx.headers);
