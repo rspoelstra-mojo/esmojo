@@ -9,3 +9,8 @@ reserveringen, revisies, bijlagen/PDF-jobs, bronfreeze/laatste delta, workers,
 pariteits-/autorisatie-/concurrencytests en beheer-runbook. Originele bronnen behouden.
 Andere modules en Supabase Auth niet ongericht omschakelen. Geen persoonsgegevens,
 broninhoud of credentials in Git/logs. Geen stille terugval of dubbele schrijvers.
+
+De gebruiker heeft de volledige lees-/schrijflaag nu expliciet opgedragen.
+Bestaande businessregels hergebruiken, native getypeerde tabellen en File als opslag,
+ETag-transacties/ontvangstbewijzen, geen Drive- of Supabase-bedrijfsfallback.
+De onafhankelijke eindvalidatie wacht na een tijdelijke uitkomst; niet voltooid claimen.
