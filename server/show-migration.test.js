@@ -127,3 +127,15 @@ test('an old native file session is renewed safely after a background-worker int
  const read=async()=>assert.fail('Restart initializes without reading a source block yet'),state={phase:'upload',offset:0,continuation:'expired-token',sessionStartedAt:1000};
  const resumed=await migrateFileStep({file,state,writer,read,now:()=>700000});assert.equal(resumed.phase,'verify');assert.equal(resumed.continuation,'fresh-download');assert.equal(resumed.sessionStartedAt,700000);assert.equal(initializations,1);assert.equal(uploads,0);
 });
+
+test('legacy cursor extension requires the internal fixed task delegation and preserves progress',()=>{
+ const day=24*3600000,started=100000,state={version:1,actor,expires:started+day+1000,stage:'shows',index:3,verifiedRecords:72,verifiedFiles:6};
+ const token=migrationTokens({env,now:()=>started}).seal(state),codec=migrationTokens({env,now:()=>started+day+5000});
+ assert.throws(()=>codec.open(token,actor),/MIGRATION_TOKEN/);
+ const extended=codec.open(token,actor,{authorizationExpiresAt:started+2*day});assert.equal(extended.expires,started+2*day);assert.equal(extended.index,3);assert.equal(extended.verifiedRecords,72);
+ assert.throws(()=>codec.open(token,'someone-else',{authorizationExpiresAt:started+2*day}),/MIGRATION_TOKEN/);
+ assert.throws(()=>codec.open('forged',actor,{authorizationExpiresAt:started+2*day}),/MIGRATION_TOKEN/);
+ assert.throws(()=>codec.open(token,actor,{authorizationExpiresAt:started+4*day}),/MIGRATION_TOKEN/);
+ assert.throws(()=>codec.open(token,actor,{authorizationExpiresAt:started+day}),/MIGRATION_TOKEN/);
+ const endCodec=migrationTokens({env,now:()=>started+2*day+1});assert.throws(()=>endCodec.open(token,actor,{authorizationExpiresAt:started+2*day}),/MIGRATION_TOKEN/);
+});

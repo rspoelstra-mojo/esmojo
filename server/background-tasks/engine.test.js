@@ -28,7 +28,7 @@ test('transient retries respect delay, uncertain writes retain lease, and confli
  const conflict=fixture({step:async()=>{throw Error('private native body');},failure:()=>({retryable:false,code:'MIGRATION_CONFLICT',error:'Safe conflict'})}),other=conflict.build();await other.control(command(),'admin');await other.run();const result=await other.control(command('status'),'admin');assert.equal(result.task.status,'blocked');assert.ok(!JSON.stringify(result).includes('private'));await assert.rejects(other.control(command('resume'),'someone-else'),/FORBIDDEN/);assert.equal((await other.control(command('resume'),'admin')).task.status,'queued');
 });
 test('unknown task types, arbitrary payloads, expired grants and changed handler versions cannot run',async()=>{
- const f=fixture(),engine=f.build();await assert.rejects(engine.control({...command(),url:'https://untrusted.invalid'},'admin'),/VALIDATION/);await assert.rejects(engine.control({operation:'start',type:'arbitrary'},'admin'),/VALIDATION/);await engine.control(command(),'admin');f.advance(24*3600000+1);await engine.run();assert.equal(f.calls,0);assert.equal(f.store.rows.get('example-task').state.public.code,'TASK_EXPIRED');await assert.rejects(engine.control(command('resume'),'admin'),/TASK_EXPIRED/);
+ const f=fixture(),engine=f.build();await assert.rejects(engine.control({...command(),url:'https://untrusted.invalid'},'admin'),/VALIDATION/);await assert.rejects(engine.control({operation:'start',type:'arbitrary'},'admin'),/VALIDATION/);await engine.control(command(),'admin');f.advance(48*3600000+1);await engine.run();assert.equal(f.calls,0);assert.equal(f.store.rows.get('example-task').state.public.code,'TASK_EXPIRED');await assert.rejects(engine.control(command('resume'),'admin'),/TASK_EXPIRED/);
  await engine.control(command('restart'),'admin');f.registry['example-task'].version=2;await engine.run();assert.equal(f.calls,0);assert.equal(f.store.rows.get('example-task').state.public.code,'TASK_VERSION');
 });
 test('several registered task types take turns rather than starving later types',async()=>{
@@ -41,4 +41,24 @@ test('unknown side effects keep their exclusion lease even when automatic retrie
 
 test('an uncertain task prevents later task types from executing until the exclusion window has passed',async()=>{
  const store=memoryStore(),calls=[],registry=Object.fromEntries(['one','two'].map(type=>[type,{title:type,module:'shows',version:1,idempotent:true,step:async()=>{calls.push(type);if(type==='one')throw Error('uncertain');return{status:'complete',public:{label:'Done'}};},failure:()=>({retryable:true,uncertain:true,code:'TEMPORARY',error:'Safe'})}]));const engine=createBackgroundTasks({store,registry,authorize:async()=>true,now:()=>1000000});for(const type of Object.keys(registry))await engine.control({operation:'start',type},'admin');await engine.run();await engine.run();assert.deepEqual(calls,['one']);
+});
+
+test('48 hour delegation is absolute and live legacy checkpoints extend without restart',async()=>{
+ const f=fixture(),engine=f.build();await engine.control(command(),'admin');let row=await f.store.get('example-task');const started=row.state.startedAt;
+ assert.equal(row.state.expiresAt,started+48*3600000);
+ // Simuleer de al lopende, versleuteld bewaarde 24-uursversie.
+ await f.store.save(row,{...row.state,expiresAt:started+24*3600000+2,cursor:'1'});
+ f.advance(25*3600000);await engine.run({maxSteps:1});row=await f.store.get('example-task');
+ assert.equal(row.state.cursor,'2');assert.equal(row.state.expiresAt,started+48*3600000);assert.equal(row.state.startedAt,started);
+ f.advance(3600000);await engine.run({maxSteps:1});row=await f.store.get('example-task');assert.equal(row.state.expiresAt,started+48*3600000);
+});
+test('legacy extension cannot revive revoked access or execute after 48 hours',async()=>{
+ for(const revoked of [false,true]){
+  let calls=0;const f=fixture({step:async()=>{calls++;return{status:'complete'};},authorize:async()=>!revoked}),engine=f.build();
+  // Alleen de teststore legt een bestaande taak vast; echte start vereist rechten.
+  if(revoked){f.registry['example-task'].version=1;const allowed=createBackgroundTasks({store:f.store,registry:f.registry,authorize:async()=>true,now:()=>1000000});await allowed.control(command(),'admin');}
+  else await engine.control(command(),'admin');
+  const row=await f.store.get('example-task');await f.store.save(row,{...row.state,expiresAt:row.state.startedAt+24*3600000});f.advance((revoked?25:49)*3600000);await engine.run();
+  assert.equal(calls,0);assert.equal(f.store.rows.get('example-task').state.public.code,revoked?'TASK_ACCESS_REVOKED':'TASK_EXPIRED');
+ }
 });

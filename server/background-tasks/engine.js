@@ -1,3 +1,4 @@
+import {TASK_AUTHORIZATION_MS,taskExpiresAt} from '../task-authorization.js';
 import {randomUUID} from 'node:crypto';
 const activeStatuses=['ready','waiting'];
 const code=value=>typeof value==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(value)?value:'TASK_UNCONFIRMED';
@@ -13,7 +14,9 @@ export function taskView(row,definition,actor,now=Date.now()){
 export function createBackgroundTasks({store,registry,authorize,now=Date.now,id=randomUUID,leaseMs=900000}={}){
  const definitions=Object.entries(registry);if(!store||typeof store.claimRunner!=='function'||typeof store.releaseRunner!=='function'||!definitions.length||typeof authorize!=='function'||definitions.some(([type,d])=>!/^[a-z][a-z0-9-]{0,79}$/.test(type)||typeof d.step!=='function'||d.idempotent!==true||!Number.isInteger(d.version)))throw Error('TASK_CONFIG');
  const changed=(row,patch)=>({...row.state,...patch,sequence:row.state.sequence+1,updatedAt:now()});
- const fresh=(type,actor,definition)=>({version:1,type,actor,epoch:id(),handlerVersion:definition.version,status:'ready',cursor:null,sequence:0,attempts:0,startedAt:now(),updatedAt:now(),expiresAt:now()+24*3600000,nextAt:now(),lease:null,uncertain:false,public:publicProgress({label:'In de wachtrij; de server start de taak.'})});
+ const fresh=(type,actor,definition)=>{
+  const startedAt=now();return{version:1,type,actor,epoch:id(),handlerVersion:definition.version,status:'ready',cursor:null,sequence:0,attempts:0,startedAt,updatedAt:startedAt,expiresAt:startedAt+TASK_AUTHORIZATION_MS,nextAt:startedAt,lease:null,uncertain:false,public:publicProgress({label:'In de wachtrij; de server start de taak.'})};
+ };
  async function control(input,actor){
   if(!input||Array.isArray(input)||Object.keys(input).sort().join(',')!=='operation,type'||!['status','start','resume','restart'].includes(input.operation)||typeof input.type!=='string'||!Object.hasOwn(registry,input.type)||typeof actor!=='string'||!actor)throw Error('VALIDATION');
   const definition=registry[input.type];if(!await authorize(actor,definition))throw Error('FORBIDDEN');
@@ -40,7 +43,7 @@ export function createBackgroundTasks({store,registry,authorize,now=Date.now,id=
   const runnerLease={id:id(),until:Math.ceil((now()+leaseMs)/1000)*1000},runner=await store.claimRunner(runnerLease,now());if(!runner)return counts;
   let uncertain=false;
   for(const entry of due){try{
-   let {row,definition}=entry;const lease={id:id(),until:Math.ceil((now()+leaseMs)/1000)*1000};row=await store.save(row,changed(row,{lease,uncertain:false}));
+   let {row,definition}=entry;const lease={id:id(),until:Math.ceil((now()+leaseMs)/1000)*1000};row=await store.save(row,changed(row,{lease,uncertain:false,expiresAt:taskExpiresAt(row.state)}));
    if(row.state.lease?.id===lease.id)claimed.push({row,definition,lease});
   }catch{counts.failed++;}}
 
@@ -55,7 +58,7 @@ export function createBackgroundTasks({store,registry,authorize,now=Date.now,id=
       if(row.state.expiresAt<=now())result={status:'blocked',public:{...row.state.public,error:'De taakmachtiging is verlopen. Start opnieuw na controle.',code:'TASK_EXPIRED'}};
       else if(row.state.handlerVersion!==definition.version)result={status:'blocked',public:{...row.state.public,error:'Deze taak gebruikt een oudere uitvoeringsversie. Start opnieuw na controle.',code:'TASK_VERSION'}};
       else if(!await authorize(row.state.actor,definition))result={status:'blocked',public:{...row.state.public,error:'De initiatiefnemer heeft geen actuele beheerder- of moduletoegang meer.',code:'TASK_ACCESS_REVOKED'}};
-      else result=await definition.step({cursor:row.state.cursor,actor:row.state.actor,runId:row.state.epoch});
+      else result=await definition.step({cursor:row.state.cursor,actor:row.state.actor,runId:row.state.epoch,authorizationExpiresAt:row.state.expiresAt});
      }catch(error){failure=error;}
      let next;
      if(failure){

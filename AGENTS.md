@@ -6,7 +6,7 @@ mag versleutelde checkpoints/machtiging en een globaal uitvoeringsslot bewaren;
 beide Opdracht-indexen Actief vóór technische writes, alle migratiechecks vóór
 bedrijfsdata. Expliciete start na admin/Shows/MFA, geen automatische taak bij laden
 of deploy. Worker gebruikt vaste main/OIDC-workflow en alleen geregistreerde
-idempotente adapters; actuele bronprofielrechten per stap, delegatie maximaal24u.
+idempotente adapters; actuele bronprofielrechten per stap, delegatie maximaal48u vanaf de oorspronkelijke start (13 november 2026).
 Globaal slot/per-taaklease/ETag/generatie en terugleescontrole; onbekende writes
 blijven15min uitgesloten. Geen bronverwijdering, cutover, mail of vrije scripts.
 Browser leest status, geen cursors/actorIDs/native tokens. Opdracht-payload AES-GCM
