@@ -58,6 +58,7 @@ function esmojoReportsMigration_(request){
   if(rows.length>10000||rows.some(row=>row.sources.length>50))throw Error('REPORT_UNAVAILABLE');
   const selection={revision:context.state.revision,recipientIds:context.state.recipientIds.slice().sort(),settings:Object.fromEntries(['version','revision','onlineMailStartedAt','pipeline','reportVersions','generations'].filter(key=>context.state[key]!==undefined).map(key=>[key,context.state[key]]))};
   const sourceFields=['id','name','receivedAt','modifiedAt','linkRevision','status','showKey','linkHistory','autoLinkedAt','attempts','errorCode','errorRow','processedModifiedAt','processedLayout','latestReportId','duplicateOf','generation'];
+  selection.settings.webIndex=context.index.document;selection.settings.historicalRegister=esmojoHistoricalRegister_().entries;
   selection.settings.sources=context.state.sources.map(row=>{if(Object.keys(row).some(key=>key!=='job'&&!sourceFields.includes(key)))throw Error('REGISTER_INVALID');return Object.fromEntries(sourceFields.filter(key=>row[key]!==undefined).map(key=>[key,row[key]]));});
   const fingerprint=esmojoOnTrackHash_(JSON.stringify({rows,selection,groups:context.groups,index:context.index.document,historical:context.historical}));
   return{version:1,entries:rows,selection,unlinked:inventory.unlinked,fingerprint};
@@ -89,6 +90,11 @@ function esmojoReportsMigration_(request){
   if(bytes.length!==metadata.size||sha256!==metadata.sha256)throw Error('SOURCE_CHANGED');return{size:bytes.length,sha256,offset:request.offset,base64:Utilities.base64Encode(bytes.slice(request.offset,request.offset+1048576))};
  }
  let timetable=null;try{timetable=esmojoWebTimetable_(show);}catch{throw Error('REPORT_UNAVAILABLE');}
- const canonical=context.catalogue.get(show.key),general=esmojoReportsMigrationGeneral_(show,canonical);
- return{version:1,show:{...entry.show,...show},sources,groups,files,timetable,general};
+ const canonical=context.catalogue.get(show.key),general=esmojoReportsMigrationGeneral_(show,canonical);let provenance=null;
+ if(canonical&&canonical.historical){
+  const historical=esmojoHistoricalRegister_().entries.find(row=>row.concertId===show.key);if(!historical)throw Error('REPORT_CATALOG');
+  const concert=esmojoHistoricalConcertFolder_(historical.concertFolderId||historical.source.folderId,show.key);provenance={historicalEntry:historical};
+  for(const [name,owner]of [['importcontrole.json','ESMOJO/HistoricalImportAudit-v1'],['showgegevens-tsc.json','ESMOJO/TscHistoricalShow-v1']]){const file=esmojoOnTrackFile_(concert,name);if(!file)continue;if(file.getSize()>2*1024*1024)throw Error('REPORT_UNAVAILABLE');const value=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(value.managedBy!==owner||value.classification!=='vertrouwelijk'||value.concertId!==show.key)throw Error('REPORT_CONFLICT');provenance[name]=value;}
+ }
+ return{version:1,show:{...entry.show,...show},sources,groups,files,timetable,general,provenance};
 }

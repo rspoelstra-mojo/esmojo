@@ -87,3 +87,8 @@ export function recipientRows(selection){
  if(!selection||!Number.isSafeInteger(selection.revision)||selection.revision<0||!Array.isArray(selection.recipientIds)||new Set(selection.recipientIds).size!==selection.recipientIds.length)throw Error('MIGRATION_SOURCE');
  return selection.recipientIds.map(id=>row('rapportontvanger','ontrack-recipient/'+id,'Bestaande ontvangerselectie',{scope:'ontrack-reports-v1',authgebruikersid:id,ontvangerhash:digest(id),geselecteerd:true,selectierevisie:selection.revision}));
 }
+
+export function sourceHistoryRows(bundle){
+ if(!bundle.provenance)return[];const text=canonical(bundle.provenance),hash=digest(text),parts=[];for(let start=0;start<text.length;){let end=Math.min(text.length,start+25000);if(end<text.length&&/[\uD800-\uDBFF]/.test(text[end-1]))end--;parts.push(text.slice(start,end));start=end;}
+ return parts.map((part,index)=>row('historie','reports-provenance/'+bundle.show.key+'/'+hash+'/'+index,'Rapportages · historische importherkomst',{entiteitsoort:'reports-historical-provenance-v1',mutatiesoort:choice('mutatiesoort','import'),snapshot_json:canonical({version:1,concertId:bundle.show.key,hash,index,total:parts.length,text:part}),fingerprint:digest(part),schemaversie:1}));
+}

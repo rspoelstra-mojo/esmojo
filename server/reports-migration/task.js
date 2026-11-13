@@ -1,7 +1,7 @@
 import {createReportsMigrationSource} from './source.js';
 import {createReportsWriter,groupReportEntries} from './writer.js';
 import {splitManifest,createReportsManifest} from './manifest.js';
-import {documentRows,sourceRows,mailRows,recipientRows,canonicalSources,mapDataset,filePlan,headerRef,datasetRef} from './map.js';
+import {documentRows,sourceRows,mailRows,recipientRows,sourceHistoryRows,canonicalSources,mapDataset,filePlan,headerRef,datasetRef} from './map.js';
 import {migrationType,reportRecord} from './contract.js';
 import {reportsSchemaHash,reportsDependenciesContract,reportsTablesContract} from '../reports-schema.js';
 import {createDataverseTables} from '../dataverse-tables.js';
@@ -65,7 +65,7 @@ export function createReportsMigrationTask({env=process.env,now=Date.now,source=
     s.phase='complete';bundleCache=null;datasetCache=null;return output(s,'Alle bestaande Rapportages-bronnen, gegevens en bestanden zijn gekopieerd en teruggelezen. Originelen en huidige opslagroutes zijn behouden.','complete');
    }
    if(s.phase==='complete')return output(s,'Rapportages-kopie is volledig gecontroleerd; de bestaande websitebron is behouden.','complete');
-   const {entry,page}=await entryAt(s,actor,authorizationExpiresAt),b=await bundle(s,entry,actor),sources=canonicalSources(b),base=[...documentRows(b),...sourceRows(b),...mailRows(b).records];
+   const {entry,page}=await entryAt(s,actor,authorizationExpiresAt),b=await bundle(s,entry,actor),sources=canonicalSources(b),base=[...sourceHistoryRows(b),...documentRows(b),...sourceRows(b),...mailRows(b).records];
    if(s.phase==='base'){
     if(!s.coreDone){await writer.core(entry);s.coreDone=true;}
     if(await rowsStep(s,base,'baseIndex',writer)){s.phase='datasets';s.sourceIndex=0;s.rowIndex=0;}

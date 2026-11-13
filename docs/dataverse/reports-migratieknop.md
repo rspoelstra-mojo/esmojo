@@ -17,7 +17,8 @@ Ongekoppelde CSV's stoppen voor controle in het bestaande rapportagebeheer.
 - Alle gekoppelde CSV's in private OnTrack en eerder geregistreerde historische
   concertmappen, ook ouder dan de45-dagenmenugrens. Alle drie brontypen behouden.
 - Exacte CSV-bytes in Document File, bron-ID/hash/wijzigingsmoment, validatie en
-  oorspronkelijke bron-/koppel-/verwerkingshistorie. Geen bronlinks naar buiten
+  oorspronkelijke bron-/koppel-/verwerkingshistorie, volledige validatie-/historische
+  registers en bestaande historische importcontrole/TSC-metadatadocumenten. Geen bronlinks naar buiten
   volgen en geen bijlage-URL's uit CSV ophalen.
 - Alle17 oorspronkelijke CSV-cellen, oorspronkelijke rijpositie, UTC- en lokale
   tijd, Europe/Amsterdam, nachtincidenten en DST-regel. De bestaande berekeningen
