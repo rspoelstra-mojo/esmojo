@@ -1,0 +1,10 @@
+import {reportsSchema,reportsTablesContract} from '../reports-schema.js';
+import {showTableSchema} from '../dataverse-table-schema.js';
+import {record,reference,choice,validateRecord} from '../show-migration-writer.js';
+export const reportsRecordContract={tableByName:reportsTablesContract.tableByName,choices:{...showTableSchema.choices,...reportsSchema.choices}};
+export const reportRecord=(table,identity,name,fields={},links={})=>validateRecord(record(table,identity,name.length<=200?name:name.slice(0,190)+'…',fields,links,reportsRecordContract),reportsRecordContract);
+export const reportChoice=(name,code)=>{if(!Object.hasOwn(reportsSchema.choices,name))return choice(name,code);const option=reportsSchema.choices[name].find(row=>row.code===code);if(!option)throw Error('MIGRATION_MAPPING');return option.waarde;};
+export {reference};
+export const migrationType='reports-migration-v1';
+export const parserContract='ontrack-csv17-v1';
+export const calculationContract='esmojo-web-report-v1.104';

@@ -1,5 +1,7 @@
 # Dataverse-inrichting voor Rapportages
 
+Voor de later geautoriseerde volledige kopie: [Rapportages-migratieknop](reports-migratieknop.md).
+
 Dit is uitsluitend de voorbereiding van het opslagmodel en de beveiligde
 inrichtingsknop. Deze wijziging importeert geen CSV, kopieert geen rapportage,
 verandert geen opslagroute en genereert of verstuurt niets. De huidige

@@ -181,3 +181,16 @@ Start via Beheerder → Datatransitie → Rapportages klaarzetten in Dataverse. 
 worker/48u-machtiging/lease/ETag bewaart metadata-checkpoints en controleert actuele
 admin-/Reports-rechten per ronde. De elf gedeelde tabellen blijven read-only.
 Zie `docs/dataverse/reports-schema.md` voor grenzen en het volledige model.
+
+## Rapportages-kopie
+
+`reports-migration-v1` kopieert na expliciete productieklik de bestaande Reports-
+bronnen naar het voorbereide schema. Actuele admin/Reports/MFA voor de start,
+actuele rol/modulerechten per serverstap, dezelfde48u-delegatie en globale sloten.
+Voorbereiding/inventaris, bronversies en CSV17, getypeerde records, File-blokken,
+read-only terugleescontrole en onafhankelijke bron-eindcontrole. Gedeelde Shows-
+identiteiten hergebruiken; nieuwe Report-only Core-reeksen blijven buiten Shows.
+Versleutelde immutable Opdracht-manifestpagina's/proofs zijn gebonden aan dezelfde
+actor/generatie/eindtijd en worden nooit uitvoerbare taken. Geen vrije metadata,
+bronverwijdering, mail, PDF-generatie of runtimecutover. Handleiding:
+[Rapportages-migratieknop](dataverse/reports-migratieknop.md).

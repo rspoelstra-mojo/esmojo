@@ -22,7 +22,12 @@ export function createNativeCatalogue({state,now=()=>new Date()}={}){
  const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1');
  async function writeRows(rows){const ops=await recordOperations(repo,rows);if(ops.length)await repo.atomic(ops);}
  async function all(){
-  const [series,concerts,artists,locations,teams,employees,projection]=await Promise.all(['esmojo_concertreeks','esmojo_concert','esmojo_artiest','esmojo_locatie','esmojo_projectteam','esmojo_medewerker','esmojo_integratiestatus'].map(table=>repo.query(table,{filter:table==='esmojo_integratiestatus'?"esmojo_integratiecode eq 'shows-native-v1'":'statecode eq 0'})));
+  let [series,concerts,artists,locations,teams,employees,projection]=await Promise.all(['esmojo_concertreeks','esmojo_concert','esmojo_artiest','esmojo_locatie','esmojo_projectteam','esmojo_medewerker','esmojo_integratiestatus'].map(table=>repo.query(table,{filter:table==='esmojo_integratiestatus'?"esmojo_integratiecode eq 'shows-native-v1'":'statecode eq 0'})));
+  // Report-only historical identities share Core but have no Shows preparation.
+  // Keep them out of the active Shows catalogue and its background writers.
+  const reportsOnly=new Set(series.filter(s=>s.esmojo_bronidentiteit?.startsWith('reports-series/')).map(s=>s.esmojo_sleutel));
+  const seriesMeta=await repo.meta('esmojo_concertreeks'),excludedIds=new Set(series.filter(s=>reportsOnly.has(s.esmojo_sleutel)).map(s=>s[seriesMeta.PrimaryIdAttribute]));
+  series=series.filter(s=>!excludedIds.has(s[seriesMeta.PrimaryIdAttribute]));concerts=concerts.filter(c=>!excludedIds.has(c._esmojo_concertreeks_value));
   const [sm,am,lm,cm,em]=await Promise.all(['esmojo_concertreeks','esmojo_artiest','esmojo_locatie','esmojo_concert','esmojo_medewerker'].map(repo.meta));
   const rows=concerts.map(row=>{
    const group=series.find(s=>s[sm.PrimaryIdAttribute]===row._esmojo_concertreeks_value),artist=artists.find(a=>a[am.PrimaryIdAttribute]===group?._esmojo_artiest_value),location=locations.find(l=>l[lm.PrimaryIdAttribute]===group?._esmojo_locatie_value);

@@ -45,6 +45,7 @@ jobs:
           node server/accounts-api.test.js
           node --test server/show-management.test.js
           node --test server/reports-schema.test.js
+          node --test server/reports-migration/*.test.js
           node --test server/dataverse-tables.test.js
           node --test server/dataverse-choices.test.js
           node --test server/dataverse-test.test.js
