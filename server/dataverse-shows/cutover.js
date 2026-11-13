@@ -8,7 +8,7 @@ import {createNativeShowsService} from './service.js';
 import {createNativeRuntimeCheck} from './check.js';
 import {createSourceValidation} from './source-validation.js';
 import {createShowsStore} from '../shows-store.js';
-import {record,recordKey,choice,canonical,digest,migrationConflictDetails} from '../show-migration-writer.js';
+import {record,recordKey,choice,canonical,digest,migrationConflictDetails,migrationDependencyDetails} from '../show-migration-writer.js';
 import {recordOperations} from './mutations.js';
 import {runtimeContract,runtimeSchema,assertNativeAuthority} from './authority.js';
 const type='shows-cutover-v1',drainMs=11*60000;
@@ -34,7 +34,7 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
   if(row.state.status==='blocked'){
    if(input.operation!=='resume')return view(row,current);
    if(current.mode==='dataverse')throw Error('DATAVERSE_SHOWS_NOT_ACTIVE');
-   const cursor=row.state.cursor?.phase==='preflight'&&row.state.public?.code==='MIGRATION_CONFLICT'?row.state.cursor:{phase:'preflight',validation:null};
+   const cursor=row.state.cursor?.phase==='preflight'&&['MIGRATION_CONFLICT','MIGRATION_DEPENDENCY'].includes(row.state.public?.code)?row.state.cursor:{phase:'preflight',validation:null};
    row=await save(row,cursor,{status:'ready',attempts:0,lease:null});
   }
   if(row.state.lease?.until>now())return{...view(row,current),waiting:true};
@@ -83,8 +83,8 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
    // Before native writes are opened, a failed comparison may safely leave the
    // old site available. After activation never switch back or hide the failure.
    if(latest?.mode==='freeze'&&latest.epoch===row.state.epoch)await setPolicy({mode:'legacy',epoch:row.state.epoch,abortedAt:new Date(now()).toISOString()});
-   const details=migrationConflictDetails(error),code=/^[A-Z_]{1,60}$/.test(error.message)?error.message:'CUTOVER_UNCONFIRMED';
-   row=await save(row,row.state.cursor,{status:'blocked',lease:null,public:{label:'Omschakeling gestopt voor controle',code,...(details?{details}:{}),...(['archived','active','legacy'].includes(error.sourceMode)?{sourceMode:error.sourceMode}:{})}});release=true;return view(row,await policy());
+   const details=migrationConflictDetails(error),dependency=migrationDependencyDetails(error),code=/^[A-Z_]{1,60}$/.test(error.message)?error.message:'CUTOVER_UNCONFIRMED';
+   row=await save(row,row.state.cursor,{status:'blocked',lease:null,public:{label:'Omschakeling gestopt voor controle',code,...(details?{details}:{}),...(dependency?{dependency}:{}),...(['archived','active','legacy'].includes(error.sourceMode)?{sourceMode:error.sourceMode}:{})}});release=true;return view(row,await policy());
   }finally{if(release)await store.releaseRunner(runner,lease.id,now());}
  };
 }
