@@ -4,7 +4,7 @@ import {continueTasks} from './continue.mjs';
 const stats=extra=>({steps:8,completed:0,blocked:0,waiting:0,failed:0,...extra});
 function fixture(results,body='{}'){let calls=0,identities=0,clock=0;const logs=[];return{logs,get calls(){return calls;},get identities(){return identities;},options:{env:{ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example.invalid/token',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'},now:()=>clock,log:value=>logs.push(value),fetcher:async(url,options)=>{
  if(String(url).startsWith('https://identity.example.invalid')){identities++;assert.equal(new URL(url).searchParams.get('audience'),'https://esmojo.nl/api/background-tasks-sync');return{ok:true,json:async()=>({value:'synthetic-identity-'+identities})};}
- calls++;clock+=180000;assert.equal(options.body,body);assert.match(options.headers.Authorization,/^Bearer synthetic-identity-/);const result=results.shift();if(result instanceof Error)throw result;return{ok:result?.ok!==false,json:async()=>result??{ok:true,stats:stats({steps:0})}};
+ calls++;clock+=180000;assert.equal(options.body,Array.isArray(body)?body.shift():body);assert.match(options.headers.Authorization,/^Bearer synthetic-identity-/);const result=results.shift();if(result instanceof Error)throw result;return{ok:result?.ok!==false,json:async()=>result??{ok:true,stats:stats({steps:0})}};
  }}};}
 test('one workflow continues multiple rounds and renews its OIDC token for each request',async()=>{const f=fixture([{ok:true,stats:stats()},{ok:true,stats:stats()},{ok:true,stats:stats({completed:1})}]);await continueTasks(f.options);assert.equal(f.calls,3);assert.equal(f.identities,3);});
 test('waiting, conflict, completion and idle never trigger another round',async()=>{for(const extra of [{waiting:1},{blocked:1},{completed:1},{steps:0}]){const f=fixture([{ok:true,stats:stats(extra)}]);await continueTasks(f.options);assert.equal(f.calls,1);}});
@@ -32,4 +32,8 @@ test('read-only diagnostics send only the fixed status command and never run ano
 });
 test('Reports check logs fixed metadata only and never starts a continuation round',async()=>{
  const f=fixture([{ok:true,diagnostic:{stage:'mail',code:'REPORT_CATALOG',counts:{groups:4,multiDateGroups:1},private:'provider-secret'}}],JSON.stringify({operation:'reports-check'}));await continueTasks({...f.options,operation:'reports-check'});assert.equal(f.calls,1);assert.match(f.logs.join(' '),/multiDateGroups/);assert.doesNotMatch(f.logs.join(' '),/provider-secret|private/);
+});
+
+test('scoped Reports repair sends resume once, then continues only already-authorized worker rounds',async()=>{
+ const f=fixture([{ok:true,continuation:continuation()},{ok:true,stats:stats({completed:1}),continuation:continuation({active:false,pollAfterMs:null})}],[JSON.stringify({operation:'reports-resume'}),'{}']);await continueTasks({...f.options,operation:'reports-resume',wait:async()=>{}});assert.equal(f.calls,2);assert.equal(f.identities,2);
 });

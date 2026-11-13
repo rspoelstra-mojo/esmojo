@@ -1,3 +1,16 @@
+// Use the existing Reports catalogue authority. allVenues/includeSeries widen
+// that scope and can turn otherwise identical retained rows into conflicts.
+// Attach series provenance only after an exact identity match; never pick a
+// winner between genuinely different concert identities.
+function esmojoReportsMigrationCatalogue_(){
+ const catalogue=esmojoTimetableCatalogue_(),root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),folders=root.getFoldersByName('Productie'),production=folders.hasNext()?folders.next():null;if(folders.hasNext())throw Error('REPORT_CATALOG');
+ const same=(a,b)=>['artist','venue','city','date'].every(key=>a[key]===b[key]);
+ if(production){const file=esmojoOnTrackFile_(production,'_esmojo_shows_v1.json');if(file){const data=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(data.version!==1||data.managedBy!=='ESMOJO/MOJO-v1'||!Array.isArray(data.concerts))throw Error('REPORT_CATALOG');
+  for(const source of data.concerts){const known=catalogue.get(source.concertId);if(!known||source.venue!=='Gashouder'||source.city!=='Amsterdam')continue;if(!same(source,known))throw Error('REPORT_CATALOG');if(source.generalConcertId)known.seriesId=source.generalConcertId;}
+ }}
+ for(const source of esmojoHistoricalRegister_().entries){const known=catalogue.get(source.concertId);if(!known||!known.historical)continue;if(!same(source,known)||known.seriesId&&known.seriesId!==source.seriesId)throw Error('REPORT_CATALOG');known.historicalSeriesId=source.seriesId;}
+ return catalogue;
+}
 // Fixed metadata-only diagnostic. Counts and known codes only; no CSV bytes,
 // source/account identifiers, names, raw errors or receipt tokens in output.
 function esmojoReportsMigrationProbe_(actor){
@@ -6,7 +19,7 @@ function esmojoReportsMigrationProbe_(actor){
   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json'),raw=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{},groups=[...(Array.isArray(raw.reports)?raw.reports:[]),...(Array.isArray(raw.onlineReports)?raw.onlineReports:[])];
   counts.groups=groups.length;counts.multiDateGroups=groups.filter(r=>Array.isArray(r.show&&r.show.dates)&&r.show.dates.length!==1).length;counts.missingShow=groups.filter(r=>!r.show||!Array.isArray(r.show.dates)||!r.show.key).length;counts.badGroupId=groups.filter(r=>!/^[a-f0-9]{64}$/.test(r.id||'')).length;counts.badSourceHash=groups.filter(r=>!/^[a-f0-9]{64}$/.test(r.sourceHash||'')).length;
   esmojoReportsMigrationState_(folder);
-  stage='catalogue';counts.catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}).size;
+  stage='catalogue';counts.catalogue=esmojoReportsMigrationCatalogue_().size;
   stage='historical';counts.historical=esmojoHistoricalSources_().length;
   stage='validation';counts.validations=Object.keys(esmojoWebIndex_(folder).document.entries).length;
   stage='inventory';const inventory=esmojoWebInventory_(folder);counts.sources=inventory.sources.length;counts.available=inventory.available.length;counts.unlinked=inventory.unlinked;
@@ -48,7 +61,7 @@ function esmojoReportsMigrationSource_(file,context){
 }
 function esmojoReportsMigrationContext_(folder){
  const mail=esmojoReportsMigrationState_(folder);
- return{...mail,folder,catalogue:esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),historical:esmojoHistoricalSources_(),index:esmojoWebIndex_(folder)};
+ return{...mail,folder,catalogue:esmojoReportsMigrationCatalogue_(),historical:esmojoHistoricalSources_(),index:esmojoWebIndex_(folder)};
 }
 function esmojoReportsMigrationGeneral_(show,canonical){
  const empty={contacts:{productionManager:null,eventSafetyManager:null,tscProjectLead:null},tickets:{sales:null,origins:null,shows:[{date:show.date}]}};

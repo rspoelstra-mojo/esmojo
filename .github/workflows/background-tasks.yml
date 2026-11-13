@@ -8,7 +8,7 @@ on:
         type: choice
         required: true
         default: continue
-        options: [continue, status, reports-check]
+        options: [continue, status, reports-check, reports-resume]
 permissions:
   contents: read
   id-token: write

@@ -122,3 +122,15 @@ beheerder start de broninventaris en bedrijfswrites. Een groene build bewijst no
 geen productie-kopie; daarvoor moet de servertaak voltooid melden met de aantallen
 gecontroleerde rapportages, records en bestanden. Native Reports lezen/schrijven en
 omschakeling vragen een volgende afzonderlijke stap.
+
+## Catalogusscope bij de broneindinventaris
+
+De migratie gebruikt dezelfde concertcatalogusscope als de bestaande Reports-
+runtime. De OnTrack- en historische registers omvatten daarin al alle vaste
+locaties. Het optioneel verbreden naar alle achtergebleven Shows-rijen en het
+vóór deduplicatie toevoegen van reeksmetadata veroorzaakt anders extra conflicten
+op retained duplicaten die de gewone Reports-runtime terecht niet gebruikt.
+Oorspronkelijke reeksinformatie wordt daarom pas na een exacte identiteitsovereenkomst
+uit de gesloten bronregisters toegevoegd. Een echt verschil in artiest/zaal/datum/
+stad binnen de Reports-catalogus blijft een harde controlestop. Geen bronrij
+verwijderen, aanpassen of willekeurig als winnaar aanwijzen.

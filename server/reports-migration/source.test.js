@@ -39,3 +39,18 @@ test('fixed probe is read-only and returns only counters and fixed stages for in
  const f=setup(),show=f.addShow(),csv=f.addCsv(show);const before=f.byteReads(),original=String(f.mail.content),source=createReportsMigrationSource({env:{},store:f.store}),good=await source.probe(admin);assert.equal(good.stage,'complete');assert.equal(good.code,null);assert.equal(good.counts.entries,1);assert.equal(f.byteReads(),before);assert.equal(String(f.mail.content),original);assert.doesNotMatch(JSON.stringify(good),/fixture_|Synthetische|reader|receipt/);
  const data=JSON.parse(f.mail.content);data.reports.push({id:'a'.repeat(64),sourceHash:'b'.repeat(64),show:{key:show.concertId,name:show.artist,venue:show.venue,dates:[show.date,'2026-11-04']},deliveries:[]});f.mail.setContent(JSON.stringify(data));const invalid=await source.probe(admin);assert.equal(invalid.stage,'mail');assert.equal(invalid.code,'REPORT_CATALOG');assert.equal(invalid.counts.multiDateGroups,1);await assert.rejects(source.probe('reader'),/FORBIDDEN/);
 });
+test('migration uses exact Reports authority despite retained non-Reports rows and preserves proven Gashouder series metadata',async()=>{
+ for(const gashouder of [false,true]){
+  const f=setup(),show=f.addShow({venue:gashouder?'Gashouder':'Ziggo Dome'});f.addCsv(show);const production=f.root.createFolder('Productie'),rootRow={...show,generalConcertId:show.concertId};
+  f.addFile(production,'_esmojo_shows_v1.json','application/json',JSON.stringify({managedBy:'ESMOJO/MOJO-v1',version:1,concerts:[rootRow],active:gashouder?[show.concertId]:[]}));
+  // The former widened catalogue rejects the duplicate: either the retained
+  // out-of-scope active flag differs or only one source carries series metadata.
+  assert.throws(()=>f.ctx.esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),/REPORT_CATALOG/);
+  const source=createReportsMigrationSource({env:{},store:f.store}),inventory=await source.catalogue(admin);assert.equal(inventory.entries.length,1);assert.equal(inventory.entries[0].show.key,show.concertId);assert.equal(inventory.entries[0].show.seriesId,gashouder?show.concertId:null);
+  const probe=await source.probe(admin);assert.equal(probe.stage,'complete');assert.equal(probe.code,null);
+ }
+});
+test('real conflicts in the ordinary Reports identity catalogue still stop rather than choosing a source',async()=>{
+ const f=setup(),show=f.addShow({venue:'Gashouder'});f.addCsv(show);const production=f.root.createFolder('Productie');f.addFile(production,'_esmojo_shows_v1.json','application/json',JSON.stringify({managedBy:'ESMOJO/MOJO-v1',version:1,concerts:[{...show,artist:'Different identity',generalConcertId:show.concertId}],active:[show.concertId]}));
+ const source=createReportsMigrationSource({env:{},store:f.store});await assert.rejects(source.catalogue(admin),/REPORT_CATALOG/);assert.equal((await source.probe(admin)).code,'REPORT_CATALOG');
+});

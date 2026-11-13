@@ -27,5 +27,12 @@ export function createApplicationTasks({env=process.env,profiles=createProfiles(
   const row=await store.get(reportsMigrationType);if(!row)throw Error('TASK_NOT_FOUND');if(row.state.expiresAt<=now())throw Error('TASK_EXPIRED');
   if(row.state.handlerVersion!==registry[reportsMigrationType].version||!await authorize(row.state.actor,registry[reportsMigrationType]))throw Error('FORBIDDEN');
   return registry[reportsMigrationType].diagnose({actor:row.state.actor});
+ },async resumeReportsInventory(){
+  const row=await store.get(reportsMigrationType),definition=registry[reportsMigrationType];
+  if(!row||row.state.expiresAt<=now())throw Error('TASK_EXPIRED');
+  if(row.state.status!=='blocked'||row.state.uncertain||row.state.lease?.until>now()||row.state.handlerVersion!==definition.version||row.state.public?.code!=='REPORTS_MIGRATION_UNCONFIRMED'||!definition.canResumeInventory(row.state.cursor,row.state.epoch))throw Error('TASK_BUSY');
+  if(!await authorize(row.state.actor,definition))throw Error('FORBIDDEN');const diagnostic=await definition.diagnose({actor:row.state.actor});
+  if(diagnostic.stage!=='complete'||diagnostic.code!==null)throw Error('CONTROL_REQUIRED');
+  return tasks.control({operation:'resume',type:reportsMigrationType},row.state.actor,{expectedEpoch:row.state.epoch,expectedSequence:row.state.sequence});
  },ensureValidation:()=>ensureShowsValidation({store,tasks,now})};
 }
