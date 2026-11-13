@@ -53,7 +53,7 @@ export function createShowsCutover({env=process.env,store=createTaskStore({env})
     cursor={...cursor,phase:'verify',validation:null};
    }else if(cursor.phase==='verify'){
     if(current.mode!=='freeze'||current.epoch!==row.state.epoch)throw Error('SOURCE_CHANGED');
-    cursor.validation=await validate(cursor.validation,actor);
+    cursor.validation=await validate(cursor.validation,actor,{stableSource:true});
     if(cursor.validation.phase==='complete')cursor.phase='prepare';
    }else if(cursor.phase==='prepare'){
     if(current.mode!=='freeze'||current.epoch!==row.state.epoch)throw Error('SOURCE_CHANGED');

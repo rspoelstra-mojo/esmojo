@@ -54,6 +54,10 @@
     "api/shows-cutover-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
       "maxDuration": 300
+    },
+    "api/timetables-sync.js": {
+      "includeFiles": "docs/dataverse/shows-schema.json",
+      "maxDuration": 300
     }
   },
   "headers": [

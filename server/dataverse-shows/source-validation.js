@@ -17,7 +17,7 @@ export function createSourceValidation({env=process.env,source=createMigrationSo
  async function files(values,show,actor){
   for(const file of values){let progress=null,rounds=0;while(!progress?.done&&rounds++<260)progress=await migrateFileStep({file,state:progress,writer,readOnly:true,read:offset=>source.readFile(file,offset,show,actor)});if(!progress?.done)throw Error('VERIFY');await writer.markFileVerified(file);}
  }
- return async(cursor,actor)=>{
+ return async(cursor,actor,{stableSource=false}={})=>{
   const catalogue=await source.catalogue(),people=await source.people(),catalogueHash=digest(catalogue),peopleHash=digest(people);
   if(cursor&&(cursor.catalogueHash!==catalogueHash||cursor.peopleHash!==peopleHash))throw Error('MIGRATION_SOURCE_CHANGED');
   const state=cursor?structuredClone(cursor):{version:1,phase:'people',index:0,records:0,files:0,catalogueHash,peopleHash,total:catalogue.length};
@@ -47,7 +47,10 @@ export function createSourceValidation({env=process.env,source=createMigrationSo
   await files(plan.files,show,actor);for(const link of plan.deferredLinks)await writer.linkEmpty(link.source,link.field,link.target);
   await linkResearch(writer,plan.researchKeys,plan.series,true);
   // Detect a source change during the native verification, not just between rounds.
-  const after=await source.show(show);if(digest(after)!==digest({bundle,management}))throw Error('MIGRATION_SOURCE_CHANGED');
+  // During the drained write freeze, source.show already brackets Supabase
+  // revisions and each File block is hash checked. A second full Drive-folder
+  // export adds no writer protection and would double the maintenance window.
+  if(!stableSource){const after=await source.show(show);if(digest(after)!==digest({bundle,management}))throw Error('MIGRATION_SOURCE_CHANGED');}
   state.records+=plan.records.length;state.files+=plan.files.length;state.index++;return state;
  };
 }

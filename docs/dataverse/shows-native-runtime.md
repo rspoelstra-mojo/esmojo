@@ -156,3 +156,10 @@ verzonnen actuele fingerprint. Gemeten archiveringscontinuïteit blijft uitsluit
 in het versleutelde definitieve validatiecheckpoint bewaard. De controle zelf
 schrijft geen bedrijfsgegevens. Een preflight-resume bewaart eerder strenger
 gecontroleerde voortgang; de volledige controle onder schrijfstop begint opnieuw.
+
+Onder de aantoonbaar gesloten en uitgelopen schrijfroutes leest de eindcontrole
+elke bronshow eenmaal, met de bestaande voor/na-Supabase-revisiecontrole en native
+bestandsblokhashes. De dubbele volledige Drive-export blijft vóór de schrijfstop
+behouden. Ook de gedeelde tijdschema-opname respecteert de schrijfstop, zodat deze
+gedurende de eindcontrole geen ondersteunende Shows-bron kan wijzigen. Dit halveert
+de langzaamste bron-I/O tijdens het onderhoud zonder velden of bytes over te slaan.
