@@ -14,3 +14,8 @@ De gebruiker heeft de volledige lees-/schrijflaag nu expliciet opgedragen.
 Bestaande businessregels hergebruiken, native getypeerde tabellen en File als opslag,
 ETag-transacties/ontvangstbewijzen, geen Drive- of Supabase-bedrijfsfallback.
 De onafhankelijke eindvalidatie wacht na een tijdelijke uitkomst; niet voltooid claimen.
+
+Gebouwd: volledige provider, research-adapter, aangrenzende voorbereidingsprojecties,
+Showbeheer, afzonderlijke technische livecontrole via main/OIDC. Geen cutover door
+codepublicatie. Zie docs/dataverse/shows-native-runtime.md voor bereik en resterende
+bewijs-/freeze-/activeringsstappen. Bedrijfsproductiewrites niet als test uitgevoerd.

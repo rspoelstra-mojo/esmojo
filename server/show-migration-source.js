@@ -8,7 +8,7 @@ import {validateActiveSnapshot} from '../shared/active-show-storage.js';
 import {barrierReferenceManifest} from '../shared/barrier-reference-manifest.js';
 import {digest} from './show-migration-writer.js';
 const clone=value=>JSON.parse(JSON.stringify(value));
-export function createMigrationSource({env=process.env,drive=createShowsStore({env,active:false}),active=createActiveRepository({env}),management=createShowManagementRepository({env}),research=createDataverseResearch({env})}={}){
+export function createMigrationSource({env=process.env,drive=createShowsStore({env,active:false,legacy:true}),active=createActiveRepository({env}),management=createShowManagementRepository({env,legacy:true}),research=createDataverseResearch({env})}={}){
  async function activeRows(){const rows=await (active.migrationIdentities?active.migrationIdentities():active.all());if(!Array.isArray(rows)||rows.length>1000)throw Error('MIGRATION_SOURCE_LIMIT');if(rows.length&&active.enabled&&!await active.enabled())throw Error('MIGRATION_ORPHAN');return rows;}
  return{
   async catalogue(){

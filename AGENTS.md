@@ -1719,3 +1719,21 @@ eenmaal per voorstelling; ook de artiestshow leest dit bestaande veld.
 Rapportages-submenu maximaal 45 dagen terug; oude rapporten blijven via artiesten
 en directe links beschikbaar. Middag/avond blijven afzonderlijke _S1/_S2-concerten.
 Zie docs/historical-report-import.md voor private batches, OIDC en hervatten.
+
+## Native Shows-runtime (13 november 2026)
+
+Gebruiker draagt nu de volledige Dataverse lees-/schrijflaag voor Shows op.
+Native getypeerde tabellen en File, bestaande regels/DTO's, ETag-changesets,
+ontvangstbewijzen, versleutelde veldleases, bestaande Showbeheer-AAD en pogingslimiet.
+Oude bronnen behouden; standaardprovider blijft legacy tot gecontroleerde cutover.
+SHOWS_STORAGE_PROVIDER=dataverse vereist ook de gevalideerde technische autoriteit;
+geen stille bedrijfsfallback en geen legacy mirror/archive vanuit native workers.
+Onderzoek blijft canoniek Markdown in de bestaande onderzoekstabel; oorspronkelijke
+MCP-metadata als scoped provenance, geen verzonnen onderzoeksdatum. Accounts/Auth
+blijven hun actuele bestaande autorisatiebron gebruiken; native medewerkerkopie
+is geen extra rechtenbron. Zie docs/dataverse/shows-native-runtime.md.
+De vaste main/OIDC-workflow shows-runtime.yml mag native bedrijfsdata alleen lezen
+(inclusief bestandshashcontrole) en één herkenbare technische Opdracht-proef doen:
+create/update, ETag-conflict en rollback van een niet-gecommitteerde controle-opdracht.
+Geen fictieve concertdata, bronwijziging, mail, activering of vrije query/scope.
+Dit is een andere controle dan de onafhankelijke bron/doel-eindvalidatie.

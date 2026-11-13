@@ -1,8 +1,8 @@
-import {createHash} from 'node:crypto';
+import {createHash,randomBytes} from 'node:crypto';
 import {createDataverseSetupConnection} from '../dataverse-setup-client.js';
 import {choice} from '../show-migration-writer.js';
 import {barrierReferenceManifest} from '../../shared/barrier-reference-manifest.js';
-import {tableByName} from '../dataverse-table-schema.js';
+import {tableByName,attributeKind,compileAttribute,showTableSchema} from '../dataverse-table-schema.js';
 const identifier=value=>typeof value==='string'&&/^[a-z][a-z0-9_]{0,127}$/i.test(value);
 const guid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
 const key=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
@@ -12,7 +12,7 @@ const checksum=bytes=>createHash('sha256').update(bytes).digest('hex');
 export function createNativeShowsRepository({env=process.env,connection=createDataverseSetupConnection({env})}={}){
  const metadata=new Map();
  async function call(path,options={}){
-  const context=await connection.connect();const response=await connection.call(path,context.headers,{...options,code:'DATAVERSE_SHOWS_UNAVAILABLE',timeoutMs:60000});
+  const context=await connection.connect();const {headers:extraHeaders,...settings}=options;const response=await connection.call(path,{...context.headers,...extraHeaders},{...settings,code:'DATAVERSE_SHOWS_UNAVAILABLE',timeoutMs:60000});
   if(!response.ok)throw Error(response.status===412?'DATAVERSE_SHOWS_CONFLICT':response.status===404?'NOT_FOUND':'DATAVERSE_SHOWS_UNAVAILABLE');return response;
  }
  async function json(path,options){return connection.json(await call(path,options),'DATAVERSE_SHOWS_RESPONSE');}
@@ -26,13 +26,12 @@ export function createNativeShowsRepository({env=process.env,connection=createDa
  async function byKey(table,value){
   if(!key(value))throw Error('VALIDATION');const m=await meta(table),result=await json(m.EntitySetName+'?'+new URLSearchParams({'$filter':"esmojo_sleutel eq '"+value+"'",'$top':'2'}));
   if(!Array.isArray(result.value)||result.value.length>1||result['@odata.nextLink'])throw Error('DATAVERSE_SHOWS_CONFLICT');
-  const row=result.value[0]||null;if(row&&(!guid(row[m.PrimaryIdAttribute])||typeof row['@odata.etag']!=='string'||row.esmojo_sleutel!==value))throw Error('DATAVERSE_SHOWS_RESPONSE');return row;
+  const row=result.value[0]||null;if(row&&(!guid(row[m.PrimaryIdAttribute])||!/^W\/"[0-9]+"$/.test(row['@odata.etag']||'')||row.esmojo_sleutel!==value))throw Error('DATAVERSE_SHOWS_RESPONSE');return row;
  }
  async function inSeries(table,seriesId){
   const schema=tableByName.get(table);if(!schema?.columns.some(column=>column.logical_name==='esmojo_concertreeks'&&column.target==='esmojo_concertreeks')||!guid(seriesId))throw Error('VALIDATION');
-  const m=await meta(table),result=await json(m.EntitySetName+'?'+new URLSearchParams({'$filter':'_esmojo_concertreeks_value eq '+seriesId,'$top':'1000'}));
-  // Geen stille afkapping: grotere reeksen vereisen een eigen gepagineerde view.
-  if(!Array.isArray(result.value)||result['@odata.nextLink']||result.value.length>1000||result.value.some(row=>row._esmojo_concertreeks_value!==seriesId||!guid(row[m.PrimaryIdAttribute])))throw Error('DATAVERSE_SHOWS_RESPONSE');return result.value;
+  const m=await meta(table),rows=await query(table,{filter:'_esmojo_concertreeks_value eq '+seriesId});
+  if(rows.some(row=>row._esmojo_concertreeks_value!==seriesId||!guid(row[m.PrimaryIdAttribute])))throw Error('DATAVERSE_SHOWS_RESPONSE');return rows;
  }
  async function downloadDocument(documentKey,scope={}){
   if(!scope||Array.isArray(scope)||Object.keys(scope).length!==1||Object.keys(scope).some(name=>!['seriesId','referenceType'].includes(name)))throw Error('VALIDATION');
@@ -54,5 +53,51 @@ export function createNativeShowsRepository({env=process.env,connection=createDa
   const bytes=Buffer.concat(blocks);if(checksum(bytes)!==row.esmojo_sha256)throw Error('SOURCE_CHANGED');
   return{bytes,fileName:row.esmojo_bestandsnaam,mime:row.esmojo_mimetype,sha256:row.esmojo_sha256};
  }
- return{meta,byKey,inSeries,downloadDocument};
+
+ async function byId(table,id){
+  if(!guid(id))throw Error('VALIDATION');const m=await meta(table),row=await json(m.EntitySetName+'('+id+')');
+  if(row[m.PrimaryIdAttribute]!==id||!/^W\/"[0-9]+"$/.test(row['@odata.etag']||''))throw Error('DATAVERSE_SHOWS_RESPONSE');return row;
+ }
+ async function query(table,{filter,top=1000,orderBy}={}){
+  const m=await meta(table);if(typeof filter!=='string'||filter.length>4000||!Number.isInteger(top)||top<1||top>1000)throw Error('VALIDATION');
+  let path=m.EntitySetName+'?'+new URLSearchParams({'$filter':filter,...(orderBy?{'$orderby':orderBy}:{})}),rows=[],pages=0;
+  while(path){
+   if(++pages>20)throw Error('DATAVERSE_SHOWS_LIMIT');const result=await json(path,{headers:{Prefer:'odata.maxpagesize='+top}});if(!Array.isArray(result.value)||result.value.length>top)throw Error('DATAVERSE_SHOWS_RESPONSE');rows.push(...result.value);if(rows.length>20000)throw Error('DATAVERSE_SHOWS_LIMIT');
+   path=null;if(result['@odata.nextLink']){const next=new URL(result['@odata.nextLink']);if(next.origin!=='https://org5bab852a.crm.dynamics.com'||next.pathname!=='/api/data/v9.2/'+m.EntitySetName||next.username||next.password||next.hash)throw Error('DATAVERSE_SHOWS_RESPONSE');path=m.EntitySetName+next.search;}
+  }return rows;
+ }
+ async function validatePatch(table,payload,metadata){
+  const schema=tableByName.get(table);if(!schema||schema.existing||!payload||typeof payload!=='object'||Array.isArray(payload)||!Object.keys(payload).length)throw Error('VALIDATION');
+  for(const [name,value]of Object.entries(payload)){
+   if(name.endsWith('@odata.bind')){
+    const nav=metadata.ManyToOneRelationships.find(r=>r.ReferencingEntityNavigationPropertyName===name.slice(0,-11)),column=schema.columns.find(c=>c.logical_name===nav?.ReferencingAttribute&&c.target);
+    if(!column||value===null&&column.required==='Ja')throw Error('VALIDATION');
+    if(value!==null){const target=await meta(column.target),binding=typeof value==='string'?/^\/([a-z0-9_]+)\(([a-f0-9-]{36})\)$/i.exec(value):null;if(!binding||binding[1]!==target.EntitySetName||!guid(binding[2]))throw Error('VALIDATION');}continue;
+   }
+   const column=schema.columns.find(c=>c.logical_name===name);if(!column||column.target||attributeKind(column)==='File')throw Error('VALIDATION');
+   if(value===null){if(column.required==='Ja')throw Error('VALIDATION');continue;}
+   const kind=attributeKind(column),expected=['String','Memo','Integer','Decimal','DateTime'].includes(kind)?compileAttribute(column,1043):null;
+   if(['String','Memo'].includes(kind)&&(typeof value!=='string'||value.length>expected.MaxLength||value.includes('\0')))throw Error('VALIDATION');
+   if(['Integer','Decimal'].includes(kind)&&(typeof value!=='number'||!Number.isFinite(value)||kind==='Integer'&&!Number.isInteger(value)||value<expected.MinValue||value>expected.MaxValue))throw Error('VALIDATION');
+   if(kind==='DateTime'&&(typeof value!=='string'||!Number.isFinite(Date.parse(value))||expected.DateTimeBehavior.Value==='DateOnly'&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||new Date(value).toISOString().slice(0,10)!==value)))throw Error('VALIDATION');
+   if(kind==='Boolean'&&typeof value!=='boolean'||kind==='Picklist'&&!showTableSchema.choices[column.choice]?.some(c=>c.waarde===value))throw Error('VALIDATION');
+  }
+ }
+ async function atomic(operations){
+  if(!Array.isArray(operations)||!operations.length||operations.length>250)throw Error('VALIDATION');
+  const boundary='batch_'+randomBytes(16).toString('hex'),changeset='changeset_'+randomBytes(16).toString('hex'),lines=['--'+boundary,'Content-Type: multipart/mixed; boundary='+changeset,''];
+  const targets=new Set();
+  for(let index=0;index<operations.length;index++){
+   const op=operations[index],m=await meta(op.table);
+   if(!guid(op.id)||!['PATCH','DELETE'].includes(op.method)||!(op.create===true||/^W\/"[0-9]+"$/.test(op.etag||''))||op.create&&op.method!=='PATCH')throw Error('VALIDATION');
+   if(targets.has(op.table+'/'+op.id))throw Error('VALIDATION');targets.add(op.table+'/'+op.id);
+   if(op.method==='PATCH')await validatePatch(op.table,op.payload,m);
+   else if(['esmojo_artiest','esmojo_locatie','esmojo_concertreeks','esmojo_concert','esmojo_medewerker','esmojo_modulerecht','esmojo_document','esmojo_historie','esmojo_opdracht','esmojo_onderzoek'].includes(op.table))throw Error('VALIDATION');
+   lines.push('--'+changeset,'Content-Type: application/http','Content-Transfer-Encoding: binary','Content-ID: '+(index+1),'',op.method+' /api/data/v9.2/'+m.EntitySetName+'('+op.id+') HTTP/1.1',op.create?'If-None-Match: *':'If-Match: '+op.etag,'Content-Type: application/json','Accept: application/json','',op.method==='PATCH'?JSON.stringify(op.payload):'');
+  }
+  lines.push('--'+changeset+'--','--'+boundary+'--','');
+  const response=await call('$batch',{method:'POST',multipart:{boundary,body:lines.join('\r\n')}}),text=await response.text(),statuses=[...text.matchAll(/^HTTP\/1\.[01] ([0-9]{3})/gm)].map(match=>Number(match[1]));
+  if(statuses.length!==operations.length||statuses.some(status=>status<200||status>=300))throw Error(statuses.includes(412)?'DATAVERSE_SHOWS_CONFLICT':'DATAVERSE_SHOWS_UNCONFIRMED');
+ }
+ return{meta,byKey,byId,query,inSeries,downloadDocument,atomic};
 }

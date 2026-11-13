@@ -1,7 +1,10 @@
+import {createNativeResearchStore} from './dataverse-shows/research.js';
+import {nativeShowsSelected} from './dataverse-shows/authority.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { ResearchError } from './research-validation.js';
 
-export function createResearchStore({ env = process.env, request = fetch } = {}) {
+export function createResearchStore({ env = process.env, request = fetch, legacy = false } = {}) {
+  if(!legacy&&nativeShowsSelected(env))return createNativeResearchStore({env});
   return async function research(input) {
     const url = env.GOOGLE_DRIVE_SCRIPT_URL, secret = env.GOOGLE_DRIVE_SHARED_SECRET;
     if (!url || !secret || secret.length < 32) throw new ResearchError('CONFIG');

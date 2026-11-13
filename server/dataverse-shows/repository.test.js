@@ -18,3 +18,20 @@ test('a document from another series or without explicit scope cannot be downloa
  await assert.rejects(fixture({foreign:true}).repository.downloadDocument(key,{seriesId:id}),/FORBIDDEN/);
  const f=fixture();await assert.rejects(f.repository.downloadDocument(key),/VALIDATION/);assert.equal(f.calls(),0);
 });
+
+test('native writes use one atomic changeset with mandatory conditional versions',async()=>{
+ let captured;const connection={connect:async()=>({headers:{}}),json:r=>r.json(),call:async(path,headers,options)=>{if(path.startsWith('EntityDefinitions'))return Response.json({LogicalName:'esmojo_analyse',EntitySetName:'analyses',PrimaryIdAttribute:'analysisid',ManyToOneRelationships:[]});assert.equal(path,'$batch');captured=options.multipart.body;return new Response('--synthetic\r\nHTTP/1.1 204 No Content\r\n\r\n--synthetic--');}};
+ const repo=createNativeShowsRepository({connection});await repo.atomic([{table:'esmojo_analyse',id,method:'PATCH',etag:'W/"5"',payload:{esmojo_samenvatting:'Test'}}]);assert.match(captured,/If-Match: W\/"5"/);assert.match(captured,/PATCH \/api\/data\/v9.2\/analyses/);
+ await assert.rejects(repo.atomic([{table:'esmojo_analyse',id,method:'PATCH',payload:{esmojo_samenvatting:'Test'}}]),/VALIDATION/);
+ await assert.rejects(repo.atomic([{table:'esmojo_analyse',id,method:'PATCH',etag:'W/"5"',payload:{unexpected:'secret'}}]),/VALIDATION/);
+});
+test('failed changesets and suspicious paging never report successful native storage',async()=>{
+ const connection={connect:async()=>({headers:{}}),json:r=>r.json(),call:async(path,headers,options)=>path.startsWith('EntityDefinitions')?Response.json({LogicalName:'esmojo_analyse',EntitySetName:'analyses',PrimaryIdAttribute:'analysisid',ManyToOneRelationships:[]}):path==='$batch'?new Response('HTTP/1.1 412 Precondition Failed\r\n'):Response.json({value:[],'@odata.nextLink':'https://example.invalid/private'})};const repo=createNativeShowsRepository({connection});
+ await assert.rejects(repo.atomic([{table:'esmojo_analyse',id,method:'PATCH',etag:'W/"5"',payload:{esmojo_samenvatting:'Test'}}]),/CONFLICT/);await assert.rejects(repo.query('esmojo_analyse',{filter:'statecode eq 0'}),/RESPONSE/);
+});
+test('native relationship binds accept only the schema target entity set and native GUID',async()=>{
+ const connection={connect:async()=>({headers:{}}),json:r=>r.json(),call:async path=>{
+  if(path.includes("LogicalName='esmojo_analyse'"))return Response.json({LogicalName:'esmojo_analyse',EntitySetName:'analyses',PrimaryIdAttribute:'analysisid',ManyToOneRelationships:[{ReferencingAttribute:'esmojo_concertreeks',ReferencingEntityNavigationPropertyName:'esmojo_concertreeks'}]});
+  if(path.includes("LogicalName='esmojo_concertreeks'"))return Response.json({LogicalName:'esmojo_concertreeks',EntitySetName:'series',PrimaryIdAttribute:'seriesid',ManyToOneRelationships:[]});return new Response('HTTP/1.1 204 No Content\r\n');
+ }};const repo=createNativeShowsRepository({connection}),op={table:'esmojo_analyse',id,method:'PATCH',etag:'W/"1"',payload:{'esmojo_concertreeks@odata.bind':'/series('+id+')'}};await repo.atomic([op]);for(const binding of ['/accounts('+id+')','https://example.invalid/series('+id+')','/series(free)'])await assert.rejects(repo.atomic([{...op,payload:{'esmojo_concertreeks@odata.bind':binding}}]),/VALIDATION/);
+});

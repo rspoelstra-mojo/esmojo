@@ -11,16 +11,16 @@ bestaande website al een volledige native Dataverse-runtime heeft.
   moet apart worden bevestigd; een lopende of groene technische ronde is niet
   automatisch een volledig gevalideerde collectie.
 - Bestaande Dataverse-onderzoekstekst, broncatalogus en schema-/kopieerfuncties.
-- Native record-/documentleesprimitieven in de taakbranch, nog niet aangesloten
-  op de website; de beveiligde API-poort blijft verplicht.
+- Volledige native provider op de taakbranch, inclusief typed transacties, File,
+  veldleases, Showbeheer en workers. Standaard uitgeschakeld; de bestaande API-poort
+  blijft verplicht. Contracten en verificatie: [shows-native-runtime.md](shows-native-runtime.md).
 
-## Runtimeblokkade
+## Resterende activeringsblokkade
 
-server/shows-store.js routeert zakelijke Shows-operaties nog naar Apps Script
-of createActiveShowService. Die actieve service gebruikt Supabase en voor
-onder meer tickets, vloer, bestanden en PDF's de Drive-brug. Er is geen complete
-Dataverse-provider die deze contracten vervangt. Geen generieke vlag kan dit
-veilig veranderen; ontbrekende functies mogen niet stil terugvallen op Drive.
+De implementatie is geen productie-omschakeling. Eindvalidatie, live native
+runtimecontrole, legacy-freeze/laatste delta en ingelogde rookproef moeten afzonderlijk
+worden bevestigd. Een configuratievlag alleen volstaat niet; de native provider
+vereist daarnaast een technisch autoriteitsbewijs. Geen stille bronfallback.
 
 Voor activering zijn minimaal deze native contracten nodig:
 

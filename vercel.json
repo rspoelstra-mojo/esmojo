@@ -1,12 +1,15 @@
 {
   "functions": {
-    "api/shows-validation-sync.js": {"includeFiles": "docs/dataverse/shows-schema.json", "maxDuration": 300},
+    "api/shows-validation-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
+      "maxDuration": 300
+    },
     "api/mcp.js": {
-      "includeFiles": "{onderzoeksprompts/**,.agents/skills/esmojo-concertonderzoek/references/catalogue.json}",
+      "includeFiles": "{onderzoeksprompts/**,.agents/skills/esmojo-concertonderzoek/references/catalogue.json,docs/dataverse/shows-schema.json,google-apps-script/**}",
       "maxDuration": 300
     },
     "api/access.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**}",
+      "includeFiles": "{docs/dataverse/shows-schema.json,server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**,google-apps-script/**}",
       "maxDuration": 300
     },
     "api/ontrack-reports-sync.js": {
@@ -14,14 +17,38 @@
       "maxDuration": 300
     },
     "api/show-storage-sync.js": {
-      "maxDuration": 300
+      "maxDuration": 300,
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}"
     },
     "api/email-deliverability.js": {
       "includeFiles": "server/email/template.html",
       "maxDuration": 60
     },
     "api/background-tasks-sync.js": {
-      "includeFiles": "docs/dataverse/shows-schema.json",
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
+      "maxDuration": 300
+    },
+    "api/home-planning-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}"
+    },
+    "api/artist-biographies-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}"
+    },
+    "api/shows-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}"
+    },
+    "api/web-reports-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}"
+    },
+    "api/shows-runtime-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
+      "maxDuration": 300
+    },
+    "api/show-management.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}"
+    },
+    "api/research.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
       "maxDuration": 300
     }
   },

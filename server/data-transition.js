@@ -15,7 +15,7 @@ export function researchMarkdown(document){
  if(missing.length)text+='\n\n## Bronnen\n\n'+missing.map((source,i)=>`[${i+1}] [${source.title.replace(/[\\[\]\r\n]/g,' ')}](${new URL(source.url).href.replaceAll('(','%28').replaceAll(')','%29')})`).join('\n\n');
  return text;
 }
-export function createDataTransition({env=process.env,shows=createShowsStore({env,active:false}),research=createResearchStore({env}),dataverse=createDataverseResearch({env})}={}){
+export function createDataTransition({env=process.env,shows=createShowsStore({env,active:false,legacy:true}),research=createResearchStore({env,legacy:true}),dataverse=createDataverseResearch({env})}={}){
  return async function transition(input){
   if(!input||Array.isArray(input))throw Error('VALIDATION');
   const operation=input.operation,expected={list:['operation'],inventory:['operation','concertId'],preview:['operation','concertId','number'],import:['operation','concertId','number','checksum'],'bulk-import':['operation','concertId','number']}[operation];
