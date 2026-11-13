@@ -5,7 +5,7 @@ async function step(operation){
  const identity=await fetch(url,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN},signal:AbortSignal.timeout(30000)});if(!identity.ok)throw Error('IDENTITY_UNCONFIRMED');const {value}=await identity.json();if(typeof value!=='string'||!value)throw Error('IDENTITY_UNCONFIRMED');console.log('::add-mask::'+value);
  const response=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({operation}),signal:AbortSignal.timeout(280000)}),data=await response.json();
  if(!response.ok||data.ok!==true)throw Error(/^[A-Z_]{1,60}$/.test(data.code||'')?data.code:'ACCESS_UNCONFIRMED');
- console.log(JSON.stringify({status:data.status,phase:data.phase,total:data.total,checked:data.checked,...(data.code?{code:/^[A-Z_]{1,60}$/.test(data.code)?data.code:'ACCESS_UNCONFIRMED'}:{})}));return data;
+ console.log(JSON.stringify({storageMode:['legacy','freeze','dataverse'].includes(data.storageMode)?data.storageMode:null,recordStatus:['ready','running','waiting','blocked','complete'].includes(data.recordStatus)?data.recordStatus:null,leaseUntil:Number.isFinite(data.leaseUntil)?data.leaseUntil:null,nextAt:Number.isFinite(data.nextAt)?data.nextAt:null,...(data.execution?{execution:Object.fromEntries(['steps','completed','blocked','waiting','failed'].map(key=>[key,Number.isSafeInteger(data.execution[key])?data.execution[key]:0]))}:{}),status:data.status,phase:data.phase,total:data.total,checked:data.checked,...(data.code?{code:/^[A-Z_]{1,60}$/.test(data.code)?data.code:'ACCESS_UNCONFIRMED'}:{})}));return data;
 }
 try{
  let data=await step(operation),rounds=0;
