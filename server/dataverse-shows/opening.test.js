@@ -34,3 +34,8 @@ test('performance diagnostics cannot normalize or write business data while meas
  const f=fixture(),service=createNativeShowsService({env,state:f.state,catalogue:{handles:()=>false},diagnostic:true,execute:source=>({changed:true,documents:source.documents,result:{},files:[]})}),before=f.writes();
  await assert.rejects(service('show-open',{concertId,actor}),/READ_REQUIRES_WRITE/);assert.equal(f.writes(),before);
 });
+test('a technical planning refresh does not invalidate an unchanged complete opening',async()=>{
+ const f=fixture();await f.service('profile-save',{concertId,questionNumber:1,status:'draft',summary:'Bewaard',revision:0});const loaded=await f.state.load(concertId);
+ await f.state.refreshPlanning(loaded,{updatedAt:'2026-11-13T12:00:00Z',completion:{profile:false}});assert.ok(await f.state.loadOpening(concertId));
+ const control=[...f.tables.get('esmojo_integratiestatus').values()].find(row=>row.esmojo_integratiecode==='shows-native-v1');const manifest=JSON.parse(control.esmojo_configuratie_json);manifest.documents={};control.esmojo_configuratie_json=JSON.stringify(manifest);control['@odata.etag']='W/"1234567"';assert.equal(await f.state.loadOpening(concertId),null,'Changed source pointers must not use the old projection');
+});

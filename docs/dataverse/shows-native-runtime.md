@@ -218,3 +218,11 @@ schema-opwarming mag parallel met de actuele Drive-rechtenread starten na MFA; g
 zakelijke data ophalen vóór de modulecontrole. Vercel-functieregio iad1 is vastgesteld;
 Dataverse-geo wordt gecontroleerd vóór een eventuele regionale wijziging. Geen
 veronderstelde Europese database op basis van alleen de organisatienaam.
+
+Voor show-open geeft de bestaande ondertekende Drive-self-route uitsluitend de
+benodigde actor-/rechtenvelden terug (`authorizationOnly`). Het register blijft
+actueel gelezen en vergrendeld; profielfoto en testontvanger worden daar niet
+meegestuurd. Dit is geen accountmigratie of rechtencache. De bestaande main-workflow
+publiceert deze compatibele Apps Script-uitbreiding en leest de bron terug.
+Technische planningverversingen wijzigen de opening niet: de actuele manifesthash
+controleert bronpointers/extras, niet uitsluitend de technische planning-ETag.

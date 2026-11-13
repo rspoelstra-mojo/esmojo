@@ -19,7 +19,7 @@ export function createShowsPerformance({env=process.env,store=createTaskStore({e
   if(!input||Array.isArray(input)||!['prepare','measure'].includes(input.operation)||!Number.isInteger(input.step)||input.step<0||Object.keys(input).some(key=>!['operation','step','catalogue'].includes(key)))throw Error('VALIDATION');
   await authority();
   const approval=await store.get('shows-migration-v1');if(approval?.state.status!=='complete'||approval.state.expiresAt<=now())throw Error('TASK_EXPIRED');
-  const actor=approval.state.actor,start=clock(),profile=await profiles('self',actor),authorizationMs=Math.round(clock()-start);
+  const actor=approval.state.actor,start=clock(),profile=await profiles('self',actor,{authorizationOnly:true}),authorizationMs=Math.round(clock()-start);
   if(profile.id!==actor||!profile.activated||profile.disabled||!isAdministrator(profile)||!hasModule(profile,'shows'))throw Error('FORBIDDEN');
   const rows=await catalogue.primaryShows(),hash=digest(rows);
   if(input.step===0){if(input.catalogue!==undefined)throw Error('VALIDATION');let geo=null;if(env.VERCEL_ENV==='production')try{const connection=nativeConnection(env),context=await connection.connect(),response=await connection.call("RetrieveCurrentOrganization(AccessType=Microsoft.Dynamics.CRM.EndpointAccessType'Default')",context.headers),data=response.ok?await connection.json(response):null;const value=data?.Detail?.Geo;if(typeof value==='string'&&/^[A-Z0-9_-]{2,20}$/.test(value))geo=value;}catch{/* Optional diagnostic, never a guessed region. */}

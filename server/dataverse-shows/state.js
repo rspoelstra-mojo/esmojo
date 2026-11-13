@@ -1,5 +1,5 @@
 import {nativeConnection} from './connection.js';
-import {openingRecord,openingKey,readOpening} from './opening.js';
+import {openingRecord,openingKey,readOpening,manifestFingerprint} from './opening.js';
 import {createHash} from 'node:crypto';
 import {record,reference,recordKey,canonical,digest,validateRecord,migrationDifferences,choice} from '../show-migration-writer.js';
 import {mapPeople,mapShow as mapRawShow} from '../show-migration-map.js';
@@ -56,8 +56,9 @@ export function createNativeShowState({env=process.env,repository,connection=nat
   if(Object.keys(leases).length){source.documents['bezoekersdata.json']||={managedBy:'ESMOJO/TicketData-v1',classification:'vertrouwelijk',concertId:source.concertId,workflow_json:JSON.stringify({visitors:{fields:{}}}),leases:{},history:[]};source.documents['bezoekersdata.json'].leases=leases;}
  }
  async function loadOpening(concertId){
-  const scope=await resolve(concertId),[row,leases]=await Promise.all([repo.byKey('esmojo_integratiestatus',openingKey(scope.seriesId)),currentLeases(scope.series.esmojo_oudalgemeenconcertid)]);
+  const scope=await resolve(concertId),[row,leases,control]=await Promise.all([repo.byKey('esmojo_integratiestatus',openingKey(scope.seriesId)),currentLeases(scope.series.esmojo_oudalgemeenconcertid),repo.byKey('esmojo_integratiestatus',recordKey('esmojo_integratiestatus','native-state/'+scope.series.esmojo_oudalgemeenconcertid))]);
   const opening=readOpening(row,scope.series,scope.seriesId,{env});if(!opening)return null;
+  if(control?manifestFingerprint(parse(control.esmojo_configuratie_json))!==opening.manifestHash:opening.hadControl)return null;
   const root={table:'esmojo_concertreeks'};if(migrationDifferences(root,scope.series,opening.rootFields).length||!await repo.sameVersions(opening.proof))return null;
   const source=opening.source;applyLeases(source,leases.leases);return{...scope,source};
  }
@@ -69,14 +70,17 @@ export function createNativeShowState({env=process.env,repository,connection=nat
    if(digest(value)!==row.esmojo_fingerprint||value.fileName!==name||canonical(expected)!==canonical(observed))throw Error('VERIFY');
    return{table:'esmojo_historie',id:row[m.PrimaryIdAttribute],etag:row['@odata.etag']};
   });proof.push(...history);
-  if(loaded.control){const manifest=parse(loaded.control.esmojo_configuratie_json);if(manifest.generation!==loaded.series.esmojo_revisie||canonical(manifest.documents)!==canonical(loaded.pointers))throw Error('VERIFY');const m=await repo.meta('esmojo_integratiestatus');proof.push({table:'esmojo_integratiestatus',id:loaded.control[m.PrimaryIdAttribute],etag:loaded.control['@odata.etag']});}
-
+  const manifest=loaded.control?parse(loaded.control.esmojo_configuratie_json):{version:1,seriesId:loaded.seriesId,generation:loaded.series.esmojo_revisie,documents:loaded.pointers,extras:loaded.source.activeAudit?{activeAudit:loaded.source.activeAudit}:{}};
+  if(manifest.generation!==loaded.series.esmojo_revisie||canonical(manifest.documents)!==canonical(loaded.pointers))throw Error('VERIFY');
   const root=entries.find(entry=>entry.row.table==='esmojo_concertreeks'),generation=loaded.series.esmojo_revisie;
-  const rootFields={...root.expected,esmojo_revisie:generation},row=openingRecord(loaded.source,loaded.seriesId,generation,{env,proof,rootFields}),operations=await recordOperations(repo,[row]);
-  // The cache is not authoritative. A racing business write invalidates this
-  // generation/proof on read; do not change the business root ETag just to cache.
-  const previous=await repo.byKey(row.table,row.key);if(previous?.esmojo_revisie>generation)throw Error('DATAVERSE_SHOWS_CONFLICT');
-  if(operations.length)await repo.atomic(operations);const confirmed=await repo.byKey(row.table,row.key);readOpening(confirmed,loaded.series,loaded.seriesId,{env});return{prepared:true};
+  const rootFields={...root.expected,esmojo_revisie:generation},row=openingRecord(loaded.source,loaded.seriesId,generation,{env,proof,rootFields,manifest,hadControl:Boolean(loaded.control)});
+  const stampHash=rows=>digest(rows.map(({table,id,etag})=>({table,id,etag})).sort((a,b)=>(a.table+a.id).localeCompare(b.table+b.id)));
+  const same=actual=>{try{const value=readOpening(actual,loaded.series,loaded.seriesId,{env});return value&&value.manifestHash===manifestFingerprint(manifest)&&canonical(value.rootFields)===canonical(rootFields)&&stampHash(value.proof)===stampHash(proof);}catch{return false;}};
+  // A racing business write invalidates the generation/proof on read. Do not
+  // change business ETags for a cache; concurrent equivalent preparations win.
+  const previous=await repo.byKey(row.table,row.key);if(previous?.esmojo_revisie>generation)throw Error('DATAVERSE_SHOWS_CONFLICT');if(same(previous))return{prepared:true};
+  const operations=await recordOperations(repo,[row]);try{if(operations.length)await repo.atomic(operations);}catch(error){if(error.message!=='DATAVERSE_SHOWS_CONFLICT'||!same(await repo.byKey(row.table,row.key)))throw error;}
+  const confirmed=await repo.byKey(row.table,row.key);if(!same(confirmed))throw Error('VERIFY');return{prepared:true};
  }
  async function refreshOpening(loaded){const entries=await verifyPlan(mapShow(loaded.source,loaded.people),loaded.source.nativeGeneration||0);return publishOpening(loaded,entries);}
  async function load(concertId){

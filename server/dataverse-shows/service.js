@@ -31,7 +31,7 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
   if(!operations.has(operation))throw Error('VALIDATION');
   if(operation==='show-open'&&state.loadOpening){
    const fast=await state.loadOpening(payload.concertId);
-   if(fast){const output=execute(fast.source,operation,{...payload,concertId:fast.concert.esmojo_oudconcertid},new Map());if(!output.changed)return{...output.result,...photoFor(fast.source)};}
+   if(fast)try{const output=execute(fast.source,operation,{...payload,concertId:fast.concert.esmojo_oudconcertid},new Map());if(!output.changed)return{...output.result,...photoFor(fast.source)};}catch(error){if(error.message!=='DOCUMENT_BYTES_REQUIRED')throw error;}
   }
   if(trustedProfile&&!readOnly(operation))await state.syncActor(trustedProfile);
   const loaded=await state.load(payload.concertId),command=digest(JSON.stringify({operation,payload,...(operation==='show-open'?{generation:loaded.source.nativeGeneration||0}:{})}));

@@ -179,3 +179,12 @@ test('Private mailuitzondering is uitsluitend zichtbaar voor het vaste superacco
  assert.equal(JSON.stringify(h.send(signed({operation:'list',actor:admin}))).includes('test-copy@example.invalid'),false);
  assert.equal(h.send(signed({operation:'security-prepare'})).ok,false);
 });
+test('show authorization-only self keeps current permissions but never returns an avatar or test recipient',()=>{
+ const h=harness([{...profile(admin,'superbeheerder'),photo:'data:image/jpeg;base64,AAAA',modules:['shows']},{...profile(user,'gebruiker'),modules:[]}],{superAdminId:admin,copyTo:'test-copy@example.invalid'});
+ const full=h.send(signed({operation:'self',actor:admin}));assert.equal(full.ok,true);assert.ok(full.data.photo);const writes=h.writes();
+ const compact=h.send(signed({operation:'self',actor:admin,authorizationOnly:true}));assert.equal(compact.ok,true);for(const key of ['id','role','activated','disabled','modules'])assert.deepEqual(compact.data[key],full.data[key]);
+ assert.equal('photo'in compact.data,false);assert.equal('emailTestCopyTo'in compact.data,false);assert.equal(h.writes(),writes);
+ h.send(signed({operation:'update',actor:admin,id:user,profile:{...profile(user,'gebruiker'),modules:['reports']}}));
+ assert.deepEqual(h.send(signed({operation:'self',actor:user,authorizationOnly:true})).data.modules,['reports']);
+ const invalid=signed({operation:'self',actor:admin,authorizationOnly:true});invalid.signature='0'.repeat(64);assert.equal(h.send(invalid).ok,false);
+});

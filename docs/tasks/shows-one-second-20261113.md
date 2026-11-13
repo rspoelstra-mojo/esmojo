@@ -17,3 +17,7 @@ technische sessie/metadata, alle tabbladen gereed, één WebP-variant/intent-pre
 Vaste production-only main/OIDC performanceworkflow voor voorbereiding en meting.
 Vercel-functie momenteel iad1 vastgesteld; Dataverse-regio eerst vaststellen, geen
 regiowijziging op basis van een onbevestigde aanname. V1.100 volgt V1.99.
+
+Accounts.gs: optionele beperkte self-response voor show-open, met dezelfde actuele
+Drive-register-, MFA- en rollencontrole; avatar weglaten, niets cachen of migreren.
+De bestaande Apps Script-mainpublicatie/readback apart van Vercel verifiëren.

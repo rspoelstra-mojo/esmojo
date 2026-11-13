@@ -6,11 +6,11 @@ const identity=seriesId=>'native-opening/v1/'+seriesId;
 export const openingKey=seriesId=>recordKey('esmojo_integratiestatus',identity(seriesId));
 // A derived read model, not another source of truth. It contains the same native
 // business snapshot, encrypted with a separate AAD. No lease tokens or file bytes.
-export function openingRecord(source,seriesId,generation,{env=process.env,proof=[],rootFields={}}={}){
+export function openingRecord(source,seriesId,generation,{env=process.env,proof=[],rootFields={},manifest=null,hadControl=false}={}){
  const documents=structuredClone(source.documents||{});if(documents['bezoekersdata.json'])documents['bezoekersdata.json'].leases={};
  const snapshot={version:1,concertId:source.concertId,nativeGeneration:generation,shows:source.shows,documents,
   files:(source.files||[]).map(({bytes,...metadata})=>metadata),...(source.photo?{photo:source.photo}: {})};
- const payload={version:1,contract:runtimeContract,schema:runtimeSchema,seriesId,generation,proof,rootFields,source:snapshot};
+ const payload={version:1,contract:runtimeContract,schema:runtimeSchema,seriesId,generation,proof,rootFields,manifestHash:manifestFingerprint(manifest),hadControl,source:snapshot};
  return record('integratiestatus',identity(seriesId),'Volledige Shows-leesprojectie',{revisie:generation,integratiecode:'shows-native-opening-v1',scopecode:digest(source.concertId),configuratie_json:canonical({version:1,sealed:seal(env,seriesId,payload)})});
 }
 export function readOpening(row,series,seriesId,{env=process.env}={}){
@@ -24,3 +24,5 @@ export function readOpening(row,series,seriesId,{env=process.env}={}){
 function key(env){if(typeof env.GOOGLE_DRIVE_SHARED_SECRET!=='string'||env.GOOGLE_DRIVE_SHARED_SECRET.length<32)throw Error('SHOWS_CONFIG');return createHash('sha256').update('esmojo/native-opening/v1\n'+env.GOOGLE_DRIVE_SHARED_SECRET).digest();}
 function seal(env,seriesId,value){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key(env),iv);cipher.setAAD(Buffer.from(identity(seriesId)));const raw=Buffer.from(JSON.stringify(value));if(raw.length>4*1024*1024)throw Error('OPENING_LIMIT');const sealed=Buffer.concat([iv,cipher.update(gzipSync(raw,{level:3})),cipher.final(),cipher.getAuthTag()]).toString('base64url');if(sealed.length>1040000)throw Error('OPENING_LIMIT');return sealed;}
 function open(env,seriesId,text){try{if(typeof text!=='string'||text.length>1040000)throw Error();const bytes=Buffer.from(text,'base64url'),cipher=createDecipheriv('aes-256-gcm',key(env),bytes.subarray(0,12));cipher.setAAD(Buffer.from(identity(seriesId)));cipher.setAuthTag(bytes.subarray(-16));return JSON.parse(gunzipSync(Buffer.concat([cipher.update(bytes.subarray(12,-16)),cipher.final()]),{maxOutputLength:4*1024*1024}));}catch{throw Error('DATAVERSE_SHOWS_CONFLICT');}}
+
+export function manifestFingerprint(value){return digest({version:value.version,seriesId:value.seriesId,generation:value.generation,documents:value.documents,extras:value.extras||{}});}
