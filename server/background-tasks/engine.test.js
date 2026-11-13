@@ -73,3 +73,14 @@ test('validation-only worker cannot execute an unrelated ready migration',async(
  const engine=createBackgroundTasks({store,registry,authorize:async()=>true,now:()=>1000000});for(const type of Object.keys(registry))await engine.control({operation:'start',type},'admin');
  await engine.run({types:['validation']});assert.deepEqual(calls,['validation']);assert.equal((await store.get('migration')).state.status,'ready');
 });
+
+test('technical inspection is read-only, fresh-authorized and exposes safe counters and bounded schedule only',async()=>{
+ let allowed=true;const f=fixture({authorize:async()=>allowed,step:async()=>({status:'waiting',cursor:'private-cursor',delayMs:30000,public:{label:'private-label',total:761,progress:{phase:'metadata',current:12}}})}),engine=f.build();
+ assert.deepEqual(await engine.inspect(),{active:false,pollAfterMs:null,tasks:[]});assert.equal(f.store.rows.size,0);
+ await engine.control(command(),'private-actor');await engine.run();const before=clone(f.store.rows);
+ const info=await engine.inspect();assert.equal(info.active,true);assert.equal(info.pollAfterMs,30000);assert.equal(info.tasks[0].current,12);assert.doesNotMatch(JSON.stringify(info),/private-|cursor|etag|epoch/);assert.deepEqual(f.store.rows,before);
+ f.advance(29999);assert.equal((await engine.inspect()).pollAfterMs,1000);allowed=false;await assert.rejects(engine.inspect(),/FORBIDDEN/);assert.deepEqual(f.store.rows,before);
+});
+test('technical inspection respects unknown-write exclusion and never modifies authorization deadline',async()=>{
+ const f=fixture({step:async()=>{throw Error('uncertain');},failure:()=>({retryable:true,uncertain:true,code:'TEMPORARY',error:'Safe'})}),engine=f.build();await engine.control(command(),'admin');await engine.run();const info=await engine.inspect();assert.equal(info.pollAfterMs,60000);assert.equal(info.tasks[0].nextAt,info.tasks[0].leaseUntil);assert.equal(info.tasks[0].authorizationExpiresAt,1000000+48*3600000);await engine.run();assert.equal(f.calls,0);
+});

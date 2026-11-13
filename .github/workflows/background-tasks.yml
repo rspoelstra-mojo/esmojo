@@ -3,11 +3,17 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        required: true
+        default: continue
+        options: [continue, status]
 permissions:
   contents: read
   id-token: write
 concurrency:
-  group: approved-background-tasks-production
+  group: ${{ inputs.operation == 'status' && 'background-tasks-status-production' || 'approved-background-tasks-production' }}
   cancel-in-progress: false
 jobs:
   continue:
@@ -17,4 +23,6 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Continue existing approved tasks only
+        env:
+          BACKGROUND_TASK_OPERATION: ${{ inputs.operation || 'continue' }}
         run: node tools/background/continue.mjs

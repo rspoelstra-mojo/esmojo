@@ -85,5 +85,23 @@ export function createBackgroundTasks({store,registry,authorize,now=Date.now,id=
   return counts;
  }
  async function release(row,leaseId){const current=await store.get(row.state.type);if(current?.state.epoch===row.state.epoch&&current.state.lease?.id===leaseId&&!current.state.uncertain)await store.save(current,changed(current,{lease:null}));}
- return{control,run};
+ // Technical diagnostics for the fixed main/OIDC worker only. No cursor,
+ // actor, labels, profile details or provider responses leave this boundary.
+ async function inspect(){
+  const tasks=[];let next=null;
+  for(const [type,definition]of definitions){
+   const row=await store.get(type);if(!row)continue;
+   const state=row.state;
+   if(!await authorize(state.actor,definition))throw Error('FORBIDDEN');
+   const active=activeStatuses.includes(state.status),leased=state.lease?.until>now();
+   const due=Math.max(state.nextAt,leased?state.lease.until:0);
+   if(active)next=next===null?due:Math.min(next,due);
+   tasks.push({type,status:leased&&state.status==='ready'?'running':state.status==='ready'?'queued':state.status,
+    current:count(state.public?.progress?.current),total:count(state.public?.total),phase:publicProgress(state.public).progress.phase,
+    updatedAt:state.updatedAt,nextAt:state.nextAt,leaseUntil:leased?state.lease.until:null,
+    authorizationExpiresAt:taskExpiresAt(state),code:state.public?.code?code(state.public.code):null});
+  }
+  return{active:next!==null,pollAfterMs:next===null?null:Math.min(60000,Math.max(1000,next-now())),tasks};
+ }
+ return{control,run,inspect};
 }
