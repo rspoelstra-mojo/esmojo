@@ -88,8 +88,10 @@ MCP-, research-, Showbeheer-, migratie- en domeintests, `npm run build` en
 5. Pas na die bewijzen de vaste Integratiestatus met identiteit
    `native-authority/v1` publiceren: integratiecode `shows-native-runtime-v1`, status
    succeeded, configuratie met mode dataverse, contract, actuele schemafingerprint,
-   werkelijk voltooide validation-task-ID, legacyWritersStopped=true,
+   werkelijk voltooide validation-task-ID plus epoch en sequence, legacyWritersStopped=true,
    deltaVerified=true en activatedAt. `authority.js` controleert dit contract.
+   De provider leest ook het bijbehorende versleutelde checkpoint terug en eist
+   complete, exact dezelfde epoch/sequence en geen resterende lease.
    Geen browserroute kan dit record of deze vlag nu vrij instellen.
 6. Eén gecoördineerde productie-uitrol met servervariabele
    `SHOWS_STORAGE_PROVIDER=dataverse`; geen VITE-prefix. Alle normale Shows-workers
@@ -100,3 +102,8 @@ MCP-, research-, Showbeheer-, migratie- en domeintests, `npm run build` en
 Deze implementatie biedt geen automatische cutover of knop die de freeze/delta
 overslaat. Na native bedrijfswrites is het terugzetten van de vlag geen veilig
 herstel: eerst native wijzigingen bewaren/verzoenen of gecontroleerd fail-forward.
+
+Bestaande encryptiesleutels blijven server-only nodig: de bestaande server-root voor
+veldleases/checkpoints en de bestaande Showbeheer-cryptosleutel/AAD niet verwijderen
+als Drive-bedrijfsopslag vervalt. Rotatie vereist afzonderlijke herencryptie; geen
+credentials naar frontend of gedeelde cloudomgeving kopiëren.
