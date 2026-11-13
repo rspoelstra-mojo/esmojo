@@ -16,6 +16,7 @@ export function createReportsMigrationSource({env=process.env,store=createOnTrac
  }
  async function nativeGeneral(entry){if(nativeShowsSelected(env)){await assertNativeAuthority({env,repository:nativeState.repo});return readNativeGeneral(entry);}if(!managedShowsRouting(env))return null;return route({legacy:async()=>null,native:()=>readNativeGeneral(entry)});}
  return{
+  async matchesInventory(fingerprint,baseline,actor){const value=await store('reports-migration-freshness',actor,{fingerprint,baseline});if(typeof value?.matches!=='boolean')throw Error('MIGRATION_SOURCE');return value.matches;},
   probe:actor=>store('reports-migration-probe',actor),
   async catalogue(actor){const value=await store('reports-migration-catalogue',actor);if(value?.version!==1||!Array.isArray(value.entries)||value.entries.length>10000||!/^[a-f0-9]{64}$/.test(value.fingerprint)||!Number.isSafeInteger(value.unlinked)||value.unlinked<0)throw Error('MIGRATION_SOURCE');if(value.unlinked)throw Error('REPORTS_UNLINKED');return value;},
   async bundle(entry,actor){const value=await store('reports-migration-bundle',actor,{entry:scoped(entry)});if(value?.version!==1||value.show?.key!==entry.show.key||!Array.isArray(value.sources)||!Array.isArray(value.groups)||!Array.isArray(value.files))throw Error('MIGRATION_SOURCE');const general=await nativeGeneral(entry);if(general)value.general=general;return value;},

@@ -1,3 +1,4 @@
+function esmojoReportsPipelineValid_(value){return Boolean(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).sort().join(',')==='status,updatedAt'&&['idle','running','assets-missing'].includes(value.status)&&typeof value.updatedAt==='string'&&Number.isFinite(Date.parse(value.updatedAt)));}
 // Use the existing Reports catalogue authority. allVenues/includeSeries widen
 // that scope and can turn otherwise identical retained rows into conflicts.
 // Attach series provenance only after an exact identity match; never pick a
@@ -71,8 +72,14 @@ function esmojoReportsMigrationGeneral_(show,canonical){
  const target=esmojoResearchTarget_(canonical.concertId),tickets=esmojoReadTicketData_(esmojoShowFile_(target.folder,'bezoekersdata.json'),target.primary.concertId),fields=JSON.parse(tickets.workflow_json).visitors.fields;
  return{contacts:{productionManager:null,eventSafetyManager:esmojoOnTrackManager_({key:show.key},esmojoOnTrackProfiles_()),tscProjectLead:null},tickets:{sales:fields.ticket_sales&&fields.ticket_sales.completed_at?fields.ticket_sales.content:null,origins:fields.visitor_origins&&fields.visitor_origins.completed_at?fields.visitor_origins.content:null,shows:target.seriesShows.map(row=>({date:row.date,time:row.time||'Niet vermeld'}))}};
 }
-function esmojoReportsMigration_(request){
+function esmojoReportsMigration_(request,pipelineBaseline){
  const op=request.operation,keys=Object.keys(request).sort().join(','),catalogueOp=op==='reports-migration-catalogue';
+ if(op==='reports-migration-freshness'){
+  const baseline=request.baseline;
+  if(keys!=='actor,baseline,fingerprint,operation'||!/^[a-f0-9]{64}$/.test(request.fingerprint||'')||!baseline||Object.keys(baseline).sort().join(',')!=='present,value'||typeof baseline.present!=='boolean'||baseline.present&&!esmojoReportsPipelineValid_(baseline.value)||!baseline.present&&baseline.value!==null)throw Error('VALIDATION');
+  if(typeof request.actor!=='string'||!esmojoOnTrackProfiles_().some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
+  const value=esmojoReportsMigration_({operation:'reports-migration-catalogue',actor:request.actor},baseline);return{matches:value.fingerprint===request.fingerprint};
+ }
  if(op==='reports-migration-probe'){if(keys!=='actor,operation'||typeof request.actor!=='string'||!esmojoOnTrackProfiles_().some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');return esmojoReportsMigrationProbe_(request.actor);}
  if(!['reports-migration-catalogue','reports-migration-bundle','reports-migration-csv','reports-migration-file'].includes(op)||keys!==(catalogueOp?'actor,operation':op==='reports-migration-bundle'?'actor,entry,operation':op==='reports-migration-csv'?'actor,entry,operation,sourceId':'actor,entry,fileId,offset,operation'))throw Error('VALIDATION');
  if(typeof request.actor!=='string'||!esmojoOnTrackProfiles_().some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
@@ -90,7 +97,12 @@ function esmojoReportsMigration_(request){
   const sourceFields=['id','name','receivedAt','modifiedAt','linkRevision','status','showKey','linkHistory','autoLinkedAt','attempts','errorCode','errorRow','processedModifiedAt','processedLayout','latestReportId','duplicateOf','generation'];
   selection.settings.webIndex=context.index.document;selection.settings.historicalRegister=esmojoHistoricalRegister_().entries;
   selection.settings.sources=context.state.sources.map(row=>{if(Object.keys(row).some(key=>key!=='job'&&!sourceFields.includes(key)))throw Error('REGISTER_INVALID');return Object.fromEntries(sourceFields.filter(key=>row[key]!==undefined).map(key=>[key,row[key]]));});
-  const fingerprint=esmojoOnTrackHash_(JSON.stringify({rows,selection,groups:context.groups,index:context.index.document,historical:context.historical}));
+  let selectionForProof=selection;
+  if(pipelineBaseline){
+   const present=Object.prototype.hasOwnProperty.call(selection.settings,'pipeline');if(present&&!esmojoReportsPipelineValid_(selection.settings.pipeline)||!present&&pipelineBaseline.present)throw Error('REPORT_CONFLICT');
+   selectionForProof={...selection,settings:{...selection.settings}};if(pipelineBaseline.present)selectionForProof.settings.pipeline=pipelineBaseline.value;else delete selectionForProof.settings.pipeline;
+  }
+  const fingerprint=esmojoOnTrackHash_(JSON.stringify({rows,selection:selectionForProof,groups:context.groups,index:context.index.document,historical:context.historical}));
   return{version:1,entries:rows,selection,unlinked:inventory.unlinked,fingerprint};
  }
  const entry=request.entry;

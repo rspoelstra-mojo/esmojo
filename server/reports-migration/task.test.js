@@ -41,3 +41,10 @@ test('automatic inventory repair is restricted to the proven pre-write checkpoin
  const {reportsSchemaHash,reportsDependenciesContract,reportsTablesContract}=await import('../reports-schema.js'),f=await setup(),task=createReportsMigrationTask(f.options),state={version:1,schema:reportsSchemaHash,run:runId,phase:'inventory',checkIndex:reportsDependenciesContract.tableSetupSteps.length+reportsTablesContract.tableSetupSteps.length,records:0,files:0};
  assert.equal(task.canResumeInventory(JSON.stringify(state),runId),true);for(const patch of [{schema:'changed'},{phase:'datasets'},{checkIndex:0},{records:1},{files:1},{inventoryHash:'present'}])assert.equal(task.canResumeInventory(JSON.stringify({...state,...patch}),runId),false);assert.equal(task.canResumeInventory(JSON.stringify(state),'other-epoch'),false);
 });
+test('final verification uses the hash-proven sealed pipeline baseline without ignoring changed recipients or registers',async()=>{
+ for(const businessChange of [false,true]){
+  const f=await setup();let raw=JSON.parse(f.drive.mail.content);raw.pipeline={status:'idle',updatedAt:'2026-11-05T10:00:00Z'};f.drive.mail.setContent(JSON.stringify(raw));let changed=false;
+  const run=complete(f.options,{afterStep:result=>{if(!changed&&JSON.parse(result.cursor).phase==='finish'){changed=true;raw=JSON.parse(f.drive.mail.content);raw.pipeline={status:'idle',updatedAt:'2026-11-05T14:00:00Z'};if(businessChange)raw.revision++;f.drive.mail.setContent(JSON.stringify(raw));}}});
+  if(businessChange)await assert.rejects(run,/MIGRATION_SOURCE_CHANGED/);else assert.equal((await run).status,'complete');assert.equal(changed,true);
+ }
+});

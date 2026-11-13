@@ -97,7 +97,7 @@ export function createBackgroundTasks({store,registry,authorize,now=Date.now,id=
    const due=Math.max(state.nextAt,leased?state.lease.until:0);
    if(active)next=next===null?due:Math.min(next,due);
    tasks.push({type,status:leased&&state.status==='ready'?'running':state.status==='ready'?'queued':state.status,
-    current:count(state.public?.progress?.current),total:count(state.public?.total),phase:publicProgress(state.public).progress.phase,
+    current:count(state.public?.progress?.current),total:count(state.public?.total),verifiedRecords:count(state.public?.progress?.verifiedRecords),verifiedFiles:count(state.public?.progress?.verifiedFiles),phase:publicProgress(state.public).progress.phase,
     updatedAt:state.updatedAt,nextAt:state.nextAt,leaseUntil:leased?state.lease.until:null,
     authorizationExpiresAt:taskExpiresAt(state),code:state.public?.code?code(state.public.code):null});
   }
