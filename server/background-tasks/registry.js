@@ -23,5 +23,9 @@ export function createTaskRegistry({env=process.env,migrate=createShowMigration(
 }
 export function createApplicationTasks({env=process.env,profiles=createProfiles({env}),store=createTaskStore({env}),registry=createTaskRegistry({env}),now=Date.now}={}){
  const authorize=async(actor,definition)=>{let profile;try{profile=await profiles('self',actor);}catch(error){if(error.message==='FORBIDDEN')return false;throw error;}return profile.id===actor&&profile.activated===true&&!profile.disabled&&isAdministrator(profile)&&hasModule(profile,definition.module);};
- const tasks=createBackgroundTasks({store,registry,authorize,now});return{...tasks,ensureValidation:()=>ensureShowsValidation({store,tasks,now})};
+ const tasks=createBackgroundTasks({store,registry,authorize,now});return{...tasks,async diagnoseReports(){
+  const row=await store.get(reportsMigrationType);if(!row)throw Error('TASK_NOT_FOUND');if(row.state.expiresAt<=now())throw Error('TASK_EXPIRED');
+  if(row.state.handlerVersion!==registry[reportsMigrationType].version||!await authorize(row.state.actor,registry[reportsMigrationType]))throw Error('FORBIDDEN');
+  return registry[reportsMigrationType].diagnose({actor:row.state.actor});
+ },ensureValidation:()=>ensureShowsValidation({store,tasks,now})};
 }

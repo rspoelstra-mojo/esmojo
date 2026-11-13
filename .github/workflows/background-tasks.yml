@@ -8,12 +8,12 @@ on:
         type: choice
         required: true
         default: continue
-        options: [continue, status]
+        options: [continue, status, reports-check]
 permissions:
   contents: read
   id-token: write
 concurrency:
-  group: ${{ inputs.operation == 'status' && 'background-tasks-status-production' || 'approved-background-tasks-production' }}
+  group: ${{ (inputs.operation == 'status' || inputs.operation == 'reports-check') && 'background-tasks-status-production' || 'approved-background-tasks-production' }}
   cancel-in-progress: false
 jobs:
   continue:

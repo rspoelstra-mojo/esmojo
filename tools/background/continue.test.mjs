@@ -30,3 +30,6 @@ test('continuation waits remain inside workflow deadline and requests remain bou
 test('read-only diagnostics send only the fixed status command and never run another round',async()=>{
  const f=fixture([{ok:true,continuation:continuation()}],JSON.stringify({operation:'status'}));await continueTasks({...f.options,operation:'status',wait:async()=>assert.fail('status must not wait')});assert.equal(f.calls,1);assert.match(f.logs.join(' '),/reports-schema-v1/);
 });
+test('Reports check logs fixed metadata only and never starts a continuation round',async()=>{
+ const f=fixture([{ok:true,diagnostic:{stage:'mail',code:'REPORT_CATALOG',counts:{groups:4,multiDateGroups:1},private:'provider-secret'}}],JSON.stringify({operation:'reports-check'}));await continueTasks({...f.options,operation:'reports-check'});assert.equal(f.calls,1);assert.match(f.logs.join(' '),/multiDateGroups/);assert.doesNotMatch(f.logs.join(' '),/provider-secret|private/);
+});

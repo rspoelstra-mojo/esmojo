@@ -194,3 +194,13 @@ Versleutelde immutable Opdracht-manifestpagina's/proofs zijn gebonden aan dezelf
 actor/generatie/eindtijd en worden nooit uitvoerbare taken. Geen vrije metadata,
 bronverwijdering, mail, PDF-generatie of runtimecutover. Handleiding:
 [Rapportages-migratieknop](dataverse/reports-migratieknop.md).
+
+### Alleen-lezen diagnose van de Reports-inventaris
+
+De vaste main/OIDC-worker biedt `operation=reports-check`. Dit vereist een reeds
+bestaande Reports-migratietaak, haar nog geldige oorspronkelijke48u-delegatie en
+actuele beheerder-/Reportsrechten van de initiatiefnemer. Geen taak starten,
+hervatten of herschrijven. Alleen vaste fase-/foutcodes en technische aantallen
+komen in CI; geen CSV-bytes, namen, bron-/account-ID's of providerbody. De export
+leest alleen register-/bestandsmetadata en deelt de bestaande HMAC-brug. Dit kan
+naast een lopende worker worden gecontroleerd via de read-only concurrencygroep.

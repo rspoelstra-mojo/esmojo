@@ -1,3 +1,19 @@
+// Fixed metadata-only diagnostic. Counts and known codes only; no CSV bytes,
+// source/account identifiers, names, raw errors or receipt tokens in output.
+function esmojoReportsMigrationProbe_(actor){
+ const counts={};let stage='mail';
+ try{
+  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json'),raw=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{},groups=[...(Array.isArray(raw.reports)?raw.reports:[]),...(Array.isArray(raw.onlineReports)?raw.onlineReports:[])];
+  counts.groups=groups.length;counts.multiDateGroups=groups.filter(r=>Array.isArray(r.show&&r.show.dates)&&r.show.dates.length!==1).length;counts.missingShow=groups.filter(r=>!r.show||!Array.isArray(r.show.dates)||!r.show.key).length;counts.badGroupId=groups.filter(r=>!/^[a-f0-9]{64}$/.test(r.id||'')).length;counts.badSourceHash=groups.filter(r=>!/^[a-f0-9]{64}$/.test(r.sourceHash||'')).length;
+  esmojoReportsMigrationState_(folder);
+  stage='catalogue';counts.catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}).size;
+  stage='historical';counts.historical=esmojoHistoricalSources_().length;
+  stage='validation';counts.validations=Object.keys(esmojoWebIndex_(folder).document.entries).length;
+  stage='inventory';const inventory=esmojoWebInventory_(folder);counts.sources=inventory.sources.length;counts.available=inventory.available.length;counts.unlinked=inventory.unlinked;
+  stage='export';const result=esmojoReportsMigration_({operation:'reports-migration-catalogue',actor});counts.entries=result.entries.length;
+  return{stage:'complete',code:null,counts};
+ }catch(error){return{stage,code:['FORBIDDEN','REGISTER_INVALID','REPORT_CATALOG','REPORT_UNAVAILABLE','REPORT_CONFLICT','SOURCE_MISSING','NOT_FOUND'].includes(error.message)?error.message:'UNCONFIRMED',counts};}
+}
 // Fixed read-only export. Called only behind ontrack-reports HMAC and current
 // server-side admin/Reports/MFA delegation. Never scans arbitrary Drive folders.
 function esmojoReportsMigrationMail_(row,channel){
@@ -44,6 +60,7 @@ function esmojoReportsMigrationGeneral_(show,canonical){
 }
 function esmojoReportsMigration_(request){
  const op=request.operation,keys=Object.keys(request).sort().join(','),catalogueOp=op==='reports-migration-catalogue';
+ if(op==='reports-migration-probe'){if(keys!=='actor,operation'||typeof request.actor!=='string'||!esmojoOnTrackProfiles_().some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');return esmojoReportsMigrationProbe_(request.actor);}
  if(!['reports-migration-catalogue','reports-migration-bundle','reports-migration-csv','reports-migration-file'].includes(op)||keys!==(catalogueOp?'actor,operation':op==='reports-migration-bundle'?'actor,entry,operation':op==='reports-migration-csv'?'actor,entry,operation,sourceId':'actor,entry,fileId,offset,operation'))throw Error('VALIDATION');
  if(typeof request.actor!=='string'||!esmojoOnTrackProfiles_().some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');
