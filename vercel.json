@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/shows-validation-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
+      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,google-apps-script/**}",
       "maxDuration": 300
     },
     "api/mcp.js": {
@@ -9,7 +9,7 @@
       "maxDuration": 300
     },
     "api/access.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**,google-apps-script/**}",
+      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**,google-apps-script/**}",
       "maxDuration": 300
     },
     "api/ontrack-reports-sync.js": {
@@ -25,7 +25,7 @@
       "maxDuration": 60
     },
     "api/background-tasks-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
+      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,google-apps-script/**}",
       "maxDuration": 300
     },
     "api/home-planning-sync.js": {
@@ -64,7 +64,7 @@
       "maxDuration": 300
     },
     "api/account-access-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,google-apps-script/**}",
+      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,google-apps-script/**}",
       "maxDuration": 300
     }
   },

@@ -29,12 +29,13 @@ export function compileRelationship(table,column,language,primaryId){
  if(!column.target||!primaryId)throw Error('TABLE_SCHEMA');
  return{'@odata.type':'Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata',SchemaName:column.relationship_schema,ReferencedEntity:column.target,ReferencedAttribute:primaryId,ReferencingEntity:table.logical_name,Lookup:compileAttribute(column,language),AssociatedMenuConfiguration:{Behavior:'DoNotDisplay',Group:'Details',Order:10000,Label:label(column.label,language)},CascadeConfiguration:{Assign:'NoCascade',Delete:'Restrict',Merge:'NoCascade',Reparent:'NoCascade',Share:'NoCascade',Unshare:'NoCascade'}};
 }
-export const tableSetupSteps=[
- ...Object.keys(showTableSchema.choices).filter(name=>name!=='opruimstatus_bestaand').map(name=>({id:'choice:'+name,kind:'choice',phase:'Keuzelijsten controleren',title:'Keuzelijst '+name,name:'esmojo_keuze_'+name})),
- ...setupTables.map(table=>({id:'table:'+table.logical_name,kind:'table',phase:'Tabellen',title:table.label+(table.existing?' (bestaand behouden)':''),table:table.logical_name})),
- ...setupTables.filter(table=>!table.existing).flatMap(table=>table.columns.filter(column=>!column.target&&column.logical_name!=='esmojo_naam').map(column=>({id:'column:'+table.logical_name+':'+column.logical_name,kind:'column',phase:'Kolommen',title:table.label+' · '+column.label,table:table.logical_name,column:column.logical_name}))),
- ...setupTables.flatMap(table=>table.columns.filter(column=>column.target).map(column=>({id:'relationship:'+table.logical_name+':'+column.logical_name,kind:'relationship',phase:'Relaties',title:table.label+' · '+column.label,table:table.logical_name,column:column.logical_name}))),
- ...setupTables.map(table=>({id:'publish:'+table.logical_name,kind:'publish',phase:'Tabellen publiceren',title:table.label,table:table.logical_name})),
- ...setupTables.flatMap(table=>table.keys.map((key,index)=>({id:'key:'+table.logical_name+':'+index,kind:'key',phase:'Unieke sleutels',title:table.label+' · '+(table.existing?'bestaande sleutel':key.name),table:table.logical_name,key:index}))),
-];
+export function buildTableSetupSteps(tables,choices){return[
+ ...Object.keys(choices).filter(name=>name!=='opruimstatus_bestaand').map(name=>({id:'choice:'+name,kind:'choice',phase:'Keuzelijsten controleren',title:'Keuzelijst '+name,name:'esmojo_keuze_'+name})),
+ ...tables.map(table=>({id:'table:'+table.logical_name,kind:'table',phase:'Tabellen',title:table.label+(table.existing?' (bestaand behouden)':''),table:table.logical_name})),
+ ...tables.filter(table=>!table.existing).flatMap(table=>table.columns.filter(column=>!column.target&&column.logical_name!=='esmojo_naam').map(column=>({id:'column:'+table.logical_name+':'+column.logical_name,kind:'column',phase:'Kolommen',title:table.label+' · '+column.label,table:table.logical_name,column:column.logical_name}))),
+ ...tables.flatMap(table=>table.columns.filter(column=>column.target).map(column=>({id:'relationship:'+table.logical_name+':'+column.logical_name,kind:'relationship',phase:'Relaties',title:table.label+' · '+column.label,table:table.logical_name,column:column.logical_name}))),
+ ...tables.map(table=>({id:'publish:'+table.logical_name,kind:'publish',phase:'Tabellen publiceren',title:table.label,table:table.logical_name})),
+ ...tables.flatMap(table=>table.keys.map((key,index)=>({id:'key:'+table.logical_name+':'+index,kind:'key',phase:'Unieke sleutels',title:table.label+' · '+(table.existing?'bestaande sleutel':key.name),table:table.logical_name,key:index}))),
+];}
+export const tableSetupSteps=buildTableSetupSteps(setupTables,showTableSchema.choices);
 export const tableStepById=new Map(tableSetupSteps.map(step=>[step.id,step]));

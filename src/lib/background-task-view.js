@@ -5,7 +5,8 @@ export function createBackgroundTaskView({container,button,type,request,run=task
  const runnable=()=>job&&['queued','running','waiting'].includes(job.status);
  function message(){
   if(!job)return 'Nog geen achtergrondtaak gestart.';
-  const counts=`${job.status!=='complete'&&job.total?'Stap '+(job.progress?.current||0)+' van '+job.total+' · ':''}${job.progress?.verifiedRecords||0} records en ${job.progress?.verifiedFiles||0} bestanden gecontroleerd.`;
+  const counts=labels.metadata?`${job.progress?.current||0} van ${job.total||0} inrichtingsstappen bevestigd.`:`${job.status!=='complete'&&job.total?'Stap '+(job.progress?.current||0)+' van '+job.total+' · ':''}${job.progress?.verifiedRecords||0} records en ${job.progress?.verifiedFiles||0} bestanden gecontroleerd.`;
+  if(job.status==='complete'&&labels.metadata)return `${job.title||'Inrichting'} klaar. ${counts} ${labels.completedNote||''}`.trim();
   if(job.status==='complete')return `${job.title||'Achtergrondtaak'} klaar: ${job.total||0} ${labels.unit||'onderdelen'}. ${counts} ${labels.completedNote||''}`.trim();
   if(job.status==='blocked')return `${job.error||job.label||'Taak gestopt voor controle.'} ${counts}${!job.canResume&&!job.canRestart?' Veilig hervatten wordt na de wachttijd automatisch weer beschikbaar.':''}`;
   if(job.status==='waiting')return `${job.error||job.label||'De server wacht en probeert automatisch opnieuw.'} ${counts} Je mag deze pagina sluiten.`;
