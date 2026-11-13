@@ -32,3 +32,7 @@ test('native artist preparation overlays the retained report source with confirm
  const f=fixture(),concertId=sampleSource.concertId,actor='synthetic-esm',field='ticket_sales',token='11111111-1111-4111-8111-111111111111';await f.service('ticket-reserve',{concertId,actor,field,token,expectedVersion:0});await f.service('ticket-review',{concertId,actor,field,token,expectedVersion:0,content:'120'});
  const {digest}=await import('../show-migration-writer.js');const result=await f.service.related('artist-show',{actor,artistIds:['a_'+digest('test')],date:'2026-11-15',venue:'Gashouder'},async()=>({show:{name:'Test',date:'2026-11-15',venue:'Gashouder'},report:{test:true},preparation:null}));assert.equal(result.preparation.tickets.sales,'120');assert.equal(result.report.test,true);
 });
+test('native new research shows preserve venue aliases and work outside Gashouder',async()=>{
+ const f=fixture(),show={key:'dataverse_test_ahoy_20261201',sourceKey:'test_ahoy_20261201',name:'Test',venue:'Rotterdam Ahoy',city:'Rotterdam',dates:['2026-12-01']};
+ const result=await f.service('dataverse-ensure',{show});assert.equal(result.concertId,show.key);assert.equal((await f.service('show-open',{concertId:show.key,actor:'synthetic-esm'})).profile.revision,0);assert.equal((await f.state.load(show.key)).source.shows[0].venue,'Rotterdam Ahoy');
+});

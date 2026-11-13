@@ -1,7 +1,7 @@
 import {createNativeShowState} from './state.js';
 import {createDataverseResearch} from '../dataverse-research.js';
 import {validateResearchRequest,ResearchError} from '../research-validation.js';
-import {researchKeyForConcert} from '../../shared/dataverse-shows.js';
+import {researchKeyForConcert,researchKeyForId} from '../../shared/dataverse-shows.js';
 import {mapShow} from '../show-migration-map.js';
 import {digest,canonical} from '../show-migration-writer.js';
 import {assertNativeAuthority} from './authority.js';
@@ -12,7 +12,7 @@ export function createNativeResearchStore({env=process.env,state=createNativeSho
   const input=validateResearchRequest(request);await authority();
   if(!['context','read','write'].includes(input.operation))throw new ResearchError('VALIDATION');
   const loaded=await state.load(input.concertId);await state.verifyPlan(mapShow(loaded.source,loaded.people),loaded.source.nativeGeneration||0);
-  const source=loaded.source,selected=source.shows.find(row=>row.concertId===loaded.concert.esmojo_oudconcertid),primary=source.shows.find(row=>row.concertId===source.concertId),pick=row=>Object.fromEntries(['concertId','artist','venue','city','date'].map(key=>[key,row[key]])),common={selected:pick(selected),storage:pick(primary),seriesDates:source.shows.map(row=>row.date).sort()},sourceKey=researchKeyForConcert(primary),native=await research.read(sourceKey);
+  const source=loaded.source,selected=source.shows.find(row=>row.concertId===loaded.concert.esmojo_oudconcertid),primary=source.shows.find(row=>row.concertId===source.concertId),pick=row=>Object.fromEntries(['concertId','artist','venue','city','date'].map(key=>[key,row[key]])),common={selected:pick(selected),storage:pick(primary),seriesDates:source.shows.map(row=>row.date).sort()},sourceKey=researchKeyForId(primary.concertId)||researchKeyForConcert(primary),native=await research.read(sourceKey);
   if(input.operation==='context')return{...common,completedQuestions:Object.keys(native.researchByNumber).map(Number).sort((a,b)=>a-b)};
   const number=input.questionNumber,filename='onderzoek_'+String(number).padStart(2,'0')+'.json',old=source.documents[filename],current=native.researchByNumber[number];
   if(input.operation==='read'){

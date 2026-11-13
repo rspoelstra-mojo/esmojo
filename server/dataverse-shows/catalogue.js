@@ -5,7 +5,7 @@ import {MOJO_VENUES} from '../mojo-venues.js';
 import {calendarDate,addDays,concertId as makeConcertId} from '../mojo-agenda.js';
 import {validTimetableDate} from '../../shared/show-timetable.js';
 import {homeCatalogue} from '../../shared/home-catalogue.js';
-import {researchKeyForConcert,researchKeyForId} from '../../shared/dataverse-shows.js';
+import {researchKeyForConcert,researchKeyForId,parseResearchKey,researchSlug} from '../../shared/dataverse-shows.js';
 import {normalizeArtistName} from '../../shared/artist-catalogue.js';
 import {biographyCandidates} from '../artist-biographies.js';
 import {showPlanning} from './planning.js';
@@ -14,6 +14,10 @@ const sameKeys=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(valu
 const photoValid=p=>sameKeys(p,['imageUrl','sourceUrl'])&&/^https:\/\/www\.mojo\.nl\/media\/[\w/.-]+\.(?:jpe?g|png|webp)(?:\?[^#\s]*)?$/i.test(p.imageUrl)&&/^https:\/\/www\.mojo\.nl\/concerten\/[\w%/-]+$/.test(p.sourceUrl);
 const biographyUrl=value=>typeof value==='string'&&/^https:\/\/(?:www\.)?mojo\.nl\/(?:[a-z0-9-]+\/?|concerten\/[\w%/-]+)$/.test(value);
 const internalRows=plan=>plan.records.filter(row=>!['esmojo_historie','esmojo_integratiestatus'].includes(row.table));
+function validSourceIdentity(show){
+ const source=parseResearchKey(show.sourceKey),venue=MOJO_VENUES.find(v=>v.name===show.venue);
+ return source&&source.date===show.dates[0]&&researchSlug(source.artistToken)===researchSlug(show.name)&&venue&&[venue.name,venue.id,...venue.aliases].some(name=>researchSlug(name)===researchSlug(source.venueToken));
+}
 export function createNativeCatalogue({state,now=()=>new Date()}={}){
  const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1');
  async function writeRows(rows){const ops=await recordOperations(repo,rows);if(ops.length)await repo.atomic(ops);}
@@ -40,7 +44,7 @@ export function createNativeCatalogue({state,now=()=>new Date()}={}){
   await writeRows(rows);
  }
  async function ensure(show){
-  if(!show||typeof show.key!=='string'||typeof show.name!=='string'||!show.name||show.name.length>160||!Array.isArray(show.dates)||show.dates.length!==1||!validTimetableDate(show.dates[0])||!MOJO_VENUES.some(v=>v.name===show.venue&&v.city===show.city)||researchKeyForId(show.key)!==show.sourceKey||researchKeyForConcert({artist:show.name,venue:show.venue,date:show.dates[0]})!==show.sourceKey)throw Error('VALIDATION');
+  if(!show||typeof show.key!=='string'||typeof show.name!=='string'||!show.name||show.name.length>160||!Array.isArray(show.dates)||show.dates.length!==1||!validTimetableDate(show.dates[0])||!MOJO_VENUES.some(v=>v.name===show.venue&&v.city===show.city)||researchKeyForId(show.key)!==show.sourceKey||!validSourceIdentity(show))throw Error('VALIDATION');
   const existing=await repo.byKey('esmojo_routealias',recordKey('esmojo_routealias','route/show/'+show.key));
   if(existing){const scope=await state.resolve(show.key);return{concertId:scope.concert.esmojo_oudconcertid};}
   const data=await all(),matches=data.rows.filter(row=>researchKeyForConcert(row)===show.sourceKey);
