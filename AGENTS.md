@@ -1,3 +1,21 @@
+## Rapportages-kopie naar Dataverse (13 november 2026)
+
+Gebruiker autoriseert nu de eenknopsmigratie van alle bestaande Rapportages-data
+van Drive naar het voorbereide Dataverse-schema. Dit vervangt de eerdere beperking
+uitsluitend schema voor deze gerichte kopie. CSV17, alle drie bronsoorten, context,
+TSC-koptotalen, tickets, tijdschema, bronversies en bestaande PDF/mail/ontvanger-/
+openingshistorie behouden. Geen bronverwijdering, nieuwe mails/PDF's, runtimecutover
+of nieuw CSV-aanleverpad. Expliciete productieklik na actuele admin/Reports/MFA,
+48u vaste delegatie, nieuwe reports-migration-v1 adapter in bestaande worker.
+Versleutelde Opdracht-manifestpagina's en bewijzen per taakgeneratie toegestaan;
+geen bronbytes in checkpoint/browser/log. Eerst alle schema/indexen read-only
+controleren; create-only en exacte readback, bestanden blokgewijs vergelijken.
+Conflicten/gewijzigde bronnen stoppen. Raw receipt-/OAuth-tokens niet kopiëren;
+alleen bestaande ontvangstbewijshash. Bestaande Shows-concerten hergebruiken,
+nieuwe rapport-only Core-reeksen uit native Shows-catalogus houden. Geen actief
+Shows-JSON/hash of rechtenbron wijzigen. Onbekende oude CSV-bytes niet vervangen
+door huidige: PDF/mailhistorie apart met nullable bron-/rekencontext bewaren.
+
 ## Rapportages-schema voorbereiden (13 november 2026)
 
 Gebruiker vraagt uitsluitend het Dataverse-opslagmodel en één beheerknop voor

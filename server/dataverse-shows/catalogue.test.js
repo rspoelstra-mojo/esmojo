@@ -36,3 +36,11 @@ test('native new research shows preserve venue aliases and work outside Gashoude
  const f=fixture(),show={key:'dataverse_test_ahoy_20261201',sourceKey:'test_ahoy_20261201',name:'Test',venue:'Rotterdam Ahoy',city:'Rotterdam',dates:['2026-12-01']};
  const result=await f.service('dataverse-ensure',{show});assert.equal(result.concertId,show.key);assert.equal((await f.service('show-open',{concertId:show.key,actor:'synthetic-esm'})).profile.revision,0);assert.equal((await f.state.load(show.key)).source.shows[0].venue,'Rotterdam Ahoy');
 });
+
+test('report-only Core identities never enter the native Shows catalogue or agenda maintenance',async()=>{
+ const f=fixture(),{record,reference}=await import('../show-migration-writer.js');
+ const series=record('concertreeks','reports-series/synthetic','Report only',{eerstedatum:'2026-01-01',laatstedatum:'2026-01-01',oudalgemeenconcertid:'reports-only/synthetic',profielrevisie:0,afrondrevisie:0,productierevisie:0,voorbereidingsgeneratie:0},{artiest:reference('artiest','artist/'+[...f.tables.get('esmojo_artiest').values()][0].esmojo_bronartiestid),locatie:reference('locatie','venue/gashouder')});
+ const {recordOperations}=await import('./mutations.js');await f.repo.atomic(await recordOperations(f.repo,[series]));
+ const concert=record('concert','concert/report-only','Report only',{datum:'2026-01-01',oudconcertid:'report-only',uitvoeringscode:'Niet vermeld',tooninshows:false,tooninrapportages:false},{concertreeks:reference('concertreeks','reports-series/synthetic')});await f.repo.atomic(await recordOperations(f.repo,[concert]));
+ const data=await f.catalogue.all();assert.equal(data.rows.length,1);assert.equal(data.series.length,1);assert.equal(data.rows[0].concertId,sampleSource.concertId);
+});

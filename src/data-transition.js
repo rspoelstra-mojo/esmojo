@@ -1,3 +1,4 @@
+import {createReportsMigration} from './reports-migration.js';
 import {createReportsSchemaSetup} from './reports-schema-setup.js';
 import {createBackgroundTaskView} from './lib/background-task-view.js';
 import {retrySetupStep} from './lib/setup-retry.js';
@@ -5,7 +6,7 @@ import {access} from './auth.js';
 import './data-transition.css';
 const el=(tag,text='')=>Object.assign(document.createElement(tag),{textContent:text});
 export function createDataTransitionView(content,{request=access,setupDelay=ms=>new Promise(resolve=>setTimeout(resolve,ms)),canShows=true,canReports=true}={}){
- let disposed=false,busy=false,previews=[],bulkRun=null,taskControls=null,accessControls=null,reportsControls=null;
+ let disposed=false,busy=false,previews=[],bulkRun=null,taskControls=null,accessControls=null,reportsControls=null,reportsMigrationControls=null;
  const card=el('section'),title=el('h1','Datatransitie'),intro=el('p','Bereid de Dataverse-tabellen en keuzelijsten voor, of verplaats openbare AI-analyses van Google Drive naar Dataverse. De volledige tekst en bronnen blijven samen in Markdown. Drive-originelen, eigen teksten en beoordelingen blijven behouden. Kies één show of zet alle beschikbare analyses over met één knop. Houd deze pagina open bij AI-import en schema-setup. De volledige Shows-migratie kan zelfstandig op de achtergrond doorgaan.'),label=el('label','Show zoeken'),search=el('input'),select=el('select'),load=el('button','Shows laden'),preview=el('button','Voorbeeld bekijken'),save=el('button','Importeren en controleren'),status=el('p'),results=el('div'),bulk=el('button','Alle AI-analyses overzetten'),choices=el('button','Keuzelijsten aanmaken en controleren'),tables=el('button','Tabellen aanmaken en controleren'),migrate=el('button','Alle Shows-gegevens overzetten');
  card.className='data-transition';search.type='search';search.placeholder='Bijvoorbeeld Antoon';search.id='migration-search';label.htmlFor=search.id;select.setAttribute('aria-label','Te migreren show');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  for(const button of [load,preview,save,bulk,choices,tables,migrate])button.type='button';
@@ -94,6 +95,6 @@ export function createDataTransitionView(content,{request=access,setupDelay=ms=>
  const accessButton=el('button','Voorbereiden, controleren en activeren');accessButton.type='button';
  const accessProgress=el('div'),accessError=el('p');accessError.setAttribute('role','alert');accessCard.append(accessTitle,accessIntro,accessButton,accessProgress,accessError);
  if(canShows)accessControls=createBackgroundTaskView({container:accessProgress,button:accessButton,type:'account-access-v1',labels:{unit:'accounts',completedNote:'Accountstatus en modulerechten worden actueel in Dataverse gecontroleerd. Profielgegevens, rollen en login zijn behouden.',start:'Voorbereiden, controleren en activeren',repeat:'Toegangscontrole opnieuw controleren',resume:'Toegangscontrole veilig hervatten',restart:'Toegangscontrole opnieuw controleren',running:'Controle loopt op de server'},request,isBusy:()=>busy,run:async task=>{accessError.textContent='';try{await task();}catch(error){if(!disposed)accessError.textContent=error.message||'De opdracht is nog niet bevestigd. Open de pagina opnieuw om de opgeslagen status te controleren.';}}});
- const children=[];if(canReports){const reportsCard=el('section');reportsControls=createReportsSchemaSetup(reportsCard,{request});children.push(reportsCard);}if(canShows)children.push(card,accessCard);
- content.replaceChildren(...children);return()=>{disposed=true;taskControls?.dispose();accessControls?.dispose();reportsControls?.dispose();};
+ const children=[];if(canReports){const reportsCard=el('section');reportsControls=createReportsSchemaSetup(reportsCard,{request});children.push(reportsCard);const migrationCard=el('section');reportsMigrationControls=createReportsMigration(migrationCard,{request});children.push(migrationCard);}if(canShows)children.push(card,accessCard);
+ content.replaceChildren(...children);return()=>{disposed=true;taskControls?.dispose();accessControls?.dispose();reportsControls?.dispose();reportsMigrationControls?.dispose();};
 }

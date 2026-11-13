@@ -1,3 +1,4 @@
+import {createReportsMigrationTask,migrationType as reportsMigrationType} from '../reports-migration/task.js';
 import {createReportsSchemaTask,reportsSchemaTaskType} from '../reports-schema-task.js';
 import {createAccessTask,accessTaskType} from '../account-access/task.js';
 import {ensureShowsValidation} from '../shows-validation-task.js';
@@ -7,9 +8,9 @@ import {createProfiles} from '../account-profiles.js';
 import {isAdministrator,hasModule} from '../../shared/account-modules.js';
 import {createTaskStore} from './store.js';
 import {createBackgroundTasks} from './engine.js';
-export const taskDefinitions=Object.freeze({[reportsSchemaTaskType]:Object.freeze({title:'Dataverse klaarzetten voor Rapportages',module:'reports',version:1,idempotent:true}),[accessTaskType]:Object.freeze({title:'Snelle toegangscontrole',module:'shows',version:1,idempotent:true}),'shows-migration-v1':Object.freeze({title:'Shows-migratie',module:'shows',version:1,idempotent:true}),'shows-validation-v1':Object.freeze({title:'Shows-eindvalidatie',module:'shows',version:1,idempotent:true})});
+export const taskDefinitions=Object.freeze({[reportsMigrationType]:Object.freeze({title:'Rapportages-migratie',module:'reports',version:1,idempotent:true}),[reportsSchemaTaskType]:Object.freeze({title:'Dataverse klaarzetten voor Rapportages',module:'reports',version:1,idempotent:true}),[accessTaskType]:Object.freeze({title:'Snelle toegangscontrole',module:'shows',version:1,idempotent:true}),'shows-migration-v1':Object.freeze({title:'Shows-migratie',module:'shows',version:1,idempotent:true}),'shows-validation-v1':Object.freeze({title:'Shows-eindvalidatie',module:'shows',version:1,idempotent:true})});
 export const backgroundTaskModule=type=>typeof type==='string'&&Object.hasOwn(taskDefinitions,type)?taskDefinitions[type].module:null;
-export function createTaskRegistry({env=process.env,migrate=createShowMigration({env}),validate=createShowMigration({env,readOnly:true}),access=createAccessTask({env}),reportsSchema=createReportsSchemaTask({env})}={}){
+export function createTaskRegistry({env=process.env,migrate=createShowMigration({env}),validate=createShowMigration({env,readOnly:true}),access=createAccessTask({env}),reportsSchema=createReportsSchemaTask({env}),reportsMigration=createReportsMigrationTask({env})}={}){
  const adapter=(type,service)=>({...taskDefinitions[type],
   async step({cursor,actor,authorizationExpiresAt}){
    const result=await service(cursor?{operation:'advance',token:cursor}:{operation:'start'},actor,{authorizationExpiresAt});
@@ -18,7 +19,7 @@ export function createTaskRegistry({env=process.env,migrate=createShowMigration(
    return{cursor:result.token,status:waiting?'waiting':result.status==='running'?'ready':result.status,delayMs:waiting?300000:0,public:{label:result.label,total:result.total,progress:result.progress,...(result.status==='blocked'&&!waiting?{error:'De schemacontrole blokkeert de taak. Controleer de gemelde tabel of sleutel.',code:'MIGRATION_SCHEMA'}:{})}};
   },
   failure(error){const failure=showMigrationFailure(error);return{...failure,uncertain:['MIGRATION_UNCONFIRMED','SETUP_TEMPORARY'].includes(failure.code)};}
- });return{[reportsSchemaTaskType]:reportsSchema,[accessTaskType]:access,'shows-migration-v1':adapter('shows-migration-v1',migrate),'shows-validation-v1':adapter('shows-validation-v1',validate)};
+ });return{[reportsMigrationType]:reportsMigration,[reportsSchemaTaskType]:reportsSchema,[accessTaskType]:access,'shows-migration-v1':adapter('shows-migration-v1',migrate),'shows-validation-v1':adapter('shows-validation-v1',validate)};
 }
 export function createApplicationTasks({env=process.env,profiles=createProfiles({env}),store=createTaskStore({env}),registry=createTaskRegistry({env}),now=Date.now}={}){
  const authorize=async(actor,definition)=>{let profile;try{profile=await profiles('self',actor);}catch(error){if(error.message==='FORBIDDEN')return false;throw error;}return profile.id===actor&&profile.activated===true&&!profile.disabled&&isAdministrator(profile)&&hasModule(profile,definition.module);};
