@@ -35,3 +35,8 @@ test('native relationship binds accept only the schema target entity set and nat
   if(path.includes("LogicalName='esmojo_concertreeks'"))return Response.json({LogicalName:'esmojo_concertreeks',EntitySetName:'series',PrimaryIdAttribute:'seriesid',ManyToOneRelationships:[]});return new Response('HTTP/1.1 204 No Content\r\n');
  }};const repo=createNativeShowsRepository({connection}),op={table:'esmojo_analyse',id,method:'PATCH',etag:'W/"1"',payload:{'esmojo_concertreeks@odata.bind':'/series('+id+')'}};await repo.atomic([op]);for(const binding of ['/accounts('+id+')','https://example.invalid/series('+id+')','/series(free)'])await assert.rejects(repo.atomic([{...op,payload:{'esmojo_concertreeks@odata.bind':binding}}]),/VALIDATION/);
 });
+test('parallel native reads stay within four metadata and eight record requests',async()=>{
+ const {tableByName}=await import('../dataverse-table-schema.js');let metadata=0,records=0,maxMetadata=0,maxRecords=0;
+ const connection={connect:async()=>({headers:{}}),json:r=>r.json(),call:async path=>{const table=/LogicalName='([^']+)'/.exec(path)?.[1];if(table){maxMetadata=Math.max(maxMetadata,++metadata);await new Promise(resolve=>setTimeout(resolve,1));metadata--;return Response.json({LogicalName:table,EntitySetName:table+'_set',PrimaryIdAttribute:table+'id',ManyToOneRelationships:[]});}maxRecords=Math.max(maxRecords,++records);await new Promise(resolve=>setTimeout(resolve,1));records--;return Response.json({value:[]});}};
+ const repo=createNativeShowsRepository({connection});await Promise.all([...tableByName.keys()].slice(0,20).map(table=>repo.query(table,{filter:'statecode eq 0'})));assert.ok(maxMetadata<=4);assert.ok(maxRecords<=8);
+});

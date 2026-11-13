@@ -93,3 +93,8 @@ test('native floor sections retain measured values and are invalidated when the 
  const done=await f.service('floor-complete',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows:[{id:'standing',name:'Staanplaatsen',visitors:100,area:80}],riskLevel:'low',note:''}});assert.equal(done.record.completed,true);assert.equal([...f.tables.get('esmojo_publieksvak').values()][0].esmojo_bezoekers,100);
  const reopened=await f.service('barrier-reopen',{concertId,actor,revision:barrier.record.revision});await f.service('barrier-draft',{concertId,actor,revision:reopened.record.revision,data:{barrierType:'end_stage_gc',riskLevel:'low',notes:null,uploadId:null,riskNote:''}});assert.equal((await f.service('floor-read',{concertId,actor})).record.completed,false);
 });
+test('a valid large custom floor remains one transaction instead of a partial batch',async()=>{
+ const f=fixture(),actor='synthetic-esm';await f.service('barrier-draft',{concertId,actor,revision:0,data:{barrierType:'custom',riskLevel:null,notes:'Testontwerp',uploadId:null,riskNote:''}});
+ const floor=await f.service('floor-read',{concertId,actor}),rows=[{id:'standing',name:'Staanplaatsen',visitors:100,area:80},...Array.from({length:260},(_,i)=>({id:'vak_'+i,name:'Vak '+i,visitors:0,area:1}))];
+ const saved=await f.service('floor-draft',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows,riskLevel:'low',note:''}});assert.equal(saved.record.rows.length,261);assert.equal(f.tables.get('esmojo_publieksvak').size,261);
+});
