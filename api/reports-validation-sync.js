@@ -16,21 +16,24 @@ export function createReportsValidationRunner({env=process.env,now=Date.now,stor
 export function makeReportsValidationSync({tasks=createReportsValidationRunner(),identify=token=>verifyImportIdentity(token,{audience:'https://esmojo.nl/api/reports-validation-sync',workflow:'reports-validation.yml'})}={}){
  return async(req,res)=>{
   res.setHeader('Cache-Control','no-store, private');
-  res.setHeader('X-ESMOJO-Reports-Validation','2');
+  res.setHeader('X-ESMOJO-Reports-Validation','3');
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false});}
-  try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1]);}catch{return res.status(403).json({ok:false});}
+  try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1]);}catch(error){return res.status(403).json({ok:false,code:'OIDC_FORBIDDEN',stage:['token','claims','issuer','audience','subject','repository','ref','workflow','jwks','signature'].includes(error.identityStage)?error.identityStage:'identity'});}
   if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)||Object.keys(req.body).length)return res.status(400).json({ok:false});
+  let stage='approval';
   try{
    let current=await tasks.ensure();
    if(current.task?.status==='blocked')return res.status(409).json({ok:false,code:'REPORTS_VALIDATION_BLOCKED'});
    let stats={steps:0,completed:1,blocked:0,waiting:0,failed:0};
    if(current.task?.status!=='complete'){
+    stage='running';
     const result=await tasks.run({budgetMs:210000,types:['reports-validation-v1']});
     stats=Object.fromEntries(Object.keys(stats).map(k=>[k,Number.isSafeInteger(result[k])&&result[k]>=0?result[k]:0]));
     current=await tasks.ensure();
    }
+   stage='status';
    return res.status(stats.failed?503:200).json({ok:!stats.failed,stats,continuation:await tasks.inspect(),...(current.task?.status==='complete'?{verification:{reports:current.task.total,records:current.task.progress.verifiedRecords,files:current.task.progress.verifiedFiles}}:{})});
-  }catch{return res.status(503).json({ok:false,code:'REPORTS_VALIDATION_UNCONFIRMED'});}
+  }catch(error){const allowed=['VALIDATION_APPROVAL_REQUIRED','TASK_EXPIRED','TASK_CORRUPT','TASK_BUSY','FORBIDDEN','CHOICE_AUTH','CHOICE_FORBIDDEN','SETUP_TEMPORARY','SETUP_THROTTLED'];return res.status(503).json({ok:false,stage,code:allowed.includes(error.message)?error.message:'REPORTS_VALIDATION_UNCONFIRMED'});}
  };
 }
 export default isolateFluidApi(makeReportsValidationSync());

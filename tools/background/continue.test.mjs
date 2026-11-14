@@ -48,3 +48,7 @@ test('Reports validation uses its own fixed audience, resumes waits and exposes 
  }});
  assert.equal(round,2);assert.equal(identities,2);assert.deepEqual(waits,[30000]);assert.match(logs.join(' '),/"verifiedReports":221/);assert.doesNotMatch(logs.join(' '),/hidden/);
 });
+test('Reports validation failure logs only fixed HTTP/code/stage diagnostics',async()=>{
+ const logs=[];await assert.rejects(continueTasks({mode:'reports-validation',now:()=>0,log:x=>logs.push(x),env:{ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example.invalid/token',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'},fetcher:async url=>String(url).startsWith('https://identity.example.invalid')?Response.json({value:'synthetic'}):Response.json({ok:false,code:'OIDC_FORBIDDEN',stage:'subject',private:'sensitive-payload'},{status:403})}),/niet bevestigd/);
+ assert.match(logs.join(' '),/"validationHttpStatus":403/);assert.match(logs.join(' '),/"stage":"subject"/);assert.doesNotMatch(logs.join(' '),/sensitive-payload/);
+});

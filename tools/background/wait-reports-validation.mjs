@@ -6,7 +6,7 @@ export async function waitForReportsValidation({fetcher=fetch,now=Date.now,wait=
  for(let round=0;round<18&&now()<deadline;round++){
   try{
    const r=await fetcher('https://esmojo.nl/api/reports-validation-sync',{method:'GET',redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(10000)});
-   if(r.status===405&&r.headers.get('x-esmojo-reports-validation')==='2')return;
+   if(r.status===405&&r.headers.get('x-esmojo-reports-validation')==='3')return;
   }catch{/* A failed public readiness read never starts or mutates a task. */}
   if(now()+10000>=deadline)break;await wait(10000);
  }

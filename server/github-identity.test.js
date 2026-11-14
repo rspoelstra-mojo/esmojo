@@ -24,6 +24,9 @@ test('alleen geldig GitHub-token voor vaste workflow, repository, main en audien
 test('ontbrekende, vervalste of alg-none tokens en onbekende sleutels krijgen geen toegang', async () => {
   for (const value of [undefined, 'invalid', token().slice(0, -10), token({}, { alg: 'none' }), token({}, { kid: 'untrusted' })]) await assert.rejects(verifyImportIdentity(value, { request, now }), /FORBIDDEN/);
 });
+test('identity diagnostics contain only closed stage names, never raw token or claim values',async()=>{
+ for(const [patch,stage]of [[{sub:'private-subject-value'},'subject'],[{aud:'private-audience-value'},'audience'],[{iss:'private-issuer-value'},'issuer']])await assert.rejects(verifyImportIdentity(token(patch),{request,now}),error=>{assert.equal(error.message,'FORBIDDEN');assert.equal(error.identityStage,stage);assert.doesNotMatch(JSON.stringify(error),/private/);return true;});
+});
 test('Biografieworker accepteert uitsluitend eigen audience/main/workflow; push en workflow_run verruimen geen andere worker',async()=>{
  const audience='https://esmojo.nl/api/artist-biographies-sync',workflow='artist-biographies.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
  for(const event_name of ['schedule','workflow_dispatch','push','workflow_run'])assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),{runId:'123'});
