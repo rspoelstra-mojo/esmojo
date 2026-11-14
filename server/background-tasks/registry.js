@@ -26,7 +26,7 @@ export function createApplicationTasks({env=process.env,profiles=createProfiles(
  const tasks=createBackgroundTasks({store,registry,authorize,now});return{...tasks,async diagnoseReports(){
   const row=await store.get(reportsMigrationType);if(!row)throw Error('TASK_NOT_FOUND');if(row.state.expiresAt<=now())throw Error('TASK_EXPIRED');
   if(row.state.handlerVersion!==registry[reportsMigrationType].version||!await authorize(row.state.actor,registry[reportsMigrationType]))throw Error('FORBIDDEN');
-  return registry[reportsMigrationType].diagnose({actor:row.state.actor});
+  return registry[reportsMigrationType].diagnose({actor:row.state.actor,cursor:row.state.cursor,runId:row.state.epoch,authorizationExpiresAt:row.state.expiresAt});
  },async resumeReportsInventory(){
   const row=await store.get(reportsMigrationType),definition=registry[reportsMigrationType];
   if(!row||row.state.expiresAt<=now())throw Error('TASK_EXPIRED');

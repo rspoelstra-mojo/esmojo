@@ -48,3 +48,11 @@ test('final verification uses the hash-proven sealed pipeline baseline without i
   if(businessChange)await assert.rejects(run,/MIGRATION_SOURCE_CHANGED/);else assert.equal((await run).status,'complete');assert.equal(changed,true);
  }
 });
+test('checkpoint diagnosis reads only the exact pending dataset and emits bounded technical codes without writes or private error text',async()=>{
+ const f=await setup(),task=createReportsMigrationTask(f.options);let cursor=null;
+ for(let i=0;i<30;i++){const result=await task.step({cursor,actor,runId,authorizationExpiresAt:expires});cursor=result.cursor;if(JSON.parse(cursor).phase==='datasets')break;}
+ assert.equal(JSON.parse(cursor).phase,'datasets');const writes=()=>f.destination.calls.filter(call=>call.method!=='GET').length,before=writes();
+ const good=await task.diagnose({cursor,actor,runId,authorizationExpiresAt:expires});assert.equal(good.stage,'dataset-ready');assert.equal(good.code,null);assert.ok(good.counts.plannedRecords>0);assert.equal(writes(),before);assert.doesNotMatch(JSON.stringify(good),/synthetic|concert|actor|incidentidhash/);
+ const broken=createReportsMigrationTask({...f.options,source:{...f.options.source,csv:async()=>{throw new TypeError('private incident and identity');}}});const failed=await broken.diagnose({cursor,actor,runId,authorizationExpiresAt:expires});assert.equal(failed.stage,'dataset-csv');assert.equal(failed.code,'RUNTIME_TYPE_ERROR');assert.ok(!JSON.stringify(failed).includes('private'));assert.equal(writes(),before);
+ const invalid=await task.diagnose({cursor,actor,runId:'wrong-epoch',authorizationExpiresAt:expires});assert.equal(invalid.code,'TASK_CORRUPT');assert.equal(writes(),before);
+});
