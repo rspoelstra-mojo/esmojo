@@ -24,12 +24,25 @@ export function createReportsMigrationTask({env=process.env,now=Date.now,source=
   const batch=[];for(const row of records.slice(s[indexName],s[indexName]+32)){if(row.table!==first.table||Buffer.byteLength(canonical([...batch,row]))>1800000)break;batch.push(row);}if(!batch.length)throw Error('MIGRATION_MAPPING');
   if(service.attachEmployees)await service.attachEmployees(batch);await service.ensureMany(batch);s[indexName]+=batch.length;if(service===writer)s.records+=batch.length;return s[indexName]===records.length;
  }
- const safeCode=error=>['ARTIST_CATALOGUE','MIGRATION_SOURCE','MIGRATION_SOURCE_LIMIT','MIGRATION_SOURCE_CHANGED','REPORTS_UNLINKED','REPORT_CATALOG','REGISTER_INVALID','TASK_UNCONFIRMED','TASK_CORRUPT'].includes(error.message)?error.message:'UNCONFIRMED';
+ const safeCode=error=>error instanceof TypeError?'RUNTIME_TYPE_ERROR':error instanceof RangeError?'RUNTIME_RANGE_ERROR':['CSV_ENCODING','CSV_TOO_LARGE','CSV_QUOTES','CSV_HEADERS','CSV_COLUMNS','CSV_EMPTY','CSV_ID','CSV_TIME','CSV_TIME_NONEXISTENT','CSV_AFFECTED_PERSON','CSV_SHOW_MISMATCH','REPORT_TIME','MIGRATION_MAPPING','MIGRATION_REJECTED','MIGRATION_SCHEMA','MIGRATION_DEPENDENCY','SOURCE_CHANGED','MIGRATION_CONFLICT','ARTIST_CATALOGUE','MIGRATION_SOURCE','MIGRATION_SOURCE_LIMIT','MIGRATION_SOURCE_CHANGED','REPORTS_UNLINKED','REPORT_CATALOG','REGISTER_INVALID','TASK_UNCONFIRMED','TASK_CORRUPT'].includes(error.message)?error.message:'UNCONFIRMED';
  return{title:'Rapportages-migratie',module:'reports',version:1,idempotent:true,
   canResumeInventory(cursor,run){try{const state=JSON.parse(cursor);return state.version===1&&state.schema===reportsSchemaHash&&state.run===run&&state.phase==='inventory'&&state.checkIndex===metadataPlan.length&&state.records===0&&state.files===0&&!state.inventoryHash;}catch{return false;}},
-  async diagnose({actor}){
+  async diagnose({actor,cursor,runId,authorizationExpiresAt}){
    const counts={};let stage='source-probe';
    try{
+    if(cursor){
+     const s=JSON.parse(cursor);
+     if(s.version!==1||s.schema!==reportsSchemaHash||s.run!==runId)throw Error('TASK_CORRUPT');
+     if(['datasets','verify-datasets'].includes(s.phase)){
+      stage='checkpoint-entry';const {entry}=await entryAt(s,actor,authorizationExpiresAt);
+      stage='checkpoint-bundle';const b=await bundle(s,entry,actor),sources=canonicalSources(b),item=sources[s.sourceIndex];
+      if(!item||!Number.isSafeInteger(s.rowIndex)||s.rowIndex<0)throw Error('TASK_CORRUPT');
+      stage='dataset-csv';const bytes=await source.csv(entry,item.source.id,actor,item.sha256);counts.csvBytes=bytes.length;
+      stage='dataset-map';const plan=mapDataset(b,item,bytes);counts.plannedRecords=plan.records.length;counts.recordIndex=s.rowIndex;
+      if(s.rowIndex>plan.records.length)throw Error('TASK_CORRUPT');
+      return{stage:'dataset-ready',code:null,counts};
+     }
+    }
     const result=await source.probe(actor);if(result.code)return result;
     Object.assign(counts,result.counts);stage='node-source';const value=await source.catalogue(actor);stage='grouping';const entries=groupReportEntries(value.entries);counts.grouped=entries.length;
     stage='manifest';const plan=splitManifest(entries,value.selection);counts.manifestPages=plan.pages.length;counts.settingsPages=plan.settings.length;

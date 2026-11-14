@@ -218,3 +218,10 @@ De technische OIDC-status toont daarnaast uitsluitend de bestaande tellers
 operationele OnTrack-heartbeat normaliseren tegen de hash-gecontroleerde, versleutelde
 originele instellingen; alle zakelijke bronvelden blijven strikt. Zie de
 Rapportages-migratiehandleiding voor deze beperkte versheidscontrole.
+
+Bij een bewaard `datasets`/`verify-datasets`-controlepunt onderzoekt dezelfde vaste
+`reports-check` uitsluitend de huidige manifestverwijzing, bronbundel, exacte CSV
+en native parser/mapping. Geen bedrijfswrites of hervatten. De controle geeft alleen
+fase, gesloten foutcode en aantallen CSV-bytes/geplande records/recordindex terug;
+een TypeError/RangeError wordt een vaste technische code, nooit een ruwe fouttekst.
+De originele taakgeneratie,48u-delegatie en actuele admin/Reports blijven vereist.
