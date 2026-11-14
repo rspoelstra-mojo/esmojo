@@ -111,7 +111,7 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
    }catch(error){if(error.message!=='MIGRATION_UNCONFIRMED')throw error;unconfirmed=error;}
    // Receipt loss is not data loss. Never replay a POST here: independently read
    // every expected row/lookup and accept only a fully proven committed batch.
-   actual=await read();
+   try{actual=await read();}catch(error){if(unconfirmed&&error.message!=='MIGRATION_CONFLICT')throw unconfirmed;throw error;}
    for(const row of rows)if(!verify(row,actual.get(row.key)))throw unconfirmed||Error('MIGRATION_UNCONFIRMED');
   }
   for(const row of rows)if(!verify(row,actual.get(row.key)))throw Error('MIGRATION_UNCONFIRMED');
