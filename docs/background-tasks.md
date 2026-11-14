@@ -246,3 +246,13 @@ zonder bekende native HTTP-weigering mag alleen de Reports-adapter via de bestaa
 engine maximaal acht keer hervatten na de vijftienminutenlease; de volgende stap
 controleert bron en bestaande doelinhoud opnieuw. Een bekende HTTP-weigering of
 inhoudelijk conflict stopt. De oorspronkelijke48u-machtiging blijft onveranderd.
+
+De conditionele dataset-resume geldt ook voor `verify-datasets`, maar dan moet de
+onafhankelijke inspectie nul ontbrekende records bevestigen. Een ontbrekende rij
+stopt met MIGRATION_DEPENDENCY; verificatie mag nooit repareren of creëren.
+De migratiewriter bewaart geen eigen bearercontext meer: elke aanvraag gebruikt de
+bestaande expiry-aware connectiecache, die een geldig token in RAM hergebruikt en
+vóór verlopen vernieuwt. Dit verlengt geen taakdelegatie of gebruikersrechten.
+Onafhankelijke response-decodefouten bij writer-reads worden technisch onbevestigd
+met de bestaande begrensde retry/lease; echte authenticatie-/rechtenfouten blijven
+stoppen met een vaste code. Geen credentialwaarden of providertekst in logs.
