@@ -36,8 +36,13 @@ Webfilters wijzigen de oorspronkelijke KPI/PDF-berekening niet.
 ## Onafhankelijke eindvalidatie
 
 **Validate copied Reports data** (`reports-validation.yml`) start uitsluitend
-bewust via workflow_dispatch op main. Eigen vaste OIDC-audience/workflow,
+via workflow_dispatch of bij wijziging van uitsluitend de eigen workflow op main,
+binnen de expliciet geautoriseerde opdracht. Eigen vaste OIDC-audience/workflow,
 POST `{}` op `/api/reports-validation-sync`. Geen vrije actor/cursor/query/scope.
+De publicatietrigger wacht begrensd op de openbare protocolmarker van de nieuwe
+productieroute, via GET zonder credentials of taakmutatie. Geen taakstart vóór
+die serverversie beschikbaar is. Een PR, fork, andere workflow of verlopen
+delegatie verleent geen toegang.
 
 `reports-validation-v1` erft exact actor en oorspronkelijke eindtijd van de
 complete ongeleasede kopie. Actuele admin/Reports per stap, bestaande globale

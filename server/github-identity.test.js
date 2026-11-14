@@ -11,10 +11,10 @@ function token(overrides = {}, header = {}) {
   return `${body}.${sign('RSA-SHA256', Buffer.from(body), privateKey).toString('base64url')}`;
 }
 const request = async url => { assert.equal(url, 'https://token.actions.githubusercontent.com/.well-known/jwks'); return Response.json({ keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'test-key', use: 'sig' }] }); };
-test('Reports validation requires its exact audience/workflow/main and deliberate dispatch',async()=>{
+test('Reports validation requires its exact audience/workflow/main and authorized publication or dispatch',async()=>{
  const audience='https://esmojo.nl/api/reports-validation-sync',workflow='reports-validation.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
- assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref}),{request,now,audience,workflow}),{runId:'123'});
- for(const patch of [{aud:'other'},{workflow_ref:claims.workflow_ref},{ref:'refs/heads/task'},{event_name:'push'},{event_name:'schedule'},{event_name:'pull_request'},{repository_id:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
+ for(const event_name of ['workflow_dispatch','push'])assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),{runId:'123'});
+ for(const patch of [{aud:'other'},{workflow_ref:claims.workflow_ref},{ref:'refs/heads/task'},{event_name:'workflow_run'},{event_name:'schedule'},{event_name:'pull_request'},{repository_id:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
  await assert.rejects(verifyImportIdentity(token({workflow_ref}),{request,now,workflow}),/FORBIDDEN/);
 });
 test('alleen geldig GitHub-token voor vaste workflow, repository, main en audience wordt geaccepteerd', async () => {

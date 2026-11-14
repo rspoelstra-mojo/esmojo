@@ -16,6 +16,7 @@ export function createReportsValidationRunner({env=process.env,now=Date.now,stor
 export function makeReportsValidationSync({tasks=createReportsValidationRunner(),identify=token=>verifyImportIdentity(token,{audience:'https://esmojo.nl/api/reports-validation-sync',workflow:'reports-validation.yml'})}={}){
  return async(req,res)=>{
   res.setHeader('Cache-Control','no-store, private');
+  res.setHeader('X-ESMOJO-Reports-Validation','2');
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false});}
   try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1]);}catch{return res.status(403).json({ok:false});}
   if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)||Object.keys(req.body).length)return res.status(400).json({ok:false});
