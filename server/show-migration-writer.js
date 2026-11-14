@@ -64,10 +64,12 @@ export function migrationDependencyDetails(error){
 }
 export function createMigrationWriter({env=process.env,request=fetch,connection=createDataverseSetupConnection({env,request}),readOnly=false,contract=defaultRecordContract}={}){
  const {tableByName}=contract;
- const metadata=new Map(),resolved=new Map();let context;
- async function ctx(){return context||(context=await connection.connect());}
+ const metadata=new Map(),resolved=new Map();
+ // The connection owns expiry-aware token caching. A warm writer must never
+ // pin its first bearer beyond that cache lifetime.
+ async function ctx(){return connection.connect();}
  async function call(path,options={}){if(readOnly&&options.method&&options.method!=='GET'&&!(options.method==='POST'&&['InitializeFileBlocksDownload','DownloadBlock'].includes(path)))throw Error('MIGRATION_CONFLICT');const response=await connection.call(path,{...(await ctx()).headers,...(options.headers||{})},{...options,code:'MIGRATION_UNCONFIRMED',timeoutMs:60000});return response;}
- async function json(path,options){const response=await call(path,options);if(response.status===404)return null;if(!response.ok)throw Error(response.status===412?'MIGRATION_CONFLICT':'MIGRATION_REJECTED');return connection.json(response);}
+ async function json(path,options){const response=await call(path,options);if(response.status===404)return null;if(!response.ok)throw Error(response.status===412?'MIGRATION_CONFLICT':'MIGRATION_REJECTED');return connection.json(response,'MIGRATION_UNCONFIRMED');}
  async function meta(name){
   if(!tableByName.has(name))throw Error('MIGRATION_MAPPING');if(metadata.has(name))return metadata.get(name);
   const value=await json("EntityDefinitions(LogicalName='"+name+"')?$select=LogicalName,EntitySetName,PrimaryIdAttribute&$expand=ManyToOneRelationships($select=ReferencingAttribute,ReferencingEntityNavigationPropertyName)");
