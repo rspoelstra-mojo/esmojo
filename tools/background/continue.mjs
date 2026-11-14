@@ -7,18 +7,20 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
  const endpoint=endpoints[mode];if(!endpoint||!['continue','status','reports-check','reports-resume'].includes(operation)||operation!=='continue'&&mode!=='tasks')throw Error('Onbekende vaste worker.');
  const deadline=now()+Math.min(budgetMs,40*60000);
  for(let round=1;round<=maxRounds&&now()+280000<=deadline;round++){
-  let response,data;
+  let response,data,transportStage='identity';
   try{
    const url=new URL(env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
    const identity=await fetcher(url,{headers:{Authorization:`Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`},signal:AbortSignal.timeout(30000)});
    if(!identity.ok)throw Error();const {value}=await identity.json();if(typeof value!=='string'||!value)throw Error();log(`::add-mask::${value}`);
+   transportStage='request';
    response=await fetcher(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:operation!=='continue'&&!(operation==='reports-resume'&&round>1)?JSON.stringify({operation}):'{}',signal:AbortSignal.timeout(280000)});
+   transportStage='response';
    data=await response.json();
    if(mode==='reports-validation'&&!response.ok){
     const codes=['OIDC_FORBIDDEN','REPORTS_VALIDATION_BLOCKED','REPORTS_VALIDATION_UNCONFIRMED','VALIDATION_APPROVAL_REQUIRED','TASK_EXPIRED','TASK_CORRUPT','TASK_BUSY','FORBIDDEN','CHOICE_AUTH','CHOICE_FORBIDDEN','SETUP_TEMPORARY','SETUP_THROTTLED'];
     log(JSON.stringify({validationHttpStatus:Number.isInteger(response.status)?response.status:0,code:codes.includes(data?.code)?data.code:'UNCONFIRMED',stage:['identity','token','claims','issuer','audience','subject','repository','ref','workflow','jwks','signature','approval','running','status'].includes(data?.stage)?data.stage:'unknown'}));
    }
-  }catch{throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');}
+  }catch{if(mode==='reports-validation')log(JSON.stringify({validationHttpStatus:Number.isInteger(response?.status)?response.status:0,code:'TRANSPORT_UNCONFIRMED',stage:transportStage}));throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');}
   if(operation==='reports-check'){
    const d=data?.diagnostic;if(!response.ok||data?.ok!==true||!d||!/^[a-z-]{1,40}$/.test(d.stage)||!(d.code===null||/^[A-Z][A-Z0-9_]{0,63}$/.test(d.code))||!d.counts||Object.values(d.counts).some(v=>!Number.isSafeInteger(v)||v<0))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
    const allowed=['groups','multiDateGroups','missingShow','badGroupId','badSourceHash','catalogue','historical','validations','sources','available','unlinked','entries','grouped','manifestPages','settingsPages','csvBytes','plannedRecords','recordIndex','existingRecords','missingRecords','batchRecords'];
