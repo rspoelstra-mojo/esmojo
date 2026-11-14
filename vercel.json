@@ -1,5 +1,9 @@
 {
   "functions": {
+    "api/reports-validation-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,google-apps-script/**}",
+      "maxDuration": 300
+    },
     "api/shows-validation-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,google-apps-script/**}",
       "maxDuration": 300
