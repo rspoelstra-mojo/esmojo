@@ -7,3 +7,11 @@ voor getypeerde Reports-rijen en scopegecontroleerde Dataverse File-downloads,
 met bestaande parser/webprojectie. Geen API-/provideractivering in deze stap.
 Geen andere module/schema/Auth wijzigen; geen testmails of zakelijke testwrites.
 Scope server/dataverse-reports, synthetische fixtures/tests en documentatie.
+
+Publicatiescope omvat tevens het gecontroleerde vervolg op de technische stop
+van validatierun 43644510137: gepagineerde identiteitsets in plaats van de nieuwe
+countquery, gesloten native HTTP-diagnose, strikt begrensde technische resume en
+registratie voor de bestaande achtergrondworker. Browsercontrol mag deze taak
+geen verse delegatie geven. Eén private rapportbundel/plan in RAM, verse broncheck
+per bevestigd rapport, actuele rechten per stap. Geen provideractivering.
+121 gerelateerde tests, build en diff-check slagen vóór PR-CI.

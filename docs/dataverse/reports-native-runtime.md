@@ -1,7 +1,9 @@
 # Rapportages: runtime en onafhankelijke validatie
 
-Deze eerste stap bouwt uitsluitend de read-only eindvalidatie. Native runtime en
-activering zijn nog niet afgerond. Een groene validatie is geen omschakeling.
+De read-only eindvalidatie en een interne read-only native repository zijn
+gebouwd. De repository is nog niet aangesloten op de productieprovider. Volledige
+native lees-/schrijfdekking en activering zijn niet afgerond. Een groene validatie
+of bestandsproef is geen omschakeling.
 
 Statusrun 43640860595 bevestigt op 14 november 2026, main 1df6184 / V1.112:
 Rapportages-kopie complete, 221 rapportages, 8517 records, 226 bestanden;
@@ -56,6 +58,20 @@ PDF/mailrelaties, ontvangerselectie, versie/publicatiepointer en alle File-blokk
 Alleen de bestaande gesloten pipeline-heartbeat mag tegen de hashbewezen
 oorspronkelijke instellingen worden genormaliseerd. Zakelijke wijzigingen stoppen.
 
+De complete rij-identiteitset wordt gepagineerd per versie/context vergeleken;
+geen afhankelijkheid van een begrensde native count of `$top=0`. Eén rapportbundel
+en datasetplan mogen tijdens een worker in RAM worden hergebruikt, zonder rechten
+te cachen. Vóór bevestiging van elk rapport wordt de bronbundel verplicht vers
+opgehaald; de finale inventariscontrole blijft eveneens vers.
+
+De bestaande main/OIDC-achtergrondworker kan een al gestarte validatie voortzetten.
+`delegatedOnly` voorkomt dat browserstart/hervatten/herstart daarvoor een nieuwe
+48-uursmachtiging maakt. Alleen de vaste serverroute leidt de originele delegatie
+af. De technische resume is beperkt tot het oude generieke datasetcontrolepunt,
+gelijke actor/eindtijd/schema/epoch en geen lease/onzekere write; actuele rechten
+en ETag/sequence worden opnieuw gecontroleerd. Conflicten/ontbrekende rijen blijven
+geblokkeerd. HTTP-diagnose bevat uitsluitend een statusnummer, geen providerinhoud.
+
 De bedrijfsdatawriter weigert mutaties op transportniveau: alleen GET en de twee
 File-downloadacties zijn toegestaan. Geen reparatie bij ontbrekende records of
 bytes, geen uploads, PDF-generatie of mails. Alleen technische Opdracht-checkpoints
@@ -68,3 +84,16 @@ Na activering mag geen stille Drive-runtimefallback bestaan. Originelen behouden
 
 De gebruiker voert de ingelogde gebruikerstest later zelf uit. Dit is geen door
 Codex uitgevoerde browseracceptatie en wordt niet als zodanig gerapporteerd.
+
+## Interne native repository
+
+`server/dataverse-reports/repository.js` leest uitsluitend vaste Reports-/gedeelde
+tabellen en Dataverse File. Geen vrije bestands-URL, upload, mutatie of fallback.
+De toekomstige servicelaag moet vóór iedere bewerking actuele account/MFA/module-
+autorisatie uitvoeren; deze interne repository is geen publiek API-eindpunt.
+
+Een File-read bewijst rapport → versie → bron/PDF → document, geverifieerde status,
+grootte/MIME/hash en alle bytes. Eigenaren/document worden daarna opnieuw gelezen
+om een gelijktijdige wijziging te weigeren. Een oude PDF met onbekende CSV blijft
+via haar eigen archiefversie leesbaar; die pending archiefversie wordt daardoor
+geen geverifieerde webdataset. Externe/onjuiste paginglinks worden geweigerd.
