@@ -1,3 +1,17 @@
+## Native Rapportages en activering (14 november 2026)
+
+Gebruiker autoriseert de volledige Reports lees-/schrijflaag, publicatie en
+daadwerkelijke Dataverse-activering na bewezen native dekking en actuele
+bron/doel/File-validatie onder schrijfstop. Dit vervangt voor deze opdracht de
+eerdere no-cutover-regel. Geen andere modules/Auth omschakelen, originelen houden,
+geen echte testmails/fictieve bedrijfsdata, geen stille Drive-runtimefallback.
+Actuele rechten, oorspronkelijke begrensde taakdelegatie, encryptie/lease/ETag/
+generatie en onafhankelijke terugleescontrole blijven verplicht. De gebruiker
+doet de ingelogde gebruikerstest later zelf. Eerste stap is de read-only
+reports-validation-v1 via vaste main/OIDC reports-validation.yml, met uitsluitend
+technische Opdracht-writes en dezelfde actor/eindtijd als de complete kopie.
+Zie docs/dataverse/reports-native-runtime.md; validatie is geen activering.
+
 ## Rapportages-kopie naar Dataverse (13 november 2026)
 
 Gebruiker autoriseert nu de eenknopsmigratie van alle bestaande Rapportages-data

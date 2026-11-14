@@ -38,3 +38,13 @@ test('scoped Reports repair sends resume once, then continues only already-autho
  const f=fixture([{ok:true,continuation:continuation()},{ok:true,stats:stats({completed:1}),continuation:continuation({active:false,pollAfterMs:null})}],[JSON.stringify({operation:'reports-resume'}),'{}']);await continueTasks({...f.options,operation:'reports-resume',wait:async()=>{}});assert.equal(f.calls,2);assert.equal(f.identities,2);
 });
 test('technical status logs only approved record/file counters beside existing progress',async()=>{const f=fixture([{ok:true,stats:stats({steps:0}),continuation:continuation({active:false,pollAfterMs:null,tasks:[{...continuation().tasks[0],verifiedRecords:1234,verifiedFiles:8,private:'not-to-log'}]})}]);await continueTasks(f.options);assert.match(f.logs.join(' '),/"verifiedRecords":1234/);assert.match(f.logs.join(' '),/"verifiedFiles":8/);assert.doesNotMatch(f.logs.join(' '),/not-to-log/);});
+
+test('Reports validation uses its own fixed audience, resumes waits and exposes only verification counters',async()=>{
+ let round=0,identities=0;const logs=[],waits=[];
+ await continueTasks({mode:'reports-validation',now:()=>0,log:x=>logs.push(x),wait:async ms=>waits.push(ms),env:{ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example.invalid/token',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'},fetcher:async(url,options)=>{
+  if(String(url).startsWith('https://identity.example.invalid')){assert.equal(new URL(url).searchParams.get('audience'),'https://esmojo.nl/api/reports-validation-sync');identities++;return Response.json({value:'synthetic'});}
+  assert.equal(String(url),'https://esmojo.nl/api/reports-validation-sync');assert.equal(options.body,'{}');round++;
+  return Response.json({ok:true,stats:stats(round===1?{waiting:1}:{completed:1}),continuation:continuation({active:round===1,pollAfterMs:round===1?30000:null,tasks:[]}),...(round===2?{verification:{reports:221,records:8517,files:226,private:'hidden'}}:{})});
+ }});
+ assert.equal(round,2);assert.equal(identities,2);assert.deepEqual(waits,[30000]);assert.match(logs.join(' '),/"verifiedReports":221/);assert.doesNotMatch(logs.join(' '),/hidden/);
+});
