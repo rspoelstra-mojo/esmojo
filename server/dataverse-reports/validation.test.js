@@ -61,3 +61,20 @@ test('starting validation forwards original expiry and requires a complete unlea
  await ensureReportsValidation({store,tasks,now});assert.deepEqual(supplied,[{operation:'start',type:'reports-validation-v1'},actor,{authorizationExpiresAt:expiresAt}]);
  state.expiresAt=now();await assert.rejects(ensureReportsValidation({store,tasks,now}),/VALIDATION_APPROVAL_REQUIRED/);
 });
+test('technical resume is limited to the same blocked read-only dataset checkpoint, actor, expiry and generation',async()=>{
+ const {reportsSchemaHash}=await import('../reports-schema.js'),migration={status:'complete',actor,epoch,expiresAt,lease:null},prior={status:'blocked',actor,epoch:runId,expiresAt,handlerVersion:1,sequence:12,lease:null,uncertain:false,public:{code:'REPORTS_VALIDATION_UNCONFIRMED'},cursor:JSON.stringify({version:1,schema:reportsSchemaHash,migration:epoch,run:runId,phase:'datasets'})};
+ let supplied;const options={store:{get:async type=>({state:type==='reports-migration-v1'?migration:prior})},tasks:{control:async(...args)=>{supplied=args;return{};}},now,resumeTechnical:true};
+ await ensureReportsValidation(options);assert.deepEqual(supplied,[{operation:'resume',type:'reports-validation-v1'},actor,{authorizationExpiresAt:expiresAt,expectedEpoch:runId,expectedSequence:12}]);
+ for(const patch of [{actor:'other'},{expiresAt:expiresAt+1},{lease:{until:now()+1}},{uncertain:true},{handlerVersion:2},{public:{code:'MIGRATION_CONFLICT'}},{public:{code:'MIGRATION_DEPENDENCY'}}]){const changed={...prior,...patch};await assert.rejects(ensureReportsValidation({...options,store:{get:async type=>({state:type==='reports-migration-v1'?migration:changed})}}),/TASK_BUSY/);}
+});
+test('Dataverse cardinality HTTP failures expose only a fixed status, never provider content',async()=>{
+ const f=await fixture(),before=writes(f).length,connection={...f.destination.connection,call:async(path,...args)=>path.includes('%24select=')&&path.includes('_esmojo_rapportversie_value')?Response.json({error:{message:'private-report-contents'}},{status:400}):f.destination.connection.call(path,...args)};
+ f.options.writer=createReportsWriter({env,connection,readOnly:true});let caught;
+ await assert.rejects(finish(f),error=>{caught=error;return error.message==='MIGRATION_REJECTED';});
+ const failure=f.make().failure(caught);assert.equal(failure.code,'REPORTS_COUNT_HTTP_400');assert.equal(failure.retryable,false);assert.doesNotMatch(JSON.stringify(failure),/private-report-contents/);assert.equal(writes(f).length,before);
+});
+test('bounded per-report RAM reuse still requires a fresh bundle before confirming each report',async()=>{
+ const f=await fixture(),original=f.options.source.bundle;let calls=0,changed=false;
+ f.options.source={...f.options.source,bundle:async(...args)=>{calls++;const result=await original(...args);if(changed)result.general.contacts.eventSafetyManager='Synthetic changed context';return result;}};
+ const before=writes(f).length;await assert.rejects(finish(f,{afterStep:result=>{if(JSON.parse(result.cursor).phase==='files')changed=true;}}),/MIGRATION_SOURCE_CHANGED/);assert.ok(calls>=2);assert.equal(writes(f).length,before);
+});

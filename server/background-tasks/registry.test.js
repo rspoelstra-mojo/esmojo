@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createTaskRegistry,createApplicationTasks,backgroundTaskModule} from './registry.js';
+test('Reports validation is registered for bounded continuation and requires a server-owned delegation',()=>{
+ const registry=createTaskRegistry();assert.equal(backgroundTaskModule('reports-validation-v1'),'reports');assert.equal(registry['reports-validation-v1'].delegatedOnly,true);assert.equal(registry['reports-validation-v1'].module,'reports');
+});
 test('Shows adapter keeps migration cursor server-side and pending keys automatically wait',async()=>{
  const calls=[],registry=createTaskRegistry({migrate:async(input,actor)=>{calls.push({input,actor});return{status:'blocked',reason:'KEY_INDEX_PENDING',token:'encrypted-cursor',label:'Sleutelindex',progress:{current:4}};}}),definition=registry['shows-migration-v1'];const result=await definition.step({cursor:null,actor:'admin'});assert.equal(result.status,'waiting');assert.equal(result.delayMs,300000);assert.equal(result.cursor,'encrypted-cursor');await definition.step({cursor:'encrypted-cursor',actor:'admin'});assert.deepEqual(calls.map(c=>c.input.operation),['start','advance']);assert.ok(!JSON.stringify(result.public).includes('cursor'));assert.equal(backgroundTaskModule('shows-migration-v1'),'shows');assert.equal(backgroundTaskModule('arbitrary'),null);
  const error=definition.failure(Error('private provider secret'));assert.equal(error.uncertain,true);assert.ok(!error.error.includes('secret'));

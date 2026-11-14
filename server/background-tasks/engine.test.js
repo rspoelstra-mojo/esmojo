@@ -5,6 +5,13 @@ const clone=structuredClone;
 function memoryStore(){const rows=new Map();let version=0,runner=null;return{rows,async claimRunner(lease,now){if(runner?.until>now)return null;runner=clone(lease);return{lease:clone(lease)};},async releaseRunner(row,id){if(runner?.id===id)runner=null;},async get(type){return clone(rows.get(type)||null);},async create(type,title,state){if(!rows.has(type))rows.set(type,{id:type,etag:String(++version),state:clone(state)});return this.get(type);},async save(row,state){if(rows.get(state.type)?.etag!==row.etag)throw Error('TASK_STALE');rows.set(state.type,{id:row.id,etag:String(++version),state:clone(state)});return this.get(state.type);}};}
 function fixture({step,authorize=async()=>true,failure}={}){const store=memoryStore();let clock=1000000,calls=0;const registry={'example-task':{title:'Example',module:'shows',version:1,idempotent:true,step:step||(async({cursor})=>{calls++;const n=(Number(cursor)||0)+1;return{status:n===3?'complete':'ready',cursor:String(n),public:{label:'Step '+n,total:3,progress:{current:n,verifiedRecords:n},private:'secret'}};}),failure}};const build=()=>createBackgroundTasks({store,registry,authorize,now:()=>clock});return{store,registry,build,advance:ms=>clock+=ms,get calls(){return calls;}};}
 const command=(operation='start')=>({operation,type:'example-task'});
+test('delegated-only tasks cannot gain a fresh browser grant but existing workers preserve the supplied expiry',async()=>{
+ const f=fixture();f.registry['example-task'].delegatedOnly=true;const engine=f.build();
+ await assert.rejects(engine.control(command(),'admin'),/VALIDATION/);assert.equal(f.store.rows.size,0);
+ const started=await engine.control(command(),'admin',{authorizationExpiresAt:1100000});assert.equal(started.task.canRestart,false);
+ await engine.run();const row=await f.store.get('example-task');assert.equal(row.state.status,'complete');assert.equal(row.state.expiresAt,1100000);
+ assert.equal((await engine.control(command('status'),'admin')).task.canRestart,false);await assert.rejects(engine.control(command('restart'),'admin'),/VALIDATION/);
+});
 test('task survives a closed browser and process restart; duplicate starts preserve the same job',async()=>{
  const f=fixture(),engine=f.build();assert.equal((await engine.control(command('status'),'admin')).task,null);assert.equal(f.calls,0);
  const first=await engine.control(command(),'admin');await engine.control(command(),'admin');assert.equal(f.store.rows.size,1);assert.equal(first.task.status,'queued');assert.equal(f.calls,0);

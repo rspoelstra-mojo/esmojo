@@ -12,13 +12,22 @@ export const reportsValidationType='reports-validation-v1';
 
 // A validation inherits the exact original actor, epoch and expiry. It cannot
 // silently turn a completed copy into a fresh 48-hour business-data delegation.
-export async function ensureReportsValidation({store,tasks,now=Date.now}){
+export async function ensureReportsValidation({store,tasks,now=Date.now,resumeTechnical=false}){
  const migration=await store.get('reports-migration-v1'),state=migration?.state;
  if(state?.status!=='complete'||state.lease||state.expiresAt<=now())throw Error('VALIDATION_APPROVAL_REQUIRED');
+ if(resumeTechnical){
+  const prior=await store.get(reportsValidationType),p=prior?.state;
+  if(p?.status==='blocked'){
+   let cursor;try{cursor=JSON.parse(p.cursor);}catch{throw Error('TASK_CORRUPT');}
+   if(p.actor!==state.actor||p.expiresAt!==state.expiresAt||p.lease||p.uncertain||p.handlerVersion!==1||p.public?.code!=='REPORTS_VALIDATION_UNCONFIRMED'||cursor.version!==1||cursor.schema!==reportsSchemaHash||cursor.migration!==state.epoch||cursor.run!==p.epoch||cursor.phase!=='datasets')throw Error('TASK_BUSY');
+   return tasks.control({operation:'resume',type:reportsValidationType},state.actor,{authorizationExpiresAt:state.expiresAt,expectedEpoch:p.epoch,expectedSequence:p.sequence});
+  }
+ }
  return tasks.control({operation:'start',type:reportsValidationType},state.actor,{authorizationExpiresAt:state.expiresAt});
 }
 
 export function createReportsValidation({env=process.env,now=Date.now,store=createTaskStore({env}),source=createReportsMigrationSource({env}),manifest=createReportsManifest({env,store,now}),writer=createReportsWriter({env,readOnly:true})}={}){
+ let bundleCache=null,datasetCache=null;
  const view=s=>({cursor:canonical(s),status:s.phase==='complete'?'complete':'ready',public:{label:s.phase==='complete'?'Rapportages-bronnen, relaties en bestanden opnieuw gecontroleerd.':'Rapportages onafhankelijk teruglezen; bedrijfsgegevens blijven ongewijzigd.',total:s.total,progress:{phase:s.phase,current:s.index,verifiedRecords:s.records,verifiedFiles:s.files}}});
  async function migration(actor,authorizationExpiresAt){
   const row=await store.get('reports-migration-v1'),state=row?.state;
@@ -53,13 +62,20 @@ export function createReportsValidation({env=process.env,now=Date.now,store=crea
   const context=plan.records.find(row=>row.table==='esmojo_rapportcontext');if(!context)throw Error('MIGRATION_MAPPING');
   const contextTarget=await writer.resolve(context);
   for(const table of ['esmojo_rapportincident','esmojo_rapportcontext','esmojo_rapporttekstblok','esmojo_rapporttijdpunt']){
-   const m=await writer.meta(table),expected=plan.records.filter(row=>row.table===table).length;
+   const m=await writer.meta(table),expected=new Set(plan.records.filter(row=>row.table===table).map(row=>row.key)),seen=new Set();
    const owner=table==='esmojo_rapporttijdpunt'?{field:'_esmojo_rapportcontext_value',id:contextTarget.id}:{field:'_esmojo_rapportversie_value',id:version.id};
-   const result=await writer.json(m.EntitySetName+'?'+new URLSearchParams({'$filter':owner.field+' eq '+owner.id,'$count':'true','$top':'0','$select':m.PrimaryIdAttribute}));
-   if(!Number.isSafeInteger(result?.['@odata.count'])||result['@odata.count']!==expected)throw Error('MIGRATION_CONFLICT');
+   let path=m.EntitySetName+'?'+new URLSearchParams({'$filter':owner.field+' eq '+owner.id,'$select':m.PrimaryIdAttribute+',esmojo_sleutel'}),pages=0;
+   while(path){
+    if(++pages>50)throw Error('MIGRATION_CONFLICT');let result;
+    try{result=await writer.json(path,{headers:{Prefer:'odata.maxpagesize=1000'}});}catch(error){error.reportsValidationStage='cardinality';throw error;}
+    if(!Array.isArray(result?.value)||result.value.length>1000)throw Error('MIGRATION_CONFLICT');
+    for(const row of result.value){if(!expected.has(row.esmojo_sleutel)||seen.has(row.esmojo_sleutel))throw Error('MIGRATION_CONFLICT');seen.add(row.esmojo_sleutel);}
+    path=null;if(result['@odata.nextLink']){const next=new URL(result['@odata.nextLink']);if(next.origin!=='https://org5bab852a.crm.dynamics.com'||next.pathname!=='/api/data/v9.2/'+m.EntitySetName||next.username||next.password||next.hash)throw Error('MIGRATION_CONFLICT');path=m.EntitySetName+next.search;}
+   }
+   if(seen.size!==expected.size)throw Error('MIGRATION_CONFLICT');
   }
  }
- return{title:'Rapportages-eindvalidatie',module:'reports',version:1,idempotent:true,
+ return{title:'Rapportages-eindvalidatie',module:'reports',version:1,idempotent:true,delegatedOnly:true,
   async step({cursor,actor,runId,authorizationExpiresAt}){
    const copied=await migration(actor,authorizationExpiresAt);
    const s=cursor?JSON.parse(cursor):{version:1,schema:reportsSchemaHash,run:runId,migration:copied.state.epoch,inventoryHash:copied.cursor.inventoryHash,total:copied.cursor.total,page:0,entry:0,index:0,row:0,settings:0,source:0,file:0,fileState:null,records:0,files:0,phase:'inventory'};
@@ -78,9 +94,12 @@ export function createReportsValidation({env=process.env,now=Date.now,store=crea
      await writer.ensure(reportRecord('historie','reports-settings/'+selection.settingsHash+'/'+s.settings,'Rapportages · bestaande verwerkingshistorie',{entiteitsoort:'reports-source-settings-v1',mutatiesoort:choice('mutatiesoort','import'),snapshot_json:canonical({version:1,hash:selection.settingsHash,index:s.settings,total:selection.settingsPages,text}),fingerprint:digest(text),schemaversie:1}));s.settings++;s.records++;
     }else s.phase=s.total?'base':'finish';return view(s);
    }
-   if(s.phase==='finish'){await sameInventory(s,actor,authorizationExpiresAt);s.phase='complete';return view(s);}
+   if(s.phase==='finish'){await sameInventory(s,actor,authorizationExpiresAt);bundleCache=null;datasetCache=null;s.phase='complete';return view(s);}
    const page=await manifest.get(s.migration,'page',s.page,actor,authorizationExpiresAt),entry=page?.[s.entry];if(!entry)throw Error('TASK_CORRUPT');
-   const bundle=await source.bundle(entry,actor),proof=await manifest.get(s.migration,'proof',s.index,actor,authorizationExpiresAt);
+   const cacheKey=s.run+'/'+s.migration+'/'+entry.show.key,proof=await manifest.get(s.migration,'proof',s.index,actor,authorizationExpiresAt);
+   let bundle;
+   if(bundleCache?.key===cacheKey&&s.phase!=='publish'){if(bundleCache.hash!==proof.sourceHash)throw Error('TASK_CORRUPT');bundle=bundleCache.value;}
+   else{bundle=await source.bundle(entry,actor);bundleCache={key:cacheKey,value:bundle,hash:digest(bundle)};datasetCache=null;}
    if(digest(bundle)!==proof.sourceHash)throw Error('MIGRATION_SOURCE_CHANGED');
    const sources=canonicalSources(bundle),base=[...sourceHistoryRows(bundle),...documentRows(bundle),...sourceRows(bundle),...mailRows(bundle).records];
    if(digest(base)!==proof.baseHash||canonical(sources.map(item=>datasetRef(bundle,item).key))!==canonical(proof.datasetFingerprints)||canonical(filePlan(bundle).map(file=>({sha256:file.sha256,size:file.size})))!==canonical(proof.files))throw Error('TASK_CORRUPT');
@@ -90,8 +109,10 @@ export function createReportsValidation({env=process.env,now=Date.now,store=crea
    }
    if(s.phase==='datasets'){
     const item=sources[s.source];if(!item){s.phase='files';s.row=0;return view(s);}
-    const bytes=await source.csv(entry,item.source.id,actor,item.sha256),plan=mapDataset(bundle,item,bytes);
-    if(await verifyRows(s,plan.records)){await datasetCardinality(plan);await writer.markVerified(plan.version,'esmojo_versiestatus');s.source++;s.row=0;}return view(s);
+    const key=cacheKey+'/'+item.source.id+'/'+item.sha256;let plan;
+    if(datasetCache?.key===key)plan=datasetCache.value;
+    else{const bytes=await source.csv(entry,item.source.id,actor,item.sha256);plan=mapDataset(bundle,item,bytes);datasetCache={key,value:plan};}
+    if(await verifyRows(s,plan.records)){await datasetCardinality(plan);await writer.markVerified(plan.version,'esmojo_versiestatus');s.source++;s.row=0;datasetCache=null;}return view(s);
    }
    if(s.phase==='files'){
     const file=filePlan(bundle)[s.file];if(!file){s.phase='publish';return view(s);}
@@ -101,14 +122,15 @@ export function createReportsValidation({env=process.env,now=Date.now,store=crea
    if(s.phase==='publish'){
     for(const item of mailRows(bundle).verified)await writer.markVerified(item.ref,item.field);
     await writer.publish(headerRef(bundle.show),bundle.show.available&&sources.length?datasetRef(bundle,sources[0]):null);
-    s.index++;s.entry++;if(s.entry===page.length){s.page++;s.entry=0;}s.phase=s.index===s.total?'finish':'base';s.row=0;s.source=0;s.file=0;return view(s);
+    s.index++;s.entry++;if(s.entry===page.length){s.page++;s.entry=0;}s.phase=s.index===s.total?'finish':'base';s.row=0;s.source=0;s.file=0;bundleCache=null;datasetCache=null;return view(s);
    }
    throw Error('TASK_CORRUPT');
   },
   failure(error){
-   const allowed=['MIGRATION_CONFLICT','MIGRATION_DEPENDENCY','MIGRATION_SOURCE_CHANGED','MIGRATION_MAPPING','TASK_CORRUPT','VALIDATION_APPROVAL_REQUIRED','FORBIDDEN'];
+   const allowed=['MIGRATION_CONFLICT','MIGRATION_DEPENDENCY','MIGRATION_SOURCE_CHANGED','MIGRATION_MAPPING','MIGRATION_REJECTED','TASK_CORRUPT','VALIDATION_APPROVAL_REQUIRED','FORBIDDEN'];
    const temporary=['ONTRACK_REPORT_UNAVAILABLE','SETUP_TEMPORARY','SETUP_THROTTLED','MIGRATION_UNCONFIRMED'].includes(error.message);
-   return{code:allowed.includes(error.message)||temporary?error.message:'REPORTS_VALIDATION_UNCONFIRMED',retryable:temporary,error:temporary?'De read-only controle wacht op de bron of Dataverse; voortgang is behouden.':'De Rapportages-eindvalidatie is gestopt. Bron en doel zijn niet aangepast; inhoudelijke controle is nodig.'};
+   const http=error.migrationRead?.status,readCode=Number.isInteger(http)&&http>=400&&http<=599?(error.reportsValidationStage==='cardinality'?'REPORTS_COUNT_HTTP_':'REPORTS_READ_HTTP_')+http:null;
+   return{code:readCode||(allowed.includes(error.message)||temporary?error.message:error instanceof TypeError?'REPORTS_VALIDATION_RUNTIME_TYPE':error instanceof RangeError?'REPORTS_VALIDATION_RUNTIME_RANGE':'REPORTS_VALIDATION_UNCONFIRMED'),retryable:temporary,error:temporary?'De read-only controle wacht op de bron of Dataverse; voortgang is behouden.':'De Rapportages-eindvalidatie is gestopt. Bron en doel zijn niet aangepast; inhoudelijke controle is nodig.'};
   }
  };
 }

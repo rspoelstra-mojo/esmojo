@@ -56,3 +56,10 @@ test('non-JSON gateway failures are distinguishable without logging the response
  const logs=[];await assert.rejects(continueTasks({mode:'reports-validation',now:()=>0,log:x=>logs.push(x),env:{ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example.invalid/token',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'},fetcher:async url=>String(url).startsWith('https://identity.example.invalid')?Response.json({value:'synthetic'}):new Response('private-gateway-body',{status:403})}),/niet bevestigd/);
  assert.match(logs.join(' '),/"validationHttpStatus":403/);assert.match(logs.join(' '),/"stage":"response"/);assert.doesNotMatch(logs.join(' '),/private-gateway-body/);
 });
+test('explicit Reports technical resume is sent once, subsequent rounds only advance the same task',async()=>{
+ const bodies=[];let round=0;
+ await continueTasks({mode:'reports-validation',resumeReportsTechnical:true,now:()=>0,log:()=>{},wait:async()=>{},env:{ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example.invalid/token',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'},fetcher:async(url,options)=>{
+  if(String(url).startsWith('https://identity.example.invalid'))return Response.json({value:'synthetic'});
+  bodies.push(options.body);round++;return Response.json({ok:true,stats:stats(round===2?{completed:1}:{}),continuation:continuation({active:round!==2,pollAfterMs:round===2?null:30000,tasks:[]})});
+ }});assert.deepEqual(bodies,['{"operation":"resume-technical"}','{}']);
+});
