@@ -17,7 +17,7 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
   }catch{throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');}
   if(operation==='reports-check'){
    const d=data?.diagnostic;if(!response.ok||data?.ok!==true||!d||!/^[a-z-]{1,40}$/.test(d.stage)||!(d.code===null||/^[A-Z][A-Z0-9_]{0,63}$/.test(d.code))||!d.counts||Object.values(d.counts).some(v=>!Number.isSafeInteger(v)||v<0))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
-   const allowed=['groups','multiDateGroups','missingShow','badGroupId','badSourceHash','catalogue','historical','validations','sources','available','unlinked','entries','grouped','manifestPages','settingsPages','csvBytes','plannedRecords','recordIndex'];
+   const allowed=['groups','multiDateGroups','missingShow','badGroupId','badSourceHash','catalogue','historical','validations','sources','available','unlinked','entries','grouped','manifestPages','settingsPages','csvBytes','plannedRecords','recordIndex','existingRecords','missingRecords','batchRecords'];
    log(JSON.stringify({stage:d.stage,code:d.code,counts:Object.fromEntries(allowed.filter(k=>Object.hasOwn(d.counts,k)).map(k=>[k,d.counts[k]]))}));return;
   }
   const continuation=data?.continuation;

@@ -225,3 +225,15 @@ en native parser/mapping. Geen bedrijfswrites of hervatten. De controle geeft al
 fase, gesloten foutcode en aantallen CSV-bytes/geplande records/recordindex terug;
 een TypeError/RangeError wordt een vaste technische code, nooit een ruwe fouttekst.
 De originele taakgeneratie,48u-delegatie en actuele admin/Reports blijven vereist.
+
+`reports-resume` kan ook een geblokkeerd `datasets`-controlepunt met de generieke
+oude `REPORTS_MIGRATION_UNCONFIRMED` veilig hervatten. Eerst oorspronkelijke48u,
+actuele admin/Reports, handler/schema/generatie, alle490 preflightchecks, bewaarde
+inventaris-/bundelhash en verstreken eventuele vijftienminutenlease bevestigen.
+De vaste read-only diagnose vergelijkt de bron opnieuw, berekent exact hetzelfde
+plan en vergelijkt alle aanwezige records/lookups van de nog open batch. Ontbrekende
+rijen mogen uitsluitend normale create-only acties blijven; afwijkende rijen stoppen.
+Alleen dataset-ready met code null geeft vrij. De resume is ETag/epoch/sequence-
+gebonden en wijzigt geen cursor/eindtijd; geen blinde herstart of conflictvrijgave.
+Batches met een nieuwe native weigering tonen uitsluitend HTTP-status en een vaste
+hexadecimale providercode, nooit providertekst/inhoud. Die fouten blijven geblokkeerd.

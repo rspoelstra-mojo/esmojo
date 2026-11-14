@@ -87,7 +87,7 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
 
  // Bounded create-only changeset, followed by exact readback. Intended for
  // independent rows of one fixed table (e.g. incidents of an existing version).
- async function ensureMany(rows){
+ async function ensureMany(rows,inspectOnly=false){
   if(!Array.isArray(rows)||!rows.length||rows.length>32||new Set(rows.map(r=>r.table)).size!==1||new Set(rows.map(r=>r.key)).size!==rows.length||Buffer.byteLength(canonical(rows))>2000000)throw Error('MIGRATION_MAPPING');
   rows.forEach(row=>validateRecord(row,contract));const m=await meta(rows[0].table);
   const read=async()=>{const data=await json(m.EntitySetName+'?'+new URLSearchParams({'$filter':rows.map(r=>"esmojo_sleutel eq '"+r.key+"'").join(' or '),'$top':String(rows.length+1)}));if(!Array.isArray(data?.value)||data['@odata.nextLink']||data.value.length>rows.length||new Set(data.value.map(r=>r.esmojo_sleutel)).size!==data.value.length)throw Error('MIGRATION_CONFLICT');return new Map(data.value.map(r=>[r.esmojo_sleutel,r]));};
@@ -95,6 +95,7 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
   for(const row of rows){const values={...row.fields},payload={...row.fields};for(const [name,ref]of Object.entries(row.links)){const target=await resolve(ref),nav=m.ManyToOneRelationships.find(r=>r.ReferencingAttribute===name)?.ReferencingEntityNavigationPropertyName;if(!identifier(nav))throw Error('MIGRATION_SCHEMA');payload[nav+'@odata.bind']='/'+target.set+'('+target.id+')';values['_'+name+'_value']=target.id;}expected.set(row.key,values);payloads.set(row.key,payload);}
   const verify=(row,actual)=>{if(!actual)return false;const differences=migrationDifferences(row,actual,expected.get(row.key),contract);if(differences.length||!guid(actual[m.PrimaryIdAttribute]))throw Object.assign(Error('MIGRATION_CONFLICT'),{migration:{table:row.table,differences}});resolved.set(row.table+row.key,{id:actual[m.PrimaryIdAttribute],set:m.EntitySetName});return true;};
   let actual=await read();const missing=rows.filter(row=>!verify(row,actual.get(row.key)));
+  if(inspectOnly)return{verified:true,count:rows.length,existing:rows.length-missing.length,missing:missing.length};
   if(missing.length&&readOnly)throw Error('MIGRATION_DEPENDENCY');
   if(missing.length){
    const boundary='batch_'+randomBytes(16).toString('hex'),changeset='changeset_'+randomBytes(16).toString('hex'),lines=['--'+boundary,'Content-Type: multipart/mixed; boundary='+changeset,''];
@@ -103,7 +104,10 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
    const response=await call('$batch',{method:'POST',multipart:{boundary,body:lines.join('\r\n')}}),text=await response.text(),statuses=[...text.matchAll(/^HTTP\/1\.[01] ([0-9]{3})/gm)].map(match=>Number(match[1]));
    // A concurrent identical create can fail the whole changeset. Read every row
    // again, but never report success on a partial or unconfirmed response.
-   if(!response.ok||!statuses.length||statuses.some(s=>(s<200||s>=300)&&![409,412].includes(s)))throw Error('MIGRATION_UNCONFIRMED');
+   if(!response.ok||!statuses.length||statuses.some(s=>(s<200||s>=300)&&![409,412].includes(s))){
+    const status=statuses.find(s=>s>=400&&![409,412].includes(s))||(!response.ok?response.status:0),code=/"code"\s*:\s*"0x([a-f0-9]{8})"/i.exec(text)?.[1]?.toUpperCase();
+    throw Object.assign(Error('MIGRATION_UNCONFIRMED'),{migrationBatch:{status:Number.isInteger(status)&&status>=400&&status<=599?status:0,...(code?{code}:{})}});
+   }
    actual=await read();
   }
   for(const row of rows)if(!verify(row,actual.get(row.key)))throw Error('MIGRATION_UNCONFIRMED');
@@ -117,5 +121,5 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
   if(actual?.[lookup]===destination.id)return;if(readOnly)throw Error('MIGRATION_CONFLICT');if(actual?.[lookup]||!actual?.['@odata.etag'])throw Error('MIGRATION_CONFLICT');
   const response=await call(path,{method:'PATCH',headers:{'If-Match':actual['@odata.etag']},body:{[nav+'@odata.bind']:'/'+destination.set+'('+destination.id+')'}});if(!response.ok)throw Error('MIGRATION_UNCONFIRMED');const confirmed=await json(path+'?$select='+lookup);if(confirmed?.[lookup]!==destination.id)throw Error('MIGRATION_UNCONFIRMED');
  }
- return{ensure,ensureMany,resolve,find,meta,json,call,markFileVerified,linkEmpty};
+ return{ensure,ensureMany:rows=>ensureMany(rows),inspectMany:rows=>ensureMany(rows,true),resolve,find,meta,json,call,markFileVerified,linkEmpty};
 }
