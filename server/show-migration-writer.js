@@ -101,14 +101,18 @@ export function createMigrationWriter({env=process.env,request=fetch,connection=
    const boundary='batch_'+randomBytes(16).toString('hex'),changeset='changeset_'+randomBytes(16).toString('hex'),lines=['--'+boundary,'Content-Type: multipart/mixed; boundary='+changeset,''];
    for(const [index,row]of missing.entries()){const h=row.key,id=h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-8'+h.slice(17,20)+'-'+h.slice(20,32);lines.push('--'+changeset,'Content-Type: application/http','Content-Transfer-Encoding: binary','Content-ID: '+(index+1),'','PATCH /api/data/v9.2/'+m.EntitySetName+'('+id+') HTTP/1.1','If-None-Match: *','Content-Type: application/json','Accept: application/json','',JSON.stringify(payloads.get(row.key)));}
    lines.push('--'+changeset+'--','--'+boundary+'--','');
-   const response=await call('$batch',{method:'POST',multipart:{boundary,body:lines.join('\r\n')}}),text=await response.text(),statuses=[...text.matchAll(/^HTTP\/1\.[01] ([0-9]{3})/gm)].map(match=>Number(match[1]));
-   // A concurrent identical create can fail the whole changeset. Read every row
-   // again, but never report success on a partial or unconfirmed response.
-   if(!response.ok||!statuses.length||statuses.some(s=>(s<200||s>=300)&&![409,412].includes(s))){
-    const status=statuses.find(s=>s>=400&&![409,412].includes(s))||(!response.ok?response.status:0),code=/"code"\s*:\s*"0x([a-f0-9]{8})"/i.exec(text)?.[1]?.toUpperCase();
-    throw Object.assign(Error('MIGRATION_UNCONFIRMED'),{migrationBatch:{status:Number.isInteger(status)&&status>=400&&status<=599?status:0,...(code?{code}:{})}});
-   }
+   let unconfirmed;
+   try{
+    const response=await call('$batch',{method:'POST',multipart:{boundary,body:lines.join('\r\n')}});let text;try{text=await response.text();}catch{throw Error('MIGRATION_UNCONFIRMED');}const statuses=[...text.matchAll(/^HTTP\/1\.[01] ([0-9]{3})/gm)].map(match=>Number(match[1]));
+    if(!response.ok||!statuses.length||statuses.some(s=>(s<200||s>=300)&&![409,412].includes(s))){
+     const status=statuses.find(s=>s>=400&&![409,412].includes(s))||(!response.ok?response.status:0),code=/"code"\s*:\s*"0x([a-f0-9]{8})"/i.exec(text)?.[1]?.toUpperCase();
+     throw Object.assign(Error('MIGRATION_UNCONFIRMED'),{migrationBatch:{status:Number.isInteger(status)&&status>=400&&status<=599?status:0,...(code?{code}:{})}});
+    }
+   }catch(error){if(error.message!=='MIGRATION_UNCONFIRMED')throw error;unconfirmed=error;}
+   // Receipt loss is not data loss. Never replay a POST here: independently read
+   // every expected row/lookup and accept only a fully proven committed batch.
    actual=await read();
+   for(const row of rows)if(!verify(row,actual.get(row.key)))throw unconfirmed||Error('MIGRATION_UNCONFIRMED');
   }
   for(const row of rows)if(!verify(row,actual.get(row.key)))throw Error('MIGRATION_UNCONFIRMED');
   return{verified:true,count:rows.length,created:missing.length};

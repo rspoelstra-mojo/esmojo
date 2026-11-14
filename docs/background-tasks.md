@@ -237,3 +237,12 @@ Alleen dataset-ready met code null geeft vrij. De resume is ETag/epoch/sequence-
 gebonden en wijzigt geen cursor/eindtijd; geen blinde herstart of conflictvrijgave.
 Batches met een nieuwe native weigering tonen uitsluitend HTTP-status en een vaste
 hexadecimale providercode, nooit providertekst/inhoud. Die fouten blijven geblokkeerd.
+
+Na een verloren batchbevestiging leest de writer onafhankelijk alle verwachte
+records en lookups terug, zonder een POST opnieuw te versturen. Alleen volledig
+gelijke doelinhoud bewijst succes. Ontbrekende of afwijkende regels blijven een
+onbevestigde write respectievelijk conflict. Bij een technische onbevestigde write
+zonder bekende native HTTP-weigering mag alleen de Reports-adapter via de bestaande
+engine maximaal acht keer hervatten na de vijftienminutenlease; de volgende stap
+controleert bron en bestaande doelinhoud opnieuw. Een bekende HTTP-weigering of
+inhoudelijk conflict stopt. De oorspronkelijke48u-machtiging blijft onveranderd.
