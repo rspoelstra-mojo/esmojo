@@ -74,7 +74,7 @@ test('dataset resume eligibility rejects changed schema, unknown stage and absen
  for(const patch of [{phase:'files'},{schema:'different'},{inventoryHash:null},{bundleHash:null},{checkIndex:0},{rowIndex:-1},{reportIndex:221}])assert.equal(task.canResumeDataset(JSON.stringify({...s,...patch}),runId),false);assert.equal(task.canResumeDataset(JSON.stringify(s),'other-run'),false);
 });
 test('only technically unconfirmed writes may retry after the engine lease; known rejection, conflicts and invalid mapping stop',async()=>{
- const f=await setup(),task=createReportsMigrationTask(f.options);assert.equal(task.failure(Error('MIGRATION_UNCONFIRMED')).retryable,true);assert.equal(task.failure(Error('MIGRATION_UNCONFIRMED')).uncertain,true);
+ const f=await setup(),task=createReportsMigrationTask(f.options);assert.equal(task.failure(Error('MIGRATION_UNCONFIRMED')).retryable,true);assert.match(task.failure(Error('MIGRATION_UNCONFIRMED')).error,/probeert veilig opnieuw/);assert.equal(task.failure(Error('MIGRATION_UNCONFIRMED')).uncertain,true);
  const known=Object.assign(Error('MIGRATION_UNCONFIRMED'),{migrationBatch:{status:400,code:'80044331'}});assert.equal(task.failure(known).retryable,false);for(const code of ['MIGRATION_CONFLICT','MIGRATION_MAPPING','MIGRATION_SOURCE_CHANGED','CSV_SHOW_MISMATCH'])assert.equal(task.failure(Error(code)).retryable,false);
 });
 test('a lost response body is accepted only after every committed field has been independently read back',async()=>{
