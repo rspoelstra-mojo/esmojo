@@ -50,9 +50,12 @@ export function createReportsValidation({env=process.env,now=Date.now,store=crea
  }
  async function datasetCardinality(plan){
   const version=await writer.resolve(plan.version);
-  for(const table of ['esmojo_rapportincident','esmojo_rapportcontext','esmojo_rapporttekstblok']){
+  const context=plan.records.find(row=>row.table==='esmojo_rapportcontext');if(!context)throw Error('MIGRATION_MAPPING');
+  const contextTarget=await writer.resolve(context);
+  for(const table of ['esmojo_rapportincident','esmojo_rapportcontext','esmojo_rapporttekstblok','esmojo_rapporttijdpunt']){
    const m=await writer.meta(table),expected=plan.records.filter(row=>row.table===table).length;
-   const result=await writer.json(m.EntitySetName+'?'+new URLSearchParams({'$filter':'_esmojo_rapportversie_value eq '+version.id,'$count':'true','$top':'0','$select':m.PrimaryIdAttribute}));
+   const owner=table==='esmojo_rapporttijdpunt'?{field:'_esmojo_rapportcontext_value',id:contextTarget.id}:{field:'_esmojo_rapportversie_value',id:version.id};
+   const result=await writer.json(m.EntitySetName+'?'+new URLSearchParams({'$filter':owner.field+' eq '+owner.id,'$count':'true','$top':'0','$select':m.PrimaryIdAttribute}));
    if(!Number.isSafeInteger(result?.['@odata.count'])||result['@odata.count']!==expected)throw Error('MIGRATION_CONFLICT');
   }
  }
