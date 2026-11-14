@@ -24,9 +24,11 @@ export function createNativeReportsRepository({env=process.env,connection,writer
   schema(table);if(!guid(id))throw Error('VALIDATION');const m=await writer.meta(table),row=await writer.json(m.EntitySetName+'('+id+')');
   if(!row)throw Error('NOT_FOUND');if(row[m.PrimaryIdAttribute]!==id)throw Error('REPORT_CONFLICT');return validRow(table,row);
  }
- async function query(table,{filter,orderBy}={}){
+ async function query(table,{filter,orderBy,select}={}){
   schema(table);if(filter!==undefined&&(typeof filter!=='string'||filter.length>4000)||orderBy!==undefined&&(typeof orderBy!=='string'||!/^[a-z0-9_]+(?: (?:asc|desc))?$/.test(orderBy)))throw Error('VALIDATION');
-  const m=await writer.meta(table),params=new URLSearchParams({...filter?{'$filter':filter}:{},...orderBy?{'$orderby':orderBy}:{}});
+  const m=await writer.meta(table),allowed=new Set([m.PrimaryIdAttribute,...schema(table).columns.map(c=>c.target?'_'+c.logical_name+'_value':c.logical_name)]);
+  if(select!==undefined&&(!Array.isArray(select)||select.length>80||select.some(field=>!allowed.has(field))||new Set(select).size!==select.length))throw Error('VALIDATION');
+  const params=new URLSearchParams({...filter?{'$filter':filter}:{},...orderBy?{'$orderby':orderBy}:{},...select?{'$select':[...new Set([m.PrimaryIdAttribute,'esmojo_sleutel',...select])].join(',')}:{}});
   let path=m.EntitySetName+'?'+params,rows=[],pages=0;const ids=new Set();
   while(path){
    if(++pages>50)throw Error('REPORT_UNAVAILABLE');
