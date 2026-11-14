@@ -41,6 +41,7 @@ jobs:
           node --test server/background-tasks/*.test.js
           node server/shows-validation.test.js
           node --test tools/background/continue.test.mjs
+          node --test tools/background/wait-reports-validation.test.mjs
           node --test server/show-migration*.test.js
           node server/accounts-api.test.js
           node --test server/show-management.test.js

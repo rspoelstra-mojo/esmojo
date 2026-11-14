@@ -1,6 +1,10 @@
 name: Validate copied Reports data
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/reports-validation.yml'
 permissions:
   contents: read
   id-token: write
@@ -14,5 +18,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Wait for the published read-only validation protocol
+        run: node tools/background/wait-reports-validation.mjs
       - name: Compare copied Reports without business writes
         run: node tools/background/continue.mjs --reports-validation
