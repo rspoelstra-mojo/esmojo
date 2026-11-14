@@ -14,3 +14,12 @@ machtigingsduur behouden. Geen stille Drive-fallback na activering.
 Verwachte bestanden/diensten: server Reports-runtime, migratie-/achtergrondtaken,
 API/providerrouter, Apps Script-integratiegrens, workflows, tests en documentatie.
 GitHub en Vercel via bestaande zakelijke verbindingen; toegang per dienst controleren.
+
+Eerste publicatiestap: uitsluitend onafhankelijke Reports-eindvalidatie en
+runtime-inventaris, vóór bouwen/activeren van de volledige native provider.
+Geen runtime-omschakeling in deze stap. De gebruikerstest voert de gebruiker later
+zelf uit. Statusrun 43640860595 bevestigt de complete kopie (221/8517/226).
+Zakelijke Vercel-toegang na opnieuw verbinden bevestigd voor esmojo/esmojo.
+GitHub-connector leest/schrijft; CLI-token is ongeldig en de connector biedt
+geen workflow_dispatch. De nieuwe read-only workflow moet daarom via de bestaande
+GitHub Actions-bediening gestart worden. Geen credentials gekopieerd.

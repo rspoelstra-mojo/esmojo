@@ -1,5 +1,5 @@
 import {pathToFileURL} from 'node:url';
-const endpoints={tasks:'https://esmojo.nl/api/background-tasks-sync',validation:'https://esmojo.nl/api/shows-validation-sync'};
+const endpoints={tasks:'https://esmojo.nl/api/background-tasks-sync',validation:'https://esmojo.nl/api/shows-validation-sync','reports-validation':'https://esmojo.nl/api/reports-validation-sync'};
 const keys=['steps','completed','blocked','waiting','failed'];
 // Eén workflow houdt meerdere korte serverrondes gaande. De server blijft
 // eigenaar van machtiging, checkpoints, leases, Retry-After en conflictstops.
@@ -33,10 +33,10 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
   const stats=data?.stats;
   if(!response.ok||data?.ok!==true||!stats||keys.some(key=>!Number.isSafeInteger(stats[key])||stats[key]<0))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
   log(JSON.stringify({round,...Object.fromEntries(keys.map(key=>[key,stats[key]]))}));
-  if(mode==='validation'&&data.verification){const v=data.verification;if(['shows','records','files'].some(k=>!Number.isSafeInteger(v[k])||v[k]<0))throw Error('Eindvalidatie niet bevestigd.');log(JSON.stringify({verifiedShows:v.shows,verifiedRecords:v.records,verifiedFiles:v.files}));}
-  if(mode==='validation'&&stats.blocked)throw Error('Eindvalidatie gestopt voor controle; raadpleeg de beheerpagina.');
+  if(['validation','reports-validation'].includes(mode)&&data.verification){const v=data.verification,subject=mode==='validation'?'shows':'reports';if([subject,'records','files'].some(k=>!Number.isSafeInteger(v[k])||v[k]<0))throw Error('Eindvalidatie niet bevestigd.');log(JSON.stringify({[subject==='shows'?'verifiedShows':'verifiedReports']:v[subject],verifiedRecords:v.records,verifiedFiles:v.files}));}
+  if(['validation','reports-validation'].includes(mode)&&stats.blocked)throw Error('Eindvalidatie gestopt voor controle; raadpleeg de beheerpagina.');
   if(stats.failed)throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
-  if(continuation&&mode==='tasks'){
+  if(continuation&&['tasks','reports-validation'].includes(mode)){
    // The server still decides what is due and enforces Retry-After, leases,
    // delegation and current permissions. Waiting here never holds a Vercel call.
    if(!continuation.active)return;
@@ -47,5 +47,5 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
  log('Begrensde uitvoering afgerond; opgeslagen taken blijven beschikbaar voor de volgende ronde.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- try{await continueTasks({mode:process.argv.includes('--shows-validation')?'validation':'tasks',operation:process.env.BACKGROUND_TASK_OPERATION||'continue'});}catch{console.error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');process.exitCode=1;}
+ try{await continueTasks({mode:process.argv.includes('--reports-validation')?'reports-validation':process.argv.includes('--shows-validation')?'validation':'tasks',operation:process.env.BACKGROUND_TASK_OPERATION||'continue'});}catch{console.error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');process.exitCode=1;}
 }

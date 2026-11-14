@@ -28,8 +28,8 @@ export function reportDestination(){
   if(options.method==='PATCH')return apply(set,match[2],headers,body);
   if(options.method&&options.method!=='GET')throw Error('Unexpected synthetic mutation');
   if(match[2])return set.rows.has(match[2])?json(set.rows.get(match[2])):none(404);
-  const params=new URLSearchParams(query),filter=params.get('$filter'),conditions=filter?[...filter.matchAll(/(esmojo_[a-z0-9_]+) eq '((?:[^']|'')*)'/g)].map(m=>({field:m[1],value:m[2].replaceAll("''","'")})):[];if(filter&&!conditions.length)throw Error('Unsupported synthetic filter '+filter);
-  const values=[...set.rows.values()].filter(row=>!conditions.length||conditions.some(c=>row[c.field]===c.value));return json({value:values.slice(0,Number(params.get('$top')||5000))});
+  const params=new URLSearchParams(query),filter=params.get('$filter'),conditions=filter?[...filter.matchAll(/(esmojo_[a-z0-9_]+) eq '((?:[^']|'')*)'/g)].map(m=>({field:m[1],value:m[2].replaceAll("''","'")})):[];const lookup=filter&&/^(_esmojo_[a-z0-9_]+_value) eq ([a-f0-9-]{36})$/.exec(filter);if(filter&&!conditions.length&&!lookup)throw Error('Unsupported synthetic filter '+filter);
+  const values=[...set.rows.values()].filter(row=>lookup?row[lookup[1]]===lookup[2]:!conditions.length||conditions.some(c=>row[c.field]===c.value));return json({value:values.slice(0,Number(params.get('$top')||5000)),...(params.get('$count')==='true'?{'@odata.count':values.length}:{})});
  }};
  return{connection,calls,files,sets,metadata,rows:table=>[...sets.get(metadata.get(table).EntitySetName).rows.values()],loseNextBatch(table){loseBatchTable=table;},corruptDownloads(value=true){corruptDownload=value;}};
 }
