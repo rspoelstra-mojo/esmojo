@@ -44,7 +44,7 @@ export function createNativeReportIngest({intake,processing,dependencies,publica
     await authorize(actor,{worker:actor===null});await markWrite();job.cursor=await publication.advance({entry:job.entry,bundle:job.bundle,bytes:read.bytes,cursor:job.cursor});
     if(job.cursor.phase==='complete')job.state=job.desiredState||'valid';value.web=job;found.previous.row=await processing.write(found.previous.row,value);if(job.state==='valid'||job.state==='invalid')break;
    }
-   if(job.state==='invalid'){let row=null;try{calculateReport(read.bytes,{generatedAt:found.file.modifiedAt});}catch(error){if(Number.isSafeInteger(error.row))row=error.row;}Object.assign(value,{status:'invalid',errorCode:input.errorCode,errorRow:row});await processing.write(found.previous.row,value);}
+   if(job.state==='invalid'){let row=null;try{calculateReport(read.bytes,{generatedAt:found.file.modifiedAt});}catch(error){if(Number.isSafeInteger(error.row))row=error.row;}job.errorCode=input.errorCode;job.errorRow=row;Object.assign(value,{status:'invalid',errorCode:input.errorCode,errorRow:row});await processing.write(found.previous.row,value);}
    return{ok:true,state:job.state==='valid'?'ready':job.state==='invalid'?'invalid':'processing'};
   });
  }
