@@ -54,3 +54,5 @@ test('noon timetable is validated and stored against the same native concert wit
  assert.equal((await catalogue.request('native-timetable-save',{concertId:sampleSource.concertId,snapshot})).state,'missing');assert.deepEqual((await catalogue.request('native-timetable-read',{concertId:sampleSource.concertId})).timetable,snapshot);
  await assert.rejects(catalogue.request('native-timetable-save',{concertId:sampleSource.concertId,snapshot:{...snapshot,capturedAt:'2026-11-15T12:00:00.000Z'}}),/TIMETABLE_INVALID/);
 });
+
+test('central catalogue route carries server context and checks current native authority before exposing data',async()=>{const f=fixture(),writes=f.writes();await assert.rejects(f.catalogue.request('concert-catalogue'),/DATAVERSE_SHOWS_NOT_ACTIVE/);assert.equal(f.writes(),writes);});

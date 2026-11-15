@@ -19,7 +19,7 @@ function validSourceIdentity(show){
  const source=parseResearchKey(show.sourceKey),venue=MOJO_VENUES.find(v=>v.name===show.venue);
  return source&&source.date===show.dates[0]&&researchSlug(source.artistToken)===researchSlug(show.name)&&venue&&[venue.name,venue.id,...venue.aliases].some(name=>researchSlug(name)===researchSlug(source.venueToken));
 }
-export function createNativeCatalogue({state,now=()=>new Date()}={}){
+export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}={}){
  const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1');
  async function writeRows(rows){const ops=await recordOperations(repo,rows);if(ops.length)await repo.atomic(ops);}
  async function all(){

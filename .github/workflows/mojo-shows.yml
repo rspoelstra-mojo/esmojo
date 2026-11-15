@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Import only at five and capture timetable only at noon
+      - name: Verify current catalogue; import at five and capture timetable at noon
         env:
           VERIFY_ONLY: ${{ github.event_name == 'push' || inputs.verify_only == true }}
         run: |
