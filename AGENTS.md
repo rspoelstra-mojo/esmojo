@@ -1854,3 +1854,13 @@ De vaste main/OIDC-workflow shows-runtime.yml mag native bedrijfsdata alleen lez
 create/update, ETag-conflict en rollback van een niet-gecommitteerde controle-opdracht.
 Geen fictieve concertdata, bronwijziging, mail, activering of vrije query/scope.
 Dit is een andere controle dan de onafhankelijke bron/doel-eindvalidatie.
+
+Op 15 november 2026 heeft de gebruiker voor de Rapportages-activering expliciet
+gevraagd de laatste schrijfstop/urenlange eindcontrole over te slaan en direct te
+publiceren. De aparte `confirmed-copy-v1`-route gebruikt het complete read-only
+voorcontrolecheckpoint, een korte atomische metadata-/leasecontrole en writerwissel,
+CAS en onafhankelijke runtime-teruglezing. Claim geen nieuwe volledige eindvalidatie
+onder schrijfstop: die is expliciet overgeslagen. Huidige rechten, originele
+begrensde delegatie, geen dubbele schrijvers, private File en geen Drive-fallback
+blijven gelden. Zie docs/dataverse/reports-native-runtime.md en taaknotitie
+reports-native-activation-20261115.md. Gebruiker doet de ingelogde gebruikerstest zelf.

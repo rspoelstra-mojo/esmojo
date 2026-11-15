@@ -25,3 +25,9 @@ test('policy mutation needs the exact signed server contract and native authoriz
  await assert.rejects(policy(f,{expectedRevision:0,next:{mode:'dataverse',epoch,drainUntil:Date.parse('2026-11-05T12:11:00Z')}}),/REPORT_CONFLICT/);
  assert.equal((await policy(f)).mode,'legacy');
 });
+test('immediate writer switch requires an unchanged metadata proof and rejects in-flight legacy jobs without entering freeze',async()=>{
+ const f=fixture(),raw=JSON.parse(f.mail.content);raw.pipeline={status:'idle',updatedAt:'2026-11-05T12:00:00.000Z'};f.mail.setContent(JSON.stringify(raw));const catalogue=await f.store('reports-migration-catalogue',actor),next={mode:'dataverse',epoch,drainUntil:Date.parse('2026-11-05T12:00:00Z'),switchMode:'confirmed-copy-v1',inventoryFingerprint:catalogue.fingerprint,pipelineBaseline:{present:true,value:raw.pipeline}};
+ await assert.rejects(policy(f,{expectedRevision:0,next:{...next,inventoryFingerprint:'f'.repeat(64)}}),/REPORT_CONFLICT/);assert.equal((await policy(f)).mode,'legacy');
+ const busy=JSON.parse(f.mail.content);busy.sources.push({id:'synthetic-source',job:{id:epoch,expiresAt:'2026-11-05T12:05:00Z'}});f.mail.setContent(JSON.stringify(busy));await assert.rejects(policy(f,{expectedRevision:0,next}),error=>error.workerCode==='BUSY');assert.equal((await policy(f)).mode,'legacy');
+ f.mail.setContent(JSON.stringify(raw));const active=await policy(f,{expectedRevision:0,next});assert.equal(active.mode,'dataverse');assert.equal(active.switchMode,'confirmed-copy-v1');assert.equal(active.inventoryFingerprint,catalogue.fingerprint);
+});
