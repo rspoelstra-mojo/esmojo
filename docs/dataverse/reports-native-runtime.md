@@ -1,5 +1,26 @@
 # Rapportages: runtime en onafhankelijke validatie
 
+## Actuele productiestatus (15 november 2026)
+
+De serverautoriteit én de Google-writerfence zijn daadwerkelijk naar Dataverse
+omgezet in run 43692823668, main 90ef01b. Er is geen Drive-runtimefallback.
+De volledige native provider uit PR 177 is gepubliceerd. PR 180 (main 53849a4,
+V1.121) corrigeert de expliciete File-select; run 43696509612 bevestigt native
+catalogus en oudste/nieuwste rapportage inclusief bytes. De Artiesten-nacontrole
+is nog geblokkeerd met SHOWS_UNAVAILABLE; PR 181 onderzoekt deze leesafhankelijkheid.
+De reguliere OnTrack-verwerking 43696509777 is geslaagd.
+
+De onafhankelijke voorcontrole is volledig afgerond: 221 rapportages,
+8517 records en 226 bestanden (run 43681649105). De laatste lange schrijfstop en
+volledige eindvergelijking zijn op expliciet gebruikersverzoek overgeslagen.
+Activering gebruikte het bestaande volledige bewijs plus korte atomische
+metadata-/leasecontrole, CAS en onafhankelijke autoriteitsteruglezing.
+Geen nieuwe volledige vergelijking onder schrijfstop claimen. Originelen behouden.
+De ingelogde browseracceptatie voert de gebruiker later uit.
+
+Hieronder staat ook de bouwgeschiedenis; oudere vermeldingen 'nog niet actief'
+beschrijven de toenmalige tussenstand, niet de huidige productieautoriteit.
+
 De read-only eindvalidatie en een interne read-only native repository zijn
 gebouwd. De repository is nog niet aangesloten op de productieprovider. Volledige
 native lees-/schrijfdekking en activering zijn niet afgerond. Een groene validatie
