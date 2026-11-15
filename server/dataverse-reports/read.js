@@ -1,7 +1,7 @@
 import {createNativeReportsRepository} from './repository.js';
-import {reportChoice,parserContract,calculationContract} from '../reports-migration/contract.js';
+import {reportChoice,parserContract,calculationContract,reportsRecordContract} from '../reports-migration/contract.js';
 import {reportIdentity} from '../reports-migration/map.js';
-import {canonical,digest,recordKey} from '../show-migration-writer.js';
+import {canonical,digest,recordKey,migrationDifferences} from '../show-migration-writer.js';
 import {ONTRACK_HEADERS,parseCsv,calculateReport} from '../ontrack-report/data.js';
 import {validateReportDay} from '../web-report-catalogue.js';
 import {validateWebReportRequest,webReportKpis,webReportTypes} from '../report-web.js';
@@ -24,7 +24,7 @@ export function createNativeReportReader({repository=createNativeReportsReposito
  function sourceMetadata(source){
   const provenance=parse(source.esmojo_herkomst_json),original=provenance.source,validation=provenance.validation,show=original?.show;
   if(!show||typeof show.key!=='string'||typeof show.name!=='string'||!show.name||typeof show.venue!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(show.date)||original.id!==source.esmojo_externebronid||original.context!==source.esmojo_contexthash||validation?.state!=='valid'||validation.context!==original.context||validation.sourceHash!==source.esmojo_inhoudsha256)fail();
-  if(source.esmojo_brontype!==reportChoice('rapportbron',reportSourceType(show))||Date.parse(original.modifiedAt)!==Date.parse(source.esmojo_brongewijzigdop))fail();
+  if(source.esmojo_brontype!==reportChoice('rapportbron',reportSourceType(show))||migrationDifferences({table:'esmojo_rapportbron'},source,{esmojo_brongewijzigdop:original.modifiedAt},reportsRecordContract).length)fail();
   if(reportSourceType(show)==='tsc-historical'&&!validTscShowData(show.showData))fail();
   return{provenance,show};
  }
@@ -88,7 +88,7 @@ export function createNativeReportReader({repository=createNativeReportsReposito
   const version=await repo.byId('esmojo_rapportversie',header._esmojo_actueleversie_value);if(!version)throw Error('REPORT_CONFLICT');
   const file=await repo.file({reportKey,versionKey:version.esmojo_sleutel}),versionId=file.versionId;
   if(!file.header.esmojo_beschikbaar||file.header._esmojo_actueleversie_value!==versionId||file.version.esmojo_parsercontract!==parserContract||file.version.esmojo_rekencontract!==calculationContract)throw Error('SOURCE_CHANGED');
-  const {show}=sourceMetadata(file.artifact);if(show.key!==concertId||file.header.esmojo_bronidentiteit!==reportIdentity(show))fail();
+  const {show,provenance}=sourceMetadata(file.artifact);if(show.key!==concertId||file.header.esmojo_bronidentiteit!==reportIdentity(show))fail();
   const concert=await repo.byId('esmojo_concert',file.header._esmojo_concert_value);if(concert.esmojo_oudconcertid!==concertId||day(concert.esmojo_datum)!==show.date)fail();
   const [contexts,incidents,blocks,menu]=await Promise.all([repo.children('esmojo_rapportcontext','esmojo_rapportversie',versionId),repo.children('esmojo_rapportincident','esmojo_rapportversie',versionId),repo.children('esmojo_rapporttekstblok','esmojo_rapportversie',versionId),catalogue()]);
   if(contexts.length!==1)fail();const context=contexts[0],snapshot=parse(context.esmojo_snapshot_json),contextId=await repo.idOf('esmojo_rapportcontext',context);
@@ -102,7 +102,7 @@ export function createNativeReportReader({repository=createNativeReportsReposito
   for(const point of points){const expected=expectedPoints[point.esmojo_volgorde];if(!expected)fail();
    for(const [field,value]of Object.entries({puntsoort:expected.kind,label:expected.label,gepubliceerdlabel:expected.publishedLabel,lokaledatum:expected.localDate,tijd:expected.time,tijdtekst:expected.timeText,tijdsoort:expected.timeType?reportChoice('tijdsoort',expected.timeType):null,brontype:expected.sourceType||snapshot.timetable.sourceType}))if(normalized(field==='lokaledatum'?day(point['esmojo_'+field]):point['esmojo_'+field])!==normalized(value))fail();
   }
-  const report=validateReportDay(calculateReport(file.bytes,{generatedAt:file.artifact.esmojo_brongewijzigdop}),show.date),raw=parseCsv(file.bytes),byPosition=new Map(incidents.map(row=>[row.esmojo_bronpositie,row])),text=textReader(blocks,versionId);
+  const report=validateReportDay(calculateReport(file.bytes,{generatedAt:provenance.source.modifiedAt}),show.date),raw=parseCsv(file.bytes),byPosition=new Map(incidents.map(row=>[row.esmojo_bronpositie,row])),text=textReader(blocks,versionId);
   if(incidents.length!==raw.length||byPosition.size!==raw.length||file.version.esmojo_incidentenaantal!==raw.length)fail();
   for(const incident of report.incidents){
    const row=byPosition.get(incident.position);if(!row)fail();const id=await repo.idOf('esmojo_rapportincident',row);
@@ -116,7 +116,7 @@ export function createNativeReportReader({repository=createNativeReportsReposito
   for(const [prefix,group,names]of [['medisch','medical',{totaal:'total',behandelingen:'treatments',zelfzorg:'selfcare',onwel:'unwell',contusie:'contusion',ambulance:'ambulance'}],['beveiliging','security',{totaal:'total',verbaal:'verbal',fysiek:'physical',baldadigheid:'mischief',uitzettingen:'evictions',aanhoudingen:'arrests'}]])for(const [name,field]of Object.entries(names))if((file.version['esmojo_'+prefix+'_'+name]??null)!==(kpis[group][field]??null))fail();
   const series=menu.find(row=>row.shows.some(item=>item.concertId===concertId));if(!series)throw Error('NOT_FOUND');
   const fresh=await repo.byKey('esmojo_rapportage',reportKey);if(fresh?.['@odata.etag']!==file.header['@odata.etag'])throw Error('SOURCE_CHANGED');
-  return{show:{...show,...(snapshot.sourceUrl?{sourceUrl:snapshot.sourceUrl}:{})},photo:snapshot.photo||null,series,csvBase64:file.bytes.toString('base64'),sourceHash:file.sha256,modifiedAt:file.artifact.esmojo_brongewijzigdop,timetable:snapshot.timetable||null};
+  return{show:{...show,...(snapshot.sourceUrl?{sourceUrl:snapshot.sourceUrl}:{})},photo:snapshot.photo||null,series,csvBase64:file.bytes.toString('base64'),sourceHash:file.sha256,modifiedAt:provenance.source.modifiedAt,timetable:snapshot.timetable||null};
  }
  return{catalogue,source,current,summary,metrics};
 }

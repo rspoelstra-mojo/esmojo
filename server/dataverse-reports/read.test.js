@@ -66,3 +66,9 @@ test('afternoon and evening performances retain independent datasets and overnig
   assert.equal(source.show.performance,performance);assert.equal(web.selectedDate,'2025-02-01');assert.equal(web.report.incidents[0].id,performance);assert.equal(web.report.incidents[0].localDate,localDate);
  }
 });
+test('native seconds precision accepts the migration representation while retaining original source milliseconds',async()=>{
+ const f=await nativeReaderFixture({prepare:async({drive,csv})=>{drive.advance(123);csv.setContent(csv.content);}}),source=f.destination.rows('esmojo_rapportbron')[0],original=JSON.parse(source.esmojo_herkomst_json).source.modifiedAt;
+ source.esmojo_brongewijzigdop=new Date(Math.floor(Date.parse(original)/1000)*1000).toISOString();for(const row of f.destination.rows('esmojo_rapportversie'))if(row.esmojo_gegenereerdop)row.esmojo_gegenereerdop=new Date(Math.floor(Date.parse(row.esmojo_gegenereerdop)/1000)*1000).toISOString();
+ const native=reader(f),before=writes(f);assert.equal((await native.catalogue()).length,1);assert.equal((await native.source(f.show.concertId)).modifiedAt,original);assert.equal(writes(f),before);
+ source.esmojo_brongewijzigdop=new Date(Date.parse(source.esmojo_brongewijzigdop)+1000).toISOString();await assert.rejects(native.catalogue(),/REPORT_CONFLICT/);
+});
