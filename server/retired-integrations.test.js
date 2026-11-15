@@ -1,0 +1,7 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {existsSync,readFileSync} from 'node:fs';import vm from 'node:vm';
+import {retiredIntegration} from './retired-integrations.js';
+test('MCP has no API, OAuth, discovery, server implementation or signed Google dispatcher',()=>{
+ for(const file of ['api/mcp.js','api/mcp-oauth.js','server/mcp-api.js','server/mcp-oauth.js','server/mcp-auth-store.js','server/mcp-owner.js','google-apps-script/McpAuth.gs','public/.well-known/oauth-authorization-server','public/.well-known/oauth-protected-resource'])assert.equal(existsSync(file),false,file);
+ const context=vm.createContext({esmojoMcpAuth_:()=>{throw Error('retired route called');},ContentService:{MimeType:{JSON:'json'},createTextOutput:value=>({setMimeType:()=>JSON.parse(value)})},PropertiesService:{getScriptProperties:()=>({getProperty:()=>null})}});vm.runInContext(readFileSync('google-apps-script/Code.gs','utf8'),context);assert.equal(context.doPost({postData:{contents:JSON.stringify({action:'mcp-auth'})}}).ok,false);
+});
+test('retired sync endpoints cannot fetch, import or write even with an old request body',async()=>{for(const method of ['GET','POST']){const response={setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};await retiredIntegration({method,body:{initialFill:true,snapshot:{}}},response);assert.equal(response.code,410);assert.equal(response.body.code,'INTEGRATION_RETIRED');}});

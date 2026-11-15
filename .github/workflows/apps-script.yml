@@ -41,7 +41,6 @@ jobs:
         id: source
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Check script and publication safety
-        # MCP-auth tests also import the existing Supabase/MFA verifier.
         # Install repository dependencies before running those offline tests.
         # No environment credentials are supplied to this step.
         run: npm ci --no-audit --no-fund
@@ -55,7 +54,7 @@ jobs:
           node server/artist-show.test.js
           node server/artist-preparation.test.js
           node --test server/incident-metrics.test.js
-          node --test server/artist-biographies.test.js
+          node --test server/concert-catalogue.test.js server/concert-schedule.test.js
           node shared/account-employment.test.js
           node server/mojo-timetable.test.js
           node server/show-timetables.test.js
@@ -65,7 +64,7 @@ jobs:
           node server/online-report-mail.test.js
           node server/email-engagement.test.js
           node --test tools/apps-script/deploy.test.mjs
-          node server/mcp.test.js
+          node server/retired-integrations.test.js
           node server/showprofile-risks.test.js
           node server/operational-risks.test.js
           node server/show-measures.test.js

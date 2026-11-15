@@ -1,3 +1,4 @@
+import {createConcertCatalogue} from '../concert-catalogue.js';
 import {createProfiles} from '../account-profiles.js';
 import {createTaskStore} from '../background-tasks/store.js';
 import {hasModule,isAdministrator} from '../../shared/account-modules.js';
@@ -9,8 +10,7 @@ import {createReportsProcessing} from './processing.js';
 import {createNativeReportReader} from './read.js';
 import {createNativeReportArchive} from './archive.js';
 import {createNativeReportRecipients} from './recipients.js';
-import {createNativeReportPublication} from './publication.js';
-import {createNativeReportIngest} from './ingest.js';
+import {createStoredReportCsv} from './stored-csv.js';
 import {createNativeReportPdf} from './pdf.js';
 import {createNativeReportMail} from './mail.js';
 import {createNativeReportManagement} from './management.js';
@@ -26,11 +26,11 @@ export function createNativeReportsService({env=process.env,repository:repo=crea
   const profile=await profiles('self',actor);if(profile?.id!==actor||profile.activated!==true||profile.disabled||!(hasModule(profile,module)||incident&&isAdministrator(profile))||admin&&!isAdministrator(profile))throw Error('FORBIDDEN');return profile;
  }
  async function accounts(){const actor=await workerActor();await authorize(actor,{admin:true});const rows=await profiles('list',actor);if(!Array.isArray(rows))throw Error('REPORT_UNAVAILABLE');return rows.map(profile=>({...profile,reports:hasModule(profile,'reports')}));}
- const dependencies=injectedDependencies||createNativeReportDependencies({env,reader,intake}),archive=createNativeReportArchive({env,repository:repo,mutations,profiles}),recipients=createNativeReportRecipients({env,repository:repo,mutations,operational,writer,profiles}),publication=createNativeReportPublication({writer,repository:repo,mutations}),ingest=createNativeReportIngest({intake,processing,dependencies,publication,repository:repo,operational,authorize}),pdf=createNativeReportPdf({intake,processing,dependencies,reader,repository:repo,writer,mutations,operational,authorize,selection:recipients.selection,accounts}),management=createNativeReportManagement({repository:repo,mutations,reader,pdf,processing,recipients,dependencies,operational,authorize}),mail=createNativeReportMail({env,repository:repo,writer,mutations,operational,authorize,accounts,visible:reader.current,selection:recipients.selection,processing,intake,download:async reportId=>archive.download(await workerActor(),reportId),manager:async show=>(await dependencies.context((await dependencies.choices()).find(row=>row.key===show.key)||{...show,date:show.dates[0]})).contextGeneral.eventSafetyManager}),related=createNativeReportsRelated({reader,authorize});
+ const dependencies=injectedDependencies||createNativeReportDependencies({env,reader,intake}),archive=createNativeReportArchive({env,repository:repo,mutations,profiles}),recipients=createNativeReportRecipients({env,repository:repo,mutations,operational,writer,profiles}),storedCsv=createStoredReportCsv({reader,repository:repo}),pdf=createNativeReportPdf({intake:storedCsv,processing,dependencies,reader,repository:repo,writer,mutations,operational,authorize,selection:recipients.selection,accounts}),management=createNativeReportManagement({repository:repo,mutations,reader,pdf,processing,recipients,dependencies,operational,authorize}),mail=createNativeReportMail({env,repository:repo,writer,mutations,operational,authorize,accounts,visible:reader.current,selection:recipients.selection,processing,intake:storedCsv,download:async reportId=>archive.download(await workerActor(),reportId),manager:async show=>(await dependencies.context((await dependencies.choices()).find(row=>row.key===show.key)||{...show,date:show.dates[0]})).contextGeneral.eventSafetyManager}),related=createNativeReportsRelated({reader,authorize,concertCatalogue:createConcertCatalogue({env})});
  const operations={
   'web-menu':async actor=>{await authorize(actor);return{reports:await reader.catalogue(),pending:0};},
   'web-read':async(actor,input)=>{await authorize(actor);return reader.source(input.concertId);},
-  'web-scan':ingest.scan,'web-source':ingest.source,'web-commit':ingest.commit,'web-historical-status':()=>ingest.historicalStatus(),
+  'web-scan':async actor=>{await authorize(actor,{worker:actor===null});return{jobs:[],unlinked:0,intakeDisabled:true};},'web-source':async actor=>{await authorize(actor,{worker:actor===null});throw Error('CSV_INTAKE_DISABLED');},'web-commit':async actor=>{await authorize(actor,{worker:actor===null});throw Error('CSV_INTAKE_DISABLED');},'web-historical-status':async()=>{await authorize(null,{worker:true});return{valid:0,invalid:0,pending:0,intakeDisabled:true};},
   scan:()=>pdf.scan(),pipeline:(actor,input)=>management.pipeline(input),reserve:(actor,input)=>pdf.reserve(input),commit:(actor,input)=>pdf.commit(input),fail:(actor,input)=>pdf.fail(input),
   link:(actor,input)=>management.change(actor,'link',input),retry:(actor,input)=>management.change(actor,'retry',input),download:(actor,input)=>archive.download(actor,input.reportId),send:(actor,input)=>mail.send(actor,input.reportId),
   'online-sync':()=>mail.sync(),'online-reserve':(actor,input)=>mail.reserve('online',input),'online-commit':(actor,input)=>mail.confirm('online',input),'online-fail':(actor,input)=>mail.confirm('online',input,{failed:true}),

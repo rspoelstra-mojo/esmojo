@@ -22,7 +22,6 @@ function doPost(event) {
       // OnTrack behoudt zijn grens; de ondertekende show-overlay kan een toegestane
       // voorbereidingssnapshot naast een bestaande upload bevatten.
       if (raw.length <= 5000000 && envelope.action === 'ontrack-reports') return esmojoOnTrackReports_(envelope);
-      if (raw.length <= 3000000 && envelope.action === 'ontrack-concerts') return esmojoOnTrackConcerts_(envelope);
       if (envelope.action === 'shows') {
         let overlay=false;try{overlay=typeof envelope.body==='string'&&JSON.parse(envelope.body).operation==='active-bridge';}catch{/* Ongeldige body krijgt geen ruimere grens. */}
         if(raw.length<=3000000||overlay&&raw.length<=8000000)return esmojoShows_(envelope);
@@ -31,7 +30,6 @@ function doPost(event) {
         if (envelope.action === 'ontrack') return esmojoOnTrack_(envelope);
         if (envelope.action === 'accounts') return esmojoAccounts_(envelope);
         if (envelope.action === 'research') return esmojoResearch_(envelope);
-        if (envelope.action === 'mcp-auth') return esmojoMcpAuth_(envelope);
       }
     }
     if (!raw || raw.length > 4096) return esmojoReply_({ ok: false, error: 'Geen toegang.' });

@@ -27,19 +27,18 @@ test('ontbrekende, vervalste of alg-none tokens en onbekende sleutels krijgen ge
 test('identity diagnostics contain only closed stage names, never raw token or claim values',async()=>{
  for(const [patch,stage]of [[{sub:'private-subject-value'},'subject'],[{aud:'private-audience-value'},'audience'],[{iss:'private-issuer-value'},'issuer']])await assert.rejects(verifyImportIdentity(token(patch),{request,now}),error=>{assert.equal(error.message,'FORBIDDEN');assert.equal(error.identityStage,stage);assert.doesNotMatch(JSON.stringify(error),/private/);return true;});
 });
-test('Biografieworker accepteert uitsluitend eigen audience/main/workflow; push en workflow_run verruimen geen andere worker',async()=>{
+test('retired biography identity is refused and only the fixed agenda publication probe allows push',async()=>{
  const audience='https://esmojo.nl/api/artist-biographies-sync',workflow='artist-biographies.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
- for(const event_name of ['schedule','workflow_dispatch','push','workflow_run'])assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),{runId:'123'});
- for(const event_name of ['push','workflow_run'])await assert.rejects(verifyImportIdentity(token({event_name}),{request,now}),/FORBIDDEN/);
- await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'pull_request'}),{request,now,audience,workflow}),/FORBIDDEN/);
- await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',ref:'refs/heads/other'}),{request,now,audience,workflow}),/FORBIDDEN/);
+ for(const event_name of ['schedule','workflow_dispatch','push','workflow_run'])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),/FORBIDDEN/);
+ assert.deepEqual(await verifyImportIdentity(token({event_name:'push'}),{request,now}),{runId:'123'});await assert.rejects(verifyImportIdentity(token({event_name:'workflow_run'}),{request,now}),/FORBIDDEN/);
 });
+
 test('immutable subject en eigenaar-/repository-ID zijn verplicht, niet alleen herbruikbare namen', async () => {
   for (const change of [{ repository_id: '1' }, { repository_owner_id: '1' }, { sub: 'repo:rspoelstra-mojo/esmojo:ref:refs/heads/main' }]) await assert.rejects(verifyImportIdentity(token(change), { request, now }), /FORBIDDEN/);
 });
 test('OnTrack-import heeft een eigen vaste audience en behoudt alle workflow/main-controles',async()=>{
  const audience='https://esmojo.nl/api/ontrack-concerts-sync';
- assert.deepEqual(await verifyImportIdentity(token({aud:audience}),{request,now,audience}),{runId:'123'});
+ await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience}),/FORBIDDEN/);
  await assert.rejects(verifyImportIdentity(token(),{request,now,audience}),/FORBIDDEN/);
  await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now}),/FORBIDDEN/);
  await assert.rejects(verifyImportIdentity(token({aud:audience,ref:'refs/heads/task'}),{request,now,audience}),/FORBIDDEN/);
@@ -55,7 +54,7 @@ test('Tijdschema-opname heeft eigen audience en uitsluitend de bestaande middagw
 });
 
 test('Homepageprojectie vereist eigen audience en de vaste middagworkflow op main',async()=>{
- const audience='https://esmojo.nl/api/home-planning-sync';assert.deepEqual(await verifyImportIdentity(token({aud:audience}),{request,now,audience}),{runId:'123'});await assert.rejects(verifyImportIdentity(token(),{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token({aud:audience,ref:'refs/heads/other'}),{request,now,audience}),/FORBIDDEN/);
+ const audience='https://esmojo.nl/api/home-planning-sync';await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token(),{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token({aud:audience,ref:'refs/heads/other'}),{request,now,audience}),/FORBIDDEN/);
 });
 
 test('Webinventaris heeft eigen audience en aparte workflow; mailworkeridentiteit krijgt geen toegang',async()=>{

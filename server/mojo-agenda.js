@@ -1,4 +1,4 @@
-import {mojoVenue,matchesMojoVenue} from './mojo-venues.js';
+import {MOJO_VENUES,mojoVenue,matchesMojoVenue} from './mojo-venues.js';
 import {isDataversePilot} from '../shared/dataverse-pilot.js';
 // Alleen openbare MOJO-agendagegevens. Geen afbeeldingen, tickets of bezoekersdata.
 const DAY = 86400000;
@@ -41,8 +41,9 @@ export function parseAgenda(html, {venue:venueId='gashouder'}={}) {
     if (!artist || artist.length > 160 || !year || !month || !day) throw new Error('MOJO_FORMAT');
     const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     if (new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) throw new Error('MOJO_DATE');
-    const href = /<a\b[^>]*href="([^"]+)"[^>]*class="[^"]*agenda-item__link/.exec(item)?.[1];
-    const source = new URL(text(href || '/agenda'), 'https://www.mojo.nl');
+    const link=(item.match(/<a\b[^>]*>/gi)||[]).map(tag=>Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*(["'])(.*?)\2/g)].map(match=>[match[1].toLowerCase(),match[3]]))).find(attrs=>/agenda-item__link\b/.test(attrs.class||''));
+    const href=link?.href;
+    const source = new URL(text(href || '/agenda'), 'https://www.mojo.nl');source.hash='';
     // Externe locatie-links worden niet gevolgd of als importbron opgeslagen.
     const sourceUrl = source.origin === 'https://www.mojo.nl' ? source.href : 'https://www.mojo.nl/agenda';
     records.push({ artist, date, venue: venue.name, city: venue.city, sourceUrl, concertId: concertId(artist, date, venue.name) });
@@ -52,9 +53,9 @@ export function parseAgenda(html, {venue:venueId='gashouder'}={}) {
   return { records, next: next ? text(next) : null };
 }
 
-export async function scrapeMojo({ request = fetch, now = new Date(), venue:venueId='gashouder' } = {}) {
+export async function scrapeMojo({ request = fetch, now = new Date(), venue:venueId='gashouder',days=365 } = {}) {
   const venue=mojoVenue(venueId);
-  const from = calendarDate(now), until = addDays(from, 365);
+  const from = calendarDate(now), until = addDays(from, days);
   let url = new URL('https://www.mojo.nl/agenda?'+new URLSearchParams({query:venue.query}));
   const seen = new Set(), concerts = new Map();
   while (url) {
@@ -68,17 +69,17 @@ export async function scrapeMojo({ request = fetch, now = new Date(), venue:venu
     for (const row of page.records) {
       if (row.date < from || row.date >= until) continue;
       const existing = concerts.get(row.concertId);
-      if (existing && artistKey(existing.artist) !== artistKey(row.artist)) throw new Error('MOJO_ID_COLLISION');
+      if (existing && (artistKey(existing.artist) !== artistKey(row.artist)||existing.sourceUrl!==row.sourceUrl)) throw new Error('MOJO_ID_COLLISION');
       concerts.set(row.concertId, row);
     }
-    url = page.next ? new URL(page.next, url) : null;
+    url = page.records.some(row=>row.date>=until)?null:page.next ? new URL(page.next, url) : null;
   }
   return { from, until, checkedAt: now.toISOString(), pages: seen.size, concerts: [...concerts.values()].sort((a, b) => a.date.localeCompare(b.date) || a.artist.localeCompare(b.artist, 'nl')) };
 }
 
 export function upcomingArtists(concerts, now = new Date()) {
   const from = calendarDate(now), until = addDays(from, 45), weekUntil = addDays(from, 7), names = new Map();
-  for (const row of concerts) if (row.date >= from && row.date < until && row.venue === 'Gashouder' && row.city === 'Amsterdam') {
+  for (const row of concerts) if (row.date >= from && row.date < until && MOJO_VENUES.some(venue=>venue.name===row.venue&&venue.city===row.city)) {
     const key = artistKey(row.artist);
     if (!names.has(key)) names.set(key, { key, name: row.artist, group: row.date < weekUntil ? 'week' : 'period' });
     else if (row.date < weekUntil) names.get(key).group = 'week';
@@ -91,8 +92,8 @@ export function upcomingShows(concerts, now = new Date()) {
   const from = calendarDate(now), until = addDays(from, 45), weekUntil = addDays(from, 7);
   const artists = new Map();
   for (const row of concerts) {
-    if ((row.venue !== 'Gashouder' || row.city !== 'Amsterdam') && !isDataversePilot(row.concertId)) continue;
-    const key = artistKey(row.artist);
+    if (!MOJO_VENUES.some(venue=>venue.name===row.venue&&venue.city===row.city)&&!isDataversePilot(row.concertId)) continue;
+    const key = artistKey(row.artist)+'|'+row.venue;
     if (!artists.has(key)) artists.set(key, new Map());
     artists.get(key).set(row.date, row);
   }

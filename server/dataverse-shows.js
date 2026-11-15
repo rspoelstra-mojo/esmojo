@@ -37,6 +37,7 @@ export function createDataverseShows({shows,research,now=Date.now}={}){
  }
  const wrapped=async(operation,payload={})=>{
   if(operation==='list'){
+   if(shows.nativeRequest){const native=await shows.nativeRequest('list',payload);if(native.handled)return native.result;}
    const [legacy,imported]=await Promise.all([shows('list').catch(error=>{if(['dataverse','managed'].includes(shows.provider)||error.message==='FORBIDDEN'||!research.configured?.())throw error;return{concerts:[],checkedAt:null};}),catalogue(true)]);
    return{...legacy,dataverseShows:imported,checkedAt:legacy.checkedAt||(imported.length?new Date(now()).toISOString():null)};
   }

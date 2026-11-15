@@ -5,13 +5,8 @@ description: "Zelfstandige ESMOJO-skill voor 'Start het onderzoek voor [artiest]
 
 # ESMOJO concertonderzoek
 
-Voor de OAuth MCP-app op https://esmojo.nl/api/mcp geldt tevens
-docs/mcp-research.md: gebruik research_prompt voor de actuele elf MD-bestanden,
-concerts_on_date voor een expliciet gekozen datum en save_research voor
-gevalideerde opslag met readback. De MCP-app geeft geen toegang tot de lokale
-shell of secrets. Deze skill of de MCP-server maakt zelf geen dagelijkse taak;
-een geplande onderzoeksopdracht vereist expliciete gebruikersautorisatie en
-daadwerkelijk aan die geplande uitvoering gekoppelde tools.
+De MCP-server is op 15 november 2026 verwijderd. Gebruik geen MCP-tools of OAuth-
+koppeling voor ESMOJO. De overige onderzoeksrichtlijnen blijven behouden.
 
 Deze skill staat op zichzelf. Gebruik geen andere onderzoeksskill. Alle elf
 originele gebruikersprompts staan in /workspace/esmojo/onderzoeksprompts; hun vaste

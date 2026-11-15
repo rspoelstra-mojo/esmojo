@@ -1,5 +1,8 @@
 # Risicoanalyse van definitieve showprofielen
 
+Actueel (15 november 2026): de MCP-koppeling is verwijderd. Onderstaande oude
+koppelinstructies zijn historisch en mogen niet opnieuw worden geactiveerd.
+
 De gebruiker heeft op 2 november 2026 gevraagd potentiële risico's voor een
 publieksevenement uit het definitieve showprofiel te halen, ieder risico als
 afzonderlijk JSON-item. Voorbeelden: moshpits, grote ticketvraag en aankomst

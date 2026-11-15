@@ -25,9 +25,11 @@ test('Validation van een verouderde upload kan een inmiddels gewijzigde bron nie
 test('Slechte MIME/te grote CSV wordt afgekeurd zonder bronbytes; maximaal vijf jobs per beurt',async()=>{
  const f=webDriveFixture();for(let i=0;i<7;i++)f.addCsv(f.addShow({name:'Fictief '+i}),{mime:'text/html'});const service=createWebCatalogueService({store:f.store});assert.equal((await f.store('web-scan',null)).jobs.length,5);await service.synchronize();assert.equal(f.byteReads(),0);assert.equal((await f.store('web-scan',null)).jobs.length,2);
 });
-test('Worker heeft eigen identiteit, negeert clientdata, geeft geen privémetadata/broninhoud en verstuurt geen mail',async()=>{
- let calls=0;const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}}),handler=makeWebReportsSync({identify:async token=>{if(token!=='trusted')throw Error('FORBIDDEN');},service:{synchronize:async(...args)=>{assert.equal(args.length,0);calls++;return{ok:true,validated:2};}}});for(const request of [{method:'GET',headers:{}},{method:'POST',headers:{}},{method:'POST',headers:{authorization:'Bearer fake'}}]){const res=response();await handler(request,res);assert.ok([403,405].includes(res.code));}assert.equal(calls,0);const res=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{sourceId:'free',recipient:'injected@example.invalid'}},res);assert.equal(res.code,200);assert.deepEqual(res.data,{ok:true});assert.equal(calls,1);
+test('retired CSV worker requires identity and cannot invoke an old synchronizer or mail worker',async()=>{
+ let calls=0;const handler=makeWebReportsSync({identify:async token=>{if(token!=='trusted')throw Error('FORBIDDEN');},service:{synchronize:async()=>{calls++;}},online:{run:async()=>{calls++;}}}),response=()=>({setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;}});
+ const denied=response();await handler({method:'POST',headers:{},body:{}},denied);assert.equal(denied.code,403);const retired=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{}},retired);assert.equal(retired.code,410);assert.equal(calls,0);
 });
+
 test('Menu-projectie is exact gedeeld en de afzonderlijke mailworkflow/generator wordt niet aangeroepen',()=>{
  assert.equal(readFileSync('google-apps-script/ReportCatalogue.gs','utf8').split('\n').slice(1).join('\n'),readFileSync('shared/report-catalogue.js','utf8').replaceAll('export ',''));
  const module=readFileSync('server/web-report-catalogue.js','utf8');for(const name of ['sendEmail','pdf.js','createOnTrackReportService','delivery-reserve'])assert.equal(module.includes(name),false);
