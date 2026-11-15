@@ -39,3 +39,8 @@ test('Drive controleert actuele Artiestenrechten en exacte artiest/datum/zaal vÃ
  const duplicate=drive({duplicate:true});assert.throws(()=>duplicate.read(),/REPORT_CONFLICT/);assert.equal(duplicate.reads(),0);
  for(const body of [{date:'2026-11-08'},{date:'2026-11-09'},{date:'2026-11-02'},{venue:'Other venue'},{artistIds:['a_'+'f'.repeat(64)]},{fileId:'arbitrary'}]){const h=drive();assert.throws(()=>h.read(body));assert.equal(h.reads(),0);}
 });
+test('signed artist read diagnostics contain only fixed stage/code and never raw provider errors',()=>{
+ const context=vm.createContext({esmojoReply_:value=>value});vm.runInContext(readFileSync('google-apps-script/Shows.gs','utf8'),context);
+ const result=context.esmojoArtistReadReply_('MENU',()=>{throw Error('private provider payload');});assert.equal(result.code,'SHOWS_UNAVAILABLE');assert.equal(result.readDiagnostic,'MENU_UNCONFIRMED');assert.equal(JSON.stringify(result).includes('private'),false);
+ const missing=context.esmojoArtistReadReply_('SHOW',()=>{throw Error('NOT_FOUND');});assert.equal(missing.code,'NOT_FOUND');assert.equal(missing.readDiagnostic,'SHOW_NOT_FOUND');
+});

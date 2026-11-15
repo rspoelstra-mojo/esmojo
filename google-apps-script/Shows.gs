@@ -50,9 +50,9 @@ function esmojoShows_(input) {
       if(['biography-save','biography-initial-save','biography-initial-batch'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);}
       return esmojoReply_({ok:true,data:esmojoArtistBiographies_(request)});
     }
-    if(request.operation==='artist-show')return esmojoReply_({ok:true,data:esmojoArtistShow_(request)});
-    if(request.operation==='artist-profile')return esmojoReply_({ok:true,data:esmojoArtistProfile_(request)});
-    if(request.operation==='artist-catalogue')return esmojoReply_({ok:true,data:esmojoArtistCatalogue_(request)});
+    if(request.operation==='artist-show')return esmojoArtistReadReply_('SHOW',()=>esmojoArtistShow_(request));
+    if(request.operation==='artist-profile')return esmojoArtistReadReply_('PROFILE',()=>esmojoArtistProfile_(request));
+    if(request.operation==='artist-catalogue')return esmojoArtistReadReply_('MENU',()=>esmojoArtistCatalogue_(request));
     if(['reference-read','reference-install'].includes(request.operation)){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return esmojoReply_({ok:true,data:esmojoBarrierReference_(request)});}
     const finish=data=>esmojoReply_({ok:true,data:typeof esmojoHomeResult_==='function'?esmojoHomeResult_(request,data):data});
     if(request.operation.startsWith('active-')){const cache=CacheService.getScriptCache(),key='shows:'+input.nonce;if(cache.get(key))throw Error('FORBIDDEN');cache.put(key,'1',180);return esmojoReply_({ok:true,data:esmojoActiveStorage_(request)});}
@@ -285,4 +285,12 @@ function esmojoWriteShowJson_(folder, file, name, data) {
     return file;
   }
   return folder.createFile(Utilities.newBlob(json, 'application/json', name));
+}
+
+// Signed server-only response: fixed diagnostics, never provider text or content.
+function esmojoArtistReadReply_(stage,read){
+ try{return esmojoReply_({ok:true,data:read()});}catch(error){
+  const code=['FORBIDDEN','NOT_FOUND','VALIDATION','CONFLICT','REPORT_CONFLICT','REPORT_UNAVAILABLE','REPORT_CATALOG','ARTIST_CATALOGUE','STORAGE_ACTIVE'].includes(error.message)?error.message:error instanceof ReferenceError?'REFERENCE':error instanceof TypeError?'TYPE':'UNCONFIRMED';
+  return esmojoReply_({ok:false,code:['FORBIDDEN','NOT_FOUND'].includes(code)?code:'SHOWS_UNAVAILABLE',readDiagnostic:stage+'_'+code});
+ }
 }
