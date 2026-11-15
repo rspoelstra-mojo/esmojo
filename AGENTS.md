@@ -1,3 +1,17 @@
+## Artiestenherstel overname account A (15 november 2026)
+
+Gebruiker vraagt gestopte account-A-taak PR190 af te maken. Nieuwe branch/PR vanaf
+actuele main, registratie behouden, geen oude branch hergebruiken. Herstel de nog
+ontbrekende native incidentdagstand die de gehele artiestpagina blokkeert na
+Google-afsluiting. Bestaande berekening, Nederlandse daggrenzen, eerste publicatie
+per dag, actuele module-/beheerdersgrenzen en profiel/score samen tonen behouden.
+Afgeleide versleutelde Integratiestatus-leesprojectie toegestaan volgens bestaand
+native projectiepatroon; getypeerde Shows/Rapportages blijven canoniek. Geen nieuw
+schema, heropening Drive, echte mails/fictieve gegevens of authbypass. Bestaande
+vaste main/OIDC incidentworker mag native dagstand initialiseren en gerichte
+read-only artiestencontrole uitvoeren; alleen veilige codes/tellingen retourneren.
+Supabase Auth en nog niet geactiveerde Redis-omschakeling afzonderlijk behouden.
+
 ## Redis vervangen met behoud Supabase Auth (15 november 2026)
 
 Gebruiker autoriseert vervanging van de twee actieve Redis-paden: anonieme

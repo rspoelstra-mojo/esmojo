@@ -12,3 +12,28 @@ rechten behouden. Geen Drive-/Supabase-bedrijfsfallback of authbypass, geen echt
 mails of fictieve bedrijfsdata. Verwachte artiestenruntime, gerichte tests en
 publicatiebewijs. Redis-publicatie PR189 staat live V1.130; native proef 780ms
 geslaagd, werkelijke Redis-activering en dienstafsluiting nog niet uitgevoerd.
+
+
+Oorzaak bewezen: createIncidentMetricsService.snapshot vraagt incident-daily-read;
+Shows/Reports router had hiervoor geen native dekking en bereikte de afgesloten
+Drive-brug. De frontend wacht bewust op profiel én score en faalde daardoor geheel.
+Herstel: vier daily-routes native, versleutelde/compressie-begrensde afgeleide dagstand
+in bestaande Integratiestatus, CAS + volledige onafhankelijke readback. Geen schema-
+wijziging of andere canonieke bron. Amsterdam-middernacht, oorspronkelijke 4u
+voortzetting en eerste dagpublicatie behouden. Geen scan/write bij lezen.
+Eerste native dagstand opnieuw opgebouwd uit actuele getypeerde native gegevens;
+geen beweerde bytegelijke kopie van oude Drive-dagstand. Origineel blijft bewaard.
+
+Incident-read met artiestscope levert alleen die artiest, zodat native Shows niet
+onnodig alle andere voorbereidingen laadt. Rapportageweergave/parser onveranderd.
+Bestaande fixed main/OIDC worker initialiseert bij publicatie en controleert menu,
+profielen, risicolezing en oude rapportagekoppeling met actuele workerrechten.
+Geen vrije actor of gegevensinhoud in probe; geen nieuwe gebruiksessie/Auth-bypass.
+
+Lokale validatie: 97 gerichte Reports/Artiesten/incidenttests en 24 probe/daily/OIDC-
+tests geslaagd; Vite-build en bestaande artiest-browsercontroles geslaagd op
+390/1440px licht/donker, profiel+score samen, historie/KPI's en races/disposal.
+Productie-uitkomst volgt afzonderlijk na merge/deployment.
+
+Brede lokale servercontrole: 723 geslaagd, 0 fouten, 1 conditionele echte Redis-test
+niet relevant voor deze wijziging overgeslagen. Build en diffcontrole geslaagd.
