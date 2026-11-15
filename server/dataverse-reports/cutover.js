@@ -13,9 +13,14 @@ import {canonical,digest} from '../show-migration-writer.js';
 export const reportsCutoverType='reports-cutover-v1';
 const drainMs=11*60000;
 const withoutRevision=value=>JSON.parse(JSON.stringify(value),(key,item)=>key==='revision'?undefined:item);
-export async function ensureReportsCutover({store,tasks,now=Date.now}){
+export async function ensureReportsCutover({store,tasks,now=Date.now,resumeTechnical=false,authority,intake}){
  const [migration,validation]=await Promise.all([store.get('reports-migration-v1'),store.get(reportsValidationType)]),state=migration?.state,checked=validation?.state;
  if(state?.status!=='complete'||state.lease||state.expiresAt<=now()||checked?.status!=='complete'||checked.lease||checked.actor!==state.actor||checked.expiresAt!==state.expiresAt)throw Error('VALIDATION_APPROVAL_REQUIRED');
+ if(resumeTechnical){const row=await store.get(reportsCutoverType),p=row?.state;if(p?.status==='blocked'){
+  if(p.actor!==state.actor||p.expiresAt!==state.expiresAt||p.handlerVersion!==1||p.lease||p.uncertain||p.cursor!==null||p.public?.code!=='REPORT_CONFLICT'||!authority||!intake)throw Error('TASK_BUSY');
+  if((await authority.read()).value.mode!=='legacy'||(await intake.policy(state.actor)).mode!=='legacy')throw Error('TASK_BUSY');
+  return tasks.control({operation:'resume',type:reportsCutoverType},state.actor,{authorizationExpiresAt:state.expiresAt,expectedEpoch:p.epoch,expectedSequence:p.sequence});
+ }}
  return tasks.control({operation:'start',type:reportsCutoverType},state.actor,{authorizationExpiresAt:state.expiresAt});
 }
 export function createReportsCutover({env=process.env,store=createTaskStore({env}),repository=createNativeReportsRepository({env}),authority=createReportsAuthority({env,repository}),reader=createNativeReportReader({repository}),intake=createReportsIntake({env}),bridge=createReportsBridge({env}),profiles=createProfiles({env}),validate=createReportsValidation({env,store}),now=Date.now,activationMode='confirmed-copy-v1'}={}){
@@ -38,9 +43,9 @@ export function createReportsCutover({env=process.env,store=createTaskStore({env
    }
    if(s.phase==='preflight'){
     const google=await bridgePolicy(actor);if(s.activationMode==='confirmed-copy-v1'&&!google.activationProtocols?.includes('confirmed-copy-v1'))return{...view(s),status:'waiting',delayMs:15000};if(google.contract!=='reports-native-runtime-v1'||!['legacy','freeze'].includes(google.mode)||google.mode==='freeze'&&google.epoch!==runId)throw Error('REPORT_CONFLICT');
-    const [legacy,native]=await Promise.all([bridge('web-menu',actor),reader.catalogue()]);if(canonical(withoutRevision(legacy.reports))!==canonical(withoutRevision(native)))throw Error('MIGRATION_SOURCE_CHANGED');
+    const [legacy,native]=await Promise.all([bridge('web-menu',actor),reader.catalogue().catch(error=>{error.reportsCutoverStage='native-catalogue';throw error;})]);if(canonical(withoutRevision(legacy.reports))!==canonical(withoutRevision(native)))throw Error('MIGRATION_SOURCE_CHANGED');
     if(s.activationMode==='confirmed-copy-v1'){
-     const checked=await store.get(reportsValidationType),proof=JSON.parse(checked.state.cursor),copy=JSON.parse(migration.cursor),settings=await originalReportSettings(repository);
+     const checked=await store.get(reportsValidationType),proof=JSON.parse(checked.state.cursor),copy=JSON.parse(migration.cursor),settings=await originalReportSettings(repository).catch(error=>{error.reportsCutoverStage='settings';throw error;});
      if(proof.phase!=='complete'||proof.schema!==reportsSchemaHash||proof.run!==checked.state.epoch||proof.migration!==migration.epoch||!Number.isSafeInteger(proof.total)||!Number.isSafeInteger(proof.records)||!Number.isSafeInteger(proof.files))throw Error('TASK_CORRUPT');
      s.total=proof.total;s.current=proof.index;s.records=proof.records;s.files=proof.files;s.inventoryHash=copy.inventoryHash;s.baseline={present:Object.hasOwn(settings,'pipeline'),value:Object.hasOwn(settings,'pipeline')?settings.pipeline:null};s.proof={type:reportsValidationType,status:'completed',taskId:checked.id,epoch:checked.state.epoch,sequence:checked.state.sequence};s.precheckCompletedAt=checked.state.updatedAt;s.phase='activate-fast';return view(s);
     }
@@ -86,6 +91,6 @@ export function createReportsCutover({env=process.env,store=createTaskStore({env
    }
    throw Error('TASK_CORRUPT');
   },
-  failure(error){const inherited=validate.failure(error),temporary=['TASK_BUSY','SETUP_TEMPORARY','SETUP_THROTTLED','ONTRACK_REPORT_UNAVAILABLE'].includes(error.message);return{...inherited,code:['REPORT_CONFLICT','REPORT_WRITE_UNCONFIRMED','REPORTS_AUTHORITY_INVALID','REPORTS_NOT_ACTIVE'].includes(error.message)?error.message:inherited.code,retryable:temporary||inherited.retryable,uncertain:error.message==='REPORT_WRITE_UNCONFIRMED',error:'De Rapportages-omschakeling wacht of is gestopt voor controle; oorsprong en checkpoints blijven behouden.'};}
+  failure(error){const inherited=validate.failure(error),temporary=['TASK_BUSY','SETUP_TEMPORARY','SETUP_THROTTLED','ONTRACK_REPORT_UNAVAILABLE'].includes(error.message);return{...inherited,code:error.reportsCutoverStage==='native-catalogue'?'REPORTS_NATIVE_CATALOGUE_CONFLICT':error.reportsCutoverStage==='settings'?'REPORTS_SETTINGS_CONFLICT':['REPORT_CONFLICT','REPORT_WRITE_UNCONFIRMED','REPORTS_AUTHORITY_INVALID','REPORTS_NOT_ACTIVE'].includes(error.message)?error.message:inherited.code,retryable:temporary||inherited.retryable,uncertain:error.message==='REPORT_WRITE_UNCONFIRMED',error:'De Rapportages-omschakeling wacht of is gestopt voor controle; oorsprong en checkpoints blijven behouden.'};}
  };
 }

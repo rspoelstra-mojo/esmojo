@@ -3,7 +3,7 @@ const endpoints={tasks:'https://esmojo.nl/api/background-tasks-sync',validation:
 const keys=['steps','completed','blocked','waiting','failed'];
 // Eén workflow houdt meerdere korte serverrondes gaande. De server blijft
 // eigenaar van machtiging, checkpoints, leases, Retry-After en conflictstops.
-export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,log=console.log,budgetMs=40*60000,maxRounds=160,mode='tasks',operation='continue',resumeReportsTechnical=false,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,log=console.log,budgetMs=40*60000,maxRounds=160,mode='tasks',operation='continue',resumeReportsTechnical=false,resumeCutoverTechnical=false,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
  const endpoint=endpoints[mode];if(!endpoint||!['continue','status','reports-check','reports-resume'].includes(operation)||operation!=='continue'&&mode!=='tasks')throw Error('Onbekende vaste worker.');
  const deadline=now()+Math.min(budgetMs,40*60000);
  for(let round=1;round<=maxRounds&&now()+280000<=deadline;round++){
@@ -13,7 +13,7 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
    const identity=await fetcher(url,{headers:{Authorization:`Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`},signal:AbortSignal.timeout(30000)});
    if(!identity.ok)throw Error();const {value}=await identity.json();if(typeof value!=='string'||!value)throw Error();log(`::add-mask::${value}`);
    transportStage='request';
-   response=await fetcher(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:mode==='reports-validation'&&resumeReportsTechnical&&round===1?JSON.stringify({operation:'resume-technical'}):operation!=='continue'&&!(operation==='reports-resume'&&round>1)?JSON.stringify({operation}):'{}',signal:AbortSignal.timeout(280000)});
+   response=await fetcher(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:((mode==='reports-validation'&&resumeReportsTechnical)||(mode==='reports-cutover'&&resumeCutoverTechnical))&&round===1?JSON.stringify({operation:'resume-technical'}):operation!=='continue'&&!(operation==='reports-resume'&&round>1)?JSON.stringify({operation}):'{}',signal:AbortSignal.timeout(280000)});
    transportStage='response';
    data=await response.json();
    if(mode==='reports-validation'&&!response.ok){
@@ -53,5 +53,5 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
  log('Begrensde uitvoering afgerond; opgeslagen taken blijven beschikbaar voor de volgende ronde.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- try{await continueTasks({mode:process.argv.includes('--reports-cutover')?'reports-cutover':process.argv.includes('--reports-validation')?'reports-validation':process.argv.includes('--shows-validation')?'validation':'tasks',operation:process.env.BACKGROUND_TASK_OPERATION||'continue',resumeReportsTechnical:process.env.REPORTS_VALIDATION_RESUME_TECHNICAL==='1'});}catch{console.error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');process.exitCode=1;}
+ try{await continueTasks({mode:process.argv.includes('--reports-cutover')?'reports-cutover':process.argv.includes('--reports-validation')?'reports-validation':process.argv.includes('--shows-validation')?'validation':'tasks',operation:process.env.BACKGROUND_TASK_OPERATION||'continue',resumeReportsTechnical:process.env.REPORTS_VALIDATION_RESUME_TECHNICAL==='1',resumeCutoverTechnical:process.env.REPORTS_CUTOVER_RESUME_TECHNICAL==='1'});}catch{console.error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');process.exitCode=1;}
 }
