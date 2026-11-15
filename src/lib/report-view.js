@@ -5,8 +5,9 @@ const contains=(value,keyword)=>String(value||'').toLocaleLowerCase('nl-NL').inc
 export function visibleReportIncidents(incidents){
  return incidents.filter(incident=>!['zelfzorg','kolven'].some(keyword=>contains(incident.type,keyword))&&!['pleister','pcm','paracetamol','paracetemol'].some(keyword=>contains(incident.description,keyword)));
 }
+const incidentDateFormatter=new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
 export function shortIncidentDate(date){
- return new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).formatToParts(new Date(date+'T12:00:00Z')).map(part=>part.type==='month'?part.value.replace(/\.$/,''):part.value).join('');
+ return incidentDateFormatter.formatToParts(new Date(date+'T12:00:00Z')).map(part=>part.type==='month'?part.value.replace(/\.$/,''):part.value).join('');
 }
 export const highlightedReportIncident=incident=>['high','critical'].includes(String(incident.priority||'').trim().toLowerCase());
 export function reportPhoto(photo){

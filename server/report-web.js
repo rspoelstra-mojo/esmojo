@@ -28,9 +28,9 @@ export function webReportKpis(report,source={}){
   const kpis={medical:{...report.kpis.medical,unwell:count(matchesMedicalReportFilter,'unwell'),contusion:count(matchesMedicalReportFilter,'contusion')},security:{...report.kpis.security,mischief:count(matchesSecurityReportFilter,'mischief')}};
   return reportSourceKpis(kpis,source);
 }
-export function createWebReportService({store,photo=async()=>null,canonicalPhoto=async()=>null}){
+export function createWebReportService({store,photo=async()=>null,canonicalPhoto=async()=>null,verifiedProfile=null}){
  return async(actor,input)=>{
-  const concertId=validateWebReportRequest(input),source=await store('web-read',actor,{concertId}),show=source.show;
+  const concertId=validateWebReportRequest(input);if(typeof store.render==='function'){const rendered=await store.render(actor,{concertId},verifiedProfile);if(rendered)return rendered;}const source=await store('web-read',actor,{concertId}),show=source.show;
   if(show?.key!==concertId||typeof show.name!=='string'||!show.name||typeof show.venue!=='string'||typeof source?.csvBase64!=='string'||source.csvBase64.length>2800000||!Number.isFinite(Date.parse(source.modifiedAt))||!Array.isArray(source.series?.shows)||!source.series.shows.some(row=>row.concertId===concertId&&row.date===show.date))throw Error('REPORT_UNAVAILABLE');
   const bytes=Buffer.from(source.csvBase64,'base64');if(createHash('sha256').update(bytes).digest('hex')!==source.sourceHash)throw Error('SOURCE_CHANGED');
   const report=validateReportDay(calculateReport(bytes,{generatedAt:source.modifiedAt}),show.date);

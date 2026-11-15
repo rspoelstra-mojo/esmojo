@@ -5,10 +5,12 @@ import {reportHref} from '../shared/report-routes.js';
 import {createWebReportPage} from './report-web.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 export function createReportsPage(content,submenu,{selected=null,heading=document.querySelector('#submenu-title'),cache=reportCatalogueCache,request=access,replaceUrl=url=>history.replaceState(null,'',url)}={}){
- let disposed=false,cleanup=()=>{},active=null,activeRevision=null;const controller=new AbortController(),loading=createSubmenuLoading(heading,content);
+ let disposed=false,cleanup=()=>{},active=null,activeRevision=null,directOpening=false;const controller=new AbortController(),loading=createSubmenuLoading(heading,content);
  const node=(tag,className,text)=>{const element=document.createElement(tag);element.className=className;if(text!==undefined)element.textContent=text;return element;};
  function showSelection(){content.classList.add('report-selection-empty');content.replaceChildren(node('p','report-selection-prompt','Kies eerst een rapportage'));}
- if(!selected)showSelection();
+ const click=globalThis.performance?.getEntriesByName?.('esmojo-report-click').at(-1),startedAt=click&&performance.now()-click.startTime<2000?click.startTime:undefined;
+ const selectedOptions=()=>({concertId:selected,request,startedAt,onSelected:(date,concertId)=>{selected=concertId;replaceUrl(reportHref({concertId}));}});
+ if(!selected)showSelection();else if(cache.current()===null){directOpening=true;content.classList.remove('report-selection-empty');cleanup=createWebReportPage(content,heading,selectedOptions());}
  function render(reports){
   if(disposed||!reports)return;const links=new Map([...submenu.querySelectorAll('[data-report-key]')].map(link=>[link.dataset.reportKey,link]));submenu.replaceChildren();
   // De menuperiode is alleen een weergavefilter, geen beperking op directe links.
@@ -23,11 +25,11 @@ export function createReportsPage(content,submenu,{selected=null,heading=documen
   }
   if(found){
    const revision=JSON.stringify(found);
-   if(activeRevision!==revision){content.classList.remove('report-selection-empty');if(active&&cleanup.reload){cleanup.reload(selected,selectedLink);}else{cleanup();cleanup=createWebReportPage(content,selectedLink,{concertId:selected,request,onSelected:(date,concertId)=>{selected=concertId;replaceUrl(reportHref({concertId}));}});}active=found;activeRevision=revision;}
+   if(activeRevision!==revision){content.classList.remove('report-selection-empty');if(directOpening){cleanup.retarget?.(selectedLink);cleanup.updateCatalogue?.(found.shows);directOpening=false;}else if(active&&cleanup.updateCatalogue){cleanup.retarget?.(selectedLink);cleanup.updateCatalogue(found.shows);}else if(active&&cleanup.reload){cleanup.reload(selected,selectedLink);}else{cleanup();cleanup=createWebReportPage(content,selectedLink,selectedOptions());}active=found;activeRevision=revision;}
   }
   if(!found){cleanup();cleanup=()=>{};active=activeRevision=null;if(!selected)showSelection();else{content.classList.remove('report-selection-empty');content.textContent=reports.length?'Rapportage niet gevonden.':'Er zijn nog geen rapportages beschikbaar.';}}
  }
- async function refresh(force=false){if(disposed)return;const finish=cache.current()?()=>{}:loading.start();try{await cache.refresh(request,{force});}catch{if(!disposed&&!cache.current()){const message=node('p','form-message','Het rapportagesmenu kon niet worden geladen.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>{cache.retry();void refresh();};content.classList.remove('report-selection-empty');content.replaceChildren(message,retry);}}finally{finish();}}
+ async function refresh(force=false){if(disposed)return;const finish=cache.current()||selected?()=>{}:loading.start();try{await cache.refresh(request,{force});}catch{if(!disposed&&!cache.current()){const message=node('p','form-message','Het rapportagesmenu kon niet worden geladen.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>{cache.retry();void refresh();};if(selected){submenu.replaceChildren(message,retry);}else{content.classList.remove('report-selection-empty');content.replaceChildren(message,retry);}}}finally{finish();}}
  render(cache.current());const unsubscribe=cache.subscribe(render);void refresh(true);
  window.addEventListener('focus',()=>void refresh(true),{signal:controller.signal});document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh(true);},{signal:controller.signal});
  let day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());const timer=setInterval(()=>{if(document.hidden)return;const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());if(today!==day){day=today;render(cache.current());}void refresh();},30000);

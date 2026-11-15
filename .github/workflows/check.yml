@@ -97,6 +97,7 @@ jobs:
           node shared/artist-catalogue.test.js
           node shared/artist-names.test.js
           node shared/mojo-artist.test.js
+          node --test server/dataverse-read-batch.test.js server/reports-performance.test.js
           node --test server/native-runtime-verification.test.js
           node --test server/artist-runtime-verification.test.js
           node server/artist-service.test.js
@@ -198,3 +199,6 @@ jobs:
         run: node tools/ui/check-dataverse-shows.mjs
       - name: Datatransitie preview en hervatten
         run: node tools/ui/check-data-transition.mjs
+
+      - name: Reports click to painted content within 1.5 seconds
+        run: node tools/ui/check-report-performance.mjs

@@ -1,3 +1,5 @@
+import {createNativeShowsRepository} from '../dataverse-shows/repository.js';
+import {createDataverseReadBatch} from '../dataverse-read-batch.js';
 import {createNativeReportsRepository} from './repository.js';
 import {createReportsWriter} from '../reports-migration/writer.js';
 import {taskCipher} from '../background-tasks/store.js';
@@ -16,7 +18,7 @@ const activationFacts=value=>value.coverage===reportsCoverageHash&&value.legacyW
 export const managedReportsRouting=env=>env.REPORTS_STORAGE_PROVIDER==='dataverse'||env.VERCEL_ENV==='production'&&Boolean(env.DATAVERSE_TEST_CLIENT_SECRET);
 export function createReportsAuthority({env=process.env,repository=createNativeReportsRepository({env}),writer=createReportsWriter({env}),now=Date.now}={}){
  const repo=repository;
- async function read(){const row=await repo.byKey('esmojo_integratiestatus',reportsAuthorityKey);if(!row)return{row:null,value:{mode:'legacy'}};let value;try{value=JSON.parse(row.esmojo_configuratie_json);}catch{throw Error('REPORTS_AUTHORITY_INVALID');}if(value?.version!==1||value.contract!==reportsRuntimeContract||value.schema!==reportsSchemaHash||!['legacy','freeze','dataverse'].includes(value.mode)||value.mode!=='legacy'&&!/^[a-f0-9-]{36}$/i.test(value.epoch||''))throw Error('REPORTS_AUTHORITY_INVALID');return{row,value};}
+ async function read(supplied){const row=supplied===undefined?await repo.byKey('esmojo_integratiestatus',reportsAuthorityKey):supplied;if(!row)return{row:null,value:{mode:'legacy'}};let value;try{value=JSON.parse(row.esmojo_configuratie_json);}catch{throw Error('REPORTS_AUTHORITY_INVALID');}if(value?.version!==1||value.contract!==reportsRuntimeContract||value.schema!==reportsSchemaHash||!['legacy','freeze','dataverse'].includes(value.mode)||value.mode!=='legacy'&&!/^[a-f0-9-]{36}$/i.test(value.epoch||''))throw Error('REPORTS_AUTHORITY_INVALID');return{row,value};}
  async function set(value,{etag=null}={}){
   if(!value||!['legacy','freeze','dataverse'].includes(value.mode)||value.mode!=='legacy'&&(!/^[a-f0-9-]{36}$/i.test(value.epoch||'')||!Number.isFinite(value.drainUntil)))throw Error('VALIDATION');
   const observed=await read();
@@ -26,12 +28,16 @@ export function createReportsAuthority({env=process.env,repository=createNativeR
   else{const metadata=await writer.meta(expected.table),id=await repo.idOf(expected.table,observed.row);try{await writer.call(metadata.EntitySetName+'('+id+')',{method:'PATCH',headers:{'If-Match':etag},body:expected.fields});}catch{/* Independent readback is mandatory, never replay this CAS. */}}
   const result=await read();if(!result.row||migrationDifferences(expected,result.row,expected.fields,reportsRecordContract).length)throw Error('REPORT_WRITE_UNCONFIRMED');return result;
  }
- async function assert(observed){
+ async function assert(observed,{task:observedTask,metadata:taskMetadata}={}){
   const current=observed||await read(),value=current.value;
   if(current.row?.esmojo_integratiestatus!==reportChoice('integratiestatus','succeeded')||value.mode!=='dataverse'||!activationFacts(value)||!Number.isFinite(Date.parse(value.activatedAt)))throw Error('REPORTS_NOT_ACTIVE');
-  const proofType=fastMode(value)?reportsPrecheckType:reportsFinalValidationType,task=await repo.byKey('esmojo_opdracht',recordKey('esmojo_opdracht','background-task/'+proofType)),m=await repo.meta('esmojo_opdracht');let proof;try{proof=taskCipher({env}).open(proofType,task?.esmojo_payload_json);}catch{throw Error('REPORTS_NOT_ACTIVE');}
+  const proofType=fastMode(value)?reportsPrecheckType:reportsFinalValidationType,task=observedTask===undefined?await repo.byKey('esmojo_opdracht',recordKey('esmojo_opdracht','background-task/'+proofType)):observedTask,m=taskMetadata||await repo.meta('esmojo_opdracht');let proof;try{proof=taskCipher({env}).open(proofType,task?.esmojo_payload_json);}catch{throw Error('REPORTS_NOT_ACTIVE');}
   let cursor;try{cursor=typeof proof.cursor==='string'?JSON.parse(proof.cursor):proof.cursor;}catch{throw Error('REPORTS_NOT_ACTIVE');}
   if(task[m.PrimaryIdAttribute]!==value.validation.taskId||task.esmojo_opdrachtsoort!=='background-task-v1'||task.esmojo_resourcecode!==proofType||task.esmojo_opdrachtstatus!==reportChoice('opdrachtstatus','verified')||proof.type!==proofType||proof.status!=='complete'||proof.lease||proof.epoch!==value.validation.epoch||proof.sequence!==value.validation.sequence||cursor?.phase!=='complete'||cursor.schema!==reportsSchemaHash||cursor.run!==proof.epoch||(!fastMode(value)&&proof.epoch!==value.epoch)||(fastMode(value)&&cursor.migration!==value.migrationEpoch)||Date.parse(value.activatedAt)>proof.expiresAt)throw Error('REPORTS_NOT_ACTIVE');return value;
  }
- return{read,set,assert};
+ async function openingRead(){
+  const transport=createNativeShowsRepository({env}),types=[reportsPrecheckType,reportsFinalValidationType],keys=types.map(type=>recordKey('esmojo_opdracht','background-task/'+type)),batch=createDataverseReadBatch({env,meta:transport.meta,allowedTables:new Set(['esmojo_integratiestatus','esmojo_opdracht'])}),sets=await batch([{table:'esmojo_integratiestatus',filter:"esmojo_sleutel eq '"+reportsAuthorityKey+"'"},{table:'esmojo_opdracht',filter:keys.map(key=>"esmojo_sleutel eq '"+key+"'").join(' or ')}]);
+  if(sets[0].length!==1)throw Error('REPORTS_AUTHORITY_INVALID');const observed=await read(sets[0][0]);if(observed.value.mode==='freeze')throw Error('REPORTS_FROZEN');const proofType=fastMode(observed.value)?reportsPrecheckType:reportsFinalValidationType,task=sets[1].find(row=>row.esmojo_sleutel===keys[types.indexOf(proofType)]);await assert(observed,{task:task||null,metadata:await transport.meta('esmojo_opdracht')});return observed;
+ }
+ return{read,set,assert,openingRead};
 }

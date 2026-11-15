@@ -1,3 +1,4 @@
+import {createDataverseReadBatch} from '../dataverse-read-batch.js';
 import {createHash,createCipheriv,createDecipheriv,randomBytes} from 'node:crypto';
 import {createNativeShowsRepository} from '../dataverse-shows/repository.js';
 import {nativeConnection} from '../dataverse-shows/connection.js';
@@ -34,5 +35,14 @@ export function createNativeAccountStore({env=process.env,repo=createNativeShows
   }catch(error){throw uncertain||error;}
   return deleted?{ok:true}:read(profile.id,{photo:true,settings});
  }
- return{get,save,policy,read,list,write,prepare,repo,access};
+ async function authorization(id){
+  if(!validAccountId(id))throw Error('FORBIDDEN');
+  const employeeKey=recordKey('esmojo_medewerker','account/'+id),employeeId=nativeId(employeeKey),rightsFilter='_esmojo_medewerker_value eq '+employeeId+' and statecode eq 0',keys=[recordKey('esmojo_integratiestatus',name(null)),recordKey('esmojo_integratiestatus',name(id)),recordKey('esmojo_integratiestatus','account-access/v1/'+id)];
+  const batch=createDataverseReadBatch({env,connection,meta:repo.meta,allowedTables:new Set(['esmojo_integratiestatus','esmojo_medewerker','esmojo_modulerecht'])}),sets=await batch([{table:'esmojo_integratiestatus',filter:keys.map(key=>"esmojo_sleutel eq '"+key+"'").join(' or ')},{table:'esmojo_medewerker',filter:"esmojo_sleutel eq '"+employeeKey+"'"},{table:'esmojo_modulerecht',filter:rightsFilter}]);
+  const tables=new Map(['esmojo_integratiestatus','esmojo_medewerker','esmojo_modulerecht'].map((table,i)=>[table,sets[i]])),snapshot={meta:repo.meta,async byKey(table,key){const found=(tables.get(table)||[]).filter(row=>row.esmojo_sleutel===key);if(found.length>1)throw Error('ACCOUNT_CORRUPT');return found[0]||null;},async query(table,{filter}){if(table!=='esmojo_modulerecht'||filter!==rightsFilter)throw Error('ACCOUNT_CORRUPT');return sets[2];}};
+  const scoped=createNativeAccountStore({env,repo:snapshot,connection}),root=await scoped.get(null),policy=root?.value;
+  if(!policy||!['freeze','dataverse'].includes(policy.mode)||policy.mode==='freeze'&&!policy.prepared||!policy.verified||policy.mode==='dataverse'&&!policy.sourceGuard||!validAccountId(policy.settings?.superAdminId))throw Error('ACCOUNT_CORRUPT');
+  const result=await scoped.read(id,{photo:false,settings:policy.settings,requireEnabled:true});if(!result)throw Error('FORBIDDEN');return result;
+ }
+ return{get,save,policy,read,list,write,prepare,repo,access,authorization};
 }
