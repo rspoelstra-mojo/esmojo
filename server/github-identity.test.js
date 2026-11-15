@@ -94,3 +94,10 @@ test('Reports cutover accepts only its fixed main workflow/audience for dispatch
  await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',ref:'refs/heads/other'}),{request,now,audience,workflow}),/FORBIDDEN/);
  await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',repository_id:'1'}),{request,now,audience,workflow}),/FORBIDDEN/);
 });
+
+
+test('MFA technical probe permits only its fixed main publication identity',async()=>{
+ const audience='https://esmojo.nl/api/mfa',workflow='mfa-security-check.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
+ assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push'}),{request,now,audience,workflow}),{runId:'123'});
+ for(const patch of [{aud:'other'},{workflow_ref:claims.workflow_ref},{ref:'refs/heads/task'},{event_name:'pull_request'},{repository_id:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
+});

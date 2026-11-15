@@ -306,7 +306,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         if(previewReads||['reports-schema-v1','reports-migration-v1'].includes(req.body?.type)&&env.VERCEL_ENV!=='production')return reply(403,{error:'Achtergrondtaken zijn uitsluitend beschikbaar in de productie-beheerdersomgeving.'});
         try{
-          if(req.body?.operation!=='status'&&!['account-native-v1','account-access-v1','reports-schema-v1','reports-migration-v1'].includes(req.body?.type)&&shows.allowLegacyMaintenance)await shows.allowLegacyMaintenance();
+          if(req.body?.operation!=='status'&&!['redis-retirement-v1','account-native-v1','account-access-v1','reports-schema-v1','reports-migration-v1'].includes(req.body?.type)&&shows.allowLegacyMaintenance)await shows.allowLegacyMaintenance();
           const result=await tasks.control(req.body,actor);
           if(req.body.operation!=='status'&&result.task&&['queued','running','waiting'].includes(result.task.status))try{background(tasks.run().catch(()=>{}));}catch{/* De duurzame worker pakt de opgeslagen taak alsnog op. */}
           return reply(200,result);

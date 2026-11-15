@@ -1,0 +1,8 @@
+import {parseViewResource} from './view-resource.js';
+import {createNativeShowsRepository} from '../dataverse-shows/repository.js';
+import {technicalKey,securityTable} from './records.js';
+const expiry=row=>row.esmojo_doelsoort==='mfa-used-v1'?Date.parse(row.modifiedon)+(row.esmojo_teller===1?31000:46000):row.esmojo_doelsoort==='mfa-user-v1'&&row.esmojo_leaseid?Date.parse(row.modifiedon)+46000:Date.parse(row.esmojo_venstereinde);
+const kinds=new Set(['mfa-user-v1','mfa-used-v1','security-probe-v1','artist-view-v1']);
+// No free table or filter. Expiry is enforced on reads immediately; physical
+// deletion is a separate bounded maintenance operation using the observed ETag.
+export function createRedisCleanup({env=process.env,repo=createNativeShowsRepository({env}),now=Date.now}={}){return async()=>{const rows=await repo.query(securityTable,{filter:[...kinds].map(kind=>"esmojo_doelsoort eq '"+kind+"'").join(' or '),orderBy:'esmojo_venstereinde asc',limit:200}),m=await repo.meta(securityTable);let deleted=0,conflicts=0;for(const row of rows.filter(row=>Number.isFinite(expiry(row))&&expiry(row)<=now()).slice(0,200)){if(!kinds.has(row.esmojo_doelsoort)||row.esmojo_sleutel!==technicalKey(row.esmojo_doelsoort,row.esmojo_doelsoort==='artist-view-v1'?parseViewResource(row.esmojo_resourcecode).eventId:row.esmojo_resourcecode))throw Error('SECURITY_STORAGE_UNCONFIRMED');try{await repo.atomic([{table:securityTable,id:row[m.PrimaryIdAttribute],method:'DELETE',etag:row['@odata.etag']}]);deleted++;}catch(error){if(error.message!=='DATAVERSE_SHOWS_CONFLICT')throw error;conflicts++;}}return{deleted,conflicts,pending:rows.length>=200||rows.filter(row=>expiry(row)<=now()).length>deleted+conflicts};};}

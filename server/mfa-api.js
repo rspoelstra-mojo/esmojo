@@ -1,11 +1,12 @@
+import {createNativeMfaReplay} from './redis-native/mfa.js';
 import {verifyImportIdentity} from './github-identity.js';
 import {createMfaReplay} from './mfa-replay.js';
 import {createMfaVerification} from './mfa-verification.js';
 import {mfaGuardEnabled,issueMfaCookie} from './mfa-cookie.js';
 import {isFluidPreview,fluidPreviewOrigin} from './fluid-preview.js';
-export function makeMfaHandler({env=process.env,request=fetch,verify=createMfaVerification({env}),replay=createMfaReplay({env}),identify=token=>verifyImportIdentity(token,{audience:'https://esmojo.nl/api/mfa',workflow:'mfa-security-check.yml'})}={}){
+export function makeMfaHandler({env=process.env,nativeReplay=createNativeMfaReplay({env}),request=fetch,verify=createMfaVerification({env}),replay=createMfaReplay({env}),identify=token=>verifyImportIdentity(token,{audience:'https://esmojo.nl/api/mfa',workflow:'mfa-security-check.yml'})}={}){
  return async(req,res)=>{
-  res.setHeader('Cache-Control','no-store, private');res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Cache-Control','no-store, private');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-ESMOJO-Security-Storage','1');
   const origin=req.headers.origin;if(origin&&origin!=='https://esmojo.nl'&&origin!==env.APP_ORIGIN&&!fluidPreviewOrigin(origin,env))return res.status(403).json({code:'MFA_FORBIDDEN',error:'Geen toegang.'});
   if(isFluidPreview(env)&&['GET','POST'].includes(req.method)){
    // Alleen authenticatie via productie; geen Drive-/bedrijfswrites in previews.
@@ -21,9 +22,9 @@ export function makeMfaHandler({env=process.env,request=fetch,verify=createMfaVe
   if(req.method==='GET')return res.status(200).json({mode:mfaGuardEnabled(env)?'redis':'direct'});
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Niet toegestaan.'});}
   if(isFluidPreview(env))return res.status(403).json({code:'MFA_FORBIDDEN',error:'Deze testomgeving is alleen-lezen.'});
-  if(req.body?.operation==='health'){
+  if(['health','native-health'].includes(req.body?.operation)){
    try{if(Object.keys(req.body).join(',')!=='operation')throw Error();await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1]);}catch{return res.status(403).json({error:'Geen toegang.'});}
-   try{await replay.health();return res.status(200).json({ok:true,enabled:mfaGuardEnabled(env),redisReady:true,secretKeyReady:env.SUPABASE_SECRET_KEY?.startsWith('sb_secret_')===true});}catch{return res.status(503).json({ok:false,error:'MFA-cache niet bevestigd.'});}
+   try{const native=req.body.operation==='native-health',started=Date.now();await(native?nativeReplay:replay).health();const provider=native?'dataverse':(await replay.status?.())?.provider||'redis';return res.status(200).json({ok:true,enabled:mfaGuardEnabled(env),storageProvider:provider,dataverseReady:provider==='dataverse',redisReady:provider==='redis',elapsedMs:Math.max(0,Date.now()-started),secretKeyReady:env.SUPABASE_SECRET_KEY?.startsWith('sb_secret_')===true});}catch{return res.status(503).json({ok:false,error:'MFA-cache niet bevestigd.'});}
   }
   try{const result=await verify(req);issueMfaCookie(res,result.claims,env);return res.status(200).json({session:result.session});}
   catch(error){const allowed=['MFA_DENIED','MFA_DISABLED','MFA_INVALID_CODE','MFA_SESSION_EXPIRED','MFA_RATE_LIMIT','MFA_REPLAY','MFA_BUSY'],code=allowed.includes(error.code)?error.code:'MFA_UNAVAILABLE',status=allowed.includes(code)?error.status:503;const messages={MFA_DENIED:'Deze verificatie is niet toegestaan. Neem contact op met de beheerder.',MFA_DISABLED:'De beveiligde verificatieroute is nog niet ingeschakeld.',MFA_INVALID_CODE:'Deze code is ongeldig of verlopen. Gebruik de huidige code uit je app.',MFA_SESSION_EXPIRED:'Je aanmelding is verlopen. Log opnieuw in.',MFA_RATE_LIMIT:'Te veel pogingen. Wacht even en probeer het opnieuw.',MFA_REPLAY:'Deze code is al gebruikt. Wacht op de volgende code uit je app.',MFA_BUSY:'Er wordt al een code gecontroleerd. Wacht even.',MFA_UNAVAILABLE:'De verificatiedienst is tijdelijk niet bereikbaar. Probeer het opnieuw.'};if(code==='MFA_RATE_LIMIT')res.setHeader('Retry-After','60');return res.status(status||503).json({code,error:messages[code]});}
