@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createDataverseSetupConnection} from './dataverse-setup-client.js';
+const id='11111111-1111-4111-8111-111111111111',table='esmojo_integratiestatus',env={DATAVERSE_TEST_URL:'https://org5bab852a.crm.dynamics.com',DATAVERSE_TEST_TENANT_ID:id,DATAVERSE_TEST_CLIENT_ID:id,DATAVERSE_TEST_CLIENT_SECRET:'fixture'};
+test('startup overlaps only technical checks, publishes metadata after verification and renews bearer context',async()=>{
+ let now=0,tokens=0;const pending=[],paths=[];
+ const connection=createDataverseSetupConnection({env,preloadTables:[table],now:()=>now,request:async(url,options)=>{if(url.includes('/token')){tokens++;return Response.json({token_type:'bearer',access_token:'fixture-'+tokens,expires_in:120});}paths.push(url);assert.equal(options.method,'GET');return new Promise(resolve=>pending.push(()=>resolve(Response.json(url.includes('solutions?')?{value:[{uniquename:'ESMOJO',solutionid:id,ismanaged:false,publisherid:{customizationprefix:'esmojo'}}]}:url.includes('organizations?')?{value:[{languagecode:1043}]}:{LogicalName:table,EntitySetName:table+'s',PrimaryIdAttribute:table+'id',ManyToOneRelationships:[]}))));}});
+ const first=connection.connect();await new Promise(resolve=>setImmediate(resolve));assert.equal(pending.length,3);assert.equal(connection.metadata(table),undefined);pending.splice(0).forEach(resolve=>resolve());assert.equal((await first).headers.Authorization,'Bearer fixture-1');assert.equal(connection.metadata(table).LogicalName,table);assert(paths.every(path=>/solutions\?|organizations\?|EntityDefinitions\(/.test(path)));now=61000;const renewed=connection.connect();await new Promise(resolve=>setImmediate(resolve));pending.splice(0).forEach(resolve=>resolve());assert.equal((await renewed).headers.Authorization,'Bearer fixture-2');assert.equal(tokens,2);
+});
+test('failed environment verification exposes no preloaded metadata or usable connection',async()=>{
+ const connection=createDataverseSetupConnection({env,preloadTables:[table],request:async url=>Response.json(url.includes('/token')?{token_type:'bearer',access_token:'fixture',expires_in:3600}:url.includes('solutions?')?{value:[]}:url.includes('organizations?')?{value:[{languagecode:1043}]}:{LogicalName:table,EntitySetName:table+'s',PrimaryIdAttribute:table+'id',ManyToOneRelationships:[]})});await assert.rejects(connection.connect(),/CHOICE_SOLUTION/);assert.equal(connection.metadata(table),undefined);
+});

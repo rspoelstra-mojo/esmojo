@@ -90,3 +90,13 @@ Nieuwe toekomstige Power Automate-inname moet de afgeleide leesprojectie na voll
 native validatie voorbereiden als onderdeel van publicatie. Die nog te bouwen inname
 wordt hier niet toegevoegd. Een ontbrekende/gewijzigde projectie blijft correct via
 het volledige native pad lezen, maar mag niet als bewezen snelle opening gelden.
+
+## Productiemeting PR194 en vervolg
+
+Run43771728638 heeft alle221 projecties voorbereid. Originele native baseline
+zie workerlog; voorbereide samples: mediaan614ms, max909ms; koude verbinding2203ms.
+De backendbegroting faalde terecht. PR195 laat uitsluitend technische omgeving-,
+taal- en metadatacontroles parallel lopen na tokenuitgifte. Geen context/metadata
+wordt beschikbaar vóór alle controles slagen; tokenvernieuwing blijft bestaan.
+Na actuele profielcontrole mogen autoriteit en read-only projectiecontrole parallel;
+alleen na beide controles mag data terugkomen. Cacheherbouw/writes wachten op autoriteit.
