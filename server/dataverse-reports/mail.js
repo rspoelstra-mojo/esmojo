@@ -47,7 +47,7 @@ export function createNativeReportMail({env=process.env,repository:repo,mutation
    const target=online?.info.legacyReportId?known.find(row=>row.info.channel==='pdf'&&row.info.id===online.info.legacyReportId):online||pdf;if(!target)throw Error('REPORT_CONFLICT');const current=await deliveries(target.row),identity=target.row.esmojo_bronidentiteit;
    for(const id of targets)if(!current.some(row=>row.esmojo_authgebruikersid===id)){await markWrite();await writer.ensure(reportRecord('rapportaflevering',identity+'/recipient/'+id,'Rapportageaflevering',{authgebruikersid:id,ontvangerhash:digest(id),afleverstatus:status('pending'),pogingen:0,idempotentiesleutel:(target.info.channel==='pdf'?'esmojo-showreport-':'esmojo-webreport-')+target.info.id+'-'+digest(id).slice(0,16),mailparameters_json:canonical({mail:null,errorCode:null})},{rapportverzending:{table:'esmojo_rapportverzending',key:target.row.esmojo_sleutel}}));}
    const fields={esmojo_verzendstatus:status(mailState(await deliveries(target.row)))};
-   if(target.info.channel==='online'){fields.esmojo_historisch=false;fields.esmojo_mailparameters_json=canonical({...target.info,historical:false});}
+   if(target.info.channel==='online'){fields.esmojo_historisch=false;fields.esmojo_mailparameters_json=canonical({...target.info,historical:false});}else if(!online)fields.esmojo_mailparameters_json=canonical({...target.info,mailRequestedBy:actor,mailRequestedAt:new Date(now()).toISOString()});
    await markWrite();await mutations.atomic([patch('esmojo_rapportverzending',target.row,fields)]);return{ok:true};
   });
  }
