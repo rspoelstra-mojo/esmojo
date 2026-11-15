@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const workflow=readFileSync('.github/workflows/web-reports.yml','utf8'),code=workflow.split("node --input-type=module <<'JS'\n")[1].split('\n          JS')[0];
-async function run(results,{daily=false,at='2026-11-08T23:00:00Z'}={}){
+async function run(results,{daily=false,event='schedule',at='2026-11-08T23:00:00Z'}={}){
  const calls=[];let skipped=false;class Clock extends Date{constructor(...args){super(...(args.length?args:[at]));}}
- const env={GITHUB_EVENT_NAME:'schedule',GITHUB_EVENT_SCHEDULE:daily?'0 22,23 * * *':'*/5 * * * *',ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example/oidc',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'};
+ const env={GITHUB_EVENT_NAME:event,GITHUB_EVENT_SCHEDULE:daily?'0 22,23 * * *':'*/5 * * * *',ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example/oidc',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'};
  try{await vm.runInNewContext('(async()=>{'+code+'})()',{URL,Date:Clock,setTimeout:fn=>fn(),process:{env,exit:()=>{skipped=true;throw Error('SKIP');}},AbortSignal,console:{log(){}},fetch:async(url,options)=>{
   if(String(url).startsWith('https://identity.example'))return{ok:true,json:async()=>({value:'synthetic'})};
+  if(!options){calls.push({url:String(url),body:null});return{headers:{get:name=>name==='x-esmojo-artist-runtime'?'1':null}};}
   calls.push({url:String(url),body:JSON.parse(options.body)});const result=results.shift();if(!result)throw Error('Unexpected extra request');return{ok:true,json:async()=>result};
  }});return calls;}catch(error){if(skipped)return calls;error.callCount=calls.length;throw error;}
 }
@@ -23,4 +24,9 @@ test('incomplete processing confirmation stops without declaring completion',asy
 test('Dutch midnight follows daylight saving and skips the other UTC round',async()=>{
  for(const at of ['2026-11-08T23:00:00Z','2026-06-08T22:00:00Z','2026-03-28T23:00:00Z','2026-10-24T22:00:00Z'])assert.equal((await run([ready,ready],{daily:true,at})).length,2,at);
  for(const at of ['2026-11-08T22:00:00Z','2026-06-08T23:00:00Z'])assert.deepEqual(await run([],{daily:true,at}),[]);
+});
+
+
+test('publication waits for native artist runtime, initializes daily state and probes reads without mail',async()=>{
+ const calls=await run([ready,ready,{ok:true,verified:true}],{event:'push',at:'2026-11-15T12:00:00Z'});assert.equal(calls[0].body,null);assert.equal(calls.length,4);assert.deepEqual(calls.at(-1).body,{artistVerify:true});assert.ok(calls.every(row=>row.url.endsWith('/incident-references-sync')));
 });
