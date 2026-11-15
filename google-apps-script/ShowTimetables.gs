@@ -1,17 +1,25 @@
+function esmojoTimetableCatalogueError_(stage){const error=Error('REPORT_CATALOG');error.catalogueReadStage=stage;return error;}
 // Openbare tijdschema's staan gescheiden van vertrouwelijke CSV/PDF-rapporten.
 function esmojoTimetableCatalogue_({allVenues=false,includeSeries=false}={}){
  const rows=[],root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),folders=root.getFoldersByName('Productie'),production=folders.hasNext()?folders.next():null;
- if(folders.hasNext())throw Error('REPORT_CATALOG');
- if(production){const file=esmojoOnTrackFile_(production,'_esmojo_shows_v1.json');if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw Error('REPORT_CATALOG');const active=new Set(index.active);rows.push(...index.concerts.filter(row=>allVenues||row.venue==='Gashouder'&&row.city==='Amsterdam').map(row=>({...row,active:active.has(row.concertId)})));}}
+ if(folders.hasNext())throw esmojoTimetableCatalogueError_('INDEX');
+ if(production){const file=esmojoOnTrackFile_(production,'_esmojo_shows_v1.json');if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw esmojoTimetableCatalogueError_('ROW');const active=new Set(index.active);rows.push(...index.concerts.filter(row=>allVenues||row.venue==='Gashouder'&&row.city==='Amsterdam').map(row=>({...row,active:active.has(row.concertId)})));}}
  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_concerts_v1.json');
- if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw Error('REPORT_CATALOG');const active=new Set(index.active);rows.push(...index.concerts.map(row=>({...row,active:active.has(row.concertId)})));}
+ if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw esmojoTimetableCatalogueError_('ROW');const active=new Set(index.active);rows.push(...index.concerts.map(row=>({...row,active:active.has(row.concertId)})));}
  if(typeof esmojoHistoricalCatalogue_==='function')rows.push(...esmojoHistoricalCatalogue_());
  const catalogue=new Map();for(const row of rows){
-  if(typeof row.concertId!=='string'||!row.concertId||row.concertId.length>240||/[\x00-\x1f/\\]/.test(row.concertId)||typeof row.artist!=='string'||!row.artist||typeof row.venue!=='string'||typeof row.city!=='string'||!validTimetableDate(row.date))throw Error('REPORT_CATALOG');
+  if(typeof row.concertId!=='string'||!row.concertId||row.concertId.length>240||/[\x00-\x1f/\\]/.test(row.concertId)||typeof row.artist!=='string'||!row.artist||typeof row.venue!=='string'||typeof row.city!=='string'||!validTimetableDate(row.date))throw esmojoTimetableCatalogueError_('ROW');
   const item={concertId:row.concertId,artist:row.artist,venue:row.venue,city:row.city,date:row.date,sourceUrl:row.sourceUrl,active:row.active};
   if(includeSeries&&row.generalConcertId)item.seriesId=row.generalConcertId;
   if(row.historical){item.historical=true;if(row.identityArtist)item.identityArtist=row.identityArtist;if(row.performance)item.performance=row.performance;if(includeSeries)item.historicalSeriesId=row.historicalSeriesId;}
-  if(catalogue.has(item.concertId)&&JSON.stringify(catalogue.get(item.concertId))!==JSON.stringify(item))throw Error('REPORT_CATALOG');catalogue.set(item.concertId,item);
+  if(catalogue.has(item.concertId)){
+   const existing=catalogue.get(item.concertId),identity=value=>JSON.stringify({...value,active:undefined,seriesId:undefined});
+   if(identity(existing)!==identity(item)||existing.seriesId&&item.seriesId&&existing.seriesId!==item.seriesId)throw esmojoTimetableCatalogueError_('DUPLICATE');
+   if(existing.seriesId||item.seriesId)item.seriesId=existing.seriesId||item.seriesId;
+   // Activity is local to each index, not part of the public concert identity.
+   // The combined catalogue retains an active item from either index.
+   item.active=existing.active||item.active;
+  }catalogue.set(item.concertId,item);
  }return catalogue;
 }
 function esmojoTimetableFolder_(creating=false){

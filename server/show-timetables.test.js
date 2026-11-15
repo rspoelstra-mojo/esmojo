@@ -32,3 +32,12 @@ test('Endpoint vereist eigen OIDC vóór verwerking; ongetekende requests starte
 test('Drive-validator is exact gedeeld; geen browser-WebAPI URL vereist in Apps Script',()=>{
  assert.equal(readFileSync('google-apps-script/TimetableValidation.gs','utf8').split('\n').slice(1).join('\n'),readFileSync('shared/show-timetable.js','utf8').replaceAll('export ',''));
 });
+test('combined public catalogue merges only identical identities with independent active flags; content conflicts still stop',()=>{
+ const iterator=items=>{let n=0;return{hasNext:()=>n<items.length,next:()=>items[n++]};},file=data=>({getBlob:()=>({getDataAsString:()=>JSON.stringify(data)})});
+ let primary={...show,generalConcertId:'synthetic-series'},other={...show};const production={},ontrack={},root={getFoldersByName:()=>iterator([production])};
+ const context=vm.createContext({ESMOJO_FOLDER_ID:'root',ESMOJO_ONTRACK_FOLDER_ID:'intake',DriveApp:{getFolderById:id=>id==='root'?root:ontrack},validTimetableDate:value=>value==='2026-11-05',esmojoOnTrackFile_:folder=>file({version:1,concerts:[folder===production?primary:other],active:folder===production?[show.concertId]:[]})});
+ vm.runInContext(readFileSync('google-apps-script/ShowTimetables.gs','utf8'),context);
+ const rows=context.esmojoTimetableCatalogue_({allVenues:true});assert.equal(rows.size,1);assert.equal(rows.get(show.concertId).active,true);assert.equal(rows.get(show.concertId).artist,show.artist);assert.equal(context.esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}).get(show.concertId).seriesId,'synthetic-series');
+ other={...show,generalConcertId:'different-series'};assert.throws(()=>context.esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),/REPORT_CATALOG/);
+ for(const changed of [{artist:'Other act'},{date:'2026-11-06'},{venue:'Other venue'},{sourceUrl:'https://www.mojo.nl/concerten/other'}]){other={...show,...changed};assert.throws(()=>context.esmojoTimetableCatalogue_({allVenues:true}),/REPORT_CATALOG/);}
+});

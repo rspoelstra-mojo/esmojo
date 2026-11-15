@@ -43,9 +43,9 @@ test('migration uses exact Reports authority despite retained non-Reports rows a
  for(const gashouder of [false,true]){
   const f=setup(),show=f.addShow({venue:gashouder?'Gashouder':'Ziggo Dome'});f.addCsv(show);const production=f.root.createFolder('Productie'),rootRow={...show,generalConcertId:show.concertId};
   f.addFile(production,'_esmojo_shows_v1.json','application/json',JSON.stringify({managedBy:'ESMOJO/MOJO-v1',version:1,concerts:[rootRow],active:gashouder?[show.concertId]:[]}));
-  // The former widened catalogue rejects the duplicate: either the retained
-  // out-of-scope active flag differs or only one source carries series metadata.
-  assert.throws(()=>f.ctx.esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),/REPORT_CATALOG/);
+  // The combined public catalogue now retains the identical identity despite
+  // independent active flags and optional series metadata; Reports scope stays exact.
+  const publicCatalogue=f.ctx.esmojoTimetableCatalogue_({allVenues:true,includeSeries:true});assert.equal(publicCatalogue.size,1);assert.equal(publicCatalogue.get(show.concertId).seriesId,show.concertId);
   const source=createReportsMigrationSource({env:{},store:f.store}),inventory=await source.catalogue(admin);assert.equal(inventory.entries.length,1);assert.equal(inventory.entries[0].show.key,show.concertId);assert.equal(inventory.entries[0].show.seriesId,gashouder?show.concertId:null);
   const probe=await source.probe(admin);assert.equal(probe.stage,'complete');assert.equal(probe.code,null);
  }
