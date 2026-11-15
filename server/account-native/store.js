@@ -42,7 +42,7 @@ export function createNativeAccountStore({env=process.env,repo=createNativeShows
   const tables=new Map(['esmojo_integratiestatus','esmojo_medewerker','esmojo_modulerecht'].map((table,i)=>[table,sets[i]])),snapshot={meta:repo.meta,async byKey(table,key){const found=(tables.get(table)||[]).filter(row=>row.esmojo_sleutel===key);if(found.length>1)throw Error('ACCOUNT_CORRUPT');return found[0]||null;},async query(table,{filter}){if(table!=='esmojo_modulerecht'||filter!==rightsFilter)throw Error('ACCOUNT_CORRUPT');return sets[2];}};
   const scoped=createNativeAccountStore({env,repo:snapshot,connection}),root=await scoped.get(null),policy=root?.value;
   if(!policy||!['freeze','dataverse'].includes(policy.mode)||policy.mode==='freeze'&&!policy.prepared||!policy.verified||policy.mode==='dataverse'&&!policy.sourceGuard||!validAccountId(policy.settings?.superAdminId))throw Error('ACCOUNT_CORRUPT');
-  const result=await scoped.read(id,{photo:false,settings:policy.settings,requireEnabled:true});if(!result||!result.activated)throw Error('FORBIDDEN');return result;
+  const result=await scoped.read(id,{photo:false,settings:policy.settings,requireEnabled:true});if(!result)throw Error('FORBIDDEN');return result;
  }
  return{get,save,policy,read,list,write,prepare,repo,access,authorization};
 }
