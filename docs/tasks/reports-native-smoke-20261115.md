@@ -10,3 +10,10 @@ gesloten smoke-/read-diagnose en uitsluitend read-only hervatting van de nacontr
 bij dezelfde reeds actieve authority/epoch/actor/eindtijd. Geen heractivering,
 rollback, zakelijke reparatie, mails, nieuwe machtiging of schemawijziging.
 Registratie vóór implementatie. Native autoriteit blijft actief.
+
+Gebouwd: expliciete select van File plus getypeerde Document-metadata bij key/ID-
+reads; een wire-regressie laat File weg bij gewone reads en bewijst de private
+select/download zonder writes. Read-only smoke mag uitsluitend dezelfde actieve
+authority en Google-epoch hervatten met onafhankelijke proofcontrole en originele
+eindtijd. Geen heractivering. Gesloten codes voor oudste/nieuwste/Artiesten en
+File-metadatastappen bevatten geen gegevens. Protocol 4, website V1.121.

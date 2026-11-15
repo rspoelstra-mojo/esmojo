@@ -32,3 +32,9 @@ test('technical resume is confined to the original unleased preflight with both 
  await ensureReportsCutover(args);assert.equal(received[0].operation,'resume');assert.equal(received[2].authorizationExpiresAt,f.expires);assert.equal(received[2].expectedEpoch,epoch);assert.equal(received[2].expectedSequence,7);
  await assert.rejects(ensureReportsCutover({...args,authority:{read:async()=>({value:{mode:'dataverse'}})}}),/TASK_BUSY/);const row=await f.store.get('reports-cutover-v1');await f.store.save(row,{...row.state,cursor:JSON.stringify({phase:'activate-fast'})});await assert.rejects(ensureReportsCutover(args),/TASK_BUSY/);
 });
+test('read-only smoke resume requires the same active authority and never reactivates or extends its grant',async()=>{
+ const f=await fixture(),at=1000000;await f.store.create('reports-cutover-v1','Synthetic blocked smoke',{version:1,type:'reports-cutover-v1',actor,epoch,handlerVersion:1,status:'blocked',cursor:JSON.stringify({phase:'smoke',run:epoch,schema:reportsSchemaHash,migration:copyEpoch}),sequence:9,attempts:0,startedAt:at,updatedAt:at,expiresAt:f.expires,nextAt:at,lease:null,uncertain:false,public:{label:'Synthetic smoke',code:'REPORTS_VALIDATION_UNCONFIRMED'}});let received,asserted=false;
+ const args={store:f.store,tasks:{control:async(...input)=>{received=input;}},now:()=>at,resumeTechnical:true,authority:{read:async()=>({value:{mode:'dataverse',epoch}}),assert:async()=>{asserted=true;}},intake:{policy:async()=>({mode:'dataverse',epoch})}};
+ await ensureReportsCutover(args);assert.equal(asserted,true);assert.equal(received[0].operation,'resume');assert.equal(received[2].expectedSequence,9);assert.equal(received[2].authorizationExpiresAt,f.expires);
+ await assert.rejects(ensureReportsCutover({...args,intake:{policy:async()=>({mode:'legacy'})}}),/TASK_BUSY/);
+});
