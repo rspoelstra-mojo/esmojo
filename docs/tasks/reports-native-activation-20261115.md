@@ -13,3 +13,13 @@ Workflow en voortgangs-/publicatiebewijzen, websiteversie V1.119. De bestaande
 originele delegatie-eindtijd blijft strikt gelden. Een conflict wordt niet gerepareerd.
 
 Registratie vóór implementatie; beide productiepublicaties worden nu gecontroleerd.
+
+Publicatievoorwaarde geslaagd op 15 november:
+- Vercel productie ee3c09f READY, versie V1.118 daadwerkelijk teruggelezen.
+- Cutoverroute geeft uitsluitend protocolmarker 1 op publieke GET/405.
+- Apps Script-run 43689986563 geslaagd: versie 93 op dezelfde bestaande webapp,
+  56 bronbestanden teruggelezen en gelijk aan geteste main.
+
+Deze branch voegt uitsluitend de eigen main-pushtrigger en een publieke
+protocolcontrole vóór OIDC/start toe. De backend/provider uit #177 blijft gelijk.
+Eindvergelijking en activering zijn nog niet als geslaagd gemeld.
