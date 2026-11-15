@@ -1,3 +1,4 @@
+import {convertTscHistorical} from './tsc-historical.js';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
@@ -31,7 +32,7 @@ test('Historische-only indexering laat gewone pending bronnen ongemoeid en loopt
  const f=setup(),normal=f.addShow();f.addCsv(normal);const web=createWebCatalogueService({store:f.store});await web.synchronize(null,{historicalOnly:true});
  assert.equal((await f.store('web-scan',null)).jobs.length,1);assert.equal((await web.historicalStatus()).available.length,1);
  let rounds=0;const handler=makeWebReportsSync({identify:async()=>{},service:{synchronize:async(actor,options)=>{assert.equal(actor,null);assert.deepEqual(options,{historicalOnly:true});rounds++;return{validated:rounds===1?1:0,invalid:0};},historicalStatus:async()=>({registered:1,validated:1,invalid:0,available:['public-id']})},online:{run:()=>assert.fail('Geen mailworker')}}),res={setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;}};
- await handler({method:'POST',headers:{authorization:'Bearer test'},body:{historicalOnly:true}},res);assert.equal(res.code,200);assert.equal(res.data.validated,1);assert.equal(rounds,1);
+ await handler({method:'POST',headers:{authorization:'Bearer test'},body:{historicalOnly:true}},res);assert.equal(res.code,410);assert.equal(res.data.code,'CSV_INTAKE_DISABLED');assert.equal(rounds,0);
 });
 test('Register en bron worden begrensd: private parentketen, unieke IDs, hash en uitsluitend historische datum',async()=>{
  for(const mode of ['move','hash','duplicate','future','forgedId']){
@@ -106,17 +107,11 @@ test('Native Drive-catalogus en artiestshow houden middag/avond en eigen kaartve
  f.ctx.esmojoHomePhotosRead_=()=>({data:{photos:{}}});f.ctx.esmojoHomeValidPhoto_=()=>false;
  const profile=f.ctx.esmojoArtistProfile_({operation:'artist-profile',actor:'reader',artistIds});assert.equal(profile.concerts.length,1);assert.equal(profile.concerts[0].performances.length,2);
 });
-test('Alleen geauthenticeerde historische workerresponses tonen vaste diagnosecodes, nooit ruwe fouten of vrije operaties',async()=>{
- const output=()=>({setHeader(){},status(code){this.statusCode=code;return this;},json(body){this.body=body;return this;}});
- for(const historical of [true,false])for(const known of [true,false]){
-  const error=Object.assign(Error('PRIVATE_PROVIDER_SENTINEL'),{workerCode:known?'BUSY':'PRIVATE_PROVIDER_SENTINEL',workerOperation:known?'web-commit':'PRIVATE_PROVIDER_SENTINEL'}),handler=makeWebReportsSync({identify:async()=>{},service:{synchronize:async()=>{throw error;}}}),res=output();
-  await handler({method:'POST',headers:{authorization:'Bearer synthetic'},body:historical?{historicalOnly:true}:{}},res);assert.equal(res.statusCode,503);assert.equal(JSON.stringify(res.body).includes('PRIVATE_PROVIDER_SENTINEL'),false);
-  if(historical){assert.equal(res.body.code,known?'BUSY':'UNCONFIRMED');assert.equal(res.body.stage,known?'web-commit':'UNKNOWN');}else assert.deepEqual(Object.keys(res.body),['error']);
- }
- const denied=makeWebReportsSync({identify:async()=>{throw Error('PRIVATE_PROVIDER_SENTINEL');},service:{synchronize:()=>assert.fail('Geen toegang')}}),res=output();await denied({method:'POST',headers:{},body:{historicalOnly:true}},res);assert.equal(res.statusCode,403);assert.equal(Object.hasOwn(res.body,'stage'),false);
+test('retired historical and ordinary CSV worker bodies never call an importer or expose provider errors',async()=>{
+ let calls=0;const handler=makeWebReportsSync({identify:async()=>{},service:{synchronize:async()=>{calls++;throw Error('PRIVATE_PROVIDER_SENTINEL');}}});
+ for(const body of [{},{historicalOnly:true},{historicalImport:true},{historicalVerify:true}]){const output={setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;}};await handler({method:'POST',headers:{authorization:'Bearer synthetic'},body},output);assert.equal(output.code,410);assert.equal(output.body.code,'CSV_INTAKE_DISABLED');assert.equal(calls,0);}
 });
 
-import {convertTscHistorical} from './tsc-historical.js';
 test('TSC slaat zes showgegevens vóór CSV op; voorraad blijft privé, broncijfers zijn leidend en readback controleert alles',async()=>{
  const f=setup(),b=batchFixture(f),original='789,0,7,Deuren open 18:00,Aanvang show 20:00,Einde show 23:00\nDate and Time,Discipline,Type,Priority,Description,Resolution Note\n2025-02-01 - 8:30 PM,EHBO,Zelfzorg,Laag,Fixture,\n2025-02-01 - 9:00 PM,Beveiliging,Uitzetting,Laag,Fixture,';
  Object.assign(b.row,convertTscHistorical(original,b.row),{ticket_sales:null});b.file.setContent(JSON.stringify({managedBy:'ESMOJO/HistoricalImport-v1',classification:'vertrouwelijk',version:1,entries:[b.row]}));

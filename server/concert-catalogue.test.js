@@ -1,0 +1,12 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {createConcertCatalogue} from './concert-catalogue.js';
+const rows={esmojo_concert:[{esmojo_concertid:'concert-1',esmojo_oudconcertid:'retained-concert-id',_esmojo_concertreeks_value:'series-1',esmojo_datum:'2026-11-15T00:00:00Z',esmojo_bronurl:'https://www.mojo.nl/concerten/synthetic',esmojo_tooninshows:true}],esmojo_concertreeks:[{esmojo_concertreeksid:'series-1',_esmojo_artiest_value:'artist-1',_esmojo_locatie_value:'venue-1',esmojo_oudalgemeenconcertid:'retained-concert-id'}],esmojo_artiest:[{esmojo_artiestid:'artist-1',esmojo_bronartiestid:'a_'+'a'.repeat(64),esmojo_naam:'Synthetic',esmojo_fotobronurl:'https://www.mojo.nl/media/synthetic.jpg'}],esmojo_locatie:[{esmojo_locatieid:'venue-1',esmojo_naam:'AHOY Rotterdam',esmojo_stad:'Rotterdam'}]};
+const repository=data=>({query:async table=>structuredClone(data[table]),meta:async table=>({PrimaryIdAttribute:table+'id'})});
+test('one native concert and artist authority supplies every projection while retaining IDs and normalized venue labels',async()=>{
+ const data=structuredClone(rows),catalogue=createConcertCatalogue({repository:repository(data),authorize:async()=>{}}),all=await catalogue.all();assert.equal(all.concerts.length,1);assert.equal(all.concerts[0].id,'concert-1');assert.equal(all.concerts[0].concertId,'retained-concert-id');assert.equal(all.concerts[0].artistRecordId,'artist-1');assert.equal(all.concerts[0].venue,'Rotterdam AHOY');assert.equal(all.artists.length,1);
+ const photo=await catalogue.photo('retained-concert-id');assert.equal(photo.imageUrl,all.artists[0].photo);assert.equal((await catalogue.photo('Synthetic')).imageUrl,photo.imageUrl);assert.equal(data.esmojo_locatie[0].esmojo_naam,'AHOY Rotterdam','a projection never silently repairs a stored record');
+});
+test('missing canonical relationships fail closed and native authorization precedes all data reads',async()=>{
+ const data=structuredClone(rows);data.esmojo_concertreeks[0]._esmojo_artiest_value='missing';await assert.rejects(createConcertCatalogue({repository:repository(data),authorize:async()=>{}}).all(),/CONCERT_CATALOGUE_CONFLICT/);
+ let read=0;const denied=createConcertCatalogue({repository:{query:async()=>{read++;}},authorize:async()=>{throw Error('FORBIDDEN');}});await assert.rejects(denied.all(),/FORBIDDEN/);assert.equal(await denied.photo('Synthetic'),null);assert.equal(read,0);
+});

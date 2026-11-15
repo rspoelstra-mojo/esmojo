@@ -28,7 +28,7 @@ test('De preview-API gebruikt uitsluitend bestaande pure reads en schrijft geen 
  for(const bad of [{operation:'save'},{operation:'snapshot',concertId:'arbitrary'},{operation:'snapshot',actor:'other'}])await assert.rejects(service(bad,id),/VALIDATION/);
 });
 test('Overige API-entrypoints weigeren previewverkeer zonder hun productiehandler aan te roepen',async()=>{
- for(const name of ['mcp','mcp-oauth','research','shows-sync'])assert.match(readFileSync(new URL('../api/'+name+'.js',import.meta.url),'utf8'),/export default isolateFluidApi\(/);
+ for(const name of ['research','shows-sync'])assert.match(readFileSync(new URL('../api/'+name+'.js',import.meta.url),'utf8'),/export default isolateFluidApi\(/);
  let called=0;const response={headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(){return this;}};
  isolateFluidApi(()=>called++,{VERCEL_ENV:'preview'})({},response);assert.equal(response.code,403);assert.equal(called,0);isolateFluidApi(()=>called++,{VERCEL_ENV:'production'})({},response);assert.equal(called,1);
  assert.equal(isFluidPreview({VERCEL_ENV:'production',ESMOJO_FLUID_PREVIEW:'1'}),false);assert.equal(fluidAccountRead('ticket-data','POST',{operation:'review'}),false);

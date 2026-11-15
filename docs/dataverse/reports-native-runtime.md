@@ -1,5 +1,14 @@
 # Rapportages: runtime en onafhankelijke validatie
 
+## Aanlevering na uitfasering Drive (15 november 2026)
+
+De Drive CSV-mapscan en import zijn verwijderd. Er is in deze stap geen nieuw
+aanleverpad. Bestaande native CSV-bestanden blijven beschikbaar voor PDF en
+bestaande mailaflevering; parser, berekeningen, rapportweergave en historie blijven
+behouden. De centrale Concert/Artiest-catalogus vervangt het losse OnTrack-register.
+Zie [centrale concertcatalogus](concert-catalogue.md) voor agenda, foto en tijdschema.
+Onderstaande validatiebewijzen betreffen de eerder afgeronde Reports-omschakeling.
+
 ## Actuele productiestatus (15 november 2026)
 
 De serverautoriteit én de Google-writerfence zijn daadwerkelijk naar Dataverse

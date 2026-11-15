@@ -1,3 +1,5 @@
+import {createDataverseResearch} from '../dataverse-research.js';
+import {canonicalVenueName} from '../mojo-venues.js';
 import {tableByName} from '../dataverse-table-schema.js';
 import {publicShowPhoto} from '../../shared/public-show-photo.js';
 import {createRelatedShows} from './related.js';
@@ -55,10 +57,11 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
  // Rights and source authority must not queue behind unrelated cold metadata.
  // All tables are still warmed; functional tabs remain part of one full bundle.
  service.prepareRead=()=>{const first=['esmojo_integratiestatus','esmojo_opdracht','esmojo_routealias','esmojo_concertreeks','esmojo_concert'];return Promise.all([...first,...[...tableByName.keys()].filter(table=>!first.includes(table))].map(table=>state.repo.meta(table))).then(()=>undefined);};
- service.related=createRelatedShows({state,catalogue:publicCatalogue});
+ const research=createDataverseResearch({env});
+ service.related=createRelatedShows({state,catalogue:publicCatalogue,research:research.configured()?research:null});
  service.provider='dataverse';service.activeStorage={alerts:async()=>[],verify:async()=>({enabled:false,provider:'dataverse',archiveDisabled:true}),run:async()=>({enabled:false,mirrored:0,archived:0,failed:0})};return service;
 }
 
 function photoFor(source){const imageUrl=source.photo?.imageUrl,sourceUrl=source.shows.find(row=>row.concertId===source.concertId)?.sourceUrl||source.shows[0]?.sourceUrl;const photo=publicShowPhoto({imageUrl,sourceUrl});return photo?{photo}:{};}
 
-function metadataFor(source,key){const first=source.shows.find(row=>row.concertId===source.concertId)||source.shows[0];return{key,name:first.artist,dates:[...new Set(source.shows.map(row=>row.date))].sort(),venue:first.venue,city:first.city||'',sourceUrl:first.sourceUrl||null};}
+function metadataFor(source,key){const first=source.shows.find(row=>row.concertId===source.concertId)||source.shows[0];return{key,name:first.artist,dates:[...new Set(source.shows.map(row=>row.date))].sort(),venue:canonicalVenueName(first.venue),city:first.city||'',sourceUrl:first.sourceUrl||null};}

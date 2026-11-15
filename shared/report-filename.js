@@ -1,5 +1,5 @@
 const filenameWords=value=>value.normalize('NFC').toUpperCase().replace(/[\s_-]+/g,' ').trim();
-export const reportVenueName=venue=>venue.name.replace(/\bArenA\b/g,'Arena');
+export const reportVenueName=venue=>venue.name.replace(/\bArenA\b/g,'Arena').replace(/^(?:Rotterdam Ahoy|AHOY Rotterdam|Ahoy Rotterdam)$/i,'Rotterdam AHOY');
 // Only explicit supported venue suffixes; never infer a date from an incident row.
 export function reportFilenameShow(filename,venues,today,knownArtists=[]){
  if(typeof filename!=='string'||filename.length>400)return null;

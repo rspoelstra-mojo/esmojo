@@ -1,115 +1,32 @@
-name: Index web reports
+name: Update incident references
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/web-reports.yml'
-      - 'api/web-reports-sync.js'
-      - 'server/incident-metrics.js'
-      - 'google-apps-script/IncidentMetrics.gs'
-      - 'google-apps-script/IncidentDaily.gs'
-      - 'shared/artist-risk-score.js'
-  workflow_run:
-    workflows: ['Publish Apps Script']
-    types: [completed]
-    branches: [main]
   schedule:
     - cron: '*/5 * * * *'
     - cron: '0 22,23 * * *'
   workflow_dispatch:
-    inputs:
-      historical_only:
-        description: Alleen historische rapportages indexeren; geen mails versturen
-        type: boolean
-        default: false
-      historical_import:
-        description: Privé Drive-batch historisch importeren zonder mail/PDF/AI
-        type: choice
-        options: [none, sample, all]
-        default: none
-      historical_batch:
-        description: Bestandsnaam van de gecontroleerde batch in private Productie
-        type: string
-        default: ''
 permissions:
   contents: read
   id-token: write
 concurrency:
-  group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *') && 'incident-reference-rebuild' || inputs.historical_import && inputs.historical_import != 'none' && 'web-reports-historical-import' || inputs.historical_only == true && 'web-reports-historical-index' || 'web-reports-production' }}
-  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' }}
+  group: ${{ github.event.schedule == '*/5 * * * *' && 'reports-existing-mail' || 'incident-reference-rebuild' }}
+  cancel-in-progress: false
 jobs:
-  index:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+  update:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *' || inputs.historical_import == 'sample' || inputs.historical_import == 'all' || inputs.historical_only == true) && 180 || 7 }}
+    timeout-minutes: 180
     steps:
-      - name: Publish web reports and deliver online mail independently of PDF generation
+      - name: Update stored daily incident references without CSV ingestion
         env:
-          METRICS_ONLY: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event.schedule == '0 22,23 * * *' }}
-          MIDNIGHT_ONLY: ${{ github.event.schedule == '0 22,23 * * *' }}
-          HISTORICAL_IMPORT: ${{ inputs.historical_import }}
-          HISTORICAL_BATCH: ${{ inputs.historical_batch }}
-          HISTORICAL_ONLY: ${{ inputs.historical_only }}
+          GITHUB_EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           node --input-type=module <<'JS'
-          const midnightHour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date());
-          if(process.env.MIDNIGHT_ONLY==='true'&&midnightHour!=='00')process.exit(0);
-          const endpoint='https://esmojo.nl/api/web-reports-sync';
-          async function call(body){
-            const target=body?.incidentRefresh?'https://esmojo.nl/api/incident-references-sync':endpoint;
-            const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',target);
-            const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
-            const {value}=await identity.json();console.log(`::add-mask::${value}`);
-            const response=await fetch(target,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(310000)});
-            const result=await response.json().catch(()=>null);
-            if(!response.ok){
-              const code=/^(?:INCIDENT_REFERENCES_NO_ELIGIBLE_REPORTS|DUPLICATE_CONCERT|INVALID_TOTAL|INVALID_CONCERT|SHOWS_UNAVAILABLE|SHOWS_CONFIG|BUSY|DRIVE_TIMEOUT|DRIVE_CONNECTION|DRIVE_HTTP|DRIVE_RESPONSE|FORBIDDEN|VALIDATION|REPORT_CONFLICT|REPORT_CATALOG|SOURCE_MISSING|SOURCE_CHANGED|REPORT_UNAVAILABLE|NOT_FOUND|ONTRACK_REPORT_UNAVAILABLE)$/.test(result?.code||'')?result.code:'UNCONFIRMED';
-              const stage=/^(?:incident-daily-state|incident-daily-start|incident-daily-publish|incident-daily-read|incident-read|incident-source|incident-counts|web-scan|web-source|web-commit|web-historical-status|historical-import-read|historical-import-commit|historical-import-verify)$/.test(result?.stage||'')?result.stage:'UNKNOWN';
-              throw Error(`Verwerking niet bevestigd: HTTP ${response.status}; ${code}; ${stage}. Geen broninhoud in logs.`);
-            }
-            if(result?.ok!==true)throw Error('Verwerking niet bevestigd.');return result;
-          }
-          if(process.env.METRICS_ONLY==='true'){
-            const pause=ms=>new Promise(done=>setTimeout(done,ms));let ready=false;
-            for(let attempt=0;attempt<12;attempt++){
-              try{const result=await call({incidentRefresh:true,checkOnly:true});if(result.workerVersion===3){ready=true;break;}}catch{}
-              await pause(20000);
-            }
-            if(!ready)throw Error('Incidentworker nog niet beschikbaar.');
-            console.log('::notice::INCIDENT_REFERENCE_READY');
-            let complete=false;for(let page=0;page<600;page++){
-              const result=await call({incidentRefresh:true});if(result.workerVersion!==3||typeof result.pending!=='boolean'||!['processing','complete','no_eligible_reports'].includes(result.status))throw Error('Incidentworker niet bevestigd.');
-              if(page===0)console.log('::notice::INCIDENT_REFERENCE_BATCH_CONFIRMED');
-              if(!result.pending){if(result.status==='no_eligible_reports')throw Error('INCIDENT_REFERENCES_NO_ELIGIBLE_REPORTS');complete=true;break;}
-            }
-            if(!complete)throw Error('Incidentherberekening nog niet volledig.');
-            console.log('::notice::INCIDENT_REFERENCE_COMPLETE');
-            console.log(JSON.stringify({ok:true}));
-          }else{
-          const phase=process.env.HISTORICAL_IMPORT,importing=['sample','all'].includes(phase);
-          if(importing){
-            if(!/^historical-[a-z0-9-]{1,70}\.json$/.test(process.env.HISTORICAL_BATCH||''))throw Error('Ongeldige batchnaam.');
-            let complete=false;for(let i=0;i<600;i++){
-              const result=await call({historicalImport:true,batch:process.env.HISTORICAL_BATCH,phase});
-              if(![result.total,result.complete,result.pending].every(Number.isSafeInteger)||result.total<1||result.total>1000||result.complete<0||result.pending<0||result.complete+result.pending!==result.total)throw Error('Import-API niet actief of ongeldige bevestiging; stop zonder herhaling.');
-              console.log(JSON.stringify({total:result.total,complete:result.complete,pending:result.pending}));
-              if(result.pending===0){console.log('::notice::HISTORICAL_IMPORT_STORED '+JSON.stringify({total:result.total,complete:result.complete,pending:result.pending}));complete=true;break;}
-            }if(!complete)throw Error('Import nog niet volledig; hervat dezelfde batch.');
-          }
-          if(importing||process.env.HISTORICAL_ONLY==='true'){
-            let complete=false;for(let i=0;i<200;i++){
-              const result=await call({historicalOnly:true});
-              console.log(JSON.stringify({registered:result.registered,validated:result.validated,invalid:result.invalid}));
-              if(result.registered===result.validated){complete=true;break;}
-            }if(!complete)throw Error('Historische indexering nog niet volledig.');
-          }else{await call();console.log(JSON.stringify({ok:true}));}
-          if(importing){
-            let offset=0;for(let i=0;i<200;i++){
-              const result=await call({historicalVerify:true,batch:process.env.HISTORICAL_BATCH,phase,offset});
-              if(![result.total,result.verified,result.nextOffset].every(Number.isSafeInteger)||result.total<1||result.total>1000||result.verified<0||result.verified>5||result.nextOffset!==offset+result.verified||result.nextOffset>result.total)throw Error('Verificatie-API niet actief of ongeldige bevestiging.');
-              if(result.nextOffset===offset&&offset<result.total)throw Error('Verificatie niet volledig.');
-              offset=result.nextOffset;console.log(JSON.stringify({verified:offset,total:result.total}));if(offset===result.total){console.log('::notice::HISTORICAL_IMPORT_VERIFIED '+JSON.stringify({verified:offset,total:result.total}));break;}
-            }
-          }
+          const hour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date());
+          const daily=process.env.GITHUB_EVENT_NAME==='workflow_dispatch'||process.env.GITHUB_EVENT_SCHEDULE==='0 22,23 * * *';
+          if(process.env.GITHUB_EVENT_NAME==='schedule'&&daily&&hour!=='00')process.exit(0);
+          const endpoint='https://esmojo.nl/api/'+(daily?'incident-references-sync':'web-reports-sync');
+          for(let round=0;round<300;round++){
+            const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+            const identity=await fetch(url,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}});if(!identity.ok)throw Error('OIDC_UNAVAILABLE');const {value}=await identity.json();console.log('::add-mask::'+value);
+            const response=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify(daily?{incidentRefresh:true}:{deliverExisting:true}),signal:AbortSignal.timeout(310000)});if(!response.ok)throw Error('INCIDENT_REFERENCES_UNCONFIRMED');const result=await response.json();if(!result.pending){console.log('Incidentreferenties bijgewerkt.');break;}if(round===299)throw Error('INCIDENT_REFERENCES_INCOMPLETE');await new Promise(resolve=>setTimeout(resolve,1000));
           }
           JS

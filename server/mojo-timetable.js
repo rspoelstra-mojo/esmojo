@@ -1,7 +1,7 @@
 import {parse} from 'parse5';
 import {createHash} from 'node:crypto';
 import {mojoConcertUrl} from './mojo-photo.js';
-import {MOJO_VENUES,matchesMojoVenue} from './mojo-venues.js';
+import {MOJO_VENUES,matchesMojoVenue,canonicalVenueName} from './mojo-venues.js';
 import {nextTimetableDate,validateTimetable} from '../shared/show-timetable.js';
 const attr=(node,name)=>node.attrs?.find(item=>item.name===name)?.value||'';
 const children=node=>node.childNodes||[];
@@ -30,7 +30,7 @@ export function parseMojoTimetable(html,show,{capturedAt=new Date().toISOString(
  let reason='NOT_PUBLISHED',rows=[],unresolved=[];
  for(const heading of headings){
   let scope=heading.parentNode;while(scope?.parentNode&&!all(scope,node=>attr(node,'role')==='tabpanel').length&&!['section','article','main'].includes(scope.tagName))scope=scope.parentNode;
-  const panels=all(scope,node=>attr(node,'role')==='tabpanel'),forDate=panels.filter(panel=>new RegExp('(?:^|[^0-9])'+show.date+'(?:[^0-9]|$)').test(attr(panel,'id')+' '+attr(panel,'data-date'))),venue=MOJO_VENUES.find(venue=>venue.name===show.venue&&venue.city===show.city);
+  const panels=all(scope,node=>attr(node,'role')==='tabpanel'),forDate=panels.filter(panel=>new RegExp('(?:^|[^0-9])'+show.date+'(?:[^0-9]|$)').test(attr(panel,'id')+' '+attr(panel,'data-date'))),venue=MOJO_VENUES.find(venue=>venue.name===canonicalVenueName(show.venue)&&venue.city===show.city);
   if(!forDate.length){reason='DATE_NOT_PUBLISHED';continue;}
   const dated=forDate.filter(panel=>venue&&matchesMojoVenue(all(panel,node=>hasClass(node,'item-list__label')).map(text).join(' '),venue));
   if(dated.length>1)throw Error('TIMETABLE_AMBIGUOUS');if(!dated.length)throw Error('TIMETABLE_CONTEXT');const panel=dated[0];

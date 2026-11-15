@@ -55,8 +55,8 @@ test('Paginering blijft op de vaste Dataverse-tabel; geen token naar externe hos
  const {service,calls}=setup([],{response:()=>Response.json({value:[row(1)],'@odata.nextLink':'https://evil.invalid/token'})});assert.deepEqual((await service.load(pilot.concertId)).researchByNumber,{});assert.equal(calls.length,3);
  let page=0;const good=setup([],{response:()=>Response.json(++page===1?{value:[row(1)],'@odata.nextLink':env.DATAVERSE_TEST_URL+'/api/data/v9.2/esmojo_onderzoeksresultaats?$skiptoken=next'}:{value:[row(2)]})});assert.equal(Object.keys((await good.service.load(pilot.concertId)).researchByNumber).length,2);
 });
-test('MOJO-only menu blijft begrensd; de publieke menucache accepteert andere zalen',()=>{
- const shows=upcomingShows([pilot,{...pilot,concertId:'Andere_AFAS-Live_15112026',artist:'Andere'}],new Date('2026-11-11T12:00:00Z'));assert.equal(shows.length,1);assert.equal(shows[0].venue,'AFAS Live');assert.equal(cleanMenu(shows).length,1);
+test('Centrale MOJO-selectie ondersteunt alle gevraagde zalen binnen dezelfde horizon',()=>{
+ const shows=upcomingShows([pilot,{...pilot,concertId:'Andere_AFAS-Live_15112026',artist:'Andere'}],new Date('2026-11-11T12:00:00Z'));assert.equal(shows.length,2);assert.equal(shows[0].venue,'AFAS Live');assert.equal(cleanMenu(shows).length,2);
  assert.equal(cleanMenu([{...pilotShow(),key:'dataverse_westlife_ziggodome_20261123',name:'Westlife',venue:'Ziggo Dome'}]).length,1);
 });
 test('Bewuste diagnose onderscheidt lege tabel, bronverschil en randspaties zonder bronwaarden terug te geven',async()=>{

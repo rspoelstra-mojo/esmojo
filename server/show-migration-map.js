@@ -1,4 +1,4 @@
-import {MOJO_VENUES} from './mojo-venues.js';
+import {MOJO_VENUES,canonicalVenueName} from './mojo-venues.js';
 import {categoryReady} from '../shared/analysis-finalization.js';
 import {record,reference,choice,digest,canonical,validateRecord} from './show-migration-writer.js';
 import {normalizeArtistName} from '../shared/artist-catalogue.js';
@@ -29,7 +29,7 @@ export function mapPeople(source){
 export function mapShow(source,people,management=null){
  if(source?.version!==1||!Array.isArray(source.shows)||!source.shows.length||source.shows.some(s=>!s.concertId||!s.artist||!s.venue||!s.date)||source.unknown?.length)throw Error(source.unknown?.length?'MIGRATION_UNKNOWN_FILES':'MIGRATION_SOURCE');
  const deferredLinks=[],rows=[],documents=[],files=(source.files||[]).map(file=>({...file})),id='drive-series/'+source.concertId,seriesRef=ref('concertreeks',id),scope={concertreeks:seriesRef};
- const shows=[...source.shows].sort((a,b)=>a.date.localeCompare(b.date)||a.concertId.localeCompare(b.concertId)),first=shows[0],artistId=source.artistId||'a_'+digest(normalizeArtistName(first.artist)),artist='artist/'+artistId,location='venue/'+(MOJO_VENUES.find(v=>v.name===first.venue)?.id||'unmapped'),docs=source.documents||{},profile=docs['showprofiel.json']||{},final=docs['analyseafronding.json']||{},production=docs['productionele-risicos.json']||{};
+ const shows=[...source.shows].sort((a,b)=>a.date.localeCompare(b.date)||a.concertId.localeCompare(b.concertId)),first=shows[0],artistId=source.artistId||'a_'+digest(normalizeArtistName(first.artist)),artist='artist/'+artistId,location='venue/'+(MOJO_VENUES.find(v=>v.name===canonicalVenueName(first.venue))?.id||'unmapped'),docs=source.documents||{},profile=docs['showprofiel.json']||{},final=docs['analyseafronding.json']||{},production=docs['productionele-risicos.json']||{};
  if(location==='venue/unmapped')throw Error('MIGRATION_MAPPING');
  rows.push(record('artiest',artist,first.artist,{bronartiestid:artistId,biografie:source.biography?.text,biografiebron:source.biography?.sourceUrl||undefined,biografieopgehaaldop:source.biography?.capturedAt,fotobronurl:source.photo?.imageUrl}));
  rows.push(record('locatie',location,first.venue,{locatiecode:location.slice(6),stad:first.city||undefined,landcode:'NL'}));

@@ -1,14 +1,17 @@
-name: Import MOJO shows
+name: Import concert catalogue and capture showday timetable
 on:
   schedule:
-    # Nederland is UTC+2 in de zomer en UTC+1 in de winter.
+    - cron: '0 3,4 * * *'
     - cron: '0 10,11 * * *'
   workflow_dispatch:
     inputs:
-      planning_only:
-        description: Alleen de bestaande openbare homepageplanning vernieuwen
+      verify_only:
+        description: Alleen de agenda lezen en centrale catalogus controleren, niets opslaan
         type: boolean
-        default: false
+        default: true
+  push:
+    branches: [main]
+    paths: ['.github/workflows/mojo-shows.yml']
 permissions:
   contents: read
   id-token: write
@@ -18,36 +21,19 @@ concurrency:
 jobs:
   import:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 45
     steps:
-      - name: Daily noon import (or manual first run)
+      - name: Import only at five and capture timetable only at noon
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          PLANNING_ONLY: ${{ inputs.planning_only }}
+          VERIFY_ONLY: ${{ github.event_name == 'push' || inputs.verify_only == true }}
         run: |
           node --input-type=module <<'JS'
-          const hour = new Intl.DateTimeFormat('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', hourCycle: 'h23' }).format(new Date());
-          if (process.env.EVENT_NAME === 'schedule' && hour !== '12') {
-            console.log('Geen Nederlandse middagrun; zomer-/wintertijd wordt gerespecteerd.');
-            process.exit(0);
-          }
-          const failures=new Set();
-          // Tijdschema vóór de imports vastleggen; daarna nogmaals voor nieuw ontdekte concerten.
-          const endpoints = process.env.EVENT_NAME === 'workflow_dispatch' && process.env.PLANNING_ONLY === 'true' ? ['https://esmojo.nl/api/home-planning-sync'] : ['https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/shows-sync','https://esmojo.nl/api/ontrack-concerts-sync','https://esmojo.nl/api/timetables-sync','https://esmojo.nl/api/home-planning-sync'];
-          for (const endpoint of endpoints) {
-            try {
-              const identityUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
-              identityUrl.searchParams.set('audience', endpoint);
-              const identity = await fetch(identityUrl, { headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` } });
-              if (!identity.ok) throw new Error('Workflow-identiteit kon niet worden verkregen.');
-              const { value } = await identity.json();
-              console.log(`::add-mask::${value}`);
-              const result = await fetch(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${value}` }, signal: AbortSignal.timeout(310000) });
-              const data = await result.json();
-              if (!result.ok) { console.log(JSON.stringify({endpoint,status:result.status,code:data.code,stage:data.stage,venue:data.venue,sourceStatus:data.sourceStatus})); throw new Error('Import mislukt.'); }
-              if (!data.ok) throw new Error('Import niet bevestigd.');
-              failures.delete(endpoint);console.log(JSON.stringify({endpoint,...data}));
-            } catch { failures.add(endpoint); console.log('Import niet bevestigd: '+endpoint+'; bestaande inventaris blijft behouden.'); }
-          }
-          if(failures.size)throw new Error('Een of meer concertinventarissen konden niet worden vernieuwd.');
+          const hour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date()),verify=process.env.VERIFY_ONLY==='true';
+          if(!verify&&!['05','12'].includes(hour)){console.log('Geen Nederlandse import- of tijdschemarun.');process.exit(0);}
+          const agenda=verify||hour==='05',endpoint='https://esmojo.nl/api/'+(agenda?'shows-sync':'timetables-sync');
+          if(agenda){let ready=false;for(let n=0;n<24;n++){try{const r=await fetch(endpoint,{method:'GET',cache:'no-store',signal:AbortSignal.timeout(10000)});if(r.status===405&&r.headers.get('x-esmojo-agenda-import')==='2'){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,10000));}if(!ready)throw Error('AGENDA_DEPLOYMENT_NOT_READY');}
+          async function call(body){const identityUrl=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);identityUrl.searchParams.set('audience',endpoint);const identity=await fetch(identityUrl,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}});if(!identity.ok)throw Error('OIDC_UNAVAILABLE');const {value}=await identity.json();console.log('::add-mask::'+value);const response=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(310000)});const result=await response.json();if(!response.ok){const code=/^[A-Z_0-9]{1,60}$/.test(result.code||'')?result.code:'CONCERT_IMPORT_UNCONFIRMED',stage=/^[a-z-]{1,30}$/.test(result.stage||'')?result.stage:'unknown';console.log(JSON.stringify({code,stage,...Number.isInteger(result.status)?{status:result.status}:{},.../^[a-z-]{1,40}$/.test(result.venue||'')?{venue:result.venue}:{}}));throw Error('CONCERT_IMPORT_UNCONFIRMED');}return result;}
+          let result=await call(verify?{verifyOnly:true}:{});console.log(JSON.stringify(result));
+          for(let batch=0;agenda&&!verify&&(result.concertsPending||result.photosPending)&&batch<100;batch++){result=await call({operation:result.concertsPending?'continue':'photos'});console.log(JSON.stringify(result));}
+          if(result.concertsPending||result.photosPending)throw Error('CONCERT_IMPORT_INCOMPLETE');
           JS

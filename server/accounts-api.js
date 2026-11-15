@@ -1,3 +1,4 @@
+import {createConcertCatalogue} from './concert-catalogue.js';
 import {createApplicationTasks,backgroundTaskModule} from './background-tasks/registry.js';
 import {showMigrationFailure} from './show-migration-errors.js';
 import {createShowMigration} from './show-migration.js';
@@ -28,7 +29,6 @@ import { waitUntil } from '@vercel/functions';
 import { createShowProfilePdfService, validatePdfRequest } from './showprofile-pdf.js';
 import { validateFinalRequest } from '../shared/analysis-finalization.js';
 import { validateTicketRequest } from './ticket-data.js';
-import { getMojoPhoto } from './mojo-photo.js';
 import { validateShowProfile } from './show-profile.js';
 import {validateMeasureRequest,measureFileSignature,measureUploadLimit} from '../shared/measure-workflow.js';
 import {createHash} from 'node:crypto';
@@ -45,7 +45,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=getMojoPhoto,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows});
@@ -206,7 +206,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       }
       if(action==='report-web'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-        try{return reply(200,await createWebReportService({store:ontrackReportStore,photo:photoService})(actor,req.body));}
+        try{return reply(200,await createWebReportService({store:ontrackReportStore,canonicalPhoto:photoService})(actor,req.body));}
         catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:error.message==='NOT_FOUND'?404:503;return reply(status,{error:status===400?'Deze rapportage is niet beschikbaar.':status===403?'Je hebt geen toegang tot deze module.':'De rapportage kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
       }
       if(previewReads&&action==='shows'&&req.method==='GET')return reply(200,await previewReads.menu());

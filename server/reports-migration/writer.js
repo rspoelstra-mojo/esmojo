@@ -1,6 +1,6 @@
 import {createMigrationWriter,record,reference,recordKey,choice,migrationDifferences,canonical,digest} from '../show-migration-writer.js';
 import {reportsRecordContract,reportRecord} from './contract.js';
-import {MOJO_VENUES} from '../mojo-venues.js';
+import {MOJO_VENUES,canonicalVenueName} from '../mojo-venues.js';
 import {reportVenueName} from '../../shared/report-filename.js';
 import {normalizeArtistName} from '../../shared/artist-catalogue.js';
 import {readableArtistName} from '../../shared/artist-names.js';
@@ -26,7 +26,7 @@ export function createReportsWriter({env=process.env,request=fetch,connection,re
   if(migrationDifferences(row,actual,expected,reportsRecordContract).length)throw Error('MIGRATION_CONFLICT');return actual;
  }
  async function core(entry){
-  const show=entry.show,venue=MOJO_VENUES.find(v=>v.name===show.venue||reportVenueName(v)===show.venue);if(!venue)throw Error('MIGRATION_MAPPING');
+  const show=entry.show,venue=MOJO_VENUES.find(v=>v.name===canonicalVenueName(show.venue)||reportVenueName(v)===show.venue);if(!venue)throw Error('MIGRATION_MAPPING');
   const cm=await writer.meta('esmojo_concert'),found=await writer.json(cm.EntitySetName+'?'+new URLSearchParams({'$filter':"esmojo_oudconcertid eq '"+show.key.replaceAll("'","''")+"'",'$top':'2'}));if(!Array.isArray(found?.value)||found.value.length>1||found['@odata.nextLink'])throw Error('MIGRATION_CONFLICT');
   let concert,series;
   if(found.value.length){

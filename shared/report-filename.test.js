@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {MOJO_VENUES} from '../server/mojo-venues.js';import {reportFilenameShow,reportConcertMatch} from './report-filename.js';
 const parse=name=>reportFilenameShow(name,MOJO_VENUES,'2026-11-05');
 test('Venue suffixes zijn bekende mooie namen, niet blind streepjes vervangen in vrije tekst',()=>{
- for(const [token,name]of [['Ziggo-Dome','Ziggo Dome'],['ZIGGO_DOME','Ziggo Dome'],['AFAS-Live','AFAS Live'],['Johan-Cruijff-Arena','Johan Cruijff Arena'],['Gashouder','Gashouder'],['Gelre-Dome','GelreDome'],['Ahoy-Rotterdam','Rotterdam Ahoy']]){const result=parse('incidents_ARCHIEF_ARTIEST_'+token+'_01102002.csv');assert.equal(result.name,'ARCHIEF ARTIEST');assert.equal(result.venue,name);assert.equal(result.date,'2002-10-01');}
+ for(const [token,name]of [['Ziggo-Dome','Ziggo Dome'],['ZIGGO_DOME','Ziggo Dome'],['AFAS-Live','AFAS Live'],['Johan-Cruijff-Arena','Johan Cruijff Arena'],['Gashouder','Gashouder'],['Gelre-Dome','GelreDome'],['Ahoy-Rotterdam','Rotterdam AHOY']]){const result=parse('incidents_ARCHIEF_ARTIEST_'+token+'_01102002.csv');assert.equal(result.name,'ARCHIEF ARTIEST');assert.equal(result.venue,name);assert.equal(result.date,'2002-10-01');}
  assert.equal(parse('incidents_ARCHIEF_ROTTERDAM_AHOY_01102002.csv').name,'ARCHIEF');assert.equal(parse('incidents_ARCHIEF_ZIGGO_DOME_01102002.csv').key,parse('incidents_archief_Ziggo-Dome_01102002.csv').key);
 });
 test('Datum/zaal/artist worden niet geraden; bekende artiestnaam mag unieke schrijfwijze herstellen',()=>{

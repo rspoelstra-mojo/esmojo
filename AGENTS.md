@@ -1,3 +1,33 @@
+## Centrale concertcatalogus en definitieve MOJO-uitzonderingen (15 november 2026)
+
+Nieuwe gebruikersinstructie vervangt de algemene agenda-stop hieronder: importeer
+elke dag om 05:00 Europe/Amsterdam uitsluitend 45 dagen vooruit uit mojo.nl/agenda
+voor Johan Cruijff ArenA, GelreDome, Ziggo Dome, AFAS Live, Rotterdam AHOY,
+Brabanthallen, AFAS Stadion, Malieveld, Goffertpark en Gashouder.
+Normaliseer Ahoy-varianten naar Rotterdam AHOY met behoud van bestaande IDs. Registreer concerten en ontbrekende artiesten alleen
+in de bestaande Dataverse Concert/Artiest-tabellen. Geen aparte concertregisters;
+Shows/Rapportages verwijzen naar Concert en Concert naar Artiest. Deriveer menus en
+modulekeuzes uit die centrale bron. Bewaar oude IDs/gegevens; conflicten niet kiezen.
+Haal bij die import voor artiesten zonder vastgelegde foto éénmaal de foto van de
+MOJO-artiestpagina (bijvoorbeeld mojo.nl/antoon); leg de gekozen foto bij de artiest
+vast en hergebruik die. Geen dagelijkse fotocontrole of vervanging. De andere
+MOJO-ophaaluitzondering blijft tijdschema 12:00 op de showdag.
+CSV-mapscan/importlogica verwijderen, geen nieuw importpad: toekomstige Power
+Automate-aanlevering rechtstreeks in Dataverse komt later. Bestaande Rapportages-
+uitlezing/weergave/parser/berekeningen/filters/links/downloads onveranderd behouden.
+
+## Integraties uitfaseren (15 november 2026)
+
+Gebruiker verwijdert MCP volledig uit ESMOJO: geen API, OAuth, discovery of
+Apps Script MCP-authroute. Gewone website-onderzoekgegevens behouden.
+Korte artiestbeschrijvingen niet meenemen in volgende migraties; website toont
+op hun bestaande plek exact [Description placeholder]. Automatische capture stopt.
+Huidige CSV-aanlevering via Drive verwijderen; geen nieuwe import bouwen in deze
+stap. Alle MOJO-ophaalautomatiseringen verwijderen, behalve openbare tijdschema's
+om 12:00 Europe/Amsterdam op de concertdag. Ook automatische pagina-fallbacks voor
+foto/biografie uitschakelen. Bestaande gegevens, native autoriteiten en originelen
+behouden; geen schema-/proofwijziging om archiefteksten te wissen.
+
 ## Native Rapportages en activering (14 november 2026)
 
 Gebruiker autoriseert de volledige Reports lees-/schrijflaag, publicatie en

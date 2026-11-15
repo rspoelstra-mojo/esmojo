@@ -1,3 +1,5 @@
+import {canonicalVenueName} from './mojo-venues.js';
+import {createConcertCatalogue} from './concert-catalogue.js';
 import {createHash} from 'node:crypto';
 import {createReadableArtistDirectory,resolveReadableArtist,foldArtistViews,validArtistReference,readableArtistName} from '../shared/artist-names.js';
 import {timetableClock,validTimetableDate} from '../shared/show-timetable.js';
@@ -6,8 +8,7 @@ import {artistPreparation} from './artist-preparation.js';
 import {artistTopFive,validArtistId} from '../shared/artist-catalogue.js';
 import {researchView} from '../src/lib/research-view.js';
 import {createArtistViews,validArtistViewEvent} from './artist-views.js';
-import {getMojoArtistPhoto} from './mojo-photo.js';
-export function createArtistService({env=process.env,shows,views=createArtistViews({env}),photo=getMojoArtistPhoto,now=Date.now}={}){
+export function createArtistService({env=process.env,shows,views=createArtistViews({env}),photo=createConcertCatalogue({env}).photo,now=Date.now}={}){
  let value=null,checked=0;const pending=new Map();
  async function catalogue(actor,force=false){
   if(!force&&value&&now()-checked<30000)return value;
@@ -22,14 +23,15 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
   async ranking(actor){const [directory,counts]=await Promise.all([catalogue(actor),views.counts()]);return{mostViewed:top(directory,counts)};},
   async show(actor,body){
    if(!body||Array.isArray(body)||Object.keys(body).sort().join(',')!==(body.performance===undefined?'artistId,date,venue':'artistId,date,performance,venue')||body.performance!==undefined&&!['middag','avond'].includes(body.performance)||!validArtistReference(body.artistId)||!validTimetableDate(body.date)||body.date>=timetableClock(now()).date||typeof body.venue!=='string'||!body.venue||body.venue.length>200)throw Error('VALIDATION');
+   body={...body,venue:canonicalVenueName(body.venue)};
    const row=await artist(actor,body.artistId),directory=await catalogue(actor),artistIds=[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)];
    const source=await shows('artist-show',{actor,artistIds,date:body.date,venue:body.venue,...(body.performance?{performance:body.performance}:{})});
-   if(body.performance&&source?.show?.performance!==body.performance||source?.show?.date!==body.date||source.show.venue!==body.venue||readableArtistName(source.show.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
+   if(body.performance&&source?.show?.performance!==body.performance||source?.show?.date!==body.date||canonicalVenueName(source.show.venue)!==body.venue||readableArtistName(source.show.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
    const general={name:row.name,venue:body.venue,date:body.date,...(body.performance?{performance:body.performance}:{})};
    const preparation=source.preparation?artistPreparation(source.preparation,general):source.nativePreparation||null;
    if(source.nativeReport)return{show:general,timetable:source.nativeReport.timetable,kpis:source.nativeReport.kpis,reportId:source.nativeReport.reportId,preparation};
    if(!source.report)return{show:general,timetable:source.timetable||null,kpis:null,reportId:null,preparation};
-   if(body.performance&&source.report.show?.performance!==body.performance||source.report.show?.date!==body.date||source.report.show?.venue!==body.venue||readableArtistName(source.report.show?.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
+   if(body.performance&&source.report.show?.performance!==body.performance||source.report.show?.date!==body.date||canonicalVenueName(source.report.show?.venue)!==body.venue||readableArtistName(source.report.show?.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
    const data=await createWebReportService({store:async()=>source.report,photo:async()=>null})(actor,{concertId:source.report.show.key});
    return{show:general,timetable:data.report.timetable,kpis:data.report.kpis,reportId:data.show.key,preparation};
   },
@@ -48,7 +50,7 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
     return entry?.summary?.trim()||researchView(entry).summaryText||null;
    });
    const audienceStoredAt=audience.map((text,index)=>{const date=profile.audience?.[index+1]?.storedAt;return text&&typeof date==='string'&&Number.isFinite(Date.parse(date))?date:null;});
-   return {...detail,profile:{concerts:profile.concerts,photo:image,biography:profile.biography||null,latestDate:profile.latestDate,audience,audienceStoredAt}};},
+   return {...detail,profile:{concerts:profile.concerts,photo:image,biography:null,latestDate:profile.latestDate,audience,audienceStoredAt}};},
   async record(actor,body){input(body,true);await artist(actor,body.artistId);const result=await views.record(body.artistId,body.eventId);try{return{...result,mostViewed:top(await catalogue(actor),await views.counts())};}catch{return result;}},
  };
 }

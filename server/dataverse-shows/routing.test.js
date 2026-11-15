@@ -27,3 +27,7 @@ test('confirmed native aliases bypass the research catalogue without weakening t
  assert.deepEqual(await wrapped('show-open',{concertId:'Test_Gashouder_15112026'}),{complete:true});assert.equal(catalogues,0);assert.equal(calls,1);
  allowed=false;await assert.rejects(wrapped('show-open',{concertId:'Test_Gashouder_15112026'}),/NOT_ACTIVE/);assert.equal(calls,1);
 });
+test('active native menu reads only the central catalogue and never discovers another concert list from research keys',async()=>{
+ const concerts=[{concertId:'retained-native-concert',artist:'Synthetic',date:'2026-11-15',venue:'Gashouder',city:'Amsterdam'}],raw=async()=>assert.fail('Legacy list must not be used');raw.nativeRequest=async operation=>{assert.equal(operation,'list');return{handled:true,result:{concerts,checkedAt:'2026-11-15T04:00:00Z'}};};
+ const wrapper=createDataverseShows({shows:raw,research:{configured:()=>true,sourceKeys:async()=>assert.fail('Unlinked research must not create a concert menu')}});assert.deepEqual((await wrapper('list')).concerts,concerts);
+});

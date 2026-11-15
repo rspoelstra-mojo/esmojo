@@ -50,11 +50,6 @@ test('Bestaande sessie/restore-response levert dashboard mee zonder tweede brows
  const res={setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};await handler({method:'GET',query:{action:'session'},headers:{authorization:'Bearer '+token}},res);assert.equal(res.code,200);assert.equal(calls,1);assert.deepEqual(res.data.homeDashboard,{shows:[]});assert.equal('homeDashboard'in res.data.profile,false);
 });
 
-test('Projectieworker is geen vrije browser-/preview-schrijfroute en accepteert geen aangeleverde brondata',async()=>{
- const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});let calls=0;
- const blocked=makeHomePlanningSync({identify:async()=>{throw Error('FORBIDDEN');},store:async()=>{calls++;}}),res=response();await blocked({method:'POST',headers:{},body:{actor:'injected'}},res);assert.equal(res.code,403);assert.equal(calls,0);
- const allowed=makeHomePlanningSync({identify:async()=>{},store:async(op,...args)=>{calls++;assert.equal(op,'home-rebuild');assert.equal(args.length,0);return{ok:true};}}),ok=response();await allowed({method:'POST',headers:{authorization:'Bearer fixture'},body:{concertId:'injected',sourceUrl:'https://evil.test'}},ok);assert.equal(ok.code,200);assert.equal(calls,1);
-});
 
 test('Gedeelde broncriteria blijven exact gelijk en publieke catalogus bevat geen persoonlijke koppelingen',()=>{
  const source=readFileSync('src/lib/show-planning.js','utf8'),start=source.indexOf('export function productionComplete'),end=source.indexOf('export function showPlanning',start);assert.equal(readFileSync('google-apps-script/HomeCompletion.gs','utf8').split('\n').slice(1).join('\n'),source.slice(start,end).replaceAll('export ',''));
@@ -71,10 +66,6 @@ test('Vooraf opgehaalde openbare foto-URL zit in bootstrap; host, bronconcert en
  await h.shows('home-photo-cache',{photos:[{key:h.concertId,photo}]});assert.deepEqual((await h.shows('home-dashboard',{actor})).shows[0].photo,photo);
  await assert.rejects(h.shows('home-photo-cache',{photos:[{key:h.concertId,photo:{...photo,imageUrl:'https://evil.test/test.jpg'}}]}),/VALIDATION/);await assert.rejects(h.shows('home-photo-cache',{photos:[{key:h.concertId,photo:{...photo,sourceUrl:'https://www.mojo.nl/concerten/other'}}]}),/VALIDATION/);
  const file=h.production.files.find(file=>file.name==='_esmojo_home_photos_v1.json');assert.equal(JSON.parse(file.content).classification,'openbaar');assert.equal(file.content.includes(actor),false);
-});
-test('Publieke fotoprefetch gebruikt alleen servercatalogus en verstuurt geen brondata in workflowresponse',async()=>{
- const calls=[],photo={imageUrl:'https://www.mojo.nl/media/test/photo.jpg',sourceUrl:'https://www.mojo.nl/concerten/test'};
- const handler=makeHomePlanningSync({identify:async()=>{},photo:async source=>{assert.equal(source,photo.sourceUrl);return photo;},store:async(operation,input)=>{calls.push([operation,input]);return operation==='home-rebuild'?{ok:true,ready:1,unavailable:0,photoSources:[{key:'canonical-test',sourceUrl:photo.sourceUrl}]}:{cached:1};}}),res={setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};await handler({method:'POST',headers:{authorization:'Bearer test'}},res);assert.equal(res.code,200);assert.equal(calls[1][0],'home-photo-cache');assert.equal(calls[1][1].photos[0].key,'canonical-test');assert.equal(res.data.photoSources,undefined);assert.equal(res.data.photos,1);
 });
 
 test('Foto van lopende reeks blijft beschikbaar als de primaire showdag al uit de actieve import valt',async()=>{

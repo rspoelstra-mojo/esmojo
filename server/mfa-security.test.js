@@ -52,12 +52,6 @@ test('Preview proxies only MFA authentication, preserving opaque proof; health c
  const denied=response();await handler({...req(),headers:{...req().headers,origin:'https://preview.example'},body:{operation:'health'}},denied);assert.equal(denied.code,403);assert.equal(calls,1);
 });
 
-test('MCP owner login enforces application MFA before looking up administrator profile',async()=>{
- const {createMcpOwnerCheck}=await import('./mcp-owner.js');let profiles=0;const owner=createMcpOwnerCheck({env,profiles:async()=>{profiles++;return{activated:true,role:'beheerder',modules:['shows']};},clientFactory:()=>({auth:{getUser:async()=>({data:{user:{id:user,factors:[{factor_type:'totp',status:'verified'}]}}})}})});
- await assert.rejects(owner.login({headers:{authorization:'Bearer '+jwt(claims)}}),/FORBIDDEN/);assert.equal(profiles,0);
-});
-
-
 test('MFA-route deelt bestaande serverfunctie zonder private accountcontrole te omzeilen',async()=>{
  const {makeAccessDispatcher}=await import('../api/access.js');let auth=0,accounts=0;
  const handle=makeAccessDispatcher({mfa:()=>auth++,accounts:()=>accounts++});

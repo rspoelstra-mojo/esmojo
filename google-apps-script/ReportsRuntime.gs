@@ -30,23 +30,9 @@ function esmojoReportsRuntime_(request,profiles){
   if(properties.getProperty('ESMOJO_REPORTS_RUNTIME_V1')!==text)throw Error('REPORT_UNAVAILABLE');return value;
  }
  const op=request.operation;
- if(op.startsWith('reports-inbox-timetable-')){
-  const action=op.slice('reports-inbox-'.length),keys=Object.keys(request).sort().join(',');
-  if(action==='timetable-candidates'&&keys==='contract,operation')return esmojoShowTimetables_({operation:action});
-  if(action==='timetable-read'&&keys==='concertId,contract,operation')return esmojoShowTimetables_({operation:action,actor:'reports-intake-worker',concertId:request.concertId});
-  if(action==='timetable-save'&&keys==='concertId,contract,operation,snapshot')return esmojoShowTimetables_({operation:action,concertId:request.concertId,snapshot:request.snapshot});
-  throw Error('VALIDATION');
- }
- if(op==='reports-inbox-list'){
-  if(Object.keys(request).sort().join(',')!=='contract,operation')throw Error('VALIDATION');
-  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');const files=[],iterator=folder.getFiles(),historical=esmojoHistoricalSources_(),historicalIds=new Set(historical.map(row=>row.id));
-  while(iterator.hasNext()){const file=iterator.next();if(file.isTrashed()||historicalIds.has(file.getId())||!/\.csv$/i.test(file.getName()))continue;files.push({id:file.getId(),name:file.getName(),mime:file.getMimeType(),size:file.getSize(),modifiedAt:file.getLastUpdated().toISOString(),receivedAt:file.getDateCreated().toISOString()});if(files.length>10000)throw Error('REPORT_UNAVAILABLE');}
-  return{version:1,files,historical};
- }
- if(op!=='reports-inbox-read'||Object.keys(request).sort().join(',')!=='contract,modifiedAt,name,operation,size,sourceId'||!/^[-\w]{1,200}$/.test(request.sourceId||'')||typeof request.name!=='string'||!Number.isSafeInteger(request.size)||request.size<1||request.size>2*1024*1024||!Number.isFinite(Date.parse(request.modifiedAt)))throw Error('VALIDATION');
- const historical=esmojoHistoricalSources_().find(row=>row.id===request.sourceId),file=historical?esmojoHistoricalSourceFile_(historical):esmojoOnTrackSourceFile_(request.sourceId);
- if(file.getName()!==request.name||file.getSize()!==request.size||file.getLastUpdated().toISOString()!==request.modifiedAt||!/\.csv$/i.test(file.getName())||!['text/csv','application/csv','text/plain','application/vnd.ms-excel'].includes(file.getMimeType()))throw Error('SOURCE_CHANGED');
- const bytes=file.getBlob().getBytes();if(bytes.length!==request.size)throw Error('SOURCE_CHANGED');return{version:1,sourceId:request.sourceId,sha256:esmojoOnTrackHash_(bytes),csvBase64:Utilities.base64Encode(bytes)};
+ if(op.startsWith('reports-inbox-timetable-'))throw Error('INTEGRATION_RETIRED');
+ if(['reports-inbox-list','reports-inbox-read'].includes(op))throw Error('CSV_INTAKE_DISABLED');
+ throw Error('VALIDATION');
 }
 // Other modules keep their own preparation/daily-state authority. Once Reports
 // is native they must not load a second Reports runtime inventory from Drive.

@@ -1,23 +1,11 @@
 import {barrierReferenceManifest as referenceManifest} from '../shared/barrier-reference-manifest.js';
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync,existsSync,readdirSync} from 'node:fs';import vm from 'node:vm';import {createHash} from 'node:crypto';
-import {createOAuthAbuseGuard,OAUTH_LIMIT_SCRIPT} from './oauth-abuse.js';
-import {makeMcpOAuthHandler} from './mcp-oauth.js';
 import {createBarrierReferenceService,validateReferenceRequest} from './barrier-references.js';
 import {harness} from './test-support/production-drive.js';
 import {expectedSecurityHeaders,appCsp} from '../tools/security/browser-headers.mjs';
 const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});
 const env={VERCEL:'1',GOOGLE_DRIVE_SHARED_SECRET:'synthetic-secret-'.repeat(3),UPSTASH_REDIS_REST_URL:'https://synthetic.upstash.io',UPSTASH_REDIS_REST_TOKEN:'synthetic-token'};
 const req={headers:{'x-forwarded-for':'192.0.2.42'}};
-test('OAuth guard begrenst vóór Drive, deelt primaire Redis-tellers en lekt geen IP',async()=>{
- const commands=[],guard=createOAuthAbuseGuard({env,request:async(_url,init)=>{const command=JSON.parse(init.body);commands.push(command);return Response.json({result:commands.length<4?0:55});}});
- for(let i=0;i<3;i++)await guard(req,'register');await assert.rejects(guard(req,'register'),{message:'OAUTH_RATE_LIMIT',retryAfter:55});
- assert.equal(commands[0][1],OAUTH_LIMIT_SCRIPT);assert.deepEqual(commands[0].slice(-3),[3,6,60]);assert.equal(JSON.stringify(commands).includes('192.0.2.42'),false);
- let touched=0;const api=makeMcpOAuthHandler({env,guard,store:async()=>{touched++;}}),res=response();await api({method:'POST',headers:req.headers,query:{action:'register'},body:{redirect_uris:['https://chatgpt.com/connector_platform_oauth_redirect']}},res);assert.equal(res.code,429);assert.equal(res.headers['Retry-After'],'55');assert.equal(touched,0);
-});
-test('Redis-storing of onbetrouwbaar IP faalt gesloten vóór OAuth-store',async()=>{
- for(const options of [{request:async()=>{throw Error('PRIVATE');}},{request:async()=>Response.json({result:'0'})},{env:{...env,UPSTASH_REDIS_REST_URL:'http://127.0.0.1'}}]){const guard=createOAuthAbuseGuard({env,...options});await assert.rejects(guard(req,'register'),/OAUTH_GUARD_UNAVAILABLE/);}
- const guard=createOAuthAbuseGuard({env,request:async()=>{throw Error('Should not run');}});await assert.rejects(guard({headers:{'x-forwarded-for':'192.0.2.1, 192.0.2.2'}},'token'),/OAUTH_GUARD_UNAVAILABLE/);
-});
 const bytes=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1]);
 const sha256=createHash('sha256').update(bytes).digest('hex'),type='seated',manifest={[type]:{fileName:'synthetic.png',size:bytes.length,sha256}};
 test('Vaste referentiebeelden worden HMAC-ondertekend geïnstalleerd en onafhankelijk op Shows-rechten gecontroleerd',async()=>{

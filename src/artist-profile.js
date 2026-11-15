@@ -1,4 +1,4 @@
-import {artistBiographyPreview,mojoArtistUrl} from '../shared/mojo-artist.js';
+import {mojoArtistUrl} from '../shared/mojo-artist.js';
 import {renderArtistRiskCard} from './artist-risk-card.js';
 import {peopleIconPaths} from './lib/profile-icons.js';
 import {timetableClock} from '../shared/show-timetable.js';
@@ -38,11 +38,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
  const header=node('header','artist-page-heading');
  const intro=node('div','artist-profile-intro');
  intro.append(node('h1','artist-page-title',name));
- if(typeof profile.biography?.text==='string'&&profile.biography.text.trim()){
-  const biography=node('div','artist-biography');
-  biography.append(node('p','',artistBiographyPreview(profile.biography.text)));
-  intro.append(biography);
- }
+ const biography=node('div','artist-biography');biography.append(node('p','','[Description placeholder]'));intro.append(biography);
  header.append(intro);
  if(typeof profile.photo==='string'&&/^https:\/\/www\.mojo\.nl\/media\//i.test(profile.photo)){
   const image=node('img','artist-profile-photo');

@@ -1,5 +1,8 @@
 # Onderzoeksbrug (voorbereid; nog niet live geactiveerd)
 
+Actueel (15 november 2026): de MCP-koppeling is verwijderd. Onderstaande oude
+koppelinstructies zijn historisch en mogen niet opnieuw worden geactiveerd.
+
 Route: uitvoeromgeving → POST https://esmojo.nl/api/research → ondertekend Apps
 Script → bestaande concertmap onder ESMOJO/Productie. Onderzoek is Openbaar,
 maar de route zelf is niet anoniem toegankelijk. Geen nieuwe websitepagina's,

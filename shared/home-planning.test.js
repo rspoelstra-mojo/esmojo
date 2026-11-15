@@ -1,3 +1,4 @@
+import {generatedHomeCatalogue} from '../tools/sync-catalogue-sources.mjs';
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {homePlanning,calendarMonth,shiftMonth,deadlineSummary,homeShowDates,nextHomeMidnight} from './home-planning.js';
 import {homeCatalogue} from './home-catalogue.js';
@@ -22,11 +23,11 @@ test('Maandraster begint maandag, eindigt zondag en bereikt schrikkeldag/volgend
  for(const month of ['2026-11','2027-01','2028-02']){const dates=calendarMonth(month);assert.equal(new Date(dates[0]+'T12:00:00Z').getUTCDay(),1);assert.equal(new Date(dates.at(-1)+'T12:00:00Z').getUTCDay(),0);assert.ok(dates.includes(month+'-01'));}
  assert.ok(calendarMonth('2028-02').includes('2028-02-29'));assert.equal(shiftMonth('2026-12',1),'2027-01');assert.equal(shiftMonth('2027-01',-1),'2026-12');assert.throws(()=>calendarMonth('2026-13'));
 });
-test('Catalogus behoudt reeksidentiteit/historische eerste datum en toont alleen actueel geïmporteerde Gashouder-groepen',()=>{
+test('Catalogus behoudt reeksidentiteit/historische eerste datum en toont actueel geïmporteerde groepen uit de centrale locatieselectie',()=>{
  const row=(id,date,extra={})=>({concertId:id,generalConcertId:id,folderId:'f-'+id,generalFolderId:'f-'+id,artist:id,venue:'Gashouder',city:'Amsterdam',date,...extra});
  const first=row('reeks','2026-11-03',{assignments:[{userId:'richard-id',role:'event-safety-manager'}]}),later={...first,concertId:'later',date:'2026-11-04',time:'19:30'},other=row('ziggo','2026-11-04',{venue:'Ziggo Dome'}),state={version:1,managedBy:'ESMOJO/MOJO-v1',checkedAt:now.toISOString(),active:['later','ziggo'],concerts:[first,later,other,row('verdwenen','2026-11-05')]};
- const assignments=[{concertId:'reeks',userId:'richard-id',role:'event-safety-manager'}],result=homeCatalogue(state,'richard-id',assignments);assert.equal(result.length,1);assert.equal(result[0].key,'reeks');assert.deepEqual(result[0].dates,['2026-11-03','2026-11-04']);assert.equal(result[0].assigned,true);assert.equal(homeCatalogue(state,'richard-id')[0].assigned,false,'Openbare indexvelden verlenen geen persoonlijke toewijzing');assert.equal(homeCatalogue(state,'ander',assignments)[0].assigned,false);assert.deepEqual(result[0].times,{'2026-11-04':'19:30'});assert.equal('assignments' in result[0],false);
- assert.equal(readFileSync('google-apps-script/HomeCatalogue.gs','utf8').split('\n').slice(1).join('\n'),readFileSync('shared/home-catalogue.js','utf8').replaceAll('export ',''));
+ const assignments=[{concertId:'reeks',userId:'richard-id',role:'event-safety-manager'}],result=homeCatalogue(state,'richard-id',assignments);assert.equal(result.length,2);assert.equal(result[0].key,'reeks');assert.deepEqual(result[0].dates,['2026-11-03','2026-11-04']);assert.equal(result[0].assigned,true);assert.equal(homeCatalogue(state,'richard-id')[0].assigned,false,'Openbare indexvelden verlenen geen persoonlijke toewijzing');assert.equal(homeCatalogue(state,'ander',assignments)[0].assigned,false);assert.deepEqual(result[0].times,{'2026-11-04':'19:30'});assert.equal('assignments' in result[0],false);
+ assert.equal(readFileSync('google-apps-script/HomeCatalogue.gs','utf8'),generatedHomeCatalogue());
 });
 
 test('Showlijsten combineren echte reeksen; gedeelde reeksdeadlines blijven uniek en linken naar de bestaande reeks',()=>{
