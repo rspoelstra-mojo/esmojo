@@ -11,7 +11,7 @@ export async function scrapeConcertCatalogue({scrape=scrapeMojo,now=new Date()}=
 }
 export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape = scrapeConcertCatalogue, store = createShowsStore({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}), photo=getMojoArtistPhoto,now=()=>new Date() } = {}) {
   return async (req, res) => {
-    res.setHeader('Cache-Control', 'no-store');res.setHeader('X-ESMOJO-Agenda-Import','2');
+    res.setHeader('Cache-Control', 'no-store');res.setHeader('X-ESMOJO-Agenda-Import','3');
     if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Niet toegestaan.' }); }
     try { await identify(/^Bearer (\S+)$/.exec(req.headers.authorization || '')?.[1]); }
     catch(error) { return res.status(403).json({ error: 'Geen toegang.',code:'FORBIDDEN',stage:['token','claims','issuer','audience','subject','repository','ref','workflow','jwks','signature'].includes(error.identityStage)?error.identityStage:'identity' }); }

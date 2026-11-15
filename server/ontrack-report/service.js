@@ -1,3 +1,4 @@
+import {assertLegacyStorage} from '../legacy-storage-policy.js';
 import {createReportsRouting} from '../dataverse-reports/routing.js';
 import {createHash,createHmac,randomBytes,randomUUID} from 'node:crypto';
 import {calculateReport} from './data.js';
@@ -9,6 +10,7 @@ import {sendEmail} from '../email.js';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 export function createReportsBridge({env=process.env,request=fetch,now=Date.now}={}){
  return async(operation,actor,payload={})=>{
+    assertLegacyStorage(env);
   const failure=(message,workerCode=message)=>Object.assign(Error(message),{workerCode,workerOperation:operation});
   const url=env.GOOGLE_DRIVE_SCRIPT_URL,secret=env.GOOGLE_DRIVE_SHARED_SECRET;if(!url||!secret||secret.length<32)throw Error('ONTRACK_REPORT_UNAVAILABLE');const parsed=new URL(url);
   if(parsed.origin!=='https://script.google.com'||!/^\/macros\/s\/[\w-]+\/exec$/.test(parsed.pathname)||parsed.search||parsed.hash||parsed.username||parsed.password)throw Error('ONTRACK_REPORT_UNAVAILABLE');

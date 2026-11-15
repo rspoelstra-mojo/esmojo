@@ -36,3 +36,5 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611100001_show_management.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/202611100001_show_management.sql
           psql -v ON_ERROR_STOP=1 -f tools/storage/check-show-management.sql
+      - name: Retire only old business access, preserve originals and Auth
+        run: psql -v ON_ERROR_STOP=1 -f tools/storage/check-retirement.sql

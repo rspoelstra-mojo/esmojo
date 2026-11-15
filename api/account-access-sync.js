@@ -1,3 +1,4 @@
+import {retiredIntegration} from '../server/retired-integrations.js';
 import {verifyImportIdentity} from '../server/github-identity.js';
 import {isolateFluidApi} from '../server/fluid-preview.js';
 import {createAccessController} from '../server/account-access/controller.js';
@@ -9,4 +10,4 @@ export function makeAccessSync({env=process.env,control=createAccessController({
   try{return res.status(200).json(await control(req.body));}catch(error){return res.status(503).json({ok:false,code:['VALIDATION','TASK_EXPIRED','FORBIDDEN','ACCESS_UNCONFIRMED','ACCESS_CORRUPT','SOURCE_CHANGED','TASK_BUSY'].includes(error.message)?error.message:'ACCESS_UNCONFIRMED'});}
  };
 }
-export default isolateFluidApi(makeAccessSync());
+export default retiredIntegration;

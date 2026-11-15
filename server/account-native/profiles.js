@@ -6,7 +6,7 @@ import {isAdministrator,isSuperAdministrator,validateAccountModules} from '../..
 export function createNativeProfiles({env=process.env,store=createNativeAccountStore({env}),legacy}={}){
  return async(operation,actor,payload={})=>{
   const root=await store.get(null),policy=root?.value;
-  if(!policy)return legacy(operation,actor,payload);
+  if(!policy){if(env.VERCEL_ENV==='production')throw Error('ACCOUNT_CORRUPT');return legacy(operation,actor,payload);}
   const mutations=['create','update','disable','delete','activate','photo','bootstrap'];
   if(policy.mode==='freeze'){if(mutations.includes(operation))throw Error('ACCESS_FROZEN');if(!policy.prepared)return legacy(operation,actor,payload);}
   if(!['freeze','dataverse'].includes(policy.mode)||!policy.verified||policy.mode==='dataverse'&&!policy.sourceGuard||!validAccountId(policy.settings?.superAdminId))throw Error('ACCOUNT_CORRUPT');

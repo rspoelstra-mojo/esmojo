@@ -1,3 +1,4 @@
+import {retiredIntegration} from '../server/retired-integrations.js';
 import {verifyImportIdentity} from '../server/github-identity.js';
 import {isolateFluidApi} from '../server/fluid-preview.js';
 import {createProfiles} from '../server/account-profiles.js';
@@ -36,4 +37,4 @@ export function makeReportsValidationSync({tasks=createReportsValidationRunner()
   }catch(error){const allowed=['VALIDATION_APPROVAL_REQUIRED','TASK_EXPIRED','TASK_CORRUPT','TASK_BUSY','FORBIDDEN','CHOICE_AUTH','CHOICE_FORBIDDEN','SETUP_TEMPORARY','SETUP_THROTTLED'];return res.status(503).json({ok:false,stage,code:allowed.includes(error.message)?error.message:'REPORTS_VALIDATION_UNCONFIRMED'});}
  };
 }
-export default isolateFluidApi(makeReportsValidationSync());
+export default retiredIntegration;

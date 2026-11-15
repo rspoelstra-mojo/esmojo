@@ -1,3 +1,4 @@
+import {assertLegacyStorage} from './legacy-storage-policy.js';
 import {createManagedShowsRouting,managedShowsRouting} from './dataverse-shows/routing.js';
 import {createNativeResearchStore} from './dataverse-shows/research.js';
 import {nativeShowsSelected} from './dataverse-shows/authority.js';
@@ -8,6 +9,7 @@ export function createResearchStore({ env = process.env, request = fetch, legacy
   if(!legacy&&nativeShowsSelected(env))return createNativeResearchStore({env});
   if(!legacy&&managedShowsRouting(env)){const route=createManagedShowsRouting({env}),old=createResearchStore({env,request,legacy:true}),native=createNativeResearchStore({env});return input=>route({legacy:()=>old(input),native:()=>native(input)});}
   return async function research(input) {
+    assertLegacyStorage(env);
     const url = env.GOOGLE_DRIVE_SCRIPT_URL, secret = env.GOOGLE_DRIVE_SHARED_SECRET;
     if (!url || !secret || secret.length < 32) throw new ResearchError('CONFIG');
     const parsed = new URL(url);
