@@ -1,3 +1,15 @@
+## Volledige accountautoriteit met behoud Supabase Auth (15 november 2026)
+
+Gebruiker autoriseert het besproken plan nu uit te voeren: alle resterende actieve
+bedrijfsgegevens, accountprofielen/foto's/rollen/instellingen naar Dataverse,
+geteste publicatie en gecontroleerde activering. Supabase Auth/wachtwoord/MFA/sessies
+blijft behouden. Bestaande vertrouwelijke classificatie geldt; geen nieuwe datadoelen.
+Behoud IDs, beleidsgrenzen en originelen; geen echte testmails/fictieve accounts.
+Eén native profiel-/rollenbron, actuele status/modules, geen Drive-fallback na
+activering. Gebruik nieuwe expliciet gestarte begrensde achtergrondtaak met actuele
+admin/MFA, lease/ETag/generatie, bronfreeze en onafhankelijke readback. Oude grants
+niet heropenen of verlengen. Sleutels met nog bestaande ciphertext niet intrekken.
+
 ## Centrale concertcatalogus en definitieve MOJO-uitzonderingen (15 november 2026)
 
 Nieuwe gebruikersinstructie vervangt de algemene agenda-stop hieronder: importeer

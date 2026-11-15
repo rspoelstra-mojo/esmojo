@@ -50,6 +50,7 @@ jobs:
           node --test tools/apps-script/check-syntax.test.mjs tools/apps-script/diagnostics.test.mjs
           node server/apps-script.test.js
           node server/account-profiles.test.js
+          node --test server/account-native/*.test.js
           node shared/artist-catalogue.test.js
           node server/artist-show.test.js
           node server/artist-preparation.test.js

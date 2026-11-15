@@ -1,3 +1,4 @@
+import {createNativeAccountStore} from '../account-native/store.js';
 import {nativeConnection} from './connection.js';
 import {openingRecord,openingKey,readOpening,manifestFingerprint} from './opening.js';
 import {createHash} from 'node:crypto';
@@ -19,6 +20,7 @@ export function createNativeShowState({env=process.env,repository,connection=nat
  const repo=repository||createNativeShowsRepository({connection}),writer=createMigrationWriter({env,connection}),cipher=taskCipher({env});
  async function syncActor(profile){
   if(!profile||!profile.activated||profile.disabled||!Array.isArray(profile.modules)||!profile.modules.includes('shows'))throw Error('FORBIDDEN');
+  if((await createNativeAccountStore({env,repo}).policy()).mode!=='legacy'){const current=await repo.byKey('esmojo_medewerker',recordKey('esmojo_medewerker','account/'+profile.id));if(!current)throw Error('FORBIDDEN');return;}
   const person={};for(const key of ['id','firstName','lastName','email','company','jobTitle','role','activated','modules'])person[key]=profile[key];
   person.disabled=false;if(person.role==='superbeheerder')person.role='beheerder';
   const rows=mapPeople({version:1,profiles:[person],assignments:[]}).records,operations=await recordOperations(repo,rows);
