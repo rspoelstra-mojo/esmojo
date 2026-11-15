@@ -4,10 +4,10 @@ import {nativeReaderFixture} from './reader-fixture.js';
 import {createNativeReportsRepository} from './repository.js';
 import {createNativeReportsMutations} from './mutations.js';
 import {createReportsOperationalStore} from './operational.js';
-import {createTaskStore} from '../background-tasks/store.js';
+import {createReportsStateStore} from './operational.js';
 import {createNativeReportRecipients} from './recipients.js';
 const actor='88888888-8888-4888-8888-888888888888',recipient='77777777-7777-4777-8777-777777777777';
-async function fixture(){const f=await nativeReaderFixture(),repository=createNativeReportsRepository({connection:f.destination.connection}),store=createTaskStore({env:f.env,connection:f.destination.connection}),operational=createReportsOperationalStore({store}),mutations=createNativeReportsMutations({repository,connection:f.destination.connection});let allowed=true;
+async function fixture(){const f=await nativeReaderFixture(),repository=createNativeReportsRepository({connection:f.destination.connection}),store=createReportsStateStore({env:f.env,connection:f.destination.connection}),operational=createReportsOperationalStore({store}),mutations=createNativeReportsMutations({repository,connection:f.destination.connection});let allowed=true;
  const accounts=[actor,recipient].map(id=>({id,activated:true,disabled:false,role:'beheerder',modules:['reports'],email:'synthetic@example.invalid'})),profiles=async op=>op==='list'?accounts:{...accounts[0],modules:allowed?['reports']:[]};
  const service=createNativeReportRecipients({repository,operational,mutations,writer:f.writer,profiles});return{...f,service,store,operational,deny(){allowed=false;}};
 }

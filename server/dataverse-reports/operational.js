@@ -1,10 +1,11 @@
 import {randomUUID} from 'node:crypto';
-import {createTaskStore} from '../background-tasks/store.js';
+import {createTaskStore,taskCipher} from '../background-tasks/store.js';
 // Encrypted technical coordination only. This is not a background authorization
 // grant: the caller authorizes every action independently, including after wait.
 // Business content and recipient selection stay in their typed Reports rows.
+export function createReportsStateStore({env=process.env,connection}={}){const base=taskCipher({env}),cipher={seal:(type,state)=>base.seal('reports-runtime/'+type,state),open:(type,text)=>base.open('reports-runtime/'+type,text)};return createTaskStore({env,...(connection?{connection}:{}),cipher,recordKind:'reports-runtime-state-v1',namespace:'reports-runtime'});}
 const type='reports-runtime-coordination-v1',leaseMs=15*60000;
-export function createReportsOperationalStore({env=process.env,store=createTaskStore({env}),now=Date.now}={}){
+export function createReportsOperationalStore({env=process.env,store=createReportsStateStore({env}),now=Date.now}={}){
  async function initial(){
   let row=await store.get(type);if(row)return row;
   const at=now();return store.create(type,'Rapportages · technische coördinatie',{version:1,type,actor:'reports-runtime-internal',epoch:randomUUID(),handlerVersion:1,status:'ready',cursor:{version:1,revision:null,pipeline:null},sequence:0,attempts:0,startedAt:at,updatedAt:at,expiresAt:at+24*3600000,nextAt:at,lease:null,public:{label:'Technische Rapportages-coördinatie'}});

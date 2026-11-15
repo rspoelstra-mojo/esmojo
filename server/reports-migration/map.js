@@ -16,7 +16,8 @@ const valid=item=>item.validation?.state==='valid'&&item.validation.sourceHash==
 export const sortedSources=bundle=>[...bundle.sources].sort((a,b)=>b.source.modifiedAt.localeCompare(a.source.modifiedAt)||a.source.id.localeCompare(b.source.id));
 export function contextFor(bundle,item){
  const show=item?.source.show||bundle.show;if(reportSourceType(show)==='tsc-historical'&&!validTscShowData(show.showData))throw Error('MIGRATION_SOURCE');
- const general=artistPreparation(bundle.general,show)?.general||{productionManager:null,eventSafetyManager:null,tscProjectLead:null,soldTickets:null,foreignPercentage:null};
+ const general=bundle.contextGeneral||artistPreparation(bundle.general,show)?.general||{productionManager:null,eventSafetyManager:null,tscProjectLead:null,soldTickets:null,foreignPercentage:null};
+ if(bundle.contextGeneral&&(Object.keys(general).sort().join(',')!=='eventSafetyManager,foreignPercentage,productionManager,soldTickets,tscProjectLead'||['productionManager','eventSafetyManager','tscProjectLead'].some(key=>general[key]!==null&&(typeof general[key]!=='string'||general[key].length>250||/[\x00-\x1f@]/.test(general[key])))||general.soldTickets!==null&&(!Number.isSafeInteger(general.soldTickets)||general.soldTickets<0)||general.foreignPercentage!==null&&(typeof general.foreignPercentage!=='number'||!Number.isFinite(general.foreignPercentage)||general.foreignPercentage<0||general.foreignPercentage>100)))throw Error('MIGRATION_SOURCE');
  return{show:{key:show.key,name:show.name,venue:show.venue,date:show.date,performance:show.performance||null,sourceType:reportSourceType(show),showData:show.showData||null},general,timetable:bundle.timetable,photo:item?.validation?.mojo?.photo||null,sourceUrl:item?.validation?.mojo?.sourceUrl||show.sourceUrl||null};
 }
 export const datasetFingerprint=(bundle,item)=>digest({concert:bundle.show.key,sha256:item.sha256,context:contextFor(bundle,item),parserContract,calculationContract});

@@ -25,6 +25,13 @@ function esmojoReportsRuntime_(request,profiles){
   if(properties.getProperty('ESMOJO_REPORTS_RUNTIME_V1')!==text)throw Error('REPORT_UNAVAILABLE');return value;
  }
  const op=request.operation;
+ if(op.startsWith('reports-inbox-timetable-')){
+  const action=op.slice('reports-inbox-'.length),keys=Object.keys(request).sort().join(',');
+  if(action==='timetable-candidates'&&keys==='contract,operation')return esmojoShowTimetables_({operation:action});
+  if(action==='timetable-read'&&keys==='concertId,contract,operation')return esmojoShowTimetables_({operation:action,actor:'reports-intake-worker',concertId:request.concertId});
+  if(action==='timetable-save'&&keys==='concertId,contract,operation,snapshot')return esmojoShowTimetables_({operation:action,concertId:request.concertId,snapshot:request.snapshot});
+  throw Error('VALIDATION');
+ }
  if(op==='reports-inbox-list'){
   if(Object.keys(request).sort().join(',')!=='contract,operation')throw Error('VALIDATION');
   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(folder.isTrashed())throw Error('SOURCE_MISSING');const files=[],iterator=folder.getFiles(),historical=esmojoHistoricalSources_(),historicalIds=new Set(historical.map(row=>row.id));
@@ -36,3 +43,11 @@ function esmojoReportsRuntime_(request,profiles){
  if(file.getName()!==request.name||file.getSize()!==request.size||file.getLastUpdated().toISOString()!==request.modifiedAt||!/\.csv$/i.test(file.getName())||!['text/csv','application/csv','text/plain','application/vnd.ms-excel'].includes(file.getMimeType()))throw Error('SOURCE_CHANGED');
  const bytes=file.getBlob().getBytes();if(bytes.length!==request.size)throw Error('SOURCE_CHANGED');return{version:1,sourceId:request.sourceId,sha256:esmojoOnTrackHash_(bytes),csvBase64:Utilities.base64Encode(bytes)};
 }
+// Other modules keep their own preparation/daily-state authority. Once Reports
+// is native they must not load a second Reports runtime inventory from Drive.
+function esmojoReportsRelatedInventory_(folder,catalogue,names,registered){
+ if(esmojoReportsRuntimePolicy_().mode==='dataverse')return{sources:[],available:[],reports:[],pending:0,unlinked:0};
+ return esmojoWebInventory_(folder,catalogue,names,registered);
+}
+
+function esmojoReportsNativeActive_(){return esmojoReportsRuntimePolicy_().mode==='dataverse';}

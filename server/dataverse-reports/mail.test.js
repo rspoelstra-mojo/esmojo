@@ -4,7 +4,7 @@ import {nativeReaderFixture} from './reader-fixture.js';
 import {createNativeReportsRepository} from './repository.js';
 import {createNativeReportsMutations} from './mutations.js';
 import {createReportsOperationalStore} from './operational.js';
-import {createTaskStore} from '../background-tasks/store.js';
+import {createReportsStateStore} from './operational.js';
 import {createNativeReportMail} from './mail.js';
 import {digest} from '../show-migration-writer.js';
 import {createNativeReportReader} from './read.js';
@@ -12,7 +12,7 @@ import {reportChoice} from '../reports-migration/contract.js';
 const recipient='77777777-7777-4777-8777-777777777777',jobId='88888888-8888-4888-8888-888888888888';
 async function fixture({attempts=0,first=null,last=null,eligible=true,channel='online'}={}){
  let id,sourceHash;const f=await nativeReaderFixture({prepare:async({drive,show,csv})=>{sourceHash=digest(csv.content);id=digest('online-showreport-v1\n'+show.concertId+'\n'+sourceHash);const state=JSON.parse(drive.mail.content),group={id,sourceId:'old-source',sourceHash,show:{key:show.concertId,name:show.artist,venue:show.venue,dates:[show.date]},publishedAt:'2026-11-04T12:00:00Z',emailStatus:'pending',deliveries:[{recipientId:recipient,status:'pending',attempts,...first?{firstAttemptAt:first}:{},...last?{lastAttemptAt:last}:{}}]};state.onlineReports=[group];drive.mail.setContent(JSON.stringify(state));}});
- const repository=createNativeReportsRepository({connection:f.destination.connection}),mutations=createNativeReportsMutations({connection:f.destination.connection,repository}),store=createTaskStore({env:f.env,connection:f.destination.connection}),operational=createReportsOperationalStore({store});let allowed=true;
+ const repository=createNativeReportsRepository({connection:f.destination.connection}),mutations=createNativeReportsMutations({connection:f.destination.connection,repository}),store=createReportsStateStore({env:f.env,connection:f.destination.connection}),operational=createReportsOperationalStore({store});let allowed=true;
  const service=createNativeReportMail({env:f.env,repository,mutations,operational,writer:f.writer,authorize:async()=>{if(!allowed)throw Error('FORBIDDEN');},accounts:async()=>[{id:recipient,activated:true,disabled:false,reports:eligible,email:'synthetic@example.invalid',firstName:'Synthetic'}],visible:()=>createNativeReportReader({repository}).current(),selection:async()=>({recipientIds:[recipient]}),download:async()=>{throw Error('unexpected PDF');},now:()=>Date.parse('2026-11-05T12:00:00Z')});
  return{...f,id,sourceHash,service,store,deny(){allowed=false;}};
 }

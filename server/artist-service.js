@@ -26,7 +26,8 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
    const source=await shows('artist-show',{actor,artistIds,date:body.date,venue:body.venue,...(body.performance?{performance:body.performance}:{})});
    if(body.performance&&source?.show?.performance!==body.performance||source?.show?.date!==body.date||source.show.venue!==body.venue||readableArtistName(source.show.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
    const general={name:row.name,venue:body.venue,date:body.date,...(body.performance?{performance:body.performance}:{})};
-   const preparation=artistPreparation(source.preparation,general);
+   const preparation=source.preparation?artistPreparation(source.preparation,general):source.nativePreparation||null;
+   if(source.nativeReport)return{show:general,timetable:source.nativeReport.timetable,kpis:source.nativeReport.kpis,reportId:source.nativeReport.reportId,preparation};
    if(!source.report)return{show:general,timetable:source.timetable||null,kpis:null,reportId:null,preparation};
    if(body.performance&&source.report.show?.performance!==body.performance||source.report.show?.date!==body.date||source.report.show?.venue!==body.venue||readableArtistName(source.report.show?.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
    const data=await createWebReportService({store:async()=>source.report,photo:async()=>null})(actor,{concertId:source.report.show.key});

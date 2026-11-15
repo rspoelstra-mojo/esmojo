@@ -11,7 +11,7 @@ const status=value=>reportChoice('rapportafleverstatus',value);
 const active=p=>p?.activated===true&&!p.disabled;
 // Existing workers keep sending/rendering; this component only reserves and
 // confirms typed native delivery state. No mail API is called here.
-export function createNativeReportMail({env=process.env,repository:repo,mutations,operational,writer,authorize,accounts,visible,selection,manager=async()=>null,download,now=Date.now}){
+export function createNativeReportMail({env=process.env,repository:repo,mutations,operational,writer,authorize,accounts,visible,selection,processing,intake,manager=async()=>null,download,now=Date.now}){
  if([authorize,accounts,visible,download].some(fn=>typeof fn!=='function'))throw Error('REPORT_CONFIG');
  function metadata(group){const value=parse(group.esmojo_mailparameters_json);if(!value||!validHash(value.id)||value.id!==group.esmojo_oudrapportid||!['online','pdf'].includes(value.channel)||group.esmojo_mailkanaal!==reportChoice('rapportmailkanaal',value.channel)||group.esmojo_verzendfingerprint!==digest({channel:value.channel,id:value.id}))throw Error('REPORT_CONFLICT');return value;}
  async function deliveries(group){const info=metadata(group),version=await repo.byId('esmojo_rapportversie',group._esmojo_rapportversie_value),header=await repo.byId('esmojo_rapportage',version._esmojo_rapportage_value);if(header.esmojo_bronidentiteit!==reportIdentity(info.show))throw Error('REPORT_CONFLICT');const rows=await repo.children('esmojo_rapportaflevering','esmojo_rapportverzending',await repo.idOf('esmojo_rapportverzending',group)),seen=new Set();for(const row of rows){const id=row.esmojo_authgebruikersid;if(typeof id!=='string'||seen.has(id)||row.esmojo_ontvangerhash!==digest(id)||row.esmojo_idempotentiesleutel!==(info.channel==='pdf'?'esmojo-showreport-':'esmojo-webreport-')+info.id+'-'+digest(id).slice(0,16))throw Error('REPORT_CONFLICT');seen.add(id);}return rows;}
@@ -34,6 +34,21 @@ export function createNativeReportMail({env=process.env,repository:repo,mutation
     queued+=targets.length;
    }
    if(state.onlineMailStartedAt===undefined)state.onlineMailStartedAt=settings?.onlineMailStartedAt||new Date(now()).toISOString();return{queued,tracking:'mail-open-v1'};
+  });
+ }
+ async function send(actor,reportId){
+  if(!validHash(reportId)||!processing||!intake||typeof selection!=='function')throw Error('VALIDATION');
+  return operational.exclusive(()=>authorize(actor,{admin:true}),async(state,{markWrite})=>{
+   const groups=await repo.query('esmojo_rapportverzending'),known=groups.map(row=>({row,info:metadata(row)})),pdf=known.find(row=>row.info.channel==='pdf'&&row.info.id===reportId);if(!pdf)throw Error('REPORT_CONFLICT');
+   const source=(await processing.read(pdf.info.sourceId)).value,file=(await intake.list()).files.find(row=>row.id===pdf.info.sourceId);
+   if(!source||source.status!=='ready'||source.latestReportId!==reportId||source.modifiedAt!==source.processedModifiedAt||!file||file.modifiedAt!==source.processedModifiedAt||(await intake.read(file)).sha256!==pdf.info.sourceHash)throw Error('REPORT_CONFLICT');
+   const [chosen,people]=await Promise.all([selection(state),accounts()]),targets=chosen.recipientIds.filter(id=>people.some(p=>p.id===id&&active(p)&&p.reports===true));if(!targets.length)throw Error('VALIDATION');
+   const online=known.find(row=>row.info.channel==='online'&&row.info.sourceHash===pdf.info.sourceHash&&row.info.show.key===pdf.info.show.key);if(!online&&pdf.info.mailChannel==='online')throw Error('REPORT_CONFLICT');
+   const target=online?.info.legacyReportId?known.find(row=>row.info.channel==='pdf'&&row.info.id===online.info.legacyReportId):online||pdf;if(!target)throw Error('REPORT_CONFLICT');const current=await deliveries(target.row),identity=target.row.esmojo_bronidentiteit;
+   for(const id of targets)if(!current.some(row=>row.esmojo_authgebruikersid===id)){await markWrite();await writer.ensure(reportRecord('rapportaflevering',identity+'/recipient/'+id,'Rapportageaflevering',{authgebruikersid:id,ontvangerhash:digest(id),afleverstatus:status('pending'),pogingen:0,idempotentiesleutel:(target.info.channel==='pdf'?'esmojo-showreport-':'esmojo-webreport-')+target.info.id+'-'+digest(id).slice(0,16),mailparameters_json:canonical({mail:null,errorCode:null})},{rapportverzending:{table:'esmojo_rapportverzending',key:target.row.esmojo_sleutel}}));}
+   const fields={esmojo_verzendstatus:status(mailState(await deliveries(target.row)))};
+   if(target.info.channel==='online'){fields.esmojo_historisch=false;fields.esmojo_mailparameters_json=canonical({...target.info,historical:false});}
+   await markWrite();await mutations.atomic([patch('esmojo_rapportverzending',target.row,fields)]);return{ok:true};
   });
  }
  async function reserve(channel,input){
@@ -73,5 +88,5 @@ export function createNativeReportMail({env=process.env,repository:repo,mutation
    await change(group,delivery,fields,markWrite);return{ok:true};
   });
  }
- return{sync,reserve,confirm};
+ return{sync,send,reserve,confirm};
 }

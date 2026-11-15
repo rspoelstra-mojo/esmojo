@@ -21,3 +21,16 @@ private PDF/mailarchiefreads, eerste opening, ontvangerselectie inclusief leeg,
 versleuteld technisch schrijfslot met blijvende onzekerheidsfence, bestaande
 mailreserveringen/bevestigingen zonder verzending en hervatbare datasetpublicatie.
 Nog geen providerrouter of Apps Script-aanlevergrens/stop; dus geen activering.
+
+De gebruikersinstructie van 15 november beperkt extra werk aan tijdelijke Google-
+koppelingen; er zijn geen andere sitegebruikers/wijzigingen tijdens deze taak.
+De brug blijft daarom uitsluitend CSV- en gedeelde MOJO-tijdschema-aanlevering,
+naast de noodzakelijke schrijfstop. Accountprofielen/Auth en andere modules
+houden hun bestaande autoriteit. De volledige Reports-router heeft geen Drive-
+fallback na native activering. Artiesten krijgt uitsluitend KPI's/tijden, geen CSV.
+
+Getest: 150 native/migratie/achtergrond-/OIDC-tests en 174 bestaande gerelateerde
+tests lokaal geslaagd; rapport- en artiestweergave in Chrome op 390/1440 px,
+licht/donker. Geen echte mails. V1.118 is de voorbereide publicatie; de aparte
+cutoverworkflow heeft voorlopig alleen workflow_dispatch. Na Vercel én bestaande
+Apps Script-deploymentcontrole volgt de daadwerkelijke vaste main-activatie.
