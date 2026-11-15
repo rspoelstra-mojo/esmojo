@@ -1,3 +1,4 @@
+import {createReportsRouting} from '../dataverse-reports/routing.js';
 import {createHash,createHmac,randomBytes,randomUUID} from 'node:crypto';
 import {calculateReport} from './data.js';
 import {SHOW_REPORT_LAYOUT} from './contract.js';
@@ -6,7 +7,7 @@ const renderReport=async(...args)=>(await import('./pdf.js')).createShowReportPd
 import {showReportEmail} from '../email-templates/show-report.js';
 import {sendEmail} from '../email.js';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-export function createOnTrackReportStore({env=process.env,request=fetch,now=Date.now}={}){
+export function createReportsBridge({env=process.env,request=fetch,now=Date.now}={}){
  return async(operation,actor,payload={})=>{
   const failure=(message,workerCode=message)=>Object.assign(Error(message),{workerCode,workerOperation:operation});
   const url=env.GOOGLE_DRIVE_SCRIPT_URL,secret=env.GOOGLE_DRIVE_SHARED_SECRET;if(!url||!secret||secret.length<32)throw Error('ONTRACK_REPORT_UNAVAILABLE');const parsed=new URL(url);
@@ -17,6 +18,7 @@ export function createOnTrackReportStore({env=process.env,request=fetch,now=Date
   if(!result.ok){const message=['FORBIDDEN','VALIDATION','REPORT_CONFLICT','REPORT_CATALOG','SOURCE_MISSING','SOURCE_CHANGED','REPORT_UNAVAILABLE','NOT_FOUND'].includes(result.code)?result.code:'ONTRACK_REPORT_UNAVAILABLE';throw failure(message,result.code==='BUSY'?'BUSY':message);}return result.data;
  };
 }
+export function createOnTrackReportStore(options={}){const bridge=createReportsBridge(options),route=createReportsRouting(options);return(operation,actor,payload={})=>route({legacy:()=>bridge(operation,actor,payload),run:native=>native.request(operation,actor,payload)});}
 export function validateOnTrackReportRequest(input){
  if(!input||typeof input!=='object'||Array.isArray(input)||!['link','retry','download','send'].includes(input.operation))throw Error('VALIDATION');
  const allowed=input.operation==='link'?['operation','sourceId','concertId','revision']:input.operation==='retry'?['operation','sourceId','revision']:['operation','reportId'];

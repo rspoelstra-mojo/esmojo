@@ -1,7 +1,8 @@
+import {createReportsRouting} from './dataverse-reports/routing.js';
 import {createHash,createHmac,randomBytes} from 'node:crypto';
 
 // Vertrouwelijk: uitsluitend ondertekend verkeer naar de bestaande Drive-brug.
-export function createOnTrackStore({env=process.env,request=fetch}={}){
+export function createOnTrackBridge({env=process.env,request=fetch}={}){
   return async(operation,actor,payload={})=>{
     const url=env.GOOGLE_DRIVE_SCRIPT_URL,secret=env.GOOGLE_DRIVE_SHARED_SECRET;
     if(!url||!secret||secret.length<32)throw Error('ONTRACK_UNAVAILABLE');
@@ -16,6 +17,7 @@ export function createOnTrackStore({env=process.env,request=fetch}={}){
     return result.data;
   };
 }
+export function createOnTrackStore(options={}){const bridge=createOnTrackBridge(options),route=createReportsRouting(options);return(operation,actor,payload={})=>route({legacy:()=>bridge(operation,actor,payload),run:native=>native.request(operation==='status'?'ontrack-status':operation==='recipients'?'ontrack-recipients':'invalid',actor,payload)});}
 export function validateOnTrackRecipients(input){
   if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!['revision','recipientIds'].includes(key))||!Number.isSafeInteger(input.revision)||input.revision<0||!Array.isArray(input.recipientIds)||input.recipientIds.some(id=>typeof id!=='string'||!/^[0-9a-f-]{36}$/i.test(id))||new Set(input.recipientIds).size!==input.recipientIds.length)throw Error('VALIDATION');
   return {revision:input.revision,recipientIds:input.recipientIds};

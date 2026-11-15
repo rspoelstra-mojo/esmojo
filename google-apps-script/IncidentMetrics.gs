@@ -16,12 +16,13 @@ function esmojoIncidentSave_(storage){
  if(saved.getBlob().getDataAsString('UTF-8')!==text)throw Error('VERIFY');
 }
 function esmojoIncidentInventory_(){
- const catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),inventory=esmojoWebInventory_(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue),today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'),shows=new Map();
+ const catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),inventory=(typeof esmojoReportsRelatedInventory_==='function'?esmojoReportsRelatedInventory_:esmojoWebInventory_)(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue),today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'),shows=new Map();
  for(const show of catalogue.values())if(show.date<today)shows.set(show.concertId,{concertId:show.concertId,name:show.artist,date:show.date,venue:show.venue,...(show.performance?{performance:show.performance}:{})});
  for(const source of inventory.sources)if(source.show.date<today)shows.set(source.show.key,{concertId:source.show.key,name:source.show.name,date:source.show.date,venue:source.show.venue,...(source.show.performance?{performance:source.show.performance}:{})});
  return{catalogue,inventory,shows};
 }
 function esmojoIncidentAttendance_(show,historical,targets){
+ if(show.historical&&typeof esmojoReportsNativeActive_==='function'&&esmojoReportsNativeActive_())return{soldTickets:null,visitorUnits:null,visitors:null,visitorBasis:'historical-attendance'};
  const imported=historical.get(show.concertId);let sold=null;
  if(imported?.sourceType==='tsc-historical'){if(!esmojoTscShowDataValid_(imported.showData))throw Error('REPORT_CATALOG');const visitors=imported.showData.visitors;return{soldTickets:null,visitors,visitorUnits:visitors===null?null:visitors*40,visitorBasis:'tsc-attendance'};}
  if(imported&&validSaleCount(imported.ticket_sales))sold=Number(imported.ticket_sales);
@@ -51,6 +52,7 @@ function esmojoIncidentAnalysis_(show){
 // Historische bestanden hebben al een canoniek, hashgebonden register. Voor een
 // afzonderlijke telling is opnieuw doorlopen van alle 200+ CSV-bestanden overbodig.
 function esmojoIncidentSource_(concertId,sourceId){
+ if(typeof esmojoReportsRuntimePolicy_==='function'&&esmojoReportsRuntimePolicy_().mode==='dataverse')throw Error('REPORT_CONFLICT');
  if(typeof concertId!=='string'||!concertId||concertId.length>240||/[\x00-\x1f/\\]/.test(concertId)||sourceId!==undefined&&(typeof sourceId!=='string'||!/^[-\w]+$/.test(sourceId)))throw Error('VALIDATION');
  if(sourceId){
   const historical=esmojoHistoricalSources_().find(row=>row.show.key===concertId&&row.id===sourceId);

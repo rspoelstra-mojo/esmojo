@@ -5,13 +5,13 @@ function esmojoArtistCatalogue_(request){
  return esmojoPublicArtistCatalogue_();
 }
 function esmojoPublicArtistCatalogue_(){
- const cache=CacheService.getScriptCache(),cached=cache.get('artist-catalogue-v2');
+ const cache=CacheService.getScriptCache(),cacheKey=typeof esmojoReportsNativeActive_==='function'&&esmojoReportsNativeActive_()?'artist-catalogue-v3-native-reports':'artist-catalogue-v2',cached=cache.get(cacheKey);
  if(cached){try{return{artists:cleanArtistMenu(JSON.parse(cached)),profileSupported:true};}catch{/* Een ongeldige cache mag de catalogus niet blokkeren. */}}
  const catalogue=esmojoTimetableCatalogue_({allVenues:true}),names=[...catalogue.values()].flatMap(show=>[show.artist,...(show.identityArtist?[show.identityArtist]:[])]);
- const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),inventory=esmojoWebInventory_(folder,catalogue,names);
+ const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),inventory=(typeof esmojoReportsRelatedInventory_==='function'?esmojoReportsRelatedInventory_:esmojoWebInventory_)(folder,catalogue,names);
  names.push(...inventory.sources.map(source=>source.show.name));
  const artists=buildArtistCatalogue(names,esmojoOnTrackHash_),body=JSON.stringify(artists);
- if(Utilities.newBlob(body).getBytes().length<90000)cache.put('artist-catalogue-v2',body,30);
+ if(Utilities.newBlob(body).getBytes().length<90000)cache.put(cacheKey,body,30);
  return{artists,profileSupported:true};
 }
 
@@ -26,7 +26,7 @@ function esmojoArtistProfile_(request){
  const ids=new Set(request.artistIds),matches=name=>ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(name)));
  const catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true});
  const registeredShows=[];
- const inventory=esmojoWebInventory_(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue,null,registeredShows);
+ const inventory=(typeof esmojoReportsRelatedInventory_==='function'?esmojoReportsRelatedInventory_:esmojoWebInventory_)(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue,null,registeredShows);
  const today=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd');
  const groups=new Map(),knownDates=new Set(),photos=new Map();
  const identity=(venue,date)=>venue.normalize('NFKC').toLowerCase()+'|'+date;
@@ -95,7 +95,7 @@ function esmojoArtistShow_(request){
  if(request.date>=Utilities.formatDate(new Date(),'Europe/Amsterdam','yyyy-MM-dd'))throw Error('VALIDATION');
  const ids=new Set(request.artistIds),matches=name=>typeof name==='string'&&ids.has('a_'+esmojoOnTrackHash_(normalizeArtistName(name)));
  const catalogue=esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),registered=[];
- const inventory=esmojoWebInventory_(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue,null,registered);
+ const inventory=(typeof esmojoReportsRelatedInventory_==='function'?esmojoReportsRelatedInventory_:esmojoWebInventory_)(DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),catalogue,null,registered);
  const sources=inventory.available.filter(source=>matches(source.show.name)&&source.show.date===request.date&&source.show.venue===request.venue&&(!request.performance||source.show.performance===request.performance));
  if(sources.length>1)throw Error('REPORT_CONFLICT');
  const canonical=[...catalogue.values()].find(show=>matches(show.artist)&&show.date===request.date&&show.venue===request.venue&&(!request.performance||show.performance===request.performance));
@@ -103,7 +103,7 @@ function esmojoArtistShow_(request){
  if(!sources.length&&!canonical&&!historical)throw Error('NOT_FOUND');
  const source=sources[0],show={name:source?source.show.name:canonical?canonical.artist:historical.name,venue:request.venue,date:request.date,...(request.performance?{performance:request.performance}:{})};
  let timetable=null;
- const preparation=canonical?.historical?esmojoHistoricalPreparation_(canonical):canonical?.seriesId?esmojoArtistPreparation_(canonical):null;
+ const preparation=canonical?.historical?(typeof esmojoReportsNativeActive_==='function'&&esmojoReportsNativeActive_()?null:esmojoHistoricalPreparation_(canonical)):canonical?.seriesId?esmojoArtistPreparation_(canonical):null;
  if(source){const report=esmojoWebReports_({operation:'web-read',actor:request.actor,concertId:source.show.key},inventory);return{show,report,preparation};}
  if(canonical){try{timetable=esmojoWebTimetable_({key:canonical.concertId,date:canonical.date,venue:canonical.venue});}catch{/* Geen tijden verzinnen. */}}
  return{show,report:null,timetable,preparation};

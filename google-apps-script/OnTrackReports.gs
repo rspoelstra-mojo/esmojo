@@ -49,13 +49,15 @@ function esmojoOnTrackReports_(input){
  if(!secret||secret.length<32||typeof input.body!=='string'||input.body.length>4500000||!Number.isSafeInteger(input.timestamp)||Math.abs(Date.now()-input.timestamp)>120000||!/^[a-f0-9]{32}$/.test(input.nonce||'')||!/^[a-f0-9]{64}$/.test(input.signature||''))return reply(false,null,'FORBIDDEN');
  const hex=bytes=>bytes.map(byte=>('0'+((byte+256)%256).toString(16)).slice(-2)).join(''),digest=esmojoOnTrackHash_(input.body),expected=hex(Utilities.computeHmacSha256Signature('ontrack-reports\n'+input.timestamp+'\n'+input.nonce+'\n'+digest,secret,Utilities.Charset.UTF_8));let difference=0;for(let i=0;i<expected.length;i++)difference|=expected.charCodeAt(i)^input.signature.charCodeAt(i);if(difference)return reply(false,null,'FORBIDDEN');
  let parsedRequest;try{parsedRequest=JSON.parse(input.body);if(!parsedRequest||typeof parsedRequest!=='object'||Array.isArray(parsedRequest))throw Error('VALIDATION');}catch{return reply(false,null,'VALIDATION');}
- const migration=typeof parsedRequest.operation==='string'&&parsedRequest.operation.startsWith('reports-migration-');
+ const migration=typeof parsedRequest.operation==='string'&&parsedRequest.operation.startsWith('reports-migration-'),nativeRuntime=typeof parsedRequest.operation==='string'&&(parsedRequest.operation==='reports-runtime-policy'||parsedRequest.operation.startsWith('reports-inbox-'));
  const web=typeof parsedRequest.operation==='string'&&parsedRequest.operation.startsWith('web-'),lock=migration?null:web?(parsedRequest.operation==='web-commit'?LockService.getUserLock():null):LockService.getScriptLock();if(lock&&!lock.tryLock(20000))return reply(false,null,'BUSY');
  try{
   const request=parsedRequest,operation=request.operation,adminOps=['link','retry','download','send','email-context'],workerOps=['scan','pipeline','reserve','commit','fail','delivery-reserve','delivery-commit','delivery-fail','timetable-candidates','timetable-save','web-scan','web-source','web-commit','web-historical-status','historical-import-read','historical-import-commit','historical-import-verify','online-sync','online-reserve','online-commit','online-fail'];
-  if(!migration&&!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview'&&operation!=='web-menu'&&operation!=='web-read'&&operation!=='timetable-read'&&operation!=='pdf-alerts'&&operation!=='email-history'&&operation!=='email-open')throw Error('VALIDATION');
+  if(!migration&&!nativeRuntime&&!adminOps.includes(operation)&&!workerOps.includes(operation)&&operation!=='web-preview'&&operation!=='web-menu'&&operation!=='web-read'&&operation!=='timetable-read'&&operation!=='pdf-alerts'&&operation!=='email-history'&&operation!=='email-open')throw Error('VALIDATION');
   const profiles=esmojoOnTrackProfiles_();if(adminOps.includes(operation)&&!profiles.some(p=>p.id===request.actor&&isAdministrator(p)&&p.activated&&!p.disabled&&hasModule(p,'reports')))throw Error('FORBIDDEN');
   const cache=CacheService.getScriptCache(),nonceKey='ontrack-reports:'+input.nonce;if(cache.get(nonceKey))throw Error('FORBIDDEN');cache.put(nonceKey,'1',180);
+  if(typeof esmojoReportsRuntimeGuard_==='function')esmojoReportsRuntimeGuard_(operation);
+  if(nativeRuntime)return reply(true,esmojoReportsRuntime_(request,profiles));
   if(migration)return reply(true,esmojoReportsMigration_(request));
   if(operation.startsWith('historical-import-'))return reply(true,esmojoHistoricalImport_(request));
   if(operation.startsWith('timetable-')){

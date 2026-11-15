@@ -111,3 +111,76 @@ zijn met synthetische migratiefixtures tegen dezelfde bestaande webservice getes
 
 Dit is interne bouwdekking, nog geen actieve Reports-provider. Schrijfoperaties,
 workerintegratie, de schrijfstop en daadwerkelijke activering zijn nog niet klaar.
+
+## Schrijfcomponenten (interne bouw, nog niet gerouteerd)
+
+`mutations.js` beperkt conditionele batches tot de elf Reports-tabellen; geen
+DELETE, File-mutatie of write naar een gedeelde Shows-tabel. Bij een verloren
+bevestiging wordt de batch niet herhaald. Alle verwachte getypeerde velden en
+lookups van alle rijen worden onafhankelijk teruggelezen. Een afwijking blijft
+onbevestigd. De bestaande verbinding blijft tokenvernieuwing beheren.
+
+`operational.js` gebruikt versleutelde technische coördinatie met ETag en lease.
+Vóór een zakelijke write staat een blijvende onzekerheidsfence op schijf. Die
+wordt pas na bevestiging opgeheven; leaseverloop geeft geen tweede schrijver vrij.
+Dit is geen extra achtergrondmachtiging: iedere servicebewerking autoriseert vers.
+
+`archive.js` behoudt private oorspronkelijke PDF's, verzendhistorie en de eerste
+opening. Openingsregistratie vereist de actuele eigen aflevering en hash van het
+bestaande ontvangsttoken, en wijzigt geen afleverstatus. `recipients.js` behoudt
+ook bij lege selectie een conditionele revisie; bestaande selectierijen blijven.
+`mail.js` reserveert/bevestigt native afleveringen met bestaande providerkeys,
+bevroren templates/ontvangers, actuele rechten, vijfminutenlease/backoff en de
+bestaande 23-uursreviewgrens. Deze component verzendt zelf geen mail.
+
+`publication.js` bereidt nieuwe CSV-datasets hervatbaar voor in oorspronkelijke
+File plus getypeerde rijen. Publicatie volgt pas na bestands- en identiteitcontrole,
+via CAS op de oorspronkelijke pointer/generatie. Een dubbel fysiek bestand voor
+hetzelfde logische dataset houdt de oude bronanker en versienummer. Een al
+geverifieerde dataset wordt alleen geïnspecteerd, nooit stil gerepareerd.
+
+De oorspronkelijke onafhankelijke productievoorcontrole is inmiddels voltooid:
+221 rapportages, 8517 records, 226 bestanden, bevestigd in achtergrondrun
+43681649105. Een nieuwe laatste controle onder schrijfstop blijft vereist.
+
+## Volledige provider en gecontroleerde activering
+
+De router selecteert vóór iedere bewerking de eigen serverautoriteit
+`reports-native-authority/v1`. Geen configuratiewijziging aan Shows. Legacy blijft
+actief totdat een native record met het exacte schema-/dekkingscontract en een
+versleuteld eindbewijs onder schrijfstop is bevestigd. Freeze weigert nieuwe
+Reports-verzoeken; Dataverse-fouten na activering vallen nooit terug naar Drive.
+
+Native paden: catalogus/directe webbron, bronverwerking/publicatie, CSV/PDF File,
+PDF-generatie/reservering/bevestiging, online/legacy-mail, verzendhistorie/eerste
+opening, selectie/handmatig verzenden/koppelen/herproberen, beheerstatus en alerts.
+Artiesten krijgt native rapportage-KPI's/tijden en historische links; een account
+met alleen Artiesten ontvangt geen CSV/incidenten/private File-DTO. Incident-
+referenties gebruiken de getypeerde Reports-tellers. Hun dagelijkse publicatie,
+Artiestenprofielen, biografie, Shows-voorbereiding, overige accountvelden en
+Supabase Auth/MFA blijven onder hun bestaande autoriteit.
+
+Expliciete integratiegrenzen: de vaste private CSV-inbox/afgeronde historische
+bronregistratie levert oorspronkelijke CSV-per-showbestanden aan; de bestaande
+gedeelde MOJO-tijdschema-capture levert openbare bronmomenten. Reports bewaart de
+gebruikte context/tijdpunten per versie in Dataverse. Geen nieuw aanleverformaat
+of importscherm. De technische kopie-/historische bulkimporthulpmiddelen zijn
+geen tweede runtime; oude Drive-runtimewrites worden na activering geweigerd.
+De gebruikerscatalogus/webread zelf doet geen Drive-Reports-request.
+
+De cutovertaak erft exact de originele actor/eindtijd. Main/OIDC, huidige admin/
+Reports-rechten, enginelease/ETag/epoch/sequence en globale runner blijven gelden.
+Na cataloguspariteit stopt zij beide schrijvers, laat elf minuten uitlopen,
+vergelijkt opnieuw alle oorspronkelijke rijen/relaties/File-blokken read-only,
+verzegelt het eindbewijs, sluit de Google-runtime definitief en activeert met CAS.
+Daarna worden autoriteit, Google-fence en oudste/nieuwste native rapportage opnieuw
+gelezen. Een conflict of verlopen machtiging stopt; niets wordt stil gerepareerd.
+
+Runtime-coördinatie heeft een eigen versleutelde Opdracht-soort/namespace
+`reports-runtime-state-v1` / `reports-runtime`, los van begrensde achtergrond-
+machtigingen. CSV-/PDF-bytes en ontvangsttokens worden niet in checkpoints
+bewaard. Een onopgeloste write blijft gefenced voor gecontroleerde inspectie.
+
+V1.118 publiceert de provider en de handmatig startbare omschakeling voorbereid.
+Dit document claimt nog geen productieactivering; de laatste vergelijking en
+conditionele omschakeling volgen na beide afzonderlijke publicatiecontroles.

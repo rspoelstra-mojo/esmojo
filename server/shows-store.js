@@ -1,3 +1,4 @@
+import {createReportsRouting} from './dataverse-reports/routing.js';
 import {createManagedShowsRouting,managedShowsRouting} from './dataverse-shows/routing.js';
 import {createNativeShowState} from './dataverse-shows/state.js';
 import {createNativeShowsService} from './dataverse-shows/service.js';
@@ -9,7 +10,7 @@ import {isDataversePilot,pilotShow} from '../shared/dataverse-pilot.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 export function createShowsStore({ env = process.env, request = fetch, active = true, repository = null, legacy = false, nativeService = null, authority = null } = {}) {
-  const drive = async function shows(operation, payload = {}) {
+  const signedDrive = async function shows(operation, payload = {}) {
     payload={...payload};delete payload.__actor;
     const url = env.GOOGLE_DRIVE_SCRIPT_URL, secret = env.GOOGLE_DRIVE_SHARED_SECRET;
     if (!url || !secret || secret.length < 32) throw new Error('SHOWS_CONFIG');
@@ -24,6 +25,9 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
     if (!result.ok) throw new Error(['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT','STORAGE_ACTIVE'].includes(result.code) ? result.code : 'SHOWS_UNAVAILABLE');
     return result.data;
   };
+  const reportRoute=createReportsRouting({env});
+  const reportDependencies=new Set(['artist-catalogue','artist-profile','artist-show','incident-read','incident-source','incident-counts']);
+  const drive=(operation,payload={})=>reportDependencies.has(operation)?reportRoute({legacy:()=>signedDrive(operation,payload),run:native=>native.related(operation,payload,()=>signedDrive(operation,payload))}):signedDrive(operation,payload);
   if(!legacy&&(nativeShowsSelected(env)||managedShowsRouting(env))){
     const state=nativeService?null:createNativeShowState({env});
     const native=nativeService||createNativeShowsService({env,state});

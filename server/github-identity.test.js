@@ -88,3 +88,10 @@ test('background tasks require their own OIDC audience/workflow on main, with no
  for(const patch of [{aud:'other'},{workflow_ref:claims.workflow_ref},{ref:'refs/heads/task'},{event_name:'push'},{event_name:'pull_request'},{repository_id:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
  await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref}),{request,now,audience}),/FORBIDDEN/);
 });
+test('Reports cutover accepts only its fixed main workflow/audience for dispatch or its own push',async()=>{
+ const audience='https://esmojo.nl/api/reports-cutover-sync',workflow='reports-cutover.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
+ for(const event_name of ['workflow_dispatch','push'])assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),{runId:'123'});
+ for(const event_name of ['schedule','pull_request','workflow_run'])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name}),{request,now,audience,workflow}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',ref:'refs/heads/other'}),{request,now,audience,workflow}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',repository_id:'1'}),{request,now,audience,workflow}),/FORBIDDEN/);
+});

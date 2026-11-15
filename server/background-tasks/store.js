@@ -10,7 +10,8 @@ export function taskCipher({env=process.env}={}){
   open(type,text){try{if(typeof text!=='string'||text.length>120000)throw Error();const envelope=JSON.parse(text);if(envelope.version!==1||typeof envelope.sealed!=='string')throw Error();const bytes=Buffer.from(envelope.sealed,'base64url'),decipher=createDecipheriv('aes-256-gcm',key(),bytes.subarray(0,12));decipher.setAAD(Buffer.from(type));decipher.setAuthTag(bytes.subarray(-16));return JSON.parse(Buffer.concat([decipher.update(bytes.subarray(12,-16)),decipher.final()]));}catch{throw Error('TASK_CORRUPT');}}
  };
 }
-export function createTaskStore({env=process.env,connection=createDataverseSetupConnection({env}),cipher=taskCipher({env})}={}){
+export function createTaskStore({env=process.env,connection=createDataverseSetupConnection({env}),cipher=taskCipher({env}),recordKind='background-task-v1',namespace='background-task'}={}){
+ if(!(['background-task-v1/background-task','reports-runtime-state-v1/reports-runtime'].includes(recordKind+'/'+namespace)))throw Error('TASK_CONFIG');
  let metadata=null;
  async function call(path,{headers={},...options}={}){const ctx=await connection.connect();return connection.call(path,{...ctx.headers,...headers},{...options,code:'TASK_UNCONFIRMED',timeoutMs:45000});}
  async function meta(){
@@ -20,17 +21,17 @@ export function createTaskStore({env=process.env,connection=createDataverseSetup
   for(const [name,column]of [['esmojo_ak_opdracht_sleutel','esmojo_sleutel'],['esmojo_ak_opdracht_commando','esmojo_commandosleutel']])if(!value.Keys.some(key=>key.SchemaName?.toLowerCase()===name&&key.KeyAttributes?.length===1&&key.KeyAttributes[0]===column&&['Active',2].includes(key.EntityKeyIndexStatus)))throw Error('TASK_SCHEMA');metadata=value;return value;
  }
  function parse(type,row,m){
-  if(!row||row.esmojo_opdrachtsoort!=='background-task-v1'||row.esmojo_resourcecode!==type||row.esmojo_sleutel!==recordKey('esmojo_opdracht','background-task/'+type)||typeof row['@odata.etag']!=='string'||!/^[a-f0-9-]{36}$/i.test(row[m.PrimaryIdAttribute]||''))throw Error('TASK_CORRUPT');
+  if(!row||row.esmojo_opdrachtsoort!==recordKind||row.esmojo_resourcecode!==type||row.esmojo_sleutel!==recordKey('esmojo_opdracht',namespace+'/'+type)||typeof row['@odata.etag']!=='string'||!/^[a-f0-9-]{36}$/i.test(row[m.PrimaryIdAttribute]||''))throw Error('TASK_CORRUPT');
   const state=cipher.open(type,row.esmojo_payload_json);if(state?.version!==1||state.type!==type||typeof state.actor!=='string'||typeof state.epoch!=='string'||!Object.hasOwn(statuses,state.status)||!Number.isInteger(state.sequence)||state.sequence<0||!Number.isFinite(state.expiresAt)||!Number.isFinite(state.nextAt))throw Error('TASK_CORRUPT');
   if((state.lease?.id||null)!==(row.esmojo_leaseid||null)||state.lease&&Date.parse(row.esmojo_leaseverlooptop)!==state.lease.until)throw Error('TASK_CORRUPT');
   return{id:row[m.PrimaryIdAttribute],etag:row['@odata.etag'],state};
  }
  async function get(type){
-  const m=await meta(),key=recordKey('esmojo_opdracht','background-task/'+type),response=await call(m.EntitySetName+'?'+new URLSearchParams({'$filter':"esmojo_sleutel eq '"+key+"'",'$top':'2','$select':[m.PrimaryIdAttribute,'esmojo_sleutel','esmojo_opdrachtsoort','esmojo_resourcecode','esmojo_payload_json','esmojo_leaseid','esmojo_leaseverlooptop'].join(',')}));if(!response.ok)throw Error('TASK_UNCONFIRMED');const result=await response.json();if(!Array.isArray(result.value)||result.value.length>1||result['@odata.nextLink'])throw Error('TASK_CORRUPT');return result.value.length?parse(type,result.value[0],m):null;
+  const m=await meta(),key=recordKey('esmojo_opdracht',namespace+'/'+type),response=await call(m.EntitySetName+'?'+new URLSearchParams({'$filter':"esmojo_sleutel eq '"+key+"'",'$top':'2','$select':[m.PrimaryIdAttribute,'esmojo_sleutel','esmojo_opdrachtsoort','esmojo_resourcecode','esmojo_payload_json','esmojo_leaseid','esmojo_leaseverlooptop'].join(',')}));if(!response.ok)throw Error('TASK_UNCONFIRMED');const result=await response.json();if(!Array.isArray(result.value)||result.value.length>1||result['@odata.nextLink'])throw Error('TASK_CORRUPT');return result.value.length?parse(type,result.value[0],m):null;
  }
  function payload(type,state){return{esmojo_payload_json:cipher.seal(type,state),esmojo_resultaat_json:JSON.stringify(state.public||{}),esmojo_revisie:state.sequence,esmojo_opdrachtstatus:choice('opdrachtstatus',state.lease&&state.status==='ready'?'running':statuses[state.status]),esmojo_pogingen:state.attempts||0,esmojo_leaseid:state.lease?.id||null,esmojo_leaseverlooptop:state.lease?new Date(state.lease.until).toISOString():null,esmojo_gestartop:new Date(state.startedAt).toISOString(),esmojo_bevestigdop:state.status==='complete'?new Date(state.updatedAt).toISOString():null,esmojo_foutcode:state.public?.code||null};}
  async function create(type,title,state){
-  const m=await meta(),identity='background-task/'+type,key=recordKey('esmojo_opdracht',identity),hex=key,id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-4'+hex.slice(13,16)+'-8'+hex.slice(17,20)+'-'+hex.slice(20,32),base=record('opdracht',identity,title,{commandosleutel:key,opdrachtsoort:'background-task-v1',resourcecode:type});
+  const m=await meta(),identity=namespace+'/'+type,key=recordKey('esmojo_opdracht',identity),hex=key,id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-4'+hex.slice(13,16)+'-8'+hex.slice(17,20)+'-'+hex.slice(20,32),base=record('opdracht',identity,title,{commandosleutel:key,opdrachtsoort:recordKind,resourcecode:type});
   const response=await call(m.EntitySetName+'('+id+')',{method:'PATCH',headers:{'If-None-Match':'*'},body:{...base.fields,...payload(type,state)}});if(!response.ok&&![409,412].includes(response.status))throw Error('TASK_UNCONFIRMED');const result=await get(type);if(!result)throw Error('TASK_UNCONFIRMED');return result;
  }
  async function save(row,state){

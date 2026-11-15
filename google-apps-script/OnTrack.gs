@@ -24,6 +24,7 @@ function esmojoOnTrack_(input) {
     if(registers.hasNext())throw Error();
     const state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{version:1,revision:0,recipientIds:[],sources:[],reports:[],nonces:{}};
     if(state.version!==1||!Number.isSafeInteger(state.revision)||state.revision<0||!Array.isArray(state.recipientIds)||!Array.isArray(state.sources)||!Array.isArray(state.reports)||!state.nonces)throw Error();
+    const reportsPolicy=typeof esmojoReportsRuntimePolicy_==='function'?esmojoReportsRuntimePolicy_():{mode:'legacy'};if(request.operation==='recipients'&&reportsPolicy.mode!=='legacy'||reportsPolicy.mode==='dataverse')throw Error('CONFLICT');
     const accounts=profiles.filter(p=>p.activated&&!p.disabled&&hasModule(p,'reports')).map(p=>({id:p.id,firstName:p.firstName,lastName:p.lastName,email:p.email}));
     let changed=false;
     if(request.operation==='recipients'){
@@ -34,7 +35,7 @@ function esmojoOnTrack_(input) {
       Object.keys(state.nonces).forEach(nonce=>{if(state.nonces[nonce]<Date.now()-120000)delete state.nonces[nonce];});
       state.nonces[input.nonce]=input.timestamp;state.recipientIds=request.recipientIds.slice();state.revision++;state.updatedAt=new Date().toISOString();state.updatedBy=actor.id;changed=true;
     }
-    if(esmojoOnTrackScan_(folder,state))changed=true;
+    if(reportsPolicy.mode==='legacy'&&esmojoOnTrackScan_(folder,state))changed=true;
     if(changed){const serialized=JSON.stringify(state);if(file)file.setContent(serialized);else folder.createFile(Utilities.newBlob(serialized,'application/json','_esmojo_ontrack_v1.json'));}
     const reports=state.reports.filter(report=>typeof report.sourceId==='string'&&typeof report.pdfId==='string'&&Number.isFinite(Date.parse(report.convertedAt)));
     return esmojoReply_({ok:true,data:{revision:state.revision,received:state.sources.length,converted:new Set(reports.map(report=>report.sourceId)).size,latest:reports.slice().sort((a,b)=>Date.parse(b.convertedAt)-Date.parse(a.convertedAt)).slice(0,5).map(report=>{const online=state.onlineReports?.find(row=>row.sourceHash===report.sourceHash&&row.show?.key===report.show?.key),mailState=online?.legacyReportId?state.reports.find(row=>row.id===online.legacyReportId):online,emailStatus=mailState?mailState.emailStatus:report.mailChannel==='online'?(state.recipientIds.length?'pending':'no-recipients'):report.emailStatus;return{id:report.id||null,name:report.name,convertedAt:report.convertedAt,emailStatus:emailStatus==='sent'?'sent':emailStatus==='failed'?'failed':emailStatus==='no-recipients'?'no-recipients':'pending'};}),recipientIds:state.recipientIds,accounts,sources:esmojoOnTrackQueue_(state),showChoices:esmojoOnTrackReportChoices_(folder),processingStatus:state.pipeline?.status||'idle'}});

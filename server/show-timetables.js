@@ -1,7 +1,10 @@
-import {createOnTrackReportStore} from './ontrack-report/service.js';
+import {createReportsIntake} from './dataverse-reports/bridge.js';
+// Shared public MOJO capture is an explicit intake, separate from the private
+// Reports storage authority and its temporary cutover write barrier.
+function timetableIntake(){const intake=createReportsIntake();return(operation,actor,payload={})=>operation==='timetable-candidates'?intake.timetableCandidates():operation==='timetable-save'?intake.saveTimetable(payload.concertId,payload.snapshot):Promise.reject(Error('VALIDATION'));}
 import {fetchMojoTimetable} from './mojo-timetable.js';
 import {timetableClock} from '../shared/show-timetable.js';
-export function createTimetableCapture({store=createOnTrackReportStore(),fetchTimetable=fetchMojoTimetable,now=()=>new Date()}={}){
+export function createTimetableCapture({store=timetableIntake(),fetchTimetable=fetchMojoTimetable,now=()=>new Date()}={}){
  return async()=>{
   if(timetableClock(now()).hour!==12)return{ok:true,skipped:true};
   const candidates=await store('timetable-candidates',null);if(candidates.skipped)return{ok:true,skipped:true};
