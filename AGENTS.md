@@ -1,3 +1,22 @@
+## Rapportages werkelijk binnen 1,5 seconde (15 november 2026)
+
+Gebruiker vraagt de beloofde laadtijd waar te maken: meet klik tot bruikbare inhoud,
+ook eerste rapportopening. Geen skeleton, warme backend-only tijd of ingekorte
+incidentenlijst als eindbewijs. Native afgeleide versleutelde leesprojectie volgens
+bestaand Shows-patroon toegestaan; volledige CSV17/parser-/File-/veldcontrole bij
+opbouw, complete verse native rij-identiteitsets/ETags en publicatie-/relatiecontrole
+vóór elke read. Wijziging leidt tot volledige native hercontrole, geen reparatie van
+bedrijfsgegevens of Drive-fallback. Catalogus en foto blijven hun native autoriteit.
+Geen rechten-TTL: batched actuele profiel/ACL/typed-modulechecks per verzoek; binnen
+hetzelfde HTTP-verzoek mag uitsluitend het servergeverifieerde profiel hergebruikt.
+Native verbinding behoudt tokenvernieuwing. Metadata/OAuth mag technisch warmen,
+geen privéreads vóór autorisatie. Geen schemawijziging, testmail of zakelijke writes.
+Bestaande main/OIDC incidentworker mag alle afgeleide projecties voorbereiden en
+privacyveilige timings meten, met servercursor/lease/CAS en actuele admin/Reports-
+rechten per ronde. Dit is cacheonderhoud, geen nieuwe/verlengde taakmachtiging.
+Supabase Auth/MFA en daadwerkelijke opslagautoriteit ongewijzigd. Meet backend,
+nieuwe verbinding en browser apart; echte live kliktest alleen geldige sessie.
+
 ## Brede native runtimecontrole (15 november 2026)
 
 Gebruiker vraagt dubbelcheck van actieve Dataverse-opslag en bestaande website-

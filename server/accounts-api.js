@@ -85,6 +85,8 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         writeSessionCookie(res, { ...remembered, refreshToken: restored.refresh_token }, env);
       }
       if (!token) return reply(401, { error: 'Log eerst in.' });
+      // Report warmup only obtains technical OAuth/schema metadata, never rights or business data.
+      if(action==='report-web'&&!isFluidPreview(env))void Promise.resolve(ontrackReportStore.prepareRead?.()).catch(()=>{});
       const { data, error } = await auth.auth.getUser(token);
       if (error || !data?.user) return restored ? expired() : reply(401, { error: 'Je sessie is verlopen. Log opnieuw in.' });
       // Pas na validatie door Supabase vertrouwen we de claims van ditzelfde token.
@@ -108,7 +110,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          const result=await profiles('self',actor,action==='show-open'?{authorizationOnly:true}:!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
+          const result=await profiles('self',actor,['report-web','report-menu'].includes(action)?{authorizationOnly:true,reportRead:true}:action==='show-open'?{authorizationOnly:true}:!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
           const {homeDashboard:home,emailTestCopyTo:copyTo,...profile}=result;emailTestCopyTo=copyTo||null;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
@@ -206,7 +208,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       }
       if(action==='report-web'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-        try{return reply(200,await createWebReportService({store:ontrackReportStore,canonicalPhoto:photoService})(actor,req.body));}
+        try{const start=performance.now(),result=await createWebReportService({store:ontrackReportStore,canonicalPhoto:photoService,verifiedProfile:own})(actor,req.body);res.setHeader('Server-Timing','auth;dur='+Math.round(sessionReady-requestBegan)+', access;dur='+Math.round(profileReady-sessionReady)+', report;dur='+Math.round(performance.now()-start));return reply(200,result);}
         catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:error.message==='NOT_FOUND'?404:503;return reply(status,{error:status===400?'Deze rapportage is niet beschikbaar.':status===403?'Je hebt geen toegang tot deze module.':'De rapportage kon niet worden geladen. Probeer opnieuw.',...(status===403?{code:'MODULE_FORBIDDEN',module:'reports'}:{})});}
       }
       if(previewReads&&action==='shows'&&req.method==='GET')return reply(200,await previewReads.menu());

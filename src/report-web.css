@@ -110,3 +110,6 @@ main:has(> .report-selection-empty), main:has(> .show-selection-empty) { display
 .content-box.report-selection-empty, .content-box.show-selection-empty { display:grid; place-items:center; }
 .report-selection-prompt, .show-selection-prompt { margin:0; color:#555; font-size:14px; line-height:1.5; text-align:center; }
 :root[data-theme="dark"] .report-selection-prompt, :root[data-theme="dark"] .show-selection-prompt { color:#a1a8b5; }
+
+/* Keep all incident data/filters ready; defer only off-screen card layout/paint. */
+.report-incident { content-visibility:auto; contain-intrinsic-size:auto 240px; }

@@ -1,3 +1,4 @@
+import {publicShowPhoto} from '../shared/public-show-photo.js';
 import {reportTimetableCaption} from './lib/report-timetable-caption.js';
 import {createMailOpenReceipt} from './lib/mail-open-receipt.js';
 import {reportChronology,timetableEntryLabel} from '../shared/show-timetable.js';
@@ -46,7 +47,7 @@ export function renderWebReport(parent,data,{loadDate=null,onSelected=()=>{}}={}
  const {show}=data,view=node('section','web-report'),header=node('header','report-heading'),intro=node('div','report-heading-intro'),venue=node('p','report-show-meta',show.venue);
  intro.append(node('p','report-eyebrow','Showrapportage'),node('h1','',show.name),venue);header.append(intro);let photoLink=null;
  function updateHeader(day){
-  venue.textContent=day.show?.venue||show.venue;photoLink?.remove();photoLink=null;header.classList.remove('report-heading-photo');const photo=reportPhoto(day.photo);if(!photo)return;
+  venue.textContent=day.show?.venue||show.venue;photoLink?.remove();photoLink=null;header.classList.remove('report-heading-photo');const photo=publicShowPhoto(reportPhoto(day.photo));if(!photo)return;
   const link=node('a','report-artist-photo'),image=node('img','');link.href=photo.sourceUrl;link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label',`Foto van ${show.name} op MOJO`);
   image.src=photo.imageUrl;image.alt=show.name;image.width=600;image.height=338;image.decoding='async';image.referrerPolicy='no-referrer';image.onerror=()=>{if(photoLink===link){link.remove();photoLink=null;header.classList.remove('report-heading-photo');}};link.append(image);header.classList.add('report-heading-photo');header.append(link);photoLink=link;
  }
@@ -106,17 +107,20 @@ function renderDailyReport(parent,report){
  disposers.push(timelineChart(chart,report.timeline));
  return()=>{for(const dispose of disposers)dispose();view.replaceChildren();};
 }
-export function createWebReportPage(content,submenuLink,{concertId,request=access,onSelected=()=>{}}={}){
+export function createWebReportPage(content,submenuLink,{concertId,request=access,onSelected=()=>{},startedAt}={}){
  const receipt=createMailOpenReceipt({concertId,request});
- let disposed=false,cleanup=()=>{},currentConcertId=concertId,revision=0,rendered=false,loading=createSubmenuLoading(submenuLink,content);
+ let disposed=false,cleanup=()=>{},currentConcertId=concertId,revision=0,rendered=false,inFlight=false,latestData=null,expectedShows=null,expectedAt=0,loadBegan=0,checkedExpectation=null,movedFinish=null,loading=createSubmenuLoading(submenuLink,content);
+ function checkCatalogue(){if(disposed||inFlight||!latestData||!expectedShows)return;const matches=expectedShows.length===latestData.availableShows.length&&expectedShows.every(row=>latestData.availableShows.some(actual=>actual.concertId===row.concertId&&actual.date===row.date&&actual.venue===row.venue&&(!row.revision||actual.revision===row.revision)));const key=JSON.stringify(expectedShows);if(matches||checkedExpectation===key||loadBegan>=expectedAt)return;checkedExpectation=key;void load();}
  async function load(){
-  const ticket=++revision,finish=loading.start(),id=currentConcertId;
-  try{const data=await request('report-web',{method:'POST',body:{concertId:id}});if(disposed||ticket!==revision)return;cleanup();
-   cleanup=renderWebReport(content,data,{onSelected:(date,id)=>{currentConcertId=id;onSelected(date,id);},loadDate:async(date,concertId)=>{const show=data.availableShows.find(show=>concertId?show.concertId===concertId:show.date===date);if(!show)throw Error('NOT_FOUND');return request('report-web',{method:'POST',body:{concertId:show.concertId}});}});rendered=true;if(data.report)receipt.shown();document.title=`${data.show.name} · Rapportages · ESMOJO`;
+  inFlight=true;loadBegan=performance.now();const began=Number.isFinite(startedAt)?startedAt:performance.now(),ticket=++revision,finish=loading.start(),id=currentConcertId;
+  startedAt=undefined;try{const data=await request('report-web',{method:'POST',body:{concertId:id}});if(disposed||ticket!==revision)return;latestData=data;cleanup();
+   cleanup=renderWebReport(content,data,{onSelected:(date,id)=>{currentConcertId=id;onSelected(date,id);},loadDate:async(date,concertId)=>{const show=data.availableShows.find(show=>concertId?show.concertId===concertId:show.date===date);if(!show)throw Error('NOT_FOUND');return request('report-web',{method:'POST',body:{concertId:show.concertId}});}});rendered=true;if(data.report){receipt.shown();void(async()=>{const image=content.querySelector('.report-artist-photo img');if(image?.decode)try{await image.decode();}catch{}requestAnimationFrame(()=>requestAnimationFrame(()=>{if(disposed||ticket!==revision)return;const elapsed=performance.now()-began,view=content.querySelector('.web-report');if(view)view.dataset.reportReadyMs=String(Math.round(elapsed));performance.measure?.('esmojo-report-ready',{start:began,end:performance.now()});}));})();}document.title=`${data.show.name} · Rapportages · ESMOJO`;
   }
   catch{if(!disposed&&ticket===revision){const message=node('p','form-message','De rapportage kon niet worden geladen. Probeer opnieuw.'),retry=node('button','secondary-button','Opnieuw laden');message.setAttribute('role','alert');retry.type='button';retry.onclick=()=>void load();if(!rendered)content.replaceChildren(message,retry);}}
-  finally{finish();}
+  finally{finish();if(ticket===revision){movedFinish?.();movedFinish=null;inFlight=false;checkCatalogue();}}
  }
  void load();const dispose=()=>{disposed=true;receipt.dispose();revision++;cleanup();loading.dispose();content.replaceChildren();};
+ dispose.updateCatalogue=rows=>{expectedShows=rows;expectedAt=performance.now();checkCatalogue();};
+ dispose.retarget=nextLink=>{if(nextLink!==submenuLink){movedFinish?.();loading.dispose();submenuLink=nextLink;loading=createSubmenuLoading(submenuLink,content);movedFinish=inFlight?loading.start():null;}};
  dispose.reload=(nextId,nextLink)=>{currentConcertId=nextId;if(nextLink!==submenuLink){loading.dispose();submenuLink=nextLink;loading=createSubmenuLoading(submenuLink,content);}void load();};return dispose;
 }

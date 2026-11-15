@@ -1,3 +1,4 @@
+import {nativeConnection} from '../dataverse-shows/connection.js';
 import {createMigrationWriter,record,reference,recordKey,choice,migrationDifferences,canonical,digest} from '../show-migration-writer.js';
 import {reportsRecordContract,reportRecord} from './contract.js';
 import {MOJO_VENUES,canonicalVenueName} from '../mojo-venues.js';
@@ -18,7 +19,7 @@ export function groupReportEntries(entries){
  const byId=new Map();for(const group of groups){const first=group.entries[0].show,last=group.entries.at(-1).show,id='reports-series/'+digest([group.artist,group.venue,group.knownSeries,first.key]);for(const entry of group.entries)byId.set(entry.show.key,{...entry,group:{id,first:first.date,last:last.date}});}
  return entries.map(entry=>byId.get(entry.show.key));
 }
-export function createReportsWriter({env=process.env,request=fetch,connection,readOnly=false,writer=createMigrationWriter({env,request,...(connection?{connection}:{}),readOnly,contract:reportsRecordContract})}={}){
+export function createReportsWriter({env=process.env,request=fetch,connection=request===fetch?nativeConnection(env):undefined,readOnly=false,writer=createMigrationWriter({env,request,...(connection?{connection}:{}),readOnly,contract:reportsRecordContract})}={}){
  const byId=async(table,id)=>{if(!guid(id))throw Error('MIGRATION_DEPENDENCY');const m=await writer.meta(table),value=await writer.json(m.EntitySetName+'('+id+')');if(!value||!guid(value[m.PrimaryIdAttribute]))throw Error('MIGRATION_DEPENDENCY');return value;};
  async function existing(row,stable){
   const actual=await writer.find(row);if(!actual){await writer.ensure(row);return writer.find(row);}
