@@ -58,3 +58,11 @@ test('MFA-route deelt bestaande serverfunctie zonder private accountcontrole te 
  handle({query:{action:'mfa'}},{});handle({query:{action:'session'}},{});
  assert.equal(auth,1);assert.equal(accounts,1);
 });
+
+
+test('native health requires fixed workflow identity and cannot invoke Auth verification',async()=>{
+ let probes=0,auth=0;const options={env,nativeReplay:{health:async()=>{probes++;}},verify:async()=>{auth++;}};
+ const denied=makeMfaHandler({...options,identify:async()=>{throw Error('FORBIDDEN');}}),bad=response();await denied({...req(),body:{operation:'native-health'}},bad);assert.equal(bad.code,403);assert.equal(probes,0);
+ const allowed=makeMfaHandler({...options,identify:async()=>({runId:'123'})}),ok=response();await allowed({...req(),body:{operation:'native-health'}},ok);assert.equal(ok.code,200);assert.equal(ok.data.dataverseReady,true);assert.equal(ok.data.redisReady,false);assert.equal(probes,1);assert.equal(auth,0);
+ const extra=response();await allowed({...req(),body:{operation:'native-health',actor:'forbidden'}},extra);assert.equal(extra.code,403);assert.equal(probes,1);
+});

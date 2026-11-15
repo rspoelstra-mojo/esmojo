@@ -1,3 +1,17 @@
+## Redis vervangen met behoud Supabase Auth (15 november 2026)
+
+Gebruiker autoriseert vervanging van de twee actieve Redis-paden: anonieme
+artiestenkliks/top 5 (31 dagen) en aanvullende MFA-replay-/leasebeveiliging.
+Supabase Auth/MFA/sessies blijven behouden. Gebruik bestaande TechnischeStatus
+voor domeingescheiden counters/leases, geen nieuw schema of concertregister.
+Behoud event-ID, artiest-ID en oorspronkelijk tijdstip; geen personen/IP/codes.
+Unieke sleutels, atomaire ETag-transacties en volledige onafhankelijke readback;
+geen geheugenfallback. Eén verse begrensde admin/MFA-taak met Artiesten+Shows,
+bronfence, elf minuten uitloop en exacte actuele kopiecontrole vóór activering.
+Oude grants niet heropenen. Publicatie, native activering en werkelijke Redis-
+dienstafsluiting afzonderlijk aantonen. Bestaande crypto-/Auth-sleutels behouden.
+Supabase bedrijfs-SQL is door gebruiker uitgevoerd en screenshot bevestigt succes.
+
 ## Oude bedrijfsopslag afsluiten (15 november 2026)
 
 Gebruiker bevestigt stap 2 na geslaagde native accountactivering: oude Google-

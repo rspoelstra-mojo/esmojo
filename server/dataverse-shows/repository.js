@@ -75,12 +75,12 @@ export function createNativeShowsRepository({env=process.env,connection=nativeCo
   if(!guid(id))throw Error('VALIDATION');const m=await meta(table),row=await json(m.EntitySetName+'('+id+')');
   if(row[m.PrimaryIdAttribute]!==id||!/^W\/"[0-9]+"$/.test(row['@odata.etag']||''))throw Error('DATAVERSE_SHOWS_RESPONSE');return row;
  }
- async function query(table,{filter,top=1000,orderBy}={}){
-  const m=await meta(table);if(typeof filter!=='string'||filter.length>4000||!Number.isInteger(top)||top<1||top>1000)throw Error('VALIDATION');
-  let path=m.EntitySetName+'?'+new URLSearchParams({'$filter':filter,...(orderBy?{'$orderby':orderBy}:{})}),rows=[],pages=0;
+ async function query(table,{filter,top=1000,orderBy,limit=null}={}){
+  const m=await meta(table);if(typeof filter!=='string'||filter.length>4000||!Number.isInteger(top)||top<1||top>1000||limit!==null&&(!Number.isInteger(limit)||limit<1||limit>20000))throw Error('VALIDATION');
+  let path=m.EntitySetName+'?'+new URLSearchParams({'$filter':filter,...(limit!==null?{'$top':String(limit)}:{}),...(orderBy?{'$orderby':orderBy}:{})}),rows=[],pages=0;
   while(path){
-   if(++pages>20)throw Error('DATAVERSE_SHOWS_LIMIT');const result=await json(path,{headers:{Prefer:'odata.maxpagesize='+top}});if(!Array.isArray(result.value)||result.value.length>top)throw Error('DATAVERSE_SHOWS_RESPONSE');rows.push(...result.value);if(rows.length>20000)throw Error('DATAVERSE_SHOWS_LIMIT');
-   path=null;if(result['@odata.nextLink']){const next=new URL(result['@odata.nextLink']);if(next.origin!=='https://org5bab852a.crm.dynamics.com'||next.pathname!=='/api/data/v9.2/'+m.EntitySetName||next.username||next.password||next.hash)throw Error('DATAVERSE_SHOWS_RESPONSE');path=m.EntitySetName+next.search;}
+   if(++pages>20)throw Error('DATAVERSE_SHOWS_LIMIT');const result=await json(path,{headers:{Prefer:'odata.maxpagesize='+top}});if(!Array.isArray(result.value)||result.value.length>top)throw Error('DATAVERSE_SHOWS_RESPONSE');rows.push(...result.value);if(rows.length>(limit??20000))throw Error('DATAVERSE_SHOWS_LIMIT');
+   path=null;if(result['@odata.nextLink']&&!(limit!==null&&rows.length>=limit)){const next=new URL(result['@odata.nextLink']);if(next.origin!=='https://org5bab852a.crm.dynamics.com'||next.pathname!=='/api/data/v9.2/'+m.EntitySetName||next.username||next.password||next.hash)throw Error('DATAVERSE_SHOWS_RESPONSE');path=m.EntitySetName+next.search;}
   }return rows;
  }
  // One read-only OData batch carries compact current row versions. No cached
