@@ -1,3 +1,4 @@
+import {assertLegacyStorage} from './legacy-storage-policy.js';
 import {createNativeProfiles} from './account-native/profiles.js';
 import {createAccessProfiles} from './account-access/profiles.js';
 import {validateAccountEmployment} from '../shared/account-employment.js';
@@ -7,6 +8,7 @@ import { createHash, createHmac, randomBytes } from 'node:crypto';
 // Dit verkeer bevat vertrouwelijke profielen. Geen logging of persistente cache.
 export function createRawProfiles({ env = process.env, request = fetch } = {}) {
   return async function profiles(operation, actor, payload = {}) {
+    assertLegacyStorage(env);
     const url = env.GOOGLE_DRIVE_SCRIPT_URL;
     const secret = env.GOOGLE_DRIVE_SHARED_SECRET;
     if (!url || !secret || secret.length < 32) throw new Error('DRIVE_CONFIG');
@@ -29,6 +31,7 @@ export function createRawProfiles({ env = process.env, request = fetch } = {}) {
 export function createProfiles({env=process.env,request=fetch,access}={}){
  const raw=createRawProfiles({env,request});
  // Unconfigured/offline test environments retain their ordinary signed adapter.
+ if(env.VERCEL_ENV==='production')return createNativeProfiles({env,legacy:async()=>{throw Error('INTEGRATION_RETIRED');}});
  if(!access&&![env.DATAVERSE_TEST_URL,env.DATAVERSE_TEST_TENANT_ID,env.DATAVERSE_TEST_CLIENT_ID,env.DATAVERSE_TEST_CLIENT_SECRET].every(Boolean))return raw;
  const legacy=createAccessProfiles({env,raw,store:access});
  return createNativeProfiles({env,legacy});

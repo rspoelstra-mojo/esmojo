@@ -243,6 +243,6 @@ test('full native account fence drains photo and profile writes, then closes all
  for(const operation of ['photo','update','create','disable','delete','activate'])assert.equal(h.send(signed({...control,operation,id:user,photo:'x',profile:profile(user)})).code,'ACCESS_FROZEN');
  const snapshot=h.send(signed({...control,operation:'native-profile-snapshot'}));assert.equal(snapshot.ok,true);assert.equal(snapshot.data.superAdminId,admin);assert.equal('nonces' in snapshot.data,false);
  assert.equal(h.send(signed({...control,operation:'native-profile-policy',mode:'dataverse'})).data.mode,'dataverse');
- for(const operation of ['self','list','photo','access-snapshot','access-state','access-policy','bootstrap-check'])assert.equal(h.send(signed({...control,operation,id:user})).code,'ACCESS_FROZEN');
+ for(const operation of ['self','list','photo','access-snapshot','access-state','access-policy','bootstrap-check'])assert.equal(h.send(signed({...control,operation,id:user})).code,'INTEGRATION_RETIRED');
  assert.equal(h.send(signed({...control,operation:'native-profile-policy',mode:'freeze'})).ok,false);assert.equal(JSON.stringify(h.state()),before);assert.equal(h.writes(),0);
 });

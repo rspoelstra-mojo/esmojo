@@ -7,7 +7,7 @@ export const runtimeSchema=digest(showTableSchema);
 export function nativeShowsSelected(env=process.env){
  const provider=env.SHOWS_STORAGE_PROVIDER||'legacy';
  if(!['legacy','dataverse'].includes(provider))throw Error('SHOWS_CONFIG');
- return provider==='dataverse';
+ return env.VERCEL_ENV==='production'||provider==='dataverse';
 }
 // Deployment alone cannot switch the source of truth. The controlled cutover
 // must first publish the verified authority record. Never fall back on failure.

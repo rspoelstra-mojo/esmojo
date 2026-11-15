@@ -1,3 +1,4 @@
+import {retiredIntegration} from '../server/retired-integrations.js';
 import {verifyImportIdentity} from '../server/github-identity.js';
 import {isolateFluidApi} from '../server/fluid-preview.js';
 import {createApplicationTasks} from '../server/background-tasks/registry.js';
@@ -19,4 +20,4 @@ export function makeShowsValidationSync({tasks=createApplicationTasks(),identify
   }catch{return res.status(503).json({ok:false,code:'VALIDATION_UNCONFIRMED'});}
  };
 }
-export default isolateFluidApi(makeShowsValidationSync());
+export default retiredIntegration;

@@ -16,6 +16,9 @@ function doGet() {
 
 function doPost(event) {
   try {
+    // Complete native account activation closes the obsolete webapp bridge.
+    // Original source functions/files remain intact for retained migration evidence.
+    if(PropertiesService.getScriptProperties().getProperty('ESMOJO_ACCOUNT_PROFILE_MODE')==='dataverse')return esmojoReply_({ok:false,code:'INTEGRATION_RETIRED'});
     const raw = event && event.postData && event.postData.contents;
     if (raw && raw.length <= 8000000) {
       const envelope = JSON.parse(raw);

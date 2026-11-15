@@ -66,6 +66,7 @@ jobs:
           node server/email-engagement.test.js
           node --test tools/apps-script/deploy.test.mjs
           node server/retired-integrations.test.js
+          node server/legacy-storage-policy.test.js
           node server/showprofile-risks.test.js
           node server/operational-risks.test.js
           node server/show-measures.test.js

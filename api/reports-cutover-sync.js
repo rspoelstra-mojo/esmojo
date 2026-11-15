@@ -1,3 +1,4 @@
+import {retiredIntegration} from '../server/retired-integrations.js';
 import {createReportsAuthority} from '../server/dataverse-reports/authority.js';
 import {createReportsIntake} from '../server/dataverse-reports/bridge.js';
 import {verifyImportIdentity} from '../server/github-identity.js';
@@ -25,4 +26,4 @@ export function makeReportsCutoverSync({tasks=createReportsCutoverRunner(),ident
   }catch(error){const allowed=['VALIDATION_APPROVAL_REQUIRED','TASK_EXPIRED','TASK_BUSY','TASK_CORRUPT','FORBIDDEN','REPORT_CONFLICT','REPORT_WRITE_UNCONFIRMED'];return res.status(503).json({ok:false,code:allowed.includes(error.message)?error.message:'REPORTS_CUTOVER_UNCONFIRMED'});}
  };
 }
-export default isolateFluidApi(makeReportsCutoverSync());
+export default retiredIntegration;

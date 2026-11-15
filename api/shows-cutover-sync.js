@@ -1,3 +1,4 @@
+import {retiredIntegration} from '../server/retired-integrations.js';
 import {verifyImportIdentity} from '../server/github-identity.js';
 import {isolateFluidApi} from '../server/fluid-preview.js';
 import {createShowsCutover} from '../server/dataverse-shows/cutover.js';
@@ -9,4 +10,4 @@ export function makeShowsCutoverSync({cutover=createShowsCutover(),identify=toke
   try{return res.status(200).json(await cutover(req.body));}catch(error){return res.status(503).json({ok:false,code:/^[A-Z_]{1,60}$/.test(error.message||'')?error.message:'CUTOVER_UNCONFIRMED'});}
  };
 }
-export default isolateFluidApi(makeShowsCutoverSync());
+export default retiredIntegration;

@@ -1,3 +1,4 @@
+import {assertLegacyStorage} from './legacy-storage-policy.js';
 import {categoryReady} from '../shared/analysis-finalization.js';
 import {operationalComplete} from '../src/lib/show-planning.js';
 import {isDeepStrictEqual} from 'node:util';
@@ -12,7 +13,7 @@ export function publicActivePlanning(state,now=new Date().toISOString()){
  return{key:state.concertId,updatedAt:now,completion:activeCompletion(state)};
 }
 export function createActiveRepository({env=process.env,clientFactory=createClient}={}){
- let client;const db=()=>client||(client=clientFactory(env.VITE_SUPABASE_URL,env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}}));
+ let client;const db=()=>{assertLegacyStorage(env);return client||(client=clientFactory(env.VITE_SUPABASE_URL,env.SUPABASE_SECRET_KEY,{auth:{persistSession:false,autoRefreshToken:false}}));};
  const check=({data,error})=>{if(error)throw Error('ACTIVE_STORAGE_UNAVAILABLE');return data;};
  return{
   async health(){const row=check(await db().from('esmojo_storage_control').select('version,enabled').eq('id',1).single());if(row.version!==1)throw Error('ACTIVE_STORAGE_UNAVAILABLE');check(await db().rpc('esmojo_show_claim',{p_id:'__schema_probe__',p_lease:randomUUID()}));return{schemaReady:true,enabled:row.enabled};},

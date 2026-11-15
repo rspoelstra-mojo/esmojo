@@ -1,3 +1,4 @@
+import {retiredIntegration} from '../server/retired-integrations.js';
 import {isolateFluidApi} from '../server/fluid-preview.js';
 import {verifyImportIdentity} from '../server/github-identity.js';
 import {createShowsStore} from '../server/shows-store.js';
@@ -10,4 +11,4 @@ export function makeShowStorageSync({store=createShowsStore(),identify=token=>ve
   catch{return res.status(503).json({ok:false,error:'Showarchivering kon niet worden bevestigd. Gegevens zijn behouden.'});}
  };
 }
-export default isolateFluidApi(makeShowStorageSync());
+export default retiredIntegration;

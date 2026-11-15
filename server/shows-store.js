@@ -1,3 +1,4 @@
+import {assertLegacyStorage} from './legacy-storage-policy.js';
 import {createReportsRouting} from './dataverse-reports/routing.js';
 import {createManagedShowsRouting,managedShowsRouting} from './dataverse-shows/routing.js';
 import {createNativeShowState} from './dataverse-shows/state.js';
@@ -11,6 +12,7 @@ import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 export function createShowsStore({ env = process.env, request = fetch, active = true, repository = null, legacy = false, nativeService = null, authority = null } = {}) {
   const signedDrive = async function shows(operation, payload = {}) {
+    assertLegacyStorage(env);
     payload={...payload};delete payload.__actor;
     const url = env.GOOGLE_DRIVE_SCRIPT_URL, secret = env.GOOGLE_DRIVE_SHARED_SECRET;
     if (!url || !secret || secret.length < 32) throw new Error('SHOWS_CONFIG');

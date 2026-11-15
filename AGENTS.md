@@ -1,3 +1,13 @@
+## Oude bedrijfsopslag afsluiten (15 november 2026)
+
+Gebruiker bevestigt stap 2 na geslaagde native accountactivering: oude Google-
+koppelingen en Supabase-bedrijfsopslag afsluiten, zonder originelen of Auth/MFA/
+sessies te verwijderen. Oude import/cutover/mirror/archive-startpaden sluiten,
+productie vereist de bestaande bewezen native autoriteiten. Geen sleutelrotatie:
+GOOGLE_DRIVE_SHARED_SECRET en Supabase-key hebben nog ciphertext-/Auth-afhankelijkheden.
+Oude SQL-bedrijfsrechten mogen gericht worden ingetrokken met behoud van alle rijen;
+productie-uitvoering afzonderlijk bewijzen, niet afleiden uit lokale/CI-tests.
+
 ## Volledige accountautoriteit met behoud Supabase Auth (15 november 2026)
 
 Gebruiker autoriseert het besproken plan nu uit te voeren: alle resterende actieve

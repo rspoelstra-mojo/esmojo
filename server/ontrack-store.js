@@ -1,9 +1,11 @@
+import {assertLegacyStorage} from './legacy-storage-policy.js';
 import {createReportsRouting} from './dataverse-reports/routing.js';
 import {createHash,createHmac,randomBytes} from 'node:crypto';
 
 // Vertrouwelijk: uitsluitend ondertekend verkeer naar de bestaande Drive-brug.
 export function createOnTrackBridge({env=process.env,request=fetch}={}){
   return async(operation,actor,payload={})=>{
+    assertLegacyStorage(env);
     const url=env.GOOGLE_DRIVE_SCRIPT_URL,secret=env.GOOGLE_DRIVE_SHARED_SECRET;
     if(!url||!secret||secret.length<32)throw Error('ONTRACK_UNAVAILABLE');
     const parsed=new URL(url);

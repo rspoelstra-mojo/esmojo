@@ -1,3 +1,4 @@
+import {assertLegacyStorage} from './legacy-storage-policy.js';
 // Server-only. Geen HTTP-endpoint: callers moeten eerst medewerkers autoriseren.
 const FOLDER_ID = '1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk';
 const API = 'https://www.googleapis.com/drive/v3';
@@ -9,6 +10,7 @@ export function createDriveStore({ env = process.env, request = fetch, now = Dat
   let pendingToken;
 
   async function accessToken() {
+    assertLegacyStorage(env);
     if (token && now() < tokenUntil) return token;
     if (pendingToken) return pendingToken;
     const { GOOGLE_CLIENT_ID: clientId, GOOGLE_CLIENT_SECRET: clientSecret,
