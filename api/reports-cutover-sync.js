@@ -6,13 +6,13 @@ import {createTaskStore} from '../server/background-tasks/store.js';
 import {createBackgroundTasks} from '../server/background-tasks/engine.js';
 import {createReportsCutover,ensureReportsCutover,reportsCutoverType} from '../server/dataverse-reports/cutover.js';
 export const config={maxDuration:300};
-export function createReportsCutoverRunner({env=process.env,now=Date.now,store=createTaskStore({env}),profiles=createProfiles({env}),cutover=createReportsCutover({env,now,store})}={}){
+export function createReportsCutoverRunner({env=process.env,now=Date.now,store=createTaskStore({env}),profiles=createProfiles({env}),cutover=createReportsCutover({env,now,store,activationMode:'confirmed-copy-v1'})}={}){
  const tasks=createBackgroundTasks({store,now,registry:{[reportsCutoverType]:cutover},authorize:async actor=>{const profile=await profiles('self',actor);return profile.id===actor&&profile.activated===true&&!profile.disabled&&isAdministrator(profile)&&hasModule(profile,'reports');}});
  return{...tasks,ensure:()=>ensureReportsCutover({store,tasks,now})};
 }
 export function makeReportsCutoverSync({tasks=createReportsCutoverRunner(),identify=token=>verifyImportIdentity(token,{audience:'https://esmojo.nl/api/reports-cutover-sync',workflow:'reports-cutover.yml'})}={}){
  return async(req,res)=>{
-  res.setHeader('Cache-Control','no-store, private');res.setHeader('X-ESMOJO-Reports-Cutover','1');
+  res.setHeader('Cache-Control','no-store, private');res.setHeader('X-ESMOJO-Reports-Cutover','2');
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false});}
   try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1]);}catch{return res.status(403).json({ok:false,code:'OIDC_FORBIDDEN'});}
   if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)||Object.keys(req.body).length)return res.status(400).json({ok:false});

@@ -17,11 +17,16 @@ function esmojoReportsRuntime_(request,profiles){
  if(request.operation==='reports-runtime-policy'){
   const keys=Object.keys(request).sort().join(','),writing=request.next!==undefined;
   if(keys!==(writing?'actor,contract,expectedRevision,nativeReportsAllowed,next,operation':'actor,contract,nativeReportsAllowed,operation')||request.nativeReportsAllowed!==true||typeof request.actor!=='string'||!profiles.some(p=>p.id===request.actor&&isAdministrator(p)))throw Error('FORBIDDEN');
-  const current=esmojoReportsRuntimePolicy_();if(!writing)return current;
-  const next=request.next;
-  if(request.expectedRevision!==current.revision||!next||Object.keys(next).sort().join(',')!=='drainUntil,epoch,mode'||!['legacy','freeze','dataverse'].includes(next.mode)||!/^[a-f0-9-]{36}$/i.test(next.epoch||'')||!Number.isFinite(next.drainUntil)||current.mode==='dataverse'&&(next.mode!=='dataverse'||next.epoch!==current.epoch)||current.mode!=='legacy'&&next.epoch!==current.epoch||next.mode==='dataverse'&&current.mode!=='freeze'&&current.mode!=='dataverse'||next.mode==='freeze'&&current.mode==='legacy'&&(next.drainUntil<Date.now()+11*60000||next.drainUntil>Date.now()+12*60000))throw Error('REPORT_CONFLICT');
+  const current=esmojoReportsRuntimePolicy_();if(!writing)return{...current,activationProtocols:['full-v1','confirmed-copy-v1']};
+  const next=request.next,fast=next?.switchMode==='confirmed-copy-v1';
+  if(request.expectedRevision!==current.revision||!next||Object.keys(next).sort().join(',')!==(fast?'drainUntil,epoch,inventoryFingerprint,mode,pipelineBaseline,switchMode':'drainUntil,epoch,mode')||!['legacy','freeze','dataverse'].includes(next.mode)||!/^[-a-f0-9]{36}$/i.test(next.epoch||'')||!Number.isFinite(next.drainUntil)||current.mode==='dataverse'&&(next.mode!=='dataverse'||next.epoch!==current.epoch)||current.mode!=='legacy'&&next.epoch!==current.epoch||next.mode==='dataverse'&&current.mode!=='freeze'&&current.mode!=='dataverse'&&!fast||next.mode==='freeze'&&current.mode==='legacy'&&(next.drainUntil<Date.now()+11*60000||next.drainUntil>Date.now()+12*60000)||fast&&(next.mode!=='dataverse'||!/^[a-f0-9]{64}$/.test(next.inventoryFingerprint||'')))throw Error('REPORT_CONFLICT');
+  if(fast&&current.mode==='legacy'){
+   const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_v1.json'),state=file?JSON.parse(file.getBlob().getDataAsString('UTF-8')):{sources:[],reports:[]},groups=[...(state.reports||[]),...(state.onlineReports||[])];
+   if((state.sources||[]).some(row=>row.job&&Date.parse(row.job.expiresAt)>Date.now())||groups.some(row=>(row.deliveries||[]).some(d=>d.job&&Date.parse(d.job.expiresAt)>Date.now())))throw Error('BUSY');
+   const currentProof=esmojoReportsMigration_({operation:'reports-migration-freshness',actor:request.actor,fingerprint:next.inventoryFingerprint,baseline:next.pipelineBaseline});if(currentProof.matches!==true)throw Error('REPORT_CONFLICT');
+  }
   if(current.mode===next.mode&&current.epoch===next.epoch&&current.drainUntil===next.drainUntil)return current;
-  const value={version:1,contract:current.contract,mode:next.mode,epoch:next.epoch,revision:current.revision+1,drainUntil:next.drainUntil},text=JSON.stringify(value),properties=PropertiesService.getScriptProperties();properties.setProperty('ESMOJO_REPORTS_RUNTIME_V1',text);
+  const value={version:1,contract:current.contract,mode:next.mode,epoch:next.epoch,revision:current.revision+1,drainUntil:next.drainUntil,...(fast?{switchMode:next.switchMode,inventoryFingerprint:next.inventoryFingerprint}:{})},text=JSON.stringify(value),properties=PropertiesService.getScriptProperties();properties.setProperty('ESMOJO_REPORTS_RUNTIME_V1',text);
   if(properties.getProperty('ESMOJO_REPORTS_RUNTIME_V1')!==text)throw Error('REPORT_UNAVAILABLE');return value;
  }
  const op=request.operation;

@@ -184,3 +184,25 @@ bewaard. Een onopgeloste write blijft gefenced voor gecontroleerde inspectie.
 V1.118 publiceert de provider en de handmatig startbare omschakeling voorbereid.
 Dit document claimt nog geen productieactivering; de laatste vergelijking en
 conditionele omschakeling volgen na beide afzonderlijke publicatiecontroles.
+
+## Actuele gebruikerskeuze: directe activering
+
+De gebruiker heeft na de voorbereide V1.118 expliciet opgedragen de laatste
+schrijfstop en urenlange eindcontrole over te slaan en nu te publiceren. Hiervoor
+is de vaste serverroute protocol 2 beschikbaar met `confirmed-copy-v1`.
+De mode `freeze`, elfminuten-drain en volledige eindvalidator worden niet uitgevoerd.
+De reeds voltooide read-only voorcontrole blijft het bewijs; de authority verwijst
+naar exact dat versleutelde checkpoint, niet naar een verzonnen eindcontrole.
+`writeStopSkipped` en `finalComparisonSkipped` zijn expliciet waar; `deltaVerified`
+is onwaar. Dit wordt ook zo gerapporteerd.
+
+Vóór de directe wissel controleert Apps Script onder hetzelfde ScriptLock als alle
+legacy Reports-writes dat er geen lopende bron-/afleverlease is en dat de actuele
+metadatafingerprint overeenkomt met het controlebewijs (uitsluitend de reeds
+verzegelde pipeline-heartbeat wordt genormaliseerd). Daarna sluit de oude schrijver
+atomair. Web-commit gebruikt daarom hetzelfde ScriptLock. Er worden geen CSV/File-
+bytes opnieuw massaal vergeleken en geen zakelijke verschillen gerepareerd.
+De native authority wordt conditioneel geschreven en onafhankelijk gelezen;
+oudste/nieuwste rapportage en, waar het bestaande account dat recht heeft, de
+Artiesten-koppeling worden servermatig teruggelezen. Actuele rechten, oorspronkelijke
+delegatie-eindtijd, File-privacy en geen Drive-fallback blijven gelden.

@@ -23,3 +23,19 @@ Publicatievoorwaarde geslaagd op 15 november:
 Deze branch voegt uitsluitend de eigen main-pushtrigger en een publieke
 protocolcontrole vóór OIDC/start toe. De backend/provider uit #177 blijft gelijk.
 Eindvergelijking en activering zijn nog niet als geslaagd gemeld.
+
+Gewijzigde expliciete opdracht van de gebruiker: laatste schrijfstop overslaan en
+nu publiceren; gebruiker meldt eventuele fouten later. Daarom geen elfminuten-
+drain/urenlange eindvergelijking. De volledige eerder voltooide read-only controle
+blijft het bewijs. Voeg een onmiddellijke atomische writerwissel toe, met korte
+metadata-/checkpointcontrole en onafhankelijke teruglezing. Presenteer dit niet
+als een nieuwe volledige eindvalidatie onder schrijfstop. Scope nu ook eigen
+cutover/authority/protocol en bestaande Apps Script-fence; oorspronkelijke begrensde
+machtiging, actuele rechten, geen dubbele schrijvers/verzending blijven gelden.
+
+Directe route gebouwd: protocol 2 wacht op de native/Google-capability en verwijst
+naar het oorspronkelijke complete read-only checkpoint. Geen freeze/drain/full
+final-validator; flags maken dat onderscheid expliciet. Atomische metadata-/lease-
+check plus writerwissel gebruikt één ScriptLock, inclusief web-commit. Daarna CAS
+van de native authority en serverteruglezing. Beide autoriteiten ondersteunen deze
+expliciete modus; oorspronkelijke machtiging wordt niet verlengd.
