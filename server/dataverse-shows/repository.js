@@ -24,7 +24,7 @@ export function createNativeShowsRepository({env=process.env,connection=nativeCo
  async function meta(table){
   if(!tableByName.has(table))throw Error('VALIDATION');
   if(!metadata.has(table))metadata.set(table,(async()=>{
-   const value=await json("EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName,PrimaryIdAttribute&$expand=ManyToOneRelationships($select=ReferencingAttribute,ReferencingEntityNavigationPropertyName)");
+   await connection.connect();const value=connection.metadata?.(table)||await json("EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName,PrimaryIdAttribute&$expand=ManyToOneRelationships($select=ReferencingAttribute,ReferencingEntityNavigationPropertyName)");
    if(value.LogicalName!==table||!identifier(value.EntitySetName)||!identifier(value.PrimaryIdAttribute)||!Array.isArray(value.ManyToOneRelationships))throw Error('DATAVERSE_SHOWS_SCHEMA');return value;
   })().catch(error=>{metadata.delete(table);throw error;}));return metadata.get(table);
  }

@@ -97,7 +97,7 @@ jobs:
           node shared/artist-catalogue.test.js
           node shared/artist-names.test.js
           node shared/mojo-artist.test.js
-          node --test server/dataverse-read-batch.test.js server/reports-performance.test.js
+          node --test server/dataverse-read-batch.test.js server/dataverse-startup.test.js server/reports-performance.test.js
           node --test server/native-runtime-verification.test.js
           node --test server/artist-runtime-verification.test.js
           node server/artist-service.test.js

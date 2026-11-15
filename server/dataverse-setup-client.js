@@ -1,8 +1,9 @@
 // Gedeelde vaste Dataverse-setupverbinding; alleen op geautoriseerde beheeractie.
 const guid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
 const origin='https://org5bab852a.crm.dynamics.com',base=origin+'/api/data/v9.2/';
-export function createDataverseSetupConnection({env=process.env,request=fetch,now=Date.now}={}){
- let context=null,pending=null;
+export function createDataverseSetupConnection({env=process.env,request=fetch,now=Date.now,preloadTables=[]}={}){
+ let context=null,pending=null;const metadata=new Map();
+ if(!Array.isArray(preloadTables)||preloadTables.some(name=>!['esmojo_integratiestatus','esmojo_opdracht','esmojo_medewerker','esmojo_modulerecht'].includes(name)))throw Error('CHOICE_CONFIG');
  async function call(path,headers,{method='GET',body,code='CHOICE_READ',timeoutMs=15000,multipart}={}){
   if(multipart&&(path!=='$batch'||method!=='POST'||body!==undefined||!/^batch_[a-f0-9]{32}$/.test(multipart.boundary)||typeof multipart.body!=='string'||Buffer.byteLength(multipart.body)>8*1024*1024))throw Error('DATAVERSE_BATCH_INVALID');
   let response;try{response=await request(base+path,{method,redirect:'error',cache:'no-store',signal:AbortSignal.timeout(Math.max(1000,Math.min(timeoutMs,120000))),headers:{...headers,...(method==='GET'?{Consistency:'Strong'}:{}),...(multipart?{'Content-Type':'multipart/mixed; boundary='+multipart.boundary}:body?{'Content-Type':'application/json'}:{})},...(multipart?{body:multipart.body}:body?{body:JSON.stringify(body)}:{})});}catch{throw Error(code);}
@@ -21,11 +22,15 @@ export function createDataverseSetupConnection({env=process.env,request=fetch,no
    if(!response.ok)throw Error('CHOICE_AUTH');const token=await json(response);
    if(token.token_type?.toLowerCase()!=='bearer'||typeof token.access_token!=='string'||!token.access_token||token.access_token.length>32000)throw Error('CHOICE_AUTH');
    const headers={Authorization:'Bearer '+token.access_token,Accept:'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0'};
-   response=await call('solutions?'+new URLSearchParams({'$select':'uniquename,solutionid,ismanaged','$expand':'publisherid($select=customizationprefix)','$filter':"uniquename eq 'ESMOJO'",'$top':'2'}),headers);
+   const solutionRequest=call('solutions?'+new URLSearchParams({'$select':'uniquename,solutionid,ismanaged','$expand':'publisherid($select=customizationprefix)','$filter':"uniquename eq 'ESMOJO'",'$top':'2'}),headers);
+   const organizationRequest=call('organizations?$select=languagecode&$top=2',headers);
+   const metadataRequest=Promise.all(preloadTables.map(async table=>{const response=await call("EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName,PrimaryIdAttribute&$expand=ManyToOneRelationships($select=ReferencingAttribute,ReferencingEntityNavigationPropertyName)",headers);if(!response.ok)throw Error('CHOICE_SCHEMA');const value=await json(response);if(value.LogicalName!==table||!/^esmojo_[a-z0-9_]+$/.test(value.EntitySetName)||!/^esmojo_[a-z0-9_]+$/.test(value.PrimaryIdAttribute)||!Array.isArray(value.ManyToOneRelationships))throw Error('CHOICE_SCHEMA');return[table,value];}));
+   const [solutionResponse,organization,preparedMetadata]=await Promise.all([solutionRequest,organizationRequest,metadataRequest]);response=solutionResponse;
    if(!response.ok)throw Error('CHOICE_SOLUTION');const result=await json(response),rows=result.value;
    if(!Array.isArray(rows)||rows.length!==1||rows[0].uniquename?.toLowerCase()!=='esmojo'||rows[0].ismanaged!==false||rows[0].publisherid?.customizationprefix!=='esmojo'||!guid(rows[0].solutionid))throw Error('CHOICE_SOLUTION');
-   const organization=await call('organizations?$select=languagecode&$top=2',headers);if(!organization.ok)throw Error('CHOICE_LANGUAGE');const org=await json(organization);
+   if(!organization.ok)throw Error('CHOICE_LANGUAGE');const org=await json(organization);
    if(!Array.isArray(org.value)||org.value.length!==1||!Number.isInteger(org.value[0].languagecode)||org.value[0].languagecode<1||org.value[0].languagecode>65535)throw Error('CHOICE_LANGUAGE');
+   for(const [table,value]of preparedMetadata)metadata.set(table,value);
    context={headers,solution:rows[0].uniquename,solutionId:rows[0].solutionid,language:org.value[0].languagecode,until:now()+Math.max(0,Math.min(Number(token.expires_in)||0,3600)-60)*1000};return context;
   })().finally(()=>{pending=null;});return pending;
  }
@@ -35,5 +40,5 @@ export function createDataverseSetupConnection({env=process.env,request=fetch,no
   if(!Array.isArray(result.value)||result.value.length>1||result.value.some(row=>row.objectid?.toLowerCase()!==metadata.MetadataId.toLowerCase()))throw Error('CHOICE_RESPONSE');
   if(!result.value.length){const added=await call('AddSolutionComponent',ctx.headers,{method:'POST',body:{ComponentId:metadata.MetadataId,ComponentType:componentType,SolutionUniqueName:ctx.solution,AddRequiredComponents:false},code:'CHOICE_COMPONENT'});if(!added.ok)throw Error('CHOICE_COMPONENT');}
  }
- return{connect,call,json,includeInSolution};
+ return{connect,call,json,includeInSolution,metadata:table=>metadata.get(table)};
 }

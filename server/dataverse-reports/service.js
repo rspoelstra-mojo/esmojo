@@ -37,6 +37,7 @@ export function createNativeReportsService({env=process.env,repository:repo=crea
  const relatedWithDaily=(operation,payload,legacy)=>operation.startsWith('incident-daily-')?incidentDaily(operation,payload):related(operation,payload,legacy);
  const opening=createReportOpening({env,repository:repo,validBefore:async data=>(await reader.current()).filter(row=>reportArtistKey(row.show.name)===reportArtistKey(data.show.name)&&row.show.date>timetableClock().date).map(row=>row.show.date).sort()[0]||null}),photoCatalogue=createConcertCatalogue({env});
  const build=async(actor,concertId)=>createWebReportService({store:async()=>reader.source(concertId),canonicalPhoto:photoCatalogue.photo})(actor,{concertId});
+ async function readAuthorized(actor,input,profile){if(profile?.id!==actor||!profile.activated||profile.disabled||!hasModule(profile,'reports'))throw Error('FORBIDDEN');return opening.read(validateWebReportRequest(input));}
  async function renderAuthorized(actor,input,profile){if(profile?.id!==actor||!profile.activated||profile.disabled||!hasModule(profile,'reports'))throw Error('FORBIDDEN');const id=validateWebReportRequest(input);return await opening.read(id)||opening.prepare(id,()=>build(actor,id));}
  const operations={
   'web-render':async(actor,input)=>renderAuthorized(actor,input,await authorize(actor,{fast:true})),
@@ -54,5 +55,5 @@ export function createNativeReportsService({env=process.env,repository:repo=crea
   'ontrack-status':actor=>management.status(actor),'ontrack-recipients':async(actor,input)=>{await recipients.save(actor,input);return management.status(actor);},
  };
  if(reportsCoverage.some(name=>!Object.hasOwn(operations,name)&&!['artist-catalogue','artist-profile','artist-show','incident-read','incident-source','incident-counts'].includes(name)))throw Error('REPORT_CONFIG');
- return{reader,opening,build,renderAuthorized,related:relatedWithDaily,authorize,operations,async request(operation,actor,input={}){if(!Object.hasOwn(operations,operation))throw Error('VALIDATION');return operations[operation](actor,input);}};
+ return{reader,opening,build,readAuthorized,renderAuthorized,related:relatedWithDaily,authorize,operations,async request(operation,actor,input={}){if(!Object.hasOwn(operations,operation))throw Error('VALIDATION');return operations[operation](actor,input);}};
 }
