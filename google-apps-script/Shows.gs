@@ -290,7 +290,7 @@ function esmojoWriteShowJson_(folder, file, name, data) {
 // Signed server-only response: fixed diagnostics, never provider text or content.
 function esmojoArtistReadReply_(stage,read){
  try{return esmojoReply_({ok:true,data:read()});}catch(error){
-  const code=['FORBIDDEN','NOT_FOUND','VALIDATION','CONFLICT','REPORT_CONFLICT','REPORT_UNAVAILABLE','REPORT_CATALOG','ARTIST_CATALOGUE','STORAGE_ACTIVE'].includes(error.message)?error.message:error instanceof ReferenceError?'REFERENCE':error instanceof TypeError?'TYPE':'UNCONFIRMED';
+  const code=['FORBIDDEN','NOT_FOUND','VALIDATION','CONFLICT','REPORT_CONFLICT','REPORT_UNAVAILABLE','REPORT_CATALOG','REPORT_CATALOG_INDEX','REPORT_CATALOG_ROW','REPORT_CATALOG_DUPLICATE','ARTIST_CATALOGUE','STORAGE_ACTIVE'].includes(error.message)?error.message:error instanceof ReferenceError?'REFERENCE':error instanceof TypeError?'TYPE':'UNCONFIRMED';
   return esmojoReply_({ok:false,code:['FORBIDDEN','NOT_FOUND'].includes(code)?code:'SHOWS_UNAVAILABLE',readDiagnostic:stage+'_'+code});
  }
 }
