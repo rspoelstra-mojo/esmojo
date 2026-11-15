@@ -19,6 +19,6 @@ export function employeeProfile(row,flags,settings){
  return{...accessFlags(flags),email:row.esmojo_email,firstName:row.esmojo_voornaam,lastName:row.esmojo_achternaam,company:row.esmojo_bedrijf,jobTitle:row.esmojo_functie,role};
 }
 export function checkedChange(profile){
- const superRole=profile?.role==='superbeheerder',value=validateProfile(superRole?{...profile,role:'beheerder'}:profile);return{...value,...superRole?{role:'superbeheerder'}:{}};
+ const superRole=profile?.role==='superbeheerder',value=validateProfile(superRole?{...profile,role:'beheerder'}:profile);if(value.firstName.length>80||value.lastName.length>80)throw Error('VALIDATION');return{...value,...superRole?{role:'superbeheerder'}:{}};
 }
 export const snapshotHash=value=>digest(canonical(value));
