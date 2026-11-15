@@ -14,7 +14,7 @@ export function createReportsCutoverRunner({env=process.env,now=Date.now,store=c
 }
 export function makeReportsCutoverSync({tasks=createReportsCutoverRunner(),identify=token=>verifyImportIdentity(token,{audience:'https://esmojo.nl/api/reports-cutover-sync',workflow:'reports-cutover.yml'})}={}){
  return async(req,res)=>{
-  res.setHeader('Cache-Control','no-store, private');res.setHeader('X-ESMOJO-Reports-Cutover','7');
+  res.setHeader('Cache-Control','no-store, private');res.setHeader('X-ESMOJO-Reports-Cutover','8');
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({ok:false});}
   try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1]);}catch{return res.status(403).json({ok:false,code:'OIDC_FORBIDDEN'});}
   if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)||!(Object.keys(req.body).length===0||Object.keys(req.body).join(',')==='operation'&&req.body.operation==='resume-technical'))return res.status(400).json({ok:false});

@@ -24,7 +24,7 @@ jobs:
           node --input-type=module <<'NODE'
           let ready=false;
           for(let round=0;round<18;round++){
-            try{const response=await fetch('https://esmojo.nl/api/reports-cutover-sync',{method:'GET',redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(10000)});if(response.status===405&&response.headers.get('x-esmojo-reports-cutover')==='7'){ready=true;break;}}catch{}
+            try{const response=await fetch('https://esmojo.nl/api/reports-cutover-sync',{method:'GET',redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(10000)});if(response.status===405&&response.headers.get('x-esmojo-reports-cutover')==='8'){ready=true;break;}}catch{}
             await new Promise(resolve=>setTimeout(resolve,10000));
           }
           if(!ready)throw Error('REPORTS_CUTOVER_DEPLOYMENT_NOT_READY');

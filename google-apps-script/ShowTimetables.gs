@@ -1,14 +1,16 @@
 function esmojoTimetableCatalogueError_(stage){const error=Error('REPORT_CATALOG');error.catalogueReadStage=stage;return error;}
 // Openbare tijdschema's staan gescheiden van vertrouwelijke CSV/PDF-rapporten.
-function esmojoTimetableCatalogue_({allVenues=false,includeSeries=false}={}){
+function esmojoTimetableCatalogue_({allVenues=false,includeSeries=false,artistNamesOnly=false,artistIds=null}={}){
  const rows=[],root=DriveApp.getFolderById(ESMOJO_FOLDER_ID),folders=root.getFoldersByName('Productie'),production=folders.hasNext()?folders.next():null;
  if(folders.hasNext())throw esmojoTimetableCatalogueError_('INDEX');
  if(production){const file=esmojoOnTrackFile_(production,'_esmojo_shows_v1.json');if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw esmojoTimetableCatalogueError_('ROW');const active=new Set(index.active);rows.push(...index.concerts.filter(row=>allVenues||row.venue==='Gashouder'&&row.city==='Amsterdam').map(row=>({...row,active:active.has(row.concertId)})));}}
  const folder=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID),file=esmojoOnTrackFile_(folder,'_esmojo_ontrack_concerts_v1.json');
  if(file){const index=JSON.parse(file.getBlob().getDataAsString('UTF-8'));if(index.version!==1||!Array.isArray(index.concerts)||!Array.isArray(index.active))throw esmojoTimetableCatalogueError_('ROW');const active=new Set(index.active);rows.push(...index.concerts.map(row=>({...row,active:active.has(row.concertId)})));}
  if(typeof esmojoHistoricalCatalogue_==='function')rows.push(...esmojoHistoricalCatalogue_());
- const catalogue=new Map();for(const row of rows){
+ const catalogue=new Map(),names=[],scope=artistIds?new Set(artistIds):null,selectedIds=scope?new Set(rows.filter(row=>typeof row.artist==='string'&&[row.artist,...row.identityArtist?[row.identityArtist]:[]].some(name=>scope.has('a_'+esmojoOnTrackHash_(normalizeArtistName(name))))).map(row=>row.concertId)):null;for(const row of rows){
+  if(selectedIds&&!selectedIds.has(row.concertId))continue;
   if(typeof row.concertId!=='string'||!row.concertId||row.concertId.length>240||/[\x00-\x1f/\\]/.test(row.concertId)||typeof row.artist!=='string'||!row.artist||typeof row.venue!=='string'||typeof row.city!=='string'||!validTimetableDate(row.date))throw esmojoTimetableCatalogueError_('ROW');
+  if(artistNamesOnly){names.push(row.artist,...row.identityArtist?[row.identityArtist]:[]);continue;}
   const item={concertId:row.concertId,artist:row.artist,venue:row.venue,city:row.city,date:row.date,sourceUrl:row.sourceUrl,active:row.active};
   if(includeSeries&&row.generalConcertId)item.seriesId=row.generalConcertId;
   if(row.historical){item.historical=true;if(row.identityArtist)item.identityArtist=row.identityArtist;if(row.performance)item.performance=row.performance;if(includeSeries)item.historicalSeriesId=row.historicalSeriesId;}
@@ -20,7 +22,7 @@ function esmojoTimetableCatalogue_({allVenues=false,includeSeries=false}={}){
    // The combined catalogue retains an active item from either index.
    item.active=existing.active||item.active;
   }catalogue.set(item.concertId,item);
- }return catalogue;
+ }return artistNamesOnly?names:catalogue;
 }
 function esmojoTimetableFolder_(creating=false){
  const root=DriveApp.getFolderById(ESMOJO_ONTRACK_FOLDER_ID);if(root.isTrashed())throw Error('SOURCE_MISSING');const folders=root.getFoldersByName('Tijdschemas'),folder=folders.hasNext()?folders.next():null;if(folders.hasNext()||folder?.isTrashed())throw Error('REPORT_UNAVAILABLE');return folder|| (creating?root.createFolder('Tijdschemas'):null);
