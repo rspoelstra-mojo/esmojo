@@ -7,6 +7,7 @@ on:
       - '.github/workflows/reports-cutover.yml'
 permissions:
   contents: read
+  actions: read
   id-token: write
 concurrency:
   group: approved-background-tasks-production
@@ -28,6 +29,22 @@ jobs:
           }
           if(!ready)throw Error('REPORTS_CUTOVER_DEPLOYMENT_NOT_READY');
           console.log('Published native Reports cutover protocol confirmed.');
+          NODE
+      - name: Confirm matching Apps Script publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          let published=false;
+          for(let round=0;round<60;round++){
+            const response=await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/actions/workflows/apps-script.yml/runs?head_sha=${process.env.GITHUB_SHA}&per_page=5`,{headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`,Accept:'application/vnd.github+json'},signal:AbortSignal.timeout(10000)});
+            if(!response.ok)throw Error('APPS_SCRIPT_PUBLICATION_STATUS_UNAVAILABLE');
+            const run=(await response.json()).workflow_runs?.find(run=>run.head_sha===process.env.GITHUB_SHA&&run.head_branch==='main');
+            if(run?.status==='completed'){if(run.conclusion!=='success')throw Error('APPS_SCRIPT_PUBLICATION_FAILED');published=true;break;}
+            await new Promise(resolve=>setTimeout(resolve,10000));
+          }
+          if(!published)throw Error('APPS_SCRIPT_PUBLICATION_NOT_CONFIRMED');
+          console.log('Matching Apps Script publication and source readback confirmed.');
           NODE
       - name: Continue the bounded authorized Reports cutover
         env:
