@@ -1,3 +1,4 @@
+import {createNativeIncidentDaily} from './incident-daily.js';
 import {createConcertCatalogue} from '../concert-catalogue.js';
 import {createProfiles} from '../account-profiles.js';
 import {createTaskStore} from '../background-tasks/store.js';
@@ -27,6 +28,8 @@ export function createNativeReportsService({env=process.env,repository:repo=crea
  }
  async function accounts(){const actor=await workerActor();await authorize(actor,{admin:true});const rows=await profiles('list',actor);if(!Array.isArray(rows))throw Error('REPORT_UNAVAILABLE');return rows.map(profile=>({...profile,reports:hasModule(profile,'reports')}));}
  const dependencies=injectedDependencies||createNativeReportDependencies({env,reader,intake}),archive=createNativeReportArchive({env,repository:repo,mutations,profiles}),recipients=createNativeReportRecipients({env,repository:repo,mutations,operational,writer,profiles}),storedCsv=createStoredReportCsv({reader,repository:repo}),pdf=createNativeReportPdf({intake:storedCsv,processing,dependencies,reader,repository:repo,writer,mutations,operational,authorize,selection:recipients.selection,accounts}),management=createNativeReportManagement({repository:repo,mutations,reader,pdf,processing,recipients,dependencies,operational,authorize}),mail=createNativeReportMail({env,repository:repo,writer,mutations,operational,authorize,accounts,visible:reader.current,selection:recipients.selection,processing,intake:storedCsv,download:async reportId=>archive.download(await workerActor(),reportId),manager:async show=>(await dependencies.context((await dependencies.choices()).find(row=>row.key===show.key)||{...show,date:show.dates[0]})).contextGeneral.eventSafetyManager}),related=createNativeReportsRelated({reader,authorize,concertCatalogue:createConcertCatalogue({env})});
+ const incidentDaily=createNativeIncidentDaily({env,authorize});
+ const relatedWithDaily=(operation,payload,legacy)=>operation.startsWith('incident-daily-')?incidentDaily(operation,payload):related(operation,payload,legacy);
  const operations={
   'web-menu':async actor=>{await authorize(actor);return{reports:await reader.catalogue(),pending:0};},
   'web-read':async(actor,input)=>{await authorize(actor);return reader.source(input.concertId);},
@@ -42,5 +45,5 @@ export function createNativeReportsService({env=process.env,repository:repo=crea
   'ontrack-status':actor=>management.status(actor),'ontrack-recipients':async(actor,input)=>{await recipients.save(actor,input);return management.status(actor);},
  };
  if(reportsCoverage.some(name=>!Object.hasOwn(operations,name)&&!['artist-catalogue','artist-profile','artist-show','incident-read','incident-source','incident-counts'].includes(name)))throw Error('REPORT_CONFIG');
- return{reader,related,authorize,operations,async request(operation,actor,input={}){if(!Object.hasOwn(operations,operation))throw Error('VALIDATION');return operations[operation](actor,input);}};
+ return{reader,related:relatedWithDaily,authorize,operations,async request(operation,actor,input={}){if(!Object.hasOwn(operations,operation))throw Error('VALIDATION');return operations[operation](actor,input);}};
 }

@@ -10,7 +10,7 @@ import {createActiveRepository,createActiveShowService} from './active-show-stor
 import {isDataversePilot,pilotShow} from '../shared/dataverse-pilot.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 
-export function createShowsStore({ env = process.env, request = fetch, active = true, repository = null, legacy = false, nativeService = null, authority = null } = {}) {
+export function createShowsStore({ env = process.env, request = fetch, active = true, repository = null, legacy = false, nativeService = null, authority = null, reportRoute=createReportsRouting({env}) } = {}) {
   const signedDrive = async function shows(operation, payload = {}) {
     assertLegacyStorage(env);
     payload={...payload};delete payload.__actor;
@@ -27,8 +27,7 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
     if (!result.ok) {const bridgeOperation=({'artist-catalogue':'MENU','artist-show':'SHOW','artist-profile':'PROFILE'})[operation]||'OTHER',replyCode=['SHOWS_UNAVAILABLE','BUSY','FORBIDDEN','NOT_FOUND','VALIDATION','CONFLICT','STORAGE_ACTIVE'].includes(result.code)?result.code:'NO_CODE';const error=new Error(['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT','STORAGE_ACTIVE'].includes(result.code) ? result.code : 'SHOWS_UNAVAILABLE');if(/^(MENU|PROFILE|SHOW)_(FORBIDDEN|NOT_FOUND|VALIDATION|CONFLICT|REPORT_CONFLICT|REPORT_UNAVAILABLE|REPORT_CATALOG(?:_INDEX|_ROW|_DUPLICATE)?|ARTIST_CATALOGUE|STORAGE_ACTIVE|REFERENCE|TYPE|UNCONFIRMED)$/.test(result.readDiagnostic||''))error.artistReadDiagnostic=result.readDiagnostic;else error.artistReadDiagnostic=bridgeOperation+'_'+replyCode;throw error;}
     return result.data;
   };
-  const reportRoute=createReportsRouting({env});
-  const reportDependencies=new Set(['artist-catalogue','artist-profile','artist-show','incident-read','incident-source','incident-counts']);
+  const reportDependencies=new Set(['artist-catalogue','artist-profile','artist-show','incident-read','incident-source','incident-counts','incident-daily-read','incident-daily-state','incident-daily-start','incident-daily-publish']);
   const drive=(operation,payload={})=>reportDependencies.has(operation)?reportRoute({legacy:()=>signedDrive(operation,payload),run:native=>native.related(operation,payload,()=>signedDrive(operation,payload))}):signedDrive(operation,payload);
   if(!legacy&&(nativeShowsSelected(env)||managedShowsRouting(env))){
     const state=nativeService?null:createNativeShowState({env});

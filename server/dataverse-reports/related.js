@@ -44,6 +44,6 @@ export function createNativeReportsRelated({reader,authorize,concertCatalogue=nu
    const show=source.show;if(show.date>=today)continue;const tsc=reportSourceType(show)==='tsc-historical',sold=tsc?null:source.context.general.soldTickets,historical=show.origin==='historical'&&show.date<'2026-11-01',units=tsc?(show.showData.visitors===null?null:show.showData.visitors*40):sold===null?null:sold*(historical?40:39),existing=rows.get(show.key)||{};
    rows.set(show.key,{...existing,concertId:show.key,name:show.name,date:show.date,venue:canonicalVenueName(show.venue),...show.performance?{performance:show.performance}:{},soldTickets:sold,visitors:units===null?null:units/40,visitorUnits:units,visitorBasis:tsc?'tsc-attendance':historical?'historical-attendance':'ticket-minus-2.5',securityComplete:!tsc||show.showData.evictions!==null&&show.showData.arrests!==null,medicalComplete:true,kpis:source.kpis,hasSource:true,sourceReady:true});
   }
-  return{...result,policyVersion:2,workerVersion:2,rows:[...rows.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.concertId.localeCompare(b.concertId)),jobs:[],jobSources:{}};
+  return{...result,policyVersion:2,workerVersion:2,rows:[...rows.values()].filter(row=>!payload.artistIds||matches(row)).sort((a,b)=>b.date.localeCompare(a.date)||a.concertId.localeCompare(b.concertId)),jobs:[],jobSources:{}};
  };
 }
