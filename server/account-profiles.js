@@ -1,3 +1,4 @@
+import {createNativeProfiles} from './account-native/profiles.js';
 import {createAccessProfiles} from './account-access/profiles.js';
 import {validateAccountEmployment} from '../shared/account-employment.js';
 import {validateAccountModules} from '../shared/account-modules.js';
@@ -29,7 +30,8 @@ export function createProfiles({env=process.env,request=fetch,access}={}){
  const raw=createRawProfiles({env,request});
  // Unconfigured/offline test environments retain their ordinary signed adapter.
  if(!access&&![env.DATAVERSE_TEST_URL,env.DATAVERSE_TEST_TENANT_ID,env.DATAVERSE_TEST_CLIENT_ID,env.DATAVERSE_TEST_CLIENT_SECRET].every(Boolean))return raw;
- return createAccessProfiles({env,raw,store:access});
+ const legacy=createAccessProfiles({env,raw,store:access});
+ return createNativeProfiles({env,legacy});
 }
 
 export function validateProfile(input,{defaultRole}={}) {

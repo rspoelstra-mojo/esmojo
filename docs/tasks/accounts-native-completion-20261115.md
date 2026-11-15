@@ -14,3 +14,16 @@ accounts-API en bestaande beheerpagina, tests/CI/docs/publicatie. Ook resterende
 Google-afhankelijkheden en Supabase-bedrijfsopslag controleren. Technische sleutels
 niet verwijderen zolang bestaande ciphertext daarvan afhankelijk is. Registratie
 vóór implementatie; externe activering en bewijs afzonderlijk rapporteren.
+
+Implementatie: bestaande Medewerker/Modulerecht + ACL in één conditionele changeset,
+private Document File-avatar met medewerkerlookup, versleutelde profielpointer en
+vaste superbeheerder/testmailinstellingen. Geen nieuw schema. Nieuwe begrensde
+account-native-v1 beheeropdracht met bronfence, elf minuten uitlopen, volledige
+vergelijking en conditionele autoriteit; geen hergebruik oude delegaties.
+
+Lokale controles: 890 bestaande tests geslaagd/één bestaande skip, 37 gerichte
+account/sourcefence-tests, 56 taak-/ACL-/tokencontroles, Apps Script 54 ES2020-bronnen,
+11 publicatietests en build geslaagd. Datatransitie-browsercontrole inclusief
+mobiel/hervatten geslaagd. Geen testmails of fictieve productiegegevens.
+Browsercontrole vindt geen ingelogde sessie; activering vereist een actuele
+MFA-beheerder die de nieuwe opdracht start. Publicatie is nog geen activering.

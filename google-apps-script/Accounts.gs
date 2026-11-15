@@ -32,6 +32,10 @@ function esmojoAccounts_(input) {
   try {
     const request = JSON.parse(input.body);
     const properties=PropertiesService.getScriptProperties();
+    const profileMode=properties.getProperty('ESMOJO_ACCOUNT_PROFILE_MODE')||'legacy';
+    const profileControl=['native-profile-policy','native-profile-snapshot'].includes(request.operation);
+    if(profileMode==='dataverse'&&!profileControl)return esmojoReply_({ok:false,code:'ACCESS_FROZEN'});
+    if(profileMode==='freeze'&&['create','bootstrap','update','disable','delete','activate','photo'].includes(request.operation))return esmojoReply_({ok:false,code:'ACCESS_FROZEN'});
     const configuredMode=properties.getProperty('ESMOJO_ACCOUNT_ACCESS_MODE');
     const accessMode=['freeze','dataverse'].includes(configuredMode)?configuredMode:'legacy';
     const contract=request.accessContract==='account-access-v1';
@@ -58,6 +62,14 @@ function esmojoAccounts_(input) {
     if(actor&&typeof superId==='string'){
       const pinned=state.profiles.find(profile=>profile.id===superId);
       if(!pinned||!nativeActor&&pinned.disabled||pinned.role!=='superbeheerder')throw Error('REGISTER_INVALID');
+    }
+    if(profileControl){
+      if(request.nativeProfileContract!=='account-native-v1'||!contract||request.actorNativeAllowed!==true||!actor||!actor.activated||actor.disabled||!isAdministrator(actor)||!hasModule(actor,'shows'))return denied();
+      if(request.operation==='native-profile-snapshot')return esmojoReply_({ok:true,data:{profiles:state.profiles,superAdminId:state.superAdminId,emailTestCopy:state.emailTestCopy||null}});
+      if(request.mode===undefined)return esmojoReply_({ok:true,data:{mode:profileMode,protocol:1}});
+      if(!['freeze','dataverse'].includes(request.mode)||profileMode==='dataverse'&&request.mode!=='dataverse'||request.mode==='dataverse'&&profileMode!=='freeze'&&profileMode!=='dataverse')return conflict();
+      properties.setProperty('ESMOJO_ACCOUNT_PROFILE_MODE',request.mode);
+      return esmojoReply_({ok:true,data:{mode:properties.getProperty('ESMOJO_ACCOUNT_PROFILE_MODE'),protocol:1}});
     }
     if(['access-policy','access-snapshot','access-state'].includes(request.operation)){
       if(!contract||!actor||(!actor.activated&&!nativeActor))return denied();

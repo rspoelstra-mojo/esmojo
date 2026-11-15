@@ -31,12 +31,15 @@ export function createAccessStore({env=process.env,repo=createNativeShowsReposit
   const policy=parse(null,rows.find(row=>row.esmojo_sleutel===keys[0]))?.value||{mode:'legacy'},account=parse(id,rows.find(row=>row.esmojo_sleutel===keys[1]));
   return{policy,account};
  }
- async function save(id,previous,value){const name=identity(id),m=await repo.meta('esmojo_integratiestatus'),generation=(previous?.value.generation||0)+1,next={...value,contract:accessContract,generation};
+ async function prepare(id,previous,value){const name=identity(id),m=await repo.meta('esmojo_integratiestatus'),generation=(previous?.value.generation||0)+1,next={...value,contract:accessContract,generation};
   const model=record('integratiestatus',name,id===null?'Accounttoegang · bronbeleid':'Accounttoegang',{
    integratiecode:accessContract,scopecode:id===null?'policy':id,integratiestatus:choice('integratiestatus','succeeded'),revisie:generation,configuratie_json:seal(name,next)});
-  await repo.atomic([{table:model.table,id:previous?.row[m.PrimaryIdAttribute]||nativeId(model.key),method:'PATCH',payload:model.fields,...(previous?{etag:previous.row['@odata.etag']}:{create:true})}]);
+  return{next,operation:{table:model.table,id:previous?.row[m.PrimaryIdAttribute]||nativeId(model.key),method:'PATCH',payload:model.fields,...(previous?{etag:previous.row['@odata.etag']}:{create:true})}};
+ }
+ async function save(id,previous,value){const {next,operation}=await prepare(id,previous,value);await repo.atomic([operation]);
   const confirmed=await get(id);if(!confirmed||canonical(confirmed.value)!==canonical(next))throw Error('ACCESS_UNCONFIRMED');return confirmed;
  }
+
  async function policy(){return(await get(null))?.value||{mode:'legacy'};}
  async function accounts(){
   const rows=await repo.query('esmojo_integratiestatus',{filter:"esmojo_integratiecode eq '"+accessContract+"'"}),output=[];
@@ -45,5 +48,5 @@ export function createAccessStore({env=process.env,repo=createNativeShowsReposit
    if(!validAccountId(id))throw Error('ACCESS_CORRUPT');output.push(parse(id,row));
   }return output;
  }
- return{get,save,policy,authorization,accounts,repo};
+ return{get,save,prepare,policy,authorization,accounts,repo};
 }

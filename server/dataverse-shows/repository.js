@@ -50,14 +50,15 @@ export function createNativeShowsRepository({env=process.env,connection=nativeCo
   if(rows.some(row=>row._esmojo_concertreeks_value!==seriesId||!guid(row[m.PrimaryIdAttribute])))throw Error('DATAVERSE_SHOWS_RESPONSE');return rows;
  }
  async function downloadDocument(documentKey,scope={}){
-  if(!scope||Array.isArray(scope)||Object.keys(scope).length!==1||Object.keys(scope).some(name=>!['seriesId','referenceType'].includes(name)))throw Error('VALIDATION');
-  const {seriesId,referenceType}=scope;if(seriesId!==undefined?!guid(seriesId):!Object.hasOwn(barrierReferenceManifest,referenceType||''))throw Error('VALIDATION');
+  if(!scope||Array.isArray(scope)||Object.keys(scope).length!==1||Object.keys(scope).some(name=>!['seriesId','referenceType','employeeId'].includes(name)))throw Error('VALIDATION');
+  const {seriesId,referenceType,employeeId}=scope;if(employeeId!==undefined?!guid(employeeId):seriesId!==undefined?!guid(seriesId):!Object.hasOwn(barrierReferenceManifest,referenceType||''))throw Error('VALIDATION');
   const row=await byKey('esmojo_document',documentKey),m=await meta('esmojo_document');
   if(!row?.esmojo_bestand||row.esmojo_documentstatus!==choice('bronstatus','verified')||!key(row.esmojo_sha256)||!Number.isSafeInteger(row.esmojo_bestandsgrootte)||row.esmojo_bestandsgrootte<1||row.esmojo_bestandsgrootte>128*1024*1024)throw Error('REPORT_UNAVAILABLE');
   if(referenceType){const reference=barrierReferenceManifest[referenceType];if(row.esmojo_bronidentiteit!=='reference/'+referenceType||row.esmojo_sha256!==reference.sha256||row.esmojo_bestandsgrootte!==reference.size)throw Error('FORBIDDEN');}
   else{
-   const links=await meta('esmojo_documentkoppeling'),result=await json(links.EntitySetName+'?'+new URLSearchParams({'$filter':'_esmojo_document_value eq '+row[m.PrimaryIdAttribute]+' and _esmojo_concertreeks_value eq '+seriesId+' and esmojo_koppelstatus eq '+choice('koppelstatus','active'),'$top':'2'}));
-   if(!Array.isArray(result.value)||!result.value.length||result.value.length>1||result['@odata.nextLink']||result.value.some(link=>link._esmojo_document_value!==row[m.PrimaryIdAttribute]||link._esmojo_concertreeks_value!==seriesId||link.esmojo_koppelstatus!==choice('koppelstatus','active')))throw Error('FORBIDDEN');
+   const owner=employeeId?'_esmojo_medewerker_value':'_esmojo_concertreeks_value',ownerId=employeeId||seriesId;
+   const links=await meta('esmojo_documentkoppeling'),result=await json(links.EntitySetName+'?'+new URLSearchParams({'$filter':'_esmojo_document_value eq '+row[m.PrimaryIdAttribute]+' and '+owner+' eq '+ownerId+' and esmojo_koppelstatus eq '+choice('koppelstatus','active'),'$top':'2'}));
+   if(!Array.isArray(result.value)||!result.value.length||result.value.length>1||result['@odata.nextLink']||result.value.some(link=>link._esmojo_document_value!==row[m.PrimaryIdAttribute]||link[owner]!==ownerId||link.esmojo_koppelstatus!==choice('koppelstatus','active')))throw Error('FORBIDDEN');
   }
   const session=await json('InitializeFileBlocksDownload',{method:'POST',body:{Target:{'@odata.type':'Microsoft.Dynamics.CRM.esmojo_document',[m.PrimaryIdAttribute]:row[m.PrimaryIdAttribute]},FileAttributeName:'esmojo_bestand'}});
   if(session.FileSizeInBytes!==row.esmojo_bestandsgrootte||typeof session.FileContinuationToken!=='string'||!session.FileContinuationToken)throw Error('SOURCE_CHANGED');
