@@ -97,3 +97,17 @@ grootte/MIME/hash en alle bytes. Eigenaren/document worden daarna opnieuw geleze
 om een gelijktijdige wijziging te weigeren. Een oude PDF met onbekende CSV blijft
 via haar eigen archiefversie leesbaar; die pending archiefversie wordt daardoor
 geen geverifieerde webdataset. Externe/onjuiste paginglinks worden geweigerd.
+
+## Native catalogus en webprojectie
+
+`read.js` projecteert uitsluitend geverifieerde native bronversies. De catalogus
+behoudt de bestaande groepering en datumtabs zonder een 45-dagengrens. De bronread
+vergelijkt de oorspronkelijke CSV File en alle 17 getypeerde cellen, identiteit,
+bronpositie, verliesvrije tekstblokken, context, tijdpunten, berekende statistieken
+en afzonderlijke KPI-kolommen. De bestaande webservice/parser blijft de DTO maken.
+Een afwijking veroorzaakt een fout; de read repareert niets. Historische OnTrack,
+TSC null/nul, verkoop versus aanwezigheid, middag/avond en nachtelijke incidenten
+zijn met synthetische migratiefixtures tegen dezelfde bestaande webservice getest.
+
+Dit is interne bouwdekking, nog geen actieve Reports-provider. Schrijfoperaties,
+workerintegratie, de schrijfstop en daadwerkelijke activering zijn nog niet klaar.
