@@ -18,7 +18,7 @@ permissions:
   contents: read
   id-token: write
 concurrency:
-  group: ${{ github.event.schedule == '*/5 * * * *' && 'reports-existing-mail' || 'incident-reference-rebuild' }}
+  group: ${{ github.event_name == 'push' && 'reports-native-publication-check' || github.event.schedule == '*/5 * * * *' && 'reports-existing-mail' || 'incident-reference-rebuild' }}
   cancel-in-progress: false
 jobs:
   update:
