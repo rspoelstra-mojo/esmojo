@@ -8,7 +8,7 @@ async function run(results,{daily=false,event='schedule',at='2026-11-08T23:00:00
  const env={GITHUB_EVENT_NAME:event,GITHUB_EVENT_SCHEDULE:daily?'0 22,23 * * *':'*/5 * * * *',ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example/oidc',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'};
  try{await vm.runInNewContext('(async()=>{'+code+'})()',{URL,Date:Clock,setTimeout:fn=>fn(),process:{env,exit:()=>{skipped=true;throw Error('SKIP');}},AbortSignal,console:{log(){}},fetch:async(url,options)=>{
   if(String(url).startsWith('https://identity.example'))return{ok:true,json:async()=>({value:'synthetic'})};
-  if(!options?.body){calls.push({url:String(url),body:null});return{headers:{get:name=>name==='x-esmojo-artist-runtime'?'1':null}};}
+  if(!options?.body){calls.push({url:String(url),body:null});return{headers:{get:name=>name==='x-esmojo-artist-runtime'?'2':null}};}
   calls.push({url:String(url),body:JSON.parse(options.body)});const result=results.shift();if(!result)throw Error('Unexpected extra request');return{ok:true,json:async()=>result};
  }});return calls;}catch(error){if(skipped)return calls;error.callCount=calls.length;throw error;}
 }
@@ -28,5 +28,5 @@ test('Dutch midnight follows daylight saving and skips the other UTC round',asyn
 
 
 test('publication waits for native artist runtime, initializes daily state and probes reads without mail',async()=>{
- const calls=await run([ready,ready,{ok:true,verified:true}],{event:'push',at:'2026-11-15T12:00:00Z'});assert.equal(calls[0].body,null);assert.equal(calls.length,4);assert.deepEqual(calls.at(-1).body,{artistVerify:true});assert.ok(calls.every(row=>row.url.endsWith('/incident-references-sync')));
+ const calls=await run([ready,ready,{ok:true,verified:true},...Array.from({length:5},()=>({ok:true}))],{event:'push',at:'2026-11-15T12:00:00Z'});assert.equal(calls[0].body,null);assert.equal(calls.length,9);assert.deepEqual(calls[3].body,{artistVerify:true});assert.deepEqual(calls.slice(4).map(row=>row.body.runtimeVerify),['authority','accounts','shows','reports','files']);assert.ok(calls.every(row=>row.url.endsWith('/incident-references-sync')));
 });

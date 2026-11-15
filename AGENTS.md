@@ -1,3 +1,13 @@
+## Brede native runtimecontrole (15 november 2026)
+
+Gebruiker vraagt dubbelcheck van actieve Dataverse-opslag en bestaande website-
+werking, inclusief herstel van bewezen fouten. Bestaande main/OIDC incidentroute
+mag vaste read-only auditstappen uitvoeren met actuele worker/admin- en alle drie
+modulerechten. Geen vrije actor/cursor/query, alleen veilige codes/tellingen. Native
+autoriteiten, accounts/foto's, Shows, rapportages, bestaande CSV/PDF en mailhistorie
+lezen. Geen zakelijke writes/testmail of tijdelijke authbypass. Supabase Auth blijft;
+Redis-activering afzonderlijk vaststellen, nooit voorbereide code als actief melden.
+
 ## Artiestenherstel overname account A (15 november 2026)
 
 Gebruiker vraagt gestopte account-A-taak PR190 af te maken. Nieuwe branch/PR vanaf
