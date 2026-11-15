@@ -41,3 +41,11 @@ test('combined public catalogue merges only identical identities with independen
  other={...show,generalConcertId:'different-series'};assert.throws(()=>context.esmojoTimetableCatalogue_({allVenues:true,includeSeries:true}),/REPORT_CATALOG/);
  for(const changed of [{artist:'Other act'},{date:'2026-11-06'},{venue:'Other venue'},{sourceUrl:'https://www.mojo.nl/concerten/other'}]){other={...show,...changed};assert.throws(()=>context.esmojoTimetableCatalogue_({allVenues:true}),/REPORT_CATALOG/);}
 });
+test('names projection does not select conflicting concert data; artist scope preserves every row for a selected concert ID',()=>{
+ const hash=name=>createHash('sha256').update(name).digest('hex'),iterator=items=>{let n=0;return{hasNext:()=>n<items.length,next:()=>items[n++]};},production={},ontrack={},root={getFoldersByName:()=>iterator([production])};let conflict={...show,artist:'Different act'};
+ const context=vm.createContext({ESMOJO_FOLDER_ID:'root',ESMOJO_ONTRACK_FOLDER_ID:'intake',normalizeArtistName:name=>name.toLowerCase(),esmojoOnTrackHash_:hash,DriveApp:{getFolderById:id=>id==='root'?root:ontrack},validTimetableDate:value=>value===show.date,esmojoOnTrackFile_:folder=>({getBlob:()=>({getDataAsString:()=>JSON.stringify({version:1,concerts:folder===production?[show,conflict]:[{...conflict,venue:'Conflicting venue'}],active:[]})})})});
+ vm.runInContext(readFileSync('google-apps-script/ShowTimetables.gs','utf8'),context);
+ assert.throws(()=>context.esmojoTimetableCatalogue_({allVenues:true}),/REPORT_CATALOG/);assert.deepEqual([...context.esmojoTimetableCatalogue_({allVenues:true,artistNamesOnly:true})],[show.artist,'Different act','Different act']);
+ assert.throws(()=>context.esmojoTimetableCatalogue_({allVenues:true,artistIds:['a_'+hash(show.artist.toLowerCase())]}),/REPORT_CATALOG/);
+ conflict={...conflict,concertId:'unrelated-concert'};const selected=context.esmojoTimetableCatalogue_({allVenues:true,artistIds:['a_'+hash(show.artist.toLowerCase())]});assert.equal(selected.size,1);assert.equal(selected.get(show.concertId).artist,show.artist);
+});

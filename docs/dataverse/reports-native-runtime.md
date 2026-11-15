@@ -6,8 +6,14 @@ De serverautoriteit én de Google-writerfence zijn daadwerkelijk naar Dataverse
 omgezet in run 43692823668, main 90ef01b. Er is geen Drive-runtimefallback.
 De volledige native provider uit PR 177 is gepubliceerd. PR 180 (main 53849a4,
 V1.121) corrigeert de expliciete File-select; run 43696509612 bevestigt native
-catalogus en oudste/nieuwste rapportage inclusief bytes. De Artiesten-nacontrole
-is nog geblokkeerd met SHOWS_UNAVAILABLE; PR 181 onderzoekt deze leesafhankelijkheid.
+catalogus en oudste/nieuwste rapportage inclusief bytes. De eerste Artiesten-nacontrole
+ontdekte een onnodige afhankelijkheid van de conflicterende oude openbare
+concertcatalogus. PR 184 leest een exact gevonden native rapportage rechtstreeks;
+het menu projecteert uitsluitend alle openbare namen, zonder een concertrecord
+te kiezen. Gekozen concertconflicten blijven strict en originelen onaangeraakt.
+De laatste productienacontrole staat in de main-run van
+[reports-cutover.yml](https://github.com/rspoelstra-mojo/esmojo/actions/workflows/reports-cutover.yml);
+een build of bronpublicatie alleen bewijst geen geslaagde nacontrole.
 De reguliere OnTrack-verwerking 43696509777 is geslaagd.
 
 De onafhankelijke voorcontrole is volledig afgerond: 221 rapportages,
