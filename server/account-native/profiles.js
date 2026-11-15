@@ -11,9 +11,9 @@ export function createNativeProfiles({env=process.env,store=createNativeAccountS
   if(policy.mode==='freeze'){if(mutations.includes(operation))throw Error('ACCESS_FROZEN');if(!policy.prepared)return legacy(operation,actor,payload);}
   if(!['freeze','dataverse'].includes(policy.mode)||!policy.verified||policy.mode==='dataverse'&&!policy.sourceGuard||!validAccountId(policy.settings?.superAdminId))throw Error('ACCOUNT_CORRUPT');
   if(operation==='bootstrap-check')throw Error('CONFLICT');
-  const own=await store.read(actor,{settings:policy.settings,photo:operation==='self'&&payload.authorizationOnly!==true});
+  const own=await store.read(actor,{settings:policy.settings,photo:false});
   if(!own||own.disabled||!own.activated&&!['self','activate'].includes(operation))throw Error('FORBIDDEN');
-  if(operation==='self'){if(payload.authorizationOnly===true)return accessFlags(own);const copy=policy.settings.emailTestCopy;return{...own,...isSuperAdministrator(own)&&copy?.actor===actor?{emailTestCopyTo:copy.address}:{}};}
+  if(operation==='self'){if(payload.authorizationOnly===true)return accessFlags(own);const full=await store.read(actor,{settings:policy.settings,photo:true,requireEnabled:true});const copy=policy.settings.emailTestCopy;return{...full,...isSuperAdministrator(own)&&copy?.actor===actor?{emailTestCopyTo:copy.address}:{}};}
   if(operation==='photo'){
    if(Object.keys(payload).join(',')!=='photo'||!payload.photo)throw Error('VALIDATION');validatePhoto(payload.photo);return store.write({...own,photo:payload.photo},root);
   }
