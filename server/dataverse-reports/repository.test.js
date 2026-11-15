@@ -38,3 +38,7 @@ test('historical PDF downloads use their own archive version and cannot borrow t
  assert.ok((await repo.file(archived)).bytes.equals(bytes));await assert.rejects(repo.file({...current,pdfKey:artifact.esmojo_sleutel}),/FORBIDDEN/);
  artifact.esmojo_layoutfingerprint='f'.repeat(64);await assert.rejects(repo.file(archived),/REPORT_CONFLICT/);assert.equal(writes(f),before);
 });
+test('private File metadata is explicitly selected even when ordinary entity reads omit the File column',async()=>{
+ const f=await nativeReaderFixture(),connection={...f.destination.connection,call:async(path,...args)=>{const response=await f.destination.connection.call(path,...args);if(path.startsWith('esmojo_documents')&&response.ok&&!new URLSearchParams(path.split('?')[1]||'').get('$select')?.split(',').includes('esmojo_bestand')){const value=await response.json();if(Array.isArray(value.value))for(const row of value.value)delete row.esmojo_bestand;else delete value.esmojo_bestand;return Response.json(value);}return response;}},repo=createNativeReportsRepository({connection}),before=writes(f),read=await repo.file(scope(f));
+ assert.equal(read.bytes.toString(),String(f.csv.content));assert.equal(writes(f),before);assert.ok(f.destination.calls.some(call=>call.path.startsWith('esmojo_documents(')&&call.path.includes('%24select=')));
+});

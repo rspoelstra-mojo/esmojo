@@ -18,10 +18,10 @@ export function createNativeReportsRepository({env=process.env,connection,writer
  }
  async function byKey(table,value){
   schema(table);if(!key(value))throw Error('VALIDATION');const row=await writer.find({table,key:value});
-  if(!row)return null;if(row.esmojo_sleutel!==value)throw Error('REPORT_CONFLICT');return validRow(table,row);
+  if(!row)return null;if(row.esmojo_sleutel!==value)throw Error('REPORT_CONFLICT');const valid=await validRow(table,row);return table==='esmojo_document'?byId(table,valid[(await writer.meta(table)).PrimaryIdAttribute]):valid;
  }
  async function byId(table,id){
-  schema(table);if(!guid(id))throw Error('VALIDATION');const m=await writer.meta(table),row=await writer.json(m.EntitySetName+'('+id+')');
+  schema(table);if(!guid(id))throw Error('VALIDATION');const m=await writer.meta(table),select=table==='esmojo_document'?'?'+new URLSearchParams({'$select':[...new Set([m.PrimaryIdAttribute,...schema(table).columns.map(column=>column.target?'_'+column.logical_name+'_value':column.logical_name)])].join(',')}):'',row=await writer.json(m.EntitySetName+'('+id+')'+select);
   if(!row)throw Error('NOT_FOUND');if(row[m.PrimaryIdAttribute]!==id)throw Error('REPORT_CONFLICT');return validRow(table,row);
  }
  async function query(table,{filter,orderBy,select}={}){
@@ -68,8 +68,12 @@ export function createNativeReportsRepository({env=process.env,connection,writer
    if(artifact._esmojo_rapportage_value!==owner.reportId||artifact.esmojo_validatiestatus!==reportChoice('bronstatus','verified')||artifact.esmojo_inhoudsha256!==owner.version.esmojo_inhoudsha256)throw Error('REPORT_CONFLICT');
   }
   const document=await byId('esmojo_document',artifact._esmojo_document_value),documentId=await idOf('esmojo_document',document),m=await writer.meta('esmojo_document'),limit=(pdfKey?3:2)*1024*1024;
-  if(!document.esmojo_bestand||document.esmojo_documentstatus!==reportChoice('bronstatus','verified')||!key(document.esmojo_sha256)||!Number.isSafeInteger(document.esmojo_bestandsgrootte)||document.esmojo_bestandsgrootte<1||document.esmojo_bestandsgrootte>limit||typeof document.esmojo_bestandsnaam!=='string'||!document.esmojo_bestandsnaam||/[\x00-\x1f/\\]/.test(document.esmojo_bestandsnaam))throw Error('REPORT_UNAVAILABLE');
-  if(pdfKey?document.esmojo_mimetype!=='application/pdf':!['text/csv','application/csv','text/plain','application/vnd.ms-excel'].includes(document.esmojo_mimetype)||document.esmojo_sha256!==artifact.esmojo_inhoudsha256)throw Error('REPORT_UNAVAILABLE');
+  const unavailable=stage=>{throw Object.assign(Error('REPORT_UNAVAILABLE'),{reportsReadStage:stage});};
+  if(!document.esmojo_bestand)unavailable('DOC_FILE');
+  if(document.esmojo_documentstatus!==reportChoice('bronstatus','verified'))unavailable('DOC_STATUS');
+  if(!key(document.esmojo_sha256)||!Number.isSafeInteger(document.esmojo_bestandsgrootte)||document.esmojo_bestandsgrootte<1||document.esmojo_bestandsgrootte>limit)unavailable('DOC_METADATA');
+  if(typeof document.esmojo_bestandsnaam!=='string'||!document.esmojo_bestandsnaam||/[\x00-\x1f/\\]/.test(document.esmojo_bestandsnaam))unavailable('DOC_NAME');
+  if(pdfKey?document.esmojo_mimetype!=='application/pdf':!['text/csv','application/csv','text/plain','application/vnd.ms-excel'].includes(document.esmojo_mimetype)||document.esmojo_sha256!==artifact.esmojo_inhoudsha256)unavailable('DOC_MIME');
   if(pdfKey&&artifact.esmojo_layoutfingerprint!==digest({id:artifact.esmojo_oudrapportid,layout:artifact.esmojo_layoutversie||null,pdfHash:document.esmojo_sha256}))throw Error('REPORT_CONFLICT');
   const session=await writer.json('InitializeFileBlocksDownload',{method:'POST',body:{Target:{'@odata.type':'Microsoft.Dynamics.CRM.esmojo_document',[m.PrimaryIdAttribute]:documentId},FileAttributeName:'esmojo_bestand'}});
   if(session?.FileSizeInBytes!==document.esmojo_bestandsgrootte||typeof session.FileContinuationToken!=='string'||!session.FileContinuationToken)throw Error('SOURCE_CHANGED');

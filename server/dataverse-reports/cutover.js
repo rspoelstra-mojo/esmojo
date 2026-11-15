@@ -12,13 +12,17 @@ import {reportsSchemaHash} from '../reports-schema.js';
 import {canonical,digest} from '../show-migration-writer.js';
 export const reportsCutoverType='reports-cutover-v1';
 const drainMs=11*60000;
+const smokeRead=async(stage,run)=>{try{return await run();}catch(error){error.reportsSmokeStage=stage;throw error;}};
 const withoutRevision=value=>JSON.parse(JSON.stringify(value),(key,item)=>key==='revision'?undefined:item);
 export async function ensureReportsCutover({store,tasks,now=Date.now,resumeTechnical=false,authority,intake}){
  const [migration,validation]=await Promise.all([store.get('reports-migration-v1'),store.get(reportsValidationType)]),state=migration?.state,checked=validation?.state;
  if(state?.status!=='complete'||state.lease||state.expiresAt<=now()||checked?.status!=='complete'||checked.lease||checked.actor!==state.actor||checked.expiresAt!==state.expiresAt)throw Error('VALIDATION_APPROVAL_REQUIRED');
  if(resumeTechnical){const row=await store.get(reportsCutoverType),p=row?.state;if(p?.status==='blocked'){
-  if(p.actor!==state.actor||p.expiresAt!==state.expiresAt||p.handlerVersion!==1||p.lease||p.uncertain||p.cursor!==null||p.public?.code!=='REPORT_CONFLICT'||!authority||!intake)throw Error('TASK_BUSY');
-  if((await authority.read()).value.mode!=='legacy'||(await intake.policy(state.actor)).mode!=='legacy')throw Error('TASK_BUSY');
+  if(p.actor!==state.actor||p.expiresAt!==state.expiresAt||p.handlerVersion!==1||p.lease||p.uncertain||!authority||!intake)throw Error('TASK_BUSY');
+  let cursor;try{cursor=p.cursor===null?null:JSON.parse(p.cursor);}catch{throw Error('TASK_CORRUPT');}
+  const preflight=p.cursor===null&&p.public?.code==='REPORT_CONFLICT',smoke=cursor?.phase==='smoke'&&cursor.run===p.epoch&&cursor.schema===reportsSchemaHash&&cursor.migration===state.epoch&&(p.public?.code==='REPORTS_VALIDATION_UNCONFIRMED'||/^REPORTS_SMOKE_[A-Z_0-9]+$/.test(p.public?.code||''));
+  if(!preflight&&!smoke)throw Error('TASK_BUSY');const observed=await authority.read(),google=await intake.policy(state.actor);
+  if(preflight&&(observed.value.mode!=='legacy'||google.mode!=='legacy')||smoke&&(observed.value.mode!=='dataverse'||observed.value.epoch!==p.epoch||google.mode!=='dataverse'||google.epoch!==p.epoch))throw Error('TASK_BUSY');if(smoke)await authority.assert(observed);
   return tasks.control({operation:'resume',type:reportsCutoverType},state.actor,{authorizationExpiresAt:state.expiresAt,expectedEpoch:p.epoch,expectedSequence:p.sequence});
  }}
  return tasks.control({operation:'start',type:reportsCutoverType},state.actor,{authorizationExpiresAt:state.expiresAt});
@@ -84,13 +88,13 @@ export function createReportsCutover({env=process.env,store=createTaskStore({env
    }
    if(s.phase==='smoke'){
     await authority.assert();const google=await bridgePolicy(actor);if(google.mode!=='dataverse'||google.epoch!==runId)throw Error('REPORT_CONFLICT');
-    const current=await reader.current();if(!current.length&&s.total)throw Error('REPORT_CONFLICT');const oldest=[...current].sort((a,b)=>a.show.date.localeCompare(b.show.date))[0],latest=[...current].sort((a,b)=>b.show.date.localeCompare(a.show.date))[0];
-    if(oldest)await reader.source(oldest.show.key);if(latest&&latest.show.key!==oldest?.show.key)await reader.source(latest.show.key);
-    const profile=await profiles('self',actor);if(oldest&&hasModule(profile,'artists')){const [{createShowsStore},{createArtistService},{normalizeArtistName}]=await Promise.all([import('../shows-store.js'),import('../artist-service.js'),import('../../shared/artist-catalogue.js')]),artists=createArtistService({env,shows:createShowsStore({env})}),id='a_'+digest(normalizeArtistName(oldest.show.name)),result=await artists.show(actor,{artistId:id,venue:oldest.show.venue,date:oldest.show.date,...oldest.show.performance?{performance:oldest.show.performance}:{}});if(result.reportId!==oldest.show.key||!result.kpis)throw Error('REPORT_CONFLICT');s.smokeArtists=true;}
+    const current=await smokeRead('CATALOGUE',()=>reader.current());if(!current.length&&s.total)throw Error('REPORT_CONFLICT');const oldest=[...current].sort((a,b)=>a.show.date.localeCompare(b.show.date))[0],latest=[...current].sort((a,b)=>b.show.date.localeCompare(a.show.date))[0];
+    if(oldest)await smokeRead('OLDEST',()=>reader.source(oldest.show.key));if(latest&&latest.show.key!==oldest?.show.key)await smokeRead('LATEST',()=>reader.source(latest.show.key));
+    const profile=await profiles('self',actor);if(oldest&&hasModule(profile,'artists')){const [{createShowsStore},{createArtistService},{normalizeArtistName}]=await Promise.all([import('../shows-store.js'),import('../artist-service.js'),import('../../shared/artist-catalogue.js')]),artists=createArtistService({env,shows:createShowsStore({env})}),id='a_'+digest(normalizeArtistName(oldest.show.name)),result=await smokeRead('ARTISTS',()=>artists.show(actor,{artistId:id,venue:oldest.show.venue,date:oldest.show.date,...oldest.show.performance?{performance:oldest.show.performance}:{}}));if(result.reportId!==oldest.show.key||!result.kpis)throw Error('REPORT_CONFLICT');s.smokeArtists=true;}
     s.smokeReads=oldest?oldest===latest?1:2:0;s.phase='complete';return view(s);
    }
    throw Error('TASK_CORRUPT');
   },
-  failure(error){const inherited=validate.failure(error),temporary=['TASK_BUSY','SETUP_TEMPORARY','SETUP_THROTTLED','ONTRACK_REPORT_UNAVAILABLE'].includes(error.message);return{...inherited,code:error.reportsCutoverStage==='native-catalogue'?'REPORTS_NATIVE_CATALOGUE_CONFLICT':error.reportsCutoverStage==='settings'?'REPORTS_SETTINGS_CONFLICT':['REPORT_CONFLICT','REPORT_WRITE_UNCONFIRMED','REPORTS_AUTHORITY_INVALID','REPORTS_NOT_ACTIVE'].includes(error.message)?error.message:inherited.code,retryable:temporary||inherited.retryable,uncertain:error.message==='REPORT_WRITE_UNCONFIRMED',error:'De Rapportages-omschakeling wacht of is gestopt voor controle; oorsprong en checkpoints blijven behouden.'};}
+  failure(error){const smokeStage=['CATALOGUE','OLDEST','LATEST','ARTISTS'].includes(error.reportsSmokeStage)?error.reportsSmokeStage:null,readStage=['DOC_FILE','DOC_STATUS','DOC_METADATA','DOC_NAME','DOC_MIME'].includes(error.reportsReadStage)?error.reportsReadStage:null,known=['NOT_FOUND','REPORT_UNAVAILABLE','SOURCE_CHANGED','REPORT_CONFLICT','FORBIDDEN','ARTIST_CATALOGUE','SHOWS_UNAVAILABLE','SHOWS_CONFIG','DATAVERSE_SHOWS_CONFLICT','DRIVE_UNAVAILABLE','MIGRATION_REJECTED'].includes(error.message)?error.message:Number.isInteger(error.migrationRead?.status)?'HTTP_'+error.migrationRead.status:error instanceof TypeError?'TYPE':'UNCONFIRMED',smokeCode=smokeStage?'REPORTS_SMOKE_'+smokeStage+'_'+(readStage||known):null;const inherited=validate.failure(error),temporary=['TASK_BUSY','SETUP_TEMPORARY','SETUP_THROTTLED','ONTRACK_REPORT_UNAVAILABLE'].includes(error.message);return{...inherited,code:smokeCode||(error.reportsCutoverStage==='native-catalogue'?'REPORTS_NATIVE_CATALOGUE_CONFLICT':error.reportsCutoverStage==='settings'?'REPORTS_SETTINGS_CONFLICT':['REPORT_CONFLICT','REPORT_WRITE_UNCONFIRMED','REPORTS_AUTHORITY_INVALID','REPORTS_NOT_ACTIVE'].includes(error.message)?error.message:inherited.code),retryable:temporary||inherited.retryable,uncertain:error.message==='REPORT_WRITE_UNCONFIRMED',error:'De Rapportages-omschakeling wacht of is gestopt voor controle; oorsprong en checkpoints blijven behouden.'};}
  };
 }
