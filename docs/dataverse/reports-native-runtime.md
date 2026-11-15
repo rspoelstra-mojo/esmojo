@@ -111,3 +111,34 @@ zijn met synthetische migratiefixtures tegen dezelfde bestaande webservice getes
 
 Dit is interne bouwdekking, nog geen actieve Reports-provider. Schrijfoperaties,
 workerintegratie, de schrijfstop en daadwerkelijke activering zijn nog niet klaar.
+
+## Schrijfcomponenten (interne bouw, nog niet gerouteerd)
+
+`mutations.js` beperkt conditionele batches tot de elf Reports-tabellen; geen
+DELETE, File-mutatie of write naar een gedeelde Shows-tabel. Bij een verloren
+bevestiging wordt de batch niet herhaald. Alle verwachte getypeerde velden en
+lookups van alle rijen worden onafhankelijk teruggelezen. Een afwijking blijft
+onbevestigd. De bestaande verbinding blijft tokenvernieuwing beheren.
+
+`operational.js` gebruikt versleutelde technische coördinatie met ETag en lease.
+Vóór een zakelijke write staat een blijvende onzekerheidsfence op schijf. Die
+wordt pas na bevestiging opgeheven; leaseverloop geeft geen tweede schrijver vrij.
+Dit is geen extra achtergrondmachtiging: iedere servicebewerking autoriseert vers.
+
+`archive.js` behoudt private oorspronkelijke PDF's, verzendhistorie en de eerste
+opening. Openingsregistratie vereist de actuele eigen aflevering en hash van het
+bestaande ontvangsttoken, en wijzigt geen afleverstatus. `recipients.js` behoudt
+ook bij lege selectie een conditionele revisie; bestaande selectierijen blijven.
+`mail.js` reserveert/bevestigt native afleveringen met bestaande providerkeys,
+bevroren templates/ontvangers, actuele rechten, vijfminutenlease/backoff en de
+bestaande 23-uursreviewgrens. Deze component verzendt zelf geen mail.
+
+`publication.js` bereidt nieuwe CSV-datasets hervatbaar voor in oorspronkelijke
+File plus getypeerde rijen. Publicatie volgt pas na bestands- en identiteitcontrole,
+via CAS op de oorspronkelijke pointer/generatie. Een dubbel fysiek bestand voor
+hetzelfde logische dataset houdt de oude bronanker en versienummer. Een al
+geverifieerde dataset wordt alleen geïnspecteerd, nooit stil gerepareerd.
+
+De oorspronkelijke onafhankelijke productievoorcontrole is inmiddels voltooid:
+221 rapportages, 8517 records, 226 bestanden, bevestigd in achtergrondrun
+43681649105. Een nieuwe laatste controle onder schrijfstop blijft vereist.

@@ -15,3 +15,9 @@ Geen echte testmails/fictieve bedrijfsgegevens; originelen behouden.
 Read-only productievalidatie is complete: 221 rapportages, 8517 records, 226 files,
 bevestigd in achtergrondrun 43681649105. Dat is nog geen laatste controle onder
 schrijfstop en geen runtime-omschakeling. Gebruiker doet de gebruikerstest later.
+
+Implementatie in uitvoering: Reports-only CAS met volledige terugleescontrole,
+private PDF/mailarchiefreads, eerste opening, ontvangerselectie inclusief leeg,
+versleuteld technisch schrijfslot met blijvende onzekerheidsfence, bestaande
+mailreserveringen/bevestigingen zonder verzending en hervatbare datasetpublicatie.
+Nog geen providerrouter of Apps Script-aanlevergrens/stop; dus geen activering.

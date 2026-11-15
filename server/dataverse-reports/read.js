@@ -28,7 +28,7 @@ export function createNativeReportReader({repository=createNativeReportsReposito
   if(reportSourceType(show)==='tsc-historical'&&!validTscShowData(show.showData))fail();
   return{provenance,show};
  }
- async function catalogue(){
+ async function current(){
   const [headers,versions,sources]=await Promise.all([
    repo.query('esmojo_rapportage',{select:['esmojo_bronidentiteit','esmojo_beschikbaar','_esmojo_actueleversie_value','esmojo_publicatiegeneratie']}),
    repo.query('esmojo_rapportversie',{select:['_esmojo_rapportage_value','_esmojo_gekozenbron_value','esmojo_versiestatus','esmojo_inhoudsha256','esmojo_versiefingerprint','esmojo_parsercontract','esmojo_rekencontract']}),
@@ -39,9 +39,13 @@ export function createNativeReportReader({repository=createNativeReportsReposito
    if(header.esmojo_beschikbaar!==true)continue;
    const id=await repo.idOf('esmojo_rapportage',header),version=versionMap.get(header._esmojo_actueleversie_value),source=version&&sourceMap.get(version._esmojo_gekozenbron_value);
    if(!version||!source||version._esmojo_rapportage_value!==id||source._esmojo_rapportage_value!==id||version.esmojo_versiestatus!==verified||source.esmojo_validatiestatus!==verified||version.esmojo_inhoudsha256!==source.esmojo_inhoudsha256||version.esmojo_parsercontract!==parserContract||version.esmojo_rekencontract!==calculationContract)fail();
-   const {show}=sourceMetadata(source);if(header.esmojo_bronidentiteit!==reportIdentity(show))fail();
-   shows.push({concertId:show.key,name:show.name,venue:show.venue,date:show.date,...(show.performance?{performance:show.performance}:{}),revision:digest({version:version.esmojo_versiefingerprint,generation:header.esmojo_publicatiegeneratie})});
+   const {show,provenance}=sourceMetadata(source);if(header.esmojo_bronidentiteit!==reportIdentity(show))fail();
+   shows.push({concertId:show.key,name:show.name,venue:show.venue,date:show.date,...(show.performance?{performance:show.performance}:{}),revision:digest({version:version.esmojo_versiefingerprint,generation:header.esmojo_publicatiegeneratie}),show,sourceId:source.esmojo_externebronid,sourceHash:source.esmojo_inhoudsha256,versionKey:version.esmojo_sleutel,reportKey:header.esmojo_sleutel,publishedAt:provenance.validation.validatedAt});
   }
+  return shows;
+ }
+ async function catalogue(){
+  const shows=(await current()).map(({concertId,name,venue,date,performance,revision})=>({concertId,name,venue,date,...performance?{performance}:{},revision}));
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
   return reportCatalogue(shows,today);
  }
@@ -58,6 +62,16 @@ export function createNativeReportReader({repository=createNativeReportsReposito
    }
    const text=parts.map(part=>part.esmojo_inhoud).join('');if(text.length!==entry.length||digest(text)!==entry.sha256)fail();return text;
   },finish(){if(used.size!==blocks.length)fail();}};
+ }
+ async function summary(concertId){
+  concertId=validateWebReportRequest({concertId});const reportKey=recordKey('esmojo_rapportage',reportIdentity({key:concertId})),header=await repo.byKey('esmojo_rapportage',reportKey);if(!header?.esmojo_beschikbaar)throw Error('NOT_FOUND');
+  const version=await repo.byId('esmojo_rapportversie',header._esmojo_actueleversie_value),owner=await repo.versionOwner(reportKey,version.esmojo_sleutel),source=await repo.byId('esmojo_rapportbron',version._esmojo_gekozenbron_value),{show}=sourceMetadata(source);
+  if(show.key!==concertId||source._esmojo_rapportage_value!==owner.reportId||source.esmojo_validatiestatus!==verified||version.esmojo_inhoudsha256!==source.esmojo_inhoudsha256||version.esmojo_parsercontract!==parserContract||version.esmojo_rekencontract!==calculationContract)fail();
+  const [contexts,allBlocks]=await Promise.all([repo.children('esmojo_rapportcontext','esmojo_rapportversie',owner.versionId),repo.children('esmojo_rapporttekstblok','esmojo_rapportversie',owner.versionId)]);if(contexts.length!==1)fail();
+  const context=parse(contexts[0].esmojo_snapshot_json);if(digest(context)!==version.esmojo_contexthash||digest(context)!==contexts[0].esmojo_contextfingerprint)fail();
+  const blocks=allBlocks.filter(row=>!row._esmojo_rapportincident_value),text=textReader(blocks,owner.versionId),stats=text.read(version,'statistiek_json');if(digest(stats)!==version.esmojo_statistiekhash)fail();text.finish();const statistics=parse(stats);
+  for(const [prefix,group,names]of [['medisch','medical',{totaal:'total',behandelingen:'treatments',zelfzorg:'selfcare',onwel:'unwell',contusie:'contusion',ambulance:'ambulance'}],['beveiliging','security',{totaal:'total',verbaal:'verbal',fysiek:'physical',baldadigheid:'mischief',uitzettingen:'evictions',aanhoudingen:'arrests'}]])for(const [name,field]of Object.entries(names))if((version['esmojo_'+prefix+'_'+name]??null)!==(statistics.kpis?.[group]?.[field]??null))fail();
+  if((await repo.byKey('esmojo_rapportage',reportKey))?.['@odata.etag']!==header['@odata.etag']||(await repo.byId('esmojo_rapportversie',owner.versionId))['@odata.etag']!==version['@odata.etag'])throw Error('SOURCE_CHANGED');return{show,context,statistics,sourceId:source.esmojo_externebronid,sourceHash:source.esmojo_inhoudsha256,versionKey:version.esmojo_sleutel,reportKey};
  }
  async function source(concertId){
   concertId=validateWebReportRequest({concertId});
@@ -96,5 +110,5 @@ export function createNativeReportReader({repository=createNativeReportsReposito
   const fresh=await repo.byKey('esmojo_rapportage',reportKey);if(fresh?.['@odata.etag']!==file.header['@odata.etag'])throw Error('SOURCE_CHANGED');
   return{show:{...show,...(snapshot.sourceUrl?{sourceUrl:snapshot.sourceUrl}:{})},photo:snapshot.photo||null,series,csvBase64:file.bytes.toString('base64'),sourceHash:file.sha256,modifiedAt:file.artifact.esmojo_brongewijzigdop,timetable:snapshot.timetable||null};
  }
- return{catalogue,source};
+ return{catalogue,source,current,summary};
 }

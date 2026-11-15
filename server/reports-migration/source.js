@@ -1,11 +1,11 @@
-import {createOnTrackReportStore} from '../ontrack-report/service.js';
+import {createReportsBridge} from '../ontrack-report/service.js';
 import {createNativeShowState} from '../dataverse-shows/state.js';
 import {assertNativeAuthority,nativeShowsSelected} from '../dataverse-shows/authority.js';
 import {createManagedShowsRouting,managedShowsRouting} from '../dataverse-shows/routing.js';
 import {mapShow} from '../show-migration-map.js';
 import {digest} from '../show-migration-writer.js';
 // The bridge only exports fixed report sources; no arbitrary URL/Drive-ID route.
-export function createReportsMigrationSource({env=process.env,store=createOnTrackReportStore({env}),nativeState=createNativeShowState({env})}={}){
+export function createReportsMigrationSource({env=process.env,store=createReportsBridge({env}),nativeState=createNativeShowState({env})}={}){
  const route=createManagedShowsRouting({env,repository:nativeState.repo});
  const scoped=entry=>({show:entry.show,sources:entry.sources});
  async function readNativeGeneral(entry){
