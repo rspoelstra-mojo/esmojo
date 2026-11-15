@@ -39,7 +39,7 @@ export function createNativeReportsService({env=process.env,repository:repo=crea
   'timetable-candidates':async()=>{await authorize(null,{worker:true});return intake.timetableCandidates();},'timetable-save':async(actor,input)=>{await authorize(null,{worker:true});return intake.saveTimetable(input.concertId,input.snapshot);},
   'timetable-read':async(actor,input)=>{await authorize(actor);try{return{timetable:(await reader.summary(input.concertId)).context.timetable||null};}catch(error){if(error.message!=='NOT_FOUND')throw error;return intake.timetable(input.concertId);}},
   'email-context':async(actor,input)=>{await authorize(actor,{admin:true});const current=(await reader.current()).find(row=>row.show.key===input.concertId);if(!current)throw Error('REPORT_CATALOG');return{managerName:(await dependencies.context((await dependencies.choices()).find(row=>row.key===current.show.key)||current.show)).contextGeneral.eventSafetyManager};},
-  'ontrack-status':actor=>management.status(actor),'ontrack-recipients':(actor,input)=>recipients.save(actor,input),
+  'ontrack-status':actor=>management.status(actor),'ontrack-recipients':async(actor,input)=>{await recipients.save(actor,input);return management.status(actor);},
  };
  if(reportsCoverage.some(name=>!Object.hasOwn(operations,name)&&!['artist-catalogue','artist-profile','artist-show','incident-read','incident-source','incident-counts'].includes(name)))throw Error('REPORT_CONFIG');
  return{reader,related,authorize,operations,async request(operation,actor,input={}){if(!Object.hasOwn(operations,operation))throw Error('VALIDATION');return operations[operation](actor,input);}};

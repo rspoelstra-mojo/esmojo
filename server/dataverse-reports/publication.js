@@ -18,6 +18,7 @@ export function createNativeReportPublication({writer,repository:repo,mutations,
  }
  async function advance({entry,bundle,item=bundle?.sources?.[0],bytes,cursor=null}){
   if(!entry?.show||!bundle||bundle.show.key!==entry.show.key||bundle.sources.length!==1||item!==bundle.sources[0]||!Buffer.isBuffer(bytes)||digest(bytes)!==item.sha256||bundle.files.length!==1)throw Error('VALIDATION');
+  const invalid=item.validation?.state==='invalid';if(!invalid&&item.validation?.state!=='valid')throw Error('VALIDATION');
   const proof=digest({entry,bundle}),header=await repo.byKey('esmojo_rapportage',headerRef(bundle.show).key);
   let state=cursor?structuredClone(cursor):null;
   if(!state){
@@ -28,15 +29,15 @@ export function createNativeReportPublication({writer,repository:repo,mutations,
   }
   if(state.version!==1||state.proof!==proof||!['base','dataset','file','verified','publish','complete'].includes(state.phase)||!Number.isSafeInteger(state.row)||state.row<0||!Number.isSafeInteger(state.number)||state.number<1)throw Error('REPORT_CONFLICT');
   if(state.phase==='complete')return state;
-  const plan=state.phase==='base'?null:await expectedPlan(bundle,item,bytes,state.number);
+  const plan=state.phase==='base'||invalid?null:await expectedPlan(bundle,item,bytes,state.number);
   if(state.phase==='base'||state.phase==='dataset'){
    const records=state.phase==='base'?[...documentRows(bundle),...sourceRows(bundle)]:plan.records;
    if(state.row<records.length){const batch=[],first=records[state.row];for(const row of records.slice(state.row,state.row+32)){if(row.table!==first.table||Buffer.byteLength(canonical([...batch,row]))>1800000)break;batch.push(row);}if(!batch.length)throw Error('REPORT_CONFLICT');if(plan?.existingVerified){const inspected=await writer.inspectMany(batch);if(inspected.missing)throw Error('REPORT_CONFLICT');}else await writer.ensureMany(batch);state.row+=batch.length;}
-   if(state.row===records.length){state.row=0;state.phase=state.phase==='base'?'dataset':'file';}return state;
+   if(state.row===records.length){state.row=0;state.phase=state.phase==='base'&&!invalid?'dataset':'file';}return state;
   }
   if(state.phase==='file'){
    const file=filePlan(bundle)[0],doc=await repo.byKey('esmojo_document',documentRows(bundle)[0].key);if(doc?.esmojo_documentstatus===reportChoice('bronstatus','verified')&&!doc.esmojo_bestand)throw Error('REPORT_CONFLICT');state.fileState=await migrateFileStep({file,state:state.fileState,writer,now,read:async offset=>({size:bytes.length,sha256:item.sha256,offset,base64:bytes.subarray(offset,Math.min(offset+1048576,bytes.length)).toString('base64')})});
-   if(state.fileState?.done){await writer.markFileVerified(file);state.fileState=null;state.phase='verified';}return state;
+   if(state.fileState?.done){await writer.markFileVerified(file);state.fileState=null;state.phase=invalid?'complete':'verified';}return state;
   }
   if(state.phase==='verified'){
    const version=await repo.byKey('esmojo_rapportversie',plan.version.key);if(!version)throw Error('REPORT_CONFLICT');

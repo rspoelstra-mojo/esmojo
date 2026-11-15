@@ -24,6 +24,6 @@ test('unchanged CSV-per-show intake publishes natively through the existing pars
 });
 test('invalid incoming CSV never replaces an existing report or creates fictional business incidents',async()=>{
  const f=await fixture(),before=await f.reader.source(f.show.concertId),incidents=f.destination.rows('esmojo_rapportincident').length;f.drive.advance(1000);f.drive.addCsv(f.show,{content:'not,the,CSV,contract'});
- assert.equal((await f.service.synchronize()).invalid,1);assert.equal((await f.reader.source(f.show.concertId)).sourceHash,before.sourceHash);assert.equal(f.destination.rows('esmojo_rapportincident').length,incidents);
+ assert.equal((await f.service.synchronize()).invalid,1);assert.equal((await f.reader.source(f.show.concertId)).sourceHash,before.sourceHash);assert.equal(f.destination.rows('esmojo_rapportincident').length,incidents);assert.ok([...f.destination.files.values()].some(bytes=>bytes.toString()==='not,the,CSV,contract'));assert.equal(f.destination.rows('esmojo_rapportbron').length,2);
 });
 test('current access is required before scanning the intake boundary',async()=>{const f=await fixture();f.deny();const before=f.drive.calls.length;await assert.rejects(f.ingest.scan(null),/FORBIDDEN/);assert.equal(f.drive.calls.length,before);});

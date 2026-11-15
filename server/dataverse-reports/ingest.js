@@ -1,3 +1,4 @@
+import {calculateReport} from '../ontrack-report/data.js';
 import {digest} from '../show-migration-writer.js';
 import {groupReportEntries} from '../reports-migration/writer.js';
 import {reportChoice} from '../reports-migration/contract.js';
@@ -30,20 +31,21 @@ export function createNativeReportIngest({intake,processing,dependencies,publica
  async function commit(actor,input){
   if(!['valid','invalid'].includes(input?.state)||input.state==='valid'&&!text(input.sourceHash)||input.errorCode!==null&&typeof input.errorCode!=='string')throw Error('VALIDATION');
   return operational.exclusive(auth(actor),async(state,{markWrite})=>{
-   const found=await selected(actor,input),read=input.state==='valid'?await intake.read(found.file):null;
+   const found=await selected(actor,input),read=text(input.sourceHash)?await intake.read(found.file):null;
    if(read&&read.sha256!==input.sourceHash)throw Error('SOURCE_CHANGED');let value={...found.source};
-   if(input.state==='invalid'){value.web={context:found.context,state:'invalid',errorCode:input.errorCode};await markWrite();await processing.write(found.previous.row,value);return{ok:true};}
+   if(input.state==='invalid'&&!read){value.web={context:found.context,state:'invalid',errorCode:input.errorCode};Object.assign(value,{status:'invalid',errorCode:input.errorCode,errorRow:null});await markWrite();await processing.write(found.previous.row,value);return{ok:true};}
    let job=found.web?.bundle?found.web:null;
    if(!job){
-    const context=await dependencies.context(found.show),item={source:{...found.metadata,context:digest({metadata:found.metadata,mojo:input.mojo})},sha256:read.sha256,validation:{state:'valid',sourceHash:read.sha256,context:digest({metadata:found.metadata,mojo:input.mojo}),validatedAt:new Date(now()).toISOString(),errorCode:null,mojo:input.mojo},previousValidation:null},bundle={version:1,show:found.show,sources:[item],groups:[],files:[{fileId:found.file.id,name:found.file.name,mime:found.file.mime,size:found.file.size,modifiedAt:found.file.modifiedAt,sha256:read.sha256,kind:'csv'}],...context},entry=groupReportEntries([{...dependencies.entry(found.show),sources:[{id:found.file.id,name:found.file.name,modifiedAt:found.file.modifiedAt,size:found.file.size}]}])[0];
-    job={context:found.context,state:'preparing',bundle,entry,cursor:null};value.web=job;await markWrite();found.previous.row=await processing.write(found.previous.row,value);
+    const context=input.state==='valid'?await dependencies.context(found.show):{general:null,timetable:null},item={source:{...found.metadata,context:digest({metadata:found.metadata,mojo:input.mojo})},sha256:read.sha256,validation:{state:input.state,sourceHash:read.sha256,context:digest({metadata:found.metadata,mojo:input.mojo}),validatedAt:new Date(now()).toISOString(),errorCode:input.errorCode,mojo:input.mojo},previousValidation:null},bundle={version:1,show:found.show,sources:[item],groups:[],files:[{fileId:found.file.id,name:found.file.name,mime:found.file.mime,size:found.file.size,modifiedAt:found.file.modifiedAt,sha256:read.sha256,kind:'csv'}],...context},entry=groupReportEntries([{...dependencies.entry(found.show),sources:[{id:found.file.id,name:found.file.name,modifiedAt:found.file.modifiedAt,size:found.file.size}]}])[0];
+    job={context:found.context,state:'preparing',desiredState:input.state,bundle,entry,cursor:null};value.web=job;await markWrite();found.previous.row=await processing.write(found.previous.row,value);
    }
    const deadline=now()+100000;
    for(let n=0;n<30&&now()<deadline;n++){
     await authorize(actor,{worker:actor===null});await markWrite();job.cursor=await publication.advance({entry:job.entry,bundle:job.bundle,bytes:read.bytes,cursor:job.cursor});
-    if(job.cursor.phase==='complete')job.state='valid';value.web=job;found.previous.row=await processing.write(found.previous.row,value);if(job.state==='valid')break;
+    if(job.cursor.phase==='complete')job.state=job.desiredState||'valid';value.web=job;found.previous.row=await processing.write(found.previous.row,value);if(job.state==='valid'||job.state==='invalid')break;
    }
-   return{ok:true,state:job.state==='valid'?'ready':'processing'};
+   if(job.state==='invalid'){let row=null;try{calculateReport(read.bytes,{generatedAt:found.file.modifiedAt});}catch(error){if(Number.isSafeInteger(error.row))row=error.row;}Object.assign(value,{status:'invalid',errorCode:input.errorCode,errorRow:row});await processing.write(found.previous.row,value);}
+   return{ok:true,state:job.state==='valid'?'ready':job.state==='invalid'?'invalid':'processing'};
   });
  }
  async function historicalStatus(){await authorize(null,{worker:true});const all=(await candidates()).filter(row=>row.show?.origin==='historical');return{registered:all.length,validated:all.filter(row=>row.state==='valid').length,invalid:all.filter(row=>row.state==='invalid').length,available:all.filter(row=>row.state==='valid').map(row=>row.show.key)};}
