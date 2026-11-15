@@ -10,3 +10,7 @@ verschillen in zakelijke identiteit blijven een conflict. Voeg gesloten diagnose
 en regressie toe, publiceer dezelfde Google-deployment en hervat read-only smoke.
 Geen gegevensreparatie, andere modulemigratie, mails of extra machtiging.
 Registratie vóór implementatie.
+
+Een ontbrekende optionele reeks-ID in één index mag de bestaande unieke reeks-ID
+uit de andere index behouden. Twee verschillende aanwezige reeks-ID's blijven een
+conflict; geen business-records of relaties worden geschreven.

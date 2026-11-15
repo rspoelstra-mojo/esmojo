@@ -12,8 +12,9 @@ function esmojoTimetableCatalogue_({allVenues=false,includeSeries=false}={}){
   if(includeSeries&&row.generalConcertId)item.seriesId=row.generalConcertId;
   if(row.historical){item.historical=true;if(row.identityArtist)item.identityArtist=row.identityArtist;if(row.performance)item.performance=row.performance;if(includeSeries)item.historicalSeriesId=row.historicalSeriesId;}
   if(catalogue.has(item.concertId)){
-   const existing=catalogue.get(item.concertId),identity=value=>JSON.stringify({...value,active:undefined});
-   if(identity(existing)!==identity(item))throw Error('REPORT_CATALOG_DUPLICATE');
+   const existing=catalogue.get(item.concertId),identity=value=>JSON.stringify({...value,active:undefined,seriesId:undefined});
+   if(identity(existing)!==identity(item)||existing.seriesId&&item.seriesId&&existing.seriesId!==item.seriesId)throw Error('REPORT_CATALOG_DUPLICATE');
+   if(existing.seriesId||item.seriesId)item.seriesId=existing.seriesId||item.seriesId;
    // Activity is local to each index, not part of the public concert identity.
    // The combined catalogue retains an active item from either index.
    item.active=existing.active||item.active;
