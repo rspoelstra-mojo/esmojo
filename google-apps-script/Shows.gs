@@ -212,7 +212,7 @@ function esmojoShows_(input) {
     let managerAssignment=null;
     if(typeof esmojoSyncHomeManagers_==='function'){try{managerAssignment=esmojoSyncHomeManagers_(esmojo,root,updated);}catch{managerAssignment={state:'unavailable'};}}
     return esmojoReply_({ ok: true, data: { ...(managerAssignment?{managerAssignment:managerAssignment.state}:{}), concerts: incoming.size, artists: new Set(snapshot.concerts.map(row => esmojoArtistKey_(row.artist))).size, createdArtists, createdConcerts } });
-  } catch (error) { return esmojoReply_({ ok: false, code: ['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT','STORAGE_ACTIVE'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
+  } catch (error) { return esmojoReply_({ ok: false, ...( /^artist-(catalogue|profile|show)$/.test(JSON.parse(input.body).operation)?{readDiagnostic:'DISPATCH_'+(error instanceof ReferenceError?'REFERENCE':error instanceof TypeError?'TYPE':'UNCONFIRMED')} : {}), code: ['FORBIDDEN','DASHBOARD_UNAVAILABLE','TICKET_CONFLICT','VALIDATION','PROFILE_CONFLICT','FINAL_CONFLICT','FINAL_NOT_READY','REPORT_NOT_READY','REPORT_CONFLICT','REPORT_UNAVAILABLE','NOT_FOUND','CONFLICT','SOURCE_CHANGED','VERIFY','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','ATTACHMENT_INVALID','STORAGE_BUSY','STORAGE_ARCHIVED','STORAGE_CONTRACT','STORAGE_ACTIVE'].includes(error.message) ? error.message : 'SHOWS_UNAVAILABLE' }); }
   finally { if (lock) lock.releaseLock(); }
 }
 
