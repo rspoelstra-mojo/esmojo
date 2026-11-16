@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {createDataverseReadBatch} from './dataverse-read-batch.js';
 import {createArtistOpening} from './artist-opening.js';
 import {nativeId} from './dataverse-shows/mutations.js';
 import {digest} from './show-migration-writer.js';
@@ -7,13 +8,13 @@ const id='a_'+digest('synthetic artist'),series='11111111-1111-4111-8111-1111111
 function fixture(){const stored=new Map(),versions=new Map();let date=new Date('2026-11-16T10:00:00Z'),writes=0,metadataCalls=0,batches=0,extraConcert=false,linked=false,lost=false;
  const meta=async name=>{metadataCalls++;return{LogicalName:name,EntitySetName:name+'s',PrimaryIdAttribute:name+'id'};},row=(name,primary,fields={})=>({[name+'id']:primary,'@odata.etag':'W/"'+(versions.get(name)||1)+'"',...fields});
  const repo={meta,byKey:async(_,key)=>structuredClone(stored.get(key)||null),query:async()=>[],atomic:async ops=>{writes++;for(const op of ops){const current=stored.get(op.payload.esmojo_sleutel);if(current&&current['@odata.etag']!==op.etag)throw Error('DATAVERSE_SHOWS_CONFLICT');stored.set(op.payload.esmojo_sleutel,{...op.payload,esmojo_integratiestatusid:op.id,'@odata.etag':'W/"'+writes+'"'});}if(lost){lost=false;throw Error('LOST_ACK');}}};
- const batch=async queries=>{batches++;assert.ok(queries.length<=30);return queries.map(q=>{
+ const batch=async queries=>{batches++;assert.ok(queries.length<=30);const sets=queries.map(q=>{
   if(q.values&&q.table==='esmojo_artiest')return[row(q.table,artist,{esmojo_bronartiestid:id,esmojo_naam:'Synthetic Artist'})];
   if(q.values&&q.table==='esmojo_concertreeks')return[row(q.table,series,{_esmojo_artiest_value:artist,esmojo_oudalgemeenconcertid:'synthetic-show'}),...extraConcert?[row(q.table,'44444444-4444-4444-8444-444444444444',{_esmojo_artiest_value:artist,esmojo_oudalgemeenconcertid:'synthetic-second'})]:[]];
   if(q.values&&q.table==='esmojo_concert')return[row(q.table,concert,{_esmojo_concertreeks_value:series}),...extraConcert?[row(q.table,'55555555-5555-4555-8555-555555555555',{_esmojo_concertreeks_value:'44444444-4444-4444-8444-444444444444'})]:[]];
   if(q.table==='esmojo_documentkoppeling')return linked?[row(q.table,nativeId(digest(q.table)),{_esmojo_document_value:'66666666-6666-4666-8666-666666666666'})]:[];
   return[row(q.table,nativeId(digest(q.table)))];
- });};
+ });const checked=createDataverseReadBatch({meta,allowedTables:new Set(queries.map(q=>q.table)),connection:{connect:async()=>({headers:{}}),call:async()=>new Response(sets.map((rows,i)=>'--checked\r\nContent-Type: application/http\r\nContent-ID: '+(i+1)+'\r\n\r\nHTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n'+JSON.stringify({value:rows})+'\r\n').join('')+'--checked--\r\n',{headers:{'Content-Type':'multipart/mixed; boundary=checked'}})}});return checked(queries);};
  const data={artist:{id,name:'Synthetic Artist'},canonicalArtistId:id,canonicalArtistSlug:'syntheticartist',requestedReference:id,profile:{audience:['Private synthetic text'],concerts:[]},risk:{score:{total:27.5},pending:false}};
  const opening=createArtistOpening({env:{GOOGLE_DRIVE_SHARED_SECRET:'synthetic-artist-opening-secret-1234567890'},repo,reports:{meta},catalogue:{all:async()=>({concerts:[{artistId:id,seriesId:series,generalConcertId:'synthetic-show'}]})},batch,now:()=>date});
  return{opening,data,stored,repo,versions,get writes(){return writes;},get metadataCalls(){return metadataCalls;},get batches(){return batches;},day:()=>date=new Date('2026-11-17T10:00:00Z'),addConcert:()=>{extraConcert=true;},addLink:()=>{linked=true;},lose:()=>{lost=true;}};
