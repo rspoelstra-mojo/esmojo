@@ -151,3 +151,41 @@ Chrome-regressie390/1440px, licht/donker, echte assessmentpages/showcontext en
 verliesloos gegenereerd fictief diagram: gesimuleerde imageAPI500ms en write600ms.
 Test eist gedecodeerd beeld en bewerkbare vloer direct na bevestiging, zonder
 afhankelijke extra HTTP-read. Dit is geen echte ingelogde productiegebruikerstest.
+
+## Eerste schematische preview V1.138
+
+De oorspronkelijke PNG en volledige lossless-kopie waren bij een nieuwe server
+nog groot en moesten opnieuw uit File worden opgehaald en geconverteerd. Daarom
+heeft de bestaande private preview nu een vooraf gemaakte WebP-webrenditie,
+maximaal768px binnen de originele verhouding, quality85; geen nieuw ontwerp of
+inhoud. Dit is een compacte preview, niet een belofte van pixelidentieke bytes.
+De ongewijzigde oorspronkelijke PNG blijft canoniek in Dataverse File.
+
+`server/barrier-display.js` gebruikt bestaande Integratiestatus, geen nieuw schema
+of publieke bestands-URL. Een AES-GCM-root en begrensde versleutelde delen zijn
+gebonden aan contract/type/originele SHA256 en de originele document-ID/ETag/File.
+Iedere serverread leest root/delen en actuele bronmetadata in één sterke read-only
+batch; controleert alle delen, volgorde, grootte en totale SHA256. Geen originele
+File-download of omzetting bij een nieuwe server nadat het beeld is voorbereid.
+Geen private bytes in Git/browseropslag/logs. Bestaande MFA/actuele Showsrechten
+blijven vóór de route staan; blobcache blijft accountgebonden/revocable.
+
+Voorbereiding controleert het echte bronbestand en actuele bronstempel vóór/na,
+schrijft immutable delen create-only en de root conditioneel met ETag. Bij verloren
+bevestiging complete heldere én ontsleutelde velden onafhankelijk vergelijken.
+Gelijktijdige voorbereiders mogen uitsluitend exact gelijke inhoud accepteren;
+geen writeherhaling na onzekere bevestiging. Onvolledige delen zonder root zijn
+niet zichtbaar en hervatten idempotent; originelen en oude delen blijven behouden.
+
+De vaste main/OIDC-stap `production-prepare` bereidt alle vijf vaste typen voor
+met actuele admin/Shows/Reportsrechten, zonder concertwrites, mails, vrije queries
+of heropening/verlenging van oude migratiegrants. De afzonderlijke `production`-
+stap leest uitsluitend terug, ook via een nieuwe verbinding, en repareert niets.
+Een ontbrekende projectie kan bij een gewone geautoriseerde previewread éénmaal
+worden opgebouwd; de publicatieworker voorkomt die eerste wachttijd voor alle5typen.
+De preview toont een laadtekst zolang de echte afbeelding nog niet gereed is.
+
+Wijzig het `barrier-display-v2`-contract bij andere renditie-instellingen; bestaande
+voorbereidingen worden dan niet stil hergebruikt. De productiecontrole bewaakt
+max150kB, een nieuwe verbinding binnen1200ms en warme native reads binnen600ms.
+Dit zijn servermetingen; volledige gebruikers-/MFA-/netwerktijd apart meten.

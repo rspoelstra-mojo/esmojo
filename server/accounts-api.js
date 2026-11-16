@@ -48,7 +48,7 @@ import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
-  referenceService ||=createBarrierReferenceService({shows});
+  referenceService ||=createBarrierReferenceService({shows,env});
   showManagement ||=createShowManagementService({env,shows});
   return async function handler(req, res) {
     const requestBegan=performance.now();let sessionReady=requestBegan,profileReady=requestBegan;

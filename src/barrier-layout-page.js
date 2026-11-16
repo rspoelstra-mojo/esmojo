@@ -63,8 +63,9 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
     preview.dataset.layout=type==='custom'?'custom':'schematic';
     if(type!=='custom'){
       if(!type){placeholderPreview('Schematische afbeelding nog niet beschikbaar');return;}
+      placeholderPreview('Schematische weergave laden…');
       try{const url=await loadBarrierImage(type);if(disposed||sequence!==previewSequence)return;
-       const image=node('img','');image.alt=barrierTypes.find(row=>row.value===type)?.label||'Barrieropstelling';image.src=url;image.onerror=()=>{if(!disposed&&sequence===previewSequence)placeholderPreview('Schematische afbeelding nog niet beschikbaar');};previewBox.append(image);
+       const image=node('img','');image.alt=barrierTypes.find(row=>row.value===type)?.label||'Barrieropstelling';image.decoding='async';image.onload=()=>{if(!disposed&&sequence===previewSequence)previewBox.replaceChildren(image);};image.onerror=()=>{if(!disposed&&sequence===previewSequence)placeholderPreview('Schematische afbeelding nog niet beschikbaar');};image.src=url;
       }catch{if(!disposed&&sequence===previewSequence)placeholderPreview('Schematische afbeelding nog niet beschikbaar');}return;
     }
     const attachment=custom.attachment;if(!attachment){placeholderPreview('Nog geen afwijkende barrieropstelling geüpload');return;}

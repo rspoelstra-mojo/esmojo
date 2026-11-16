@@ -6,3 +6,7 @@ na MFA en controle van actuele Shows-rechten. Zie
 
 Plaats hier of elders in Git/public/src geen kopieën van deze beelden. De
 sessiecache verandert de oorspronkelijke afbeeldingsinhoud of vormgeving niet.
+
+De schematische preview gebruikt sinds V1.138 vooraf voorbereide compacte private
+WebP-rendities in versleutelde Dataverse-leesprojecties. De originele PNG blijft
+ongewijzigd; ook de rendities horen niet in Git/public/src.
