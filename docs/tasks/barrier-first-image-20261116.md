@@ -1,0 +1,4 @@
+# Eerste schematische afbeelding werkelijk sneller
+
+Eigenaar account B. Branch task/barrier-first-image-20261116 vanaf actuele main.
+Gebruiker meldt na PR197 nog traag laden/lege preview. Vorige koude route downloadt nog steeds originele File en converteert per nieuw serverproces; losslessbeelden blijven700kB. Bouw vooraf voorbereide compacte webrendities in bestaande versleutelde Dataverse Integratiestatus-leesprojectie, gekoppeld aan vaste oorspronkelijke bronhash/rijversie. Eén verse batchread, huidige MFA/Showsrechten, geen publieke URL/Git/browseropslag, originelen behouden. Werkelijke producerende worker en onafhankelijke koude teruglezing van alle5beelden. Geen schemawijziging, zakelijke proefwrites of mails. Controleer veilige hervatting/verloren bevestiging/parallelle voorbereiding en desktop/mobiel. Publicatie/autonome verificatie toegestaan.
