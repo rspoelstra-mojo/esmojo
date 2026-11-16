@@ -74,3 +74,10 @@ test('expliciete navigatie-intentie deelt de volledige context en begrenst voorl
  const first=memory.prefetch('A'),again=memory.prefetch('A');assert.equal(first,again);assert.equal(await memory.prefetch('B'),null);await Promise.resolve();assert.deepEqual(calls,['A']);
  const opened=memory.acquire('A');wait.resolve();await first;await opened.ready;assert.equal(calls.length,1);opened.release();memory.clear();assert.equal(memory.size,0);
 });
+
+test('opening floor during a barrier write waits for its confirmed dependent snapshot without a second request',async()=>{
+ const wait=deferred(),base=bundle(),calls=[];const memory=createShowMemory({request:async(action)=>{calls.push(action);return action==='show-open'?base:wait.promise;},...timers}),lease=memory.acquire('A'),data=await lease.ready,write=data.request('barrier-layout',{body:{operation:'complete'}});let shown=false;const floor=read(data,'floor-pressure').then(value=>{shown=true;return value;});await tick();assert.equal(shown,false);const expected={...base.floor,barrierType:'end_stage_gc',basis:{barrierSignature:'new-basis',ticketVersion:2}};wait.resolve({record:{revision:1,barrierType:'end_stage_gc',completed:true},floor:expected});await write;assert.deepEqual(await floor,expected);assert.deepEqual(calls,['show-open','barrier-layout']);lease.release();memory.clear();
+});
+test('failed pending barrier write never makes a dependent floor read appear confirmed',async()=>{
+ const wait=deferred(),base=bundle(),memory=createShowMemory({request:async action=>action==='show-open'?base:wait.promise,...timers}),lease=memory.acquire('A'),data=await lease.ready,write=data.request('barrier-layout',{body:{operation:'complete'}}),floor=read(data,'floor-pressure');const failedWrite=assert.rejects(write,/uncertain/),failedFloor=assert.rejects(floor,/uncertain/);wait.reject(Error('uncertain'));await Promise.all([failedWrite,failedFloor]);lease.release();memory.clear();
+});

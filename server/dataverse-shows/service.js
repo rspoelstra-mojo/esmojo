@@ -31,9 +31,9 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
    return{pending,scanned:candidates.length,classification:'vertrouwelijk',nextAfter:rows.some(row=>row.key>(candidates.at(-1)?.key||payload.after||''))?candidates.at(-1)?.key||null:null};
   }
   if(!operations.has(operation))throw Error('VALIDATION');
-  if(operation==='show-open'&&state.loadOpening){
+  if(['show-open','barrier-read','floor-read'].includes(operation)&&state.loadOpening){
    const fast=await state.loadOpening(payload.concertId);
-   if(fast)try{const output=execute(fast.source,operation,{...payload,concertId:fast.concert.esmojo_oudconcertid},new Map());if(!output.changed)return{...output.result,...photoFor(fast.source),show:metadataFor(fast.source,payload.concertId)};}catch(error){if(error.message!=='DOCUMENT_BYTES_REQUIRED')throw error;}
+   if(fast)try{const output=execute(fast.source,operation,{...payload,concertId:fast.concert.esmojo_oudconcertid},new Map());if(!output.changed)return operation==='show-open'?{...output.result,...photoFor(fast.source),show:metadataFor(fast.source,payload.concertId)}:output.result;}catch(error){if(error.message!=='DOCUMENT_BYTES_REQUIRED')throw error;}
   }
   if(trustedProfile&&!readOnly(operation))await state.syncActor(trustedProfile);
   const loaded=await state.load(payload.concertId),command=digest(JSON.stringify({operation,payload,...(operation==='show-open'?{generation:loaded.source.nativeGeneration||0}:{})}));
@@ -45,6 +45,13 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
    catch(error){if(error.message!=='DOCUMENT_BYTES_REQUIRED'||binary.has(error.fileId))throw error;const file=loaded.source.files.find(file=>file.fileId===error.fileId);if(!file)throw Error('ATTACHMENT_INVALID');const downloaded=await state.repo.downloadDocument(file.key,{seriesId:loaded.seriesId});binary.set(file.fileId,downloaded.bytes);}
   }
   if(!output)throw Error('REPORT_UNAVAILABLE');
+  // Barrier rules already synchronize floor sections. Return that same confirmed
+  // dependent snapshot, never reconstruct its basis or counts in the browser.
+  if(operation.startsWith('barrier-')&&!['barrier-read','barrier-download'].includes(operation)){
+   const dependent=execute({...loaded.source,documents:output.documents},'floor-read',{concertId:loaded.concert.esmojo_oudconcertid,actor:payload.actor},binary);
+   if(dependent.changed)throw Error('DATAVERSE_SHOWS_CONFLICT');
+   output.result={...output.result,floor:dependent.result};
+  }
   if(!output.changed){if(operation==='show-open'&&!diagnostic&&state.cacheOpening)try{await state.cacheOpening(loaded,verified);}catch{/* A failed derived cache never replaces authoritative native reads. */}return operation==='show-open'?{...output.result,...photoFor(loaded.source),show:metadataFor(loaded.source,payload.concertId)}:output.result;}
   if(diagnostic)throw Error('READ_REQUIRES_WRITE');
   if(operation==='show-open'&&trustedProfile)await state.syncActor(trustedProfile);
@@ -52,7 +59,7 @@ export function createNativeShowsService({env=process.env,state=createNativeShow
   for(const file of output.files){const ref=references.find(ref=>ref.fileId===file.fileId);if(!ref||ref.sha256!==file.sha256)throw Error('ATTACHMENT_INVALID');next.files.push({...file,...ref,identity:'drive-file/'+file.fileId,name:ref.fileName||file.name,size:file.size,mime:file.mime,bytes:file.bytes,version:ref.version||1});}
   if(technical(operation))return state.commitLease(loaded,next,output.result);
   const planning=showPlanning(next),result={...output.result,homePlanning:planning};next.planning=planning;
-  return state.commit(loaded,next,result,command);
+  return state.commit(loaded,next,result,command,/^(barrier|floor)-/.test(operation)?verified:null);
  };
  // Rights and source authority must not queue behind unrelated cold metadata.
  // All tables are still warmed; functional tabs remain part of one full bundle.

@@ -9,3 +9,7 @@ test('Late respons na afmelden wordt niet zichtbaar of als blob bewaard; fout is
  let resolve,urls=0;const cache=createBarrierReferenceCache({manifest,request:()=>new Promise(done=>resolve=done),createUrl:()=>{urls++;return'blob:test';}});cache.bind(profile);const pending=cache.load(type);await Promise.resolve();cache.clear();resolve(data);await assert.rejects(pending,/SESSION_CHANGED/);assert.equal(urls,0);
  const bad=createBarrierReferenceCache({manifest,request:async()=>({...data,base64:'AAAAAA'})});bad.bind(profile);await assert.rejects(bad.load(type),/ATTACHMENT_INVALID/);
 });
+
+test('lossless WebP accepts verified provenance and rejects a corrupt derived payload',async()=>{
+ const bytes=new Uint8Array([82,73,70,70,4,0,0,0,87,69,66,80]),encodedSha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join(''),manifest={seated:{size:1000,sha256:'a'.repeat(64)}},value={type,mime:'image/webp',sha256:'a'.repeat(64),size:bytes.length,encodedSha256,base64:btoa(String.fromCharCode(...bytes))};let blob;const cache=createBarrierReferenceCache({manifest,request:async()=>value,createUrl:value=>{blob=value;return'blob:derived';}});cache.bind(profile);assert.equal(await cache.load(type),'blob:derived');assert.equal(blob.type,'image/webp');const bad=createBarrierReferenceCache({manifest,request:async()=>({...value,encodedSha256:'b'.repeat(64)})});bad.bind(profile);await assert.rejects(bad.load(type),/ATTACHMENT_INVALID/);
+});

@@ -9,7 +9,7 @@ export function createShowData(bundle,request,concertId){
   const values=new Map([['show-profile',bundle.profile],['ticket-data',bundle.tickets],['barrier-layout',bundle.barrier],['floor-pressure',bundle.floor],['show-risks',bundle.risks],['analysis-finalization',bundle.profile]]);
   if(bundle.pdf)values.set('show-profile-pdf',bundle.pdf);
   let disposed=false,riskVersion=0,writeTail=Promise.resolve(),localProductionRevision=bundle.risks.production?.revision;
-  const finalTransitions=[];
+  const finalTransitions=[],barrierWrites=new Set();
   const sameFinalBasis=(a,b)=>Boolean(a&&b&&a.profileRevision===b.profileRevision&&a.finalRevision===b.finalRevision&&['ticket_sales','visitor_origins','domestic_origins'].every(key=>a.ticketVersions?.[key]===b.ticketVersions?.[key]));
   const previousValues=new Map(values),pendingWrites=new Set(),listeners=new Set(),operationalReviews=createOperationalReviewMemory(),measureDrafts=new Map();
   let notifyPending=false;const notify=()=>{if(notifyPending||disposed)return;notifyPending=true;queueMicrotask(()=>{notifyPending=false;if(!disposed)for(const listener of listeners){try{listener();}catch{/* Een weergavefout onderbreekt geen opslag. */}}});};
@@ -33,6 +33,7 @@ export function createShowData(bundle,request,concertId){
     photo:bundle.photo||null,show:bundle.show||null,
     async request(action,options){
       const body=options.body||{},read=isRead(action,body);
+      if(read&&action==='floor-pressure'&&barrierWrites.size)await Promise.all([...barrierWrites]);
       if(read&&disposed)throw Error('Show gesloten.');
       if(read&&!['measure','show-profile-pdf'].includes(action)&&!options.refresh&&!values.has(action)&&context.busy&&previousValues.has(action))return structuredClone(previousValues.get(action));
       if(read&&action!=='measure'&&!options.refresh&&values.has(action)){
@@ -56,7 +57,7 @@ export function createShowData(bundle,request,concertId){
           remember(action,data);overview(data);
           if(action==='barrier-layout'){
             const signature=r=>JSON.stringify([r?.barrierType,r?.barrierType==='custom'?r.attachment?.sha256:null]);
-            if(signature(before?.record)!==signature(data.record))forget('floor-pressure');
+            if(data.floor?.basis&&data.floor?.tickets)remember('floor-pressure',data.floor);else if(signature(before?.record)!==signature(data.record))forget('floor-pressure');
           }
           if(action==='ticket-data'){forget('analysis-finalization');forget('floor-pressure');}
           if(['show-profile','analysis-finalization','ticket-data'].includes(action)){forget('show-profile-pdf');forget('show-risks');riskVersion++;}
@@ -124,7 +125,7 @@ export function createShowData(bundle,request,concertId){
       }
       return result;
     });
-    writeTail=task.catch(()=>{});pendingWrites.add(task);const finished=()=>{pendingWrites.delete(task);notify();};task.then(finished,finished);return task;
+    writeTail=task.catch(()=>{});pendingWrites.add(task);if(action==='barrier-layout')barrierWrites.add(task);const finished=()=>{pendingWrites.delete(task);barrierWrites.delete(task);notify();};task.then(finished,finished);return task;
   };
   return context;
 }

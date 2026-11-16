@@ -1,3 +1,4 @@
+import {loadBarrierImage} from './barrier-images.js';
 import {publicShowPhoto} from '../shared/public-show-photo.js';
 import {createShowManagement} from './show-management.js';
 import './show-tabs.css';
@@ -28,6 +29,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       const earlyPhoto=lease.view.photo||loadPhoto.peek?.(show.key)||null;
       if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
       const context=await lease.ready;
+      // Warm only the selected private reference, without delaying show content.
+      void context.request('barrier-layout',{method:'POST',body:{operation:'read',concertId:show.key}}).then(data=>loadBarrierImage(data.record?.barrierType)).catch(()=>{});
       const photoData=earlyPhoto||context.photo||null;
       if(context.show)show={...show,...context.show,key:show.key};
       if(disposed)return;

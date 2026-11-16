@@ -126,6 +126,7 @@ jobs:
           node server/security-hardening.test.js
           node server/authorization-matrix.test.js
           node src/lib/barrier-reference-cache.test.js
+          node --test server/barrier-references.test.js
           node tools/security/browser-headers.mjs
           node src/lib/mfa-verification.test.js
           node --test src/lib/show-menu-cache.test.js server/startup-view.test.js src/lib/router.test.js src/lib/profile-saves.test.js
@@ -202,3 +203,5 @@ jobs:
 
       - name: Reports click to painted content within 1.5 seconds
         run: node tools/ui/check-report-performance.mjs
+      - name: Production risk images and confirmed floor transition
+        run: node tools/ui/check-production-performance.mjs

@@ -1,7 +1,6 @@
 # Private barrierreferenties
 
-De vijf originele PNG's staan uitsluitend in de private Drive-map
-`_esmojo_private_references_v1`. De beveiligde `barrier-reference`-route levert ze
+De vijf originele PNG's staan uitsluitend in de private Dataverse File-opslag. De beveiligde `barrier-reference`-route levert ze
 na MFA en controle van actuele Shows-rechten. Zie
 `shared/barrier-reference-manifest.js` en `docs/production-assessments.md`.
 
