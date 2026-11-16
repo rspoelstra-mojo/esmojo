@@ -6,6 +6,7 @@ on:
     paths:
       - 'server/redis-native/**'
       - 'server/mfa-api.js'
+      - 'server/github-identity.js'
       - '.github/workflows/mfa-security-check.yml'
 permissions:
   contents: read
