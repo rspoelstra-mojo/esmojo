@@ -1,3 +1,9 @@
+# Actuele publicatie: alleen GitHub en Vercel (16 november 2026)
+
+Google-publicatie is definitief afgesloten. De instructies en oude toegangsbewijzen
+hieronder zijn uitsluitend historie en mogen geen nieuwe Google-publicatie starten.
+Zie [Google loskoppelen](dataverse/google-detachment.md). Supabase Auth/MFA blijft.
+
 # ESMOJO beheren vanuit twee Codex-accounts
 
 Beide accounts werken aan rspoelstra-mojo/esmojo via de bestaande zakelijke

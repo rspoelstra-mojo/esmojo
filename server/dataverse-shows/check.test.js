@@ -10,3 +10,10 @@ test('runtime endpoint rejects missing identity before native access and never e
  let calls=0;const response=()=>({setHeader(){},status(s){this.code=s;return this;},json(v){this.value=v;return this;}}),denied=makeShowsRuntimeSync({identify:async()=>{throw Error('no identity');},check:async()=>{calls++;}}),res=response();await denied({method:'POST',headers:{},body:{step:0}},res);assert.equal(res.code,403);assert.equal(calls,0);
  const handler=makeShowsRuntimeSync({identify:async()=>({}),check:async()=>{throw Error('provider secret must not leak');}}),safe=response();await handler({method:'POST',headers:{authorization:'Bearer test'},body:{step:0}},safe);assert.equal(safe.code,503);assert.equal(JSON.stringify(safe.value).includes('secret'),false);
 });
+
+test('Google-independent audit stays on fixed OIDC route and rejects free commands before private reads',async()=>{
+ let calls=0;const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;return this;}}),audit=async stage=>{calls++;return{ok:true,stage};};
+ const denied=makeShowsRuntimeSync({identify:async()=>{throw Error('denied');},audit}),res=response();await denied({method:'POST',headers:{},body:{stage:'shows'}},res);assert.equal(res.code,403);assert.equal(calls,0);
+ const handler=makeShowsRuntimeSync({identify:async()=>({}),audit});for(const body of [{stage:'production-prepare'},{stage:'shows',actor:'free'},{stage:'delete'}]){const bad=response();await handler({method:'POST',headers:{},body},bad);assert.equal(bad.code,400);}assert.equal(calls,0);
+ for(const stage of ['authority','accounts','shows','reports','files']){const ok=response();await handler({method:'POST',headers:{},body:{stage}},ok);assert.equal(ok.code,200);assert.equal(ok.value.stage,stage);}assert.equal(calls,5);
+});

@@ -1,3 +1,4 @@
+import {assertLegacyStorage} from './legacy-storage-policy.js';
 import { createHmac, randomBytes } from 'node:crypto';
 
 export class AppsScriptError extends Error {
@@ -6,6 +7,7 @@ export class AppsScriptError extends Error {
 
 // Alleen servercode; geen website-endpoint en geen gegevenscache.
 export async function checkAppsScriptConnection({ env = process.env, request = fetch, now = Date.now } = {}) {
+  assertLegacyStorage(env);
   const url = env.GOOGLE_DRIVE_SCRIPT_URL;
   const secret = env.GOOGLE_DRIVE_SHARED_SECRET;
   if (!url || !secret || secret.length < 32) throw new AppsScriptError('CONFIG', 'Apps Script is nog niet ingesteld.');

@@ -1,3 +1,19 @@
+## Google definitief loskoppelen (16 november 2026)
+
+Gebruiker autoriseert native Shows-regels en verwijdering van Google-publicatie,
+zodat de externe ESMOJO-Drive-mappen en het Apps Script-project verwijderd kunnen
+worden. Vervangt oudere instructies om Google te publiceren of .gs-runtime te
+behouden. Alleen lokale native JavaScript-regels in productie, functionele
+paritytests tegen offline referenties, Vercel bundelt geen google-apps-script.
+Oude publicatiecommando weigert vóór credentials/I/O; geen Google-workflow.
+Bestaande shows-runtime.yml main/OIDC-route mag uitsluitend de vaste read-only
+native audit uitvoeren met actuele normale worker/admin/modulechecks. Geen
+nieuwe/verlengde grant, bedrijfswrite, fake data, authbypass of performancewerk.
+Dataverse-autoriteiten/schema en Supabase Auth/MFA behouden. Historische crypto-
+sleutel GOOGLE_DRIVE_SHARED_SECRET behouden; die is geen Google-serviceverbinding.
+Originelen niet door agent verwijderen: gebruiker wil dat na bewezen publicatie
+zelf kunnen doen. Zie docs/dataverse/google-detachment.md voor verificatiegrenzen.
+
 ## Artiestenopening binnen één seconde (16 november 2026)
 
 Gebruiker vraagt de beloofde snelheid waar te maken; rapportages mogen na de

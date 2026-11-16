@@ -1,7 +1,8 @@
+import {compareShowRules} from '../test-support/show-rules-parity.js';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createNativeShowsService} from './service.js';import {createNativeShowState} from './state.js';import {nativeFixture,sampleSource,samplePeople} from './test-fixture.js';
 const env={GOOGLE_DRIVE_SHARED_SECRET:'synthetic-native-state-secret-1234567890'};
-function fixture(){const db=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople)),state=createNativeShowState({env,repository:db.repo,connection:db.connection}),service=createNativeShowsService({state,catalogue:{handles:()=>false}});return{...db,state,service};}
+function fixture(){const db=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople)),state=createNativeShowState({env,repository:db.repo,connection:db.connection}),service=createNativeShowsService({execute:compareShowRules,state,catalogue:{handles:()=>false}});return{...db,state,service};}
 const concertId=sampleSource.concertId;
 test('native profile read/save/replay use typed rows and preserve revision conflict rules',async()=>{
  const f=fixture();assert.equal((await f.service('profile-read',{concertId})).revision,0);
