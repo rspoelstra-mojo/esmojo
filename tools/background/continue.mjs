@@ -26,6 +26,7 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
    const allowed=['groups','multiDateGroups','missingShow','badGroupId','badSourceHash','catalogue','historical','validations','sources','available','unlinked','entries','grouped','manifestPages','settingsPages','csvBytes','plannedRecords','recordIndex','existingRecords','missingRecords','batchRecords'];
    log(JSON.stringify({stage:d.stage,code:d.code,counts:Object.fromEntries(allowed.filter(k=>Object.hasOwn(d.counts,k)).map(k=>[k,d.counts[k]]))}));return;
   }
+  if(!response.ok&&operation==='redis-resume'){const codes=['OIDC_FORBIDDEN','TASK_EXPIRED','TASK_BUSY','TASK_STALE','TASK_VERSION','FORBIDDEN','CONTROL_REQUIRED','REDIS_AUTHORITY_INVALID','REDIS_SOURCE_CONFLICT','ARTIST_VIEWS_UNAVAILABLE','MFA_CACHE_UNAVAILABLE','BACKGROUND_UNCONFIRMED'];log(JSON.stringify({recoveryHttpStatus:response.status,code:codes.includes(data?.code)?data.code:'UNCONFIRMED'}));}
   const continuation=data?.continuation;
   if(continuation!==undefined){
    if(!continuation||typeof continuation.active!=='boolean'||!Array.isArray(continuation.tasks)||continuation.active&&(!Number.isSafeInteger(continuation.pollAfterMs)||continuation.pollAfterMs<1000||continuation.pollAfterMs>60000))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');

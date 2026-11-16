@@ -29,7 +29,7 @@ jobs:
         if: github.event_name == 'push' || inputs.operation == 'redis-resume'
         run: |
           node --input-type=module <<'JS'
-          let ready=false;for(let n=0;n<30;n++){try{const result=await fetch('https://esmojo.nl/api/background-tasks-sync',{cache:'no-store',signal:AbortSignal.timeout(10000)});if(result.headers.get('x-esmojo-background-worker')==='2'){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,10000));}if(!ready)throw Error('BACKGROUND_RECOVERY_NOT_READY');
+          let ready=false;for(let n=0;n<30;n++){try{const result=await fetch('https://esmojo.nl/api/background-tasks-sync',{cache:'no-store',signal:AbortSignal.timeout(10000)});if(result.headers.get('x-esmojo-background-worker')==='3'){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,10000));}if(!ready)throw Error('BACKGROUND_RECOVERY_NOT_READY');
           JS
       - name: Continue existing approved tasks only
         env:
