@@ -120,3 +120,34 @@ Afwijkend ontwerp wist de selectie; invullen/typen/blur schrijft geen concept.
 Vloerdruk berekent direct maar schrijft pas via afronden. Lokale invoer wordt
 in tijdelijk sessiegeheugen bewaard. Nieuwe custombestanden worden pas na Opslaan
 serieël geüpload vóór afronden. Geen automatische planningafronding door selectie.
+
+## Native snelheid V1.137
+
+Dataverse blijft de huidige bron. Detailreads barrier/vloer gebruiken dezelfde verse
+root-/rijversie-/manifestcontrole als Shows-open; gewijzigde projecties gebruiken
+het volledige native pad. Barrierwrites geven de door de bestaande regels reeds
+gesynchroniseerde vloerdruk met ticketbasis terug in hetzelfde geverifieerde
+ontvangstbewijs. De browser wacht alleen op lopende barrierwrites voordat hij die
+vloerdruk toont, en vermijdt een tweede HTTP-read. Onzekere opslag geeft geen
+bevestigde vloerbasis. De binnen hetzelfde verzoek volledige vóórcontrole mag
+alleen voor barrier/vloer worden hergebruikt; originele ETags, atomaire CAS en
+volledige nacontrole blijven staan.
+
+De private referentie-PNG's blijven origineel in Dataverse File. Na volledige hash-
+controle maakt de server uitsluitend in geheugen een lossless WebP met dezelfde
+afmetingen/pixels, wanneer kleiner. SHA256 van origineel én afgeleide bytes blijven
+controleerbaar. Geen publieke assets, Drive, opslag van privébeelden in Git of
+browseropslag. Gedeelde gelijktijdige afleiding, servercache15min, bestaande
+sessiecache/revoke bij account-/rechtenwissel. Alleen de al gekozen referentie
+wordt bij showopening zonder blokkeren voorgeladen. Elke HTTP-read houdt actuele
+MFA/Showsrechten; afbeeldings-/barrierreads laden geen profielfotobytes.
+
+De bestaande main/OIDC-audit heeft een vaste read-only productiestap voor alle vijf
+referenties (originele/geleverde bytes, formaat, koude tijd) en bestaande details.
+Geen zakelijke proefwrites, willekeurige concert-ID of reparatie tijdens verificatie.
+Een benodigde bestaande normalisatiewrite wordt alleen geteld en niet uitgevoerd.
+
+Chrome-regressie390/1440px, licht/donker, echte assessmentpages/showcontext en
+verliesloos gegenereerd fictief diagram: gesimuleerde imageAPI500ms en write600ms.
+Test eist gedecodeerd beeld en bewerkbare vloer direct na bevestiging, zonder
+afhankelijke extra HTTP-read. Dit is geen echte ingelogde productiegebruikerstest.

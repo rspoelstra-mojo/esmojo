@@ -98,3 +98,11 @@ test('a valid large custom floor remains one transaction instead of a partial ba
  const floor=await f.service('floor-read',{concertId,actor}),rows=[{id:'standing',name:'Staanplaatsen',visitors:100,area:80},...Array.from({length:260},(_,i)=>({id:'vak_'+i,name:'Vak '+i,visitors:0,area:1}))];
  const saved=await f.service('floor-draft',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows,riskLevel:'low',note:''}});assert.equal(saved.record.rows.length,261);assert.equal(f.tables.get('esmojo_publieksvak').size,261);
 });
+
+test('barrier confirmation carries exactly the current floor basis and valid detail reads avoid full reconstruction',async()=>{
+ const f=fixture(),actor='synthetic-esm',first=await f.service('barrier-read',{concertId,actor}),saved=await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:{barrierType:'end_stage_gc',riskLevel:'none',notes:null,uploadId:null,riskNote:''}});assert(saved.floor.basis);assert.equal(saved.floor.barrierType,'end_stage_gc');assert.deepEqual(saved.floor,await f.service('floor-read',{concertId,actor}));
+ const writes=f.writes();f.state.load=async()=>assert.fail('unnecessary full read');assert.equal((await f.service('barrier-read',{concertId,actor})).record.completed,true);assert.deepEqual(await f.service('floor-read',{concertId,actor}),saved.floor);assert.equal(f.writes(),writes);
+});
+test('detail read detects a changed typed barrier row instead of serving a stale opening',async()=>{
+ const f=fixture(),actor='synthetic-esm',first=await f.service('barrier-read',{concertId,actor});await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:{barrierType:'seated',riskLevel:'none',notes:null,uploadId:null,riskNote:''}});const row=[...f.tables.get('esmojo_barrierbeoordeling').values()][0];row.esmojo_barriertype=999999;row['@odata.etag']='W/"999999"';await assert.rejects(f.service('barrier-read',{concertId,actor}),/DATAVERSE_SHOWS_CONFLICT/);
+});

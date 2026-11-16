@@ -110,7 +110,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          const result=await profiles('self',actor,['report-web','report-menu'].includes(action)?{authorizationOnly:true,reportRead:true}:action==='show-open'?{authorizationOnly:true}:!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
+          const result=await profiles('self',actor,['report-web','report-menu'].includes(action)?{authorizationOnly:true,reportRead:true}:action==='barrier-reference'||action==='barrier-layout'&&req.body?.operation==='read'?{authorizationOnly:true,moduleRead:true}:action==='show-open'?{authorizationOnly:true}:!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
           const {homeDashboard:home,emailTestCopyTo:copyTo,...profile}=result;emailTestCopyTo=copyTo||null;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {

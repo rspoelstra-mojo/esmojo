@@ -1,3 +1,6 @@
+import {createBarrierReferenceService} from './barrier-references.js';
+import {createNativeShowsService} from './dataverse-shows/service.js';
+import {barrierReferenceManifest} from '../shared/barrier-reference-manifest.js';
 import {createNativeReportsRepository} from './dataverse-reports/repository.js';
 import {reportSourceType} from '../shared/report-source.js';
 import {createNativeReportsService} from './dataverse-reports/service.js';
@@ -11,13 +14,19 @@ import {mapShow} from './show-migration-map.js';
 import {executeShowRules} from './dataverse-shows/rules.js';
 import {createRedisPolicy} from './redis-native/policy.js';
 import {hasModule} from '../shared/account-modules.js';
-export const runtimeAuditStages=Object.freeze(['authority','accounts','shows','reports','files']);
+export const runtimeAuditStages=Object.freeze(['authority','accounts','shows','reports','files','production']);
 // Fixed read-only checks. No actor, cursor, record ID, table or write supplied by
 // the workflow. Existing regular worker identity is reauthorized on every stage.
 export function createNativeRuntimeVerification({env=process.env,reports=createNativeReportsService({env}),accounts=createNativeAccountStore({env}),state=createNativeShowState({env}),catalogue=createNativeCatalogue({env,state}),core=createConcertCatalogue({env}),reportAuthority=createReportsAuthority({env}),redis=createRedisPolicy({env}),reportRepository=createNativeReportsRepository({env}),execute=executeShowRules}={}){return async stage=>{
  if(!runtimeAuditStages.includes(stage))throw Error('VALIDATION');
  try{
   const profile=await reports.authorize(null,{worker:true,admin:true});if(!['shows','artists','reports'].every(module=>hasModule(profile,module)))throw Error('FORBIDDEN');const actor=profile.id;
+  if(stage==='production'){
+   await assertNativeAuthority({env,repository:state.repo});const native=createNativeShowsService({env,state,diagnostic:true}),references=createBarrierReferenceService({shows:native}),images=[];
+   for(const type of Object.keys(barrierReferenceManifest)){const start=performance.now(),value=await references(actor,{type});images.push({originalBytes:barrierReferenceManifest[type].size,servedBytes:Buffer.from(value.base64,'base64').length,format:value.mime==='image/webp'?'webp':'png',coldMs:Math.round(performance.now()-start)});}
+   const rows=await catalogue.primaryShows();let details=0,pendingDetailNormalization=0;for(const show of rows.slice(0,2))for(const operation of ['barrier-read','floor-read']){try{await native(operation,{concertId:show.key,actor});details++;}catch(error){if(error.message!=='READ_REQUIRES_WRITE')throw error;pendingDetailNormalization++;}}
+   return{ok:true,stage,verifiedImages:images.length,images,verifiedDetailReads:details,pendingDetailNormalization};
+  }
   if(stage==='authority'){await assertNativeAuthority({env,repository:state.repo});await reportAuthority.assert();const accountPolicy=await accounts.policy();if(accountPolicy.mode!=='dataverse'||accountPolicy.verified!==true)throw Error('ACCOUNT_CORRUPT');const mode=(await redis.read()).value.mode;return{ok:true,stage,shows:'dataverse',reports:'dataverse',accounts:'dataverse',authentication:'supabase-auth',redis:mode==='dataverse'?'dataverse':mode==='freeze'?'frozen':'redis'};}
   if(stage==='accounts'){const list=await accounts.list({photos:true});return{ok:true,stage,accounts:list.length,verifiedPhotos:list.filter(p=>p.photo).length};}
   if(stage==='shows'){

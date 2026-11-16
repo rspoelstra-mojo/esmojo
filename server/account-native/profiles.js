@@ -5,7 +5,7 @@ import {checkedChange} from './model.js';
 import {isAdministrator,isSuperAdministrator,validateAccountModules} from '../../shared/account-modules.js';
 export function createNativeProfiles({env=process.env,store=createNativeAccountStore({env}),legacy}={}){
  return async(operation,actor,payload={})=>{
-  if(operation==='self'&&payload.authorizationOnly===true&&payload.reportRead===true&&env.VERCEL_ENV==='production'&&store.authorization)return accessFlags(await store.authorization(actor));
+  if(operation==='self'&&payload.authorizationOnly===true&&(payload.reportRead===true||payload.moduleRead===true)&&env.VERCEL_ENV==='production'&&store.authorization)return accessFlags(await store.authorization(actor));
   const root=await store.get(null),policy=root?.value;
   if(!policy){if(env.VERCEL_ENV==='production')throw Error('ACCOUNT_CORRUPT');return legacy(operation,actor,payload);}
   const mutations=['create','update','disable','delete','activate','photo','bootstrap'];

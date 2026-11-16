@@ -126,10 +126,13 @@ export function createNativeShowState({env=process.env,repository,connection=nat
   }
  }
  async function receipt(loaded,command){const row=await repo.byKey('esmojo_opdracht',recordKey('esmojo_opdracht','native-receipt/'+loaded.source.concertId+'/'+command));return row?parse(row.esmojo_resultaat_json):null;}
- async function commit(loaded,next,result,command){
+ async function commit(loaded,next,result,command,verifiedBefore=null){
   const {source,people,series,seriesId}=loaded,scope={concertreeks:reference('concertreeks','drive-series/'+source.concertId)},generation=series.esmojo_revisie+1;
   const receiptKey=recordKey('esmojo_opdracht','native-receipt/'+source.concertId+'/'+command),receipt=await repo.byKey('esmojo_opdracht',receiptKey);if(receipt)return parse(receipt.esmojo_resultaat_json);
-  const before=mapShow(source,people),after=mapShow(next,people),confirmed=await verifyPlan(before,source.nativeGeneration||0);await uploadFiles(next.files.filter(file=>file.bytes));
+  const before=mapShow(source,people),after=mapShow(next,people);for(const link of before.deferredLinks||[])before.records.find(row=>row.key===link.source.key).links[link.field]=link.target;const expectedBefore=before.records.filter(row=>!['esmojo_historie','esmojo_integratiestatus'].includes(row.table));
+  // Reuse only the complete independently checked plan from this same request.
+  // Its original ETags still fence the atomic write; post-write verification stays.
+  const confirmed=verifiedBefore&&verifiedBefore.length===expectedBefore.length&&verifiedBefore.every(entry=>expectedBefore.some(row=>canonical(row)===canonical(entry.row)))?verifiedBefore:await verifyPlan(before,source.nativeGeneration||0);await uploadFiles(next.files.filter(file=>file.bytes));
   const pointers={...loaded.pointers},snapshots=[];
   for(const [name,document]of Object.entries(next.documents))if(canonical(document)!==canonical(source.documents[name]??null)){
    const stored=structuredClone(document);if(name==='bezoekersdata.json')stored.leases={};const value={fileName:name,document:stored},row=record('historie','native-file/'+source.concertId+'/'+name+'/'+generation+'/'+digest(value),name,{revisie:generation,entiteitsoort:'native-file',versienummer:generation,mutatiesoort:choice('mutatiesoort','update'),snapshot_json:canonical(value),fingerprint:digest(value),schemaversie:1},scope);pointers[name]=row.key;snapshots.push(row);
