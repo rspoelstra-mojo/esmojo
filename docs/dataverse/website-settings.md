@@ -58,7 +58,7 @@ huidige gepubliceerde weergave in deze aparte tabel; geen vrije native tabel,
 Document-ID, origineel of URL. De server leest en verifieert de bestandshash vóór
 versturen. Deze openbare bytes hebben een onveranderlijke hash-URL en mogen een
 jaar worden gecachet. Er zijn geen anonieme upload-/setup-/schrijfoperaties.
-Beheerresponses blijven private/no-store. Previewdeployments schrijven niets.
+Gereserveerde `_vercel_`-queryparameters van platformtoegangslinks worden uitsluitend genegeerd; ze beïnvloeden geen bestandskeuze of appautorisatie. Beheerresponses blijven private/no-store. Previewdeployments schrijven niets.
 
 De login wacht nooit op de optionele achtergrond-API. De initiële foto blijft
 zichtbaar bij een fout; de dienst meldt een echte fout in plaats van dat een

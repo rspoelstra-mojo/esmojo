@@ -39,7 +39,7 @@ export function makeLoginBackgroundHandler({settings=createWebsiteSettings()}={}
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET'){res.setHeader('Allow','GET');res.setHeader('Cache-Control','no-store');return res.status(405).json({error:'Niet toegestaan.'});}
   try{
-   if(Object.keys(req.query||{}).some(key=>!['action','image'].includes(key))||req.query?.image!==undefined&&typeof req.query.image!=='string')throw Error('VALIDATION');
+   if(Object.keys(req.query||{}).some(key=>!key.startsWith('_vercel_')&&!['action','image'].includes(key))||req.query?.image!==undefined&&typeof req.query.image!=='string')throw Error('VALIDATION');
    if(req.query?.image!==undefined){const file=await settings.image(req.query.image);res.setHeader('Content-Type',file.mime);res.setHeader('Cache-Control','public, max-age=31536000, immutable');res.setHeader('ETag','"'+req.query.image+'"');return res.status(200).send(file.bytes);}
    const value=await settings.read();res.setHeader('Cache-Control','no-store');return res.status(200).json(value);
   }catch(error){res.setHeader('Cache-Control','no-store');return res.status(error.message==='VALIDATION'?400:error.message==='NOT_FOUND'?404:503).json({error:'De inlogachtergrond is tijdelijk niet beschikbaar.'});}
