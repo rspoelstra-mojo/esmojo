@@ -83,16 +83,18 @@ Productie-activering en werkelijke dienstafsluiting afzonderlijk in taaknotitie 
 ## Definitieve projectafbouw na de activering
 
 Na109/109 gecontroleerde events en bewezen native MFA (PR200/201) worden alleen
-oude KV/Upstash/Redis-toegangsvariabelen buiten actief gebruik gebracht. Bewaar ze
-versleuteld onder `RETIRED_REDIS_*` totdat providerintrekking afzonderlijk bevestigd
-is; geen geheime waarden uitlezen of publiceren. Nieuwe uitrol gebruikt uitsluitend
+oude KV/Upstash/Redis-toegangsvariabelen buiten actief gebruik gebracht. Verwijder de integratieverbinding en trek providercredentials in nadat de
+nacontrole geslaagd is; gevoelige integratievariabelen kunnen niet via de
+Vercel-API hernoemd worden; geen geheime waarden uitlezen of publiceren. Nieuwe uitrol gebruikt uitsluitend
 Dataverse, ook bij ontbrekende autoriteit geen productiecontact met Redis.
 `REDIS_STORAGE_PROVIDER=dataverse` is expliciete aanvullende blokkade. Supabase-/
 Dataverse-/crypto-keys en `MFA_REPLAY_ENABLED` blijven behouden.
 
 De vaste main/OIDC-stap `redis-closure` controleert de voltooide oorspronkelijke
-kopie/activering, afwezigheid van actieve Rediscredentials, actuele native kliktellers
-en de daadwerkelijk geselecteerde MFA-replayopslag. Alleen de bestaande korte
+kopie/activering, het aantal nog aanwezige credentialvariabelen, actuele native kliktellers
+en de daadwerkelijk geselecteerde MFA-replayopslag via een aparte serveromgeving
+waarin alle Rediscredentials ontbreken. Dit is een onafhankelijke functionele
+proef, geen claim dat bestaande Vercel-variabelen al zijn verwijderd. Alleen de bestaande korte
 technische MFA-probe schrijft/leest/verwijdert; geen Auth-challenge, codes of kliks.
 Provider/database en oudere deploymentcredentials moeten apart worden afgesloten;
 een geslaagde native controle bewijst geen gestopte Redis-facturering.
