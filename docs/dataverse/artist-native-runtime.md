@@ -101,3 +101,10 @@ fingerprint wijzigen niet. Alleen vaste fasen, aantallen en numerieke timings
 van de geautoriseerde onderhoudswerker worden gelogd; geen broninhoud of IDs.
 Autorisatie- en openingstijden worden afzonderlijk gemeten voor verdere diagnose.
 Dit voorbereidende resultaat is nog geen geslaagde éénsecondeproductieproef.
+
+V1.148 mat vervolgens koud 1049 ms (autorisatie498/opening552), warm p50 586/max
+780 ms. Dat is verbetering, maar geen geslaagd budget. PR209 houdt dezelfde
+complete bronqueries/fingerprint aan en gebruikt batches van twee met maximaal
+zestien gelijktijdige batches. De transportregressies bewaken de begrenzing en
+blijven iedere query/rij en bronwijziging controleren. Voorbereiding blijft geldig;
+publicatie wordt gevolgd door dezelfde koude/warme productieproef.
