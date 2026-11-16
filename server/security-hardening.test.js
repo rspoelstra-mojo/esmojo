@@ -6,7 +6,7 @@ import {expectedSecurityHeaders,appCsp} from '../tools/security/browser-headers.
 const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});
 const env={VERCEL:'1',GOOGLE_DRIVE_SHARED_SECRET:'synthetic-secret-'.repeat(3),UPSTASH_REDIS_REST_URL:'https://synthetic.upstash.io',UPSTASH_REDIS_REST_TOKEN:'synthetic-token'};
 const req={headers:{'x-forwarded-for':'192.0.2.42'}};
-const bytes=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1]);
+const bytes=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,6,0,0,0,31,21,196,137,0,0,0,9,112,72,89,115,0,0,3,232,0,0,3,232,1,181,123,82,107,0,0,0,13,73,68,65,84,120,156,99,40,156,178,251,63,0,5,250,2,192,83,145,128,62,0,0,0,0,73,69,78,68,174,66,96,130]);
 const sha256=createHash('sha256').update(bytes).digest('hex'),type='seated',manifest={[type]:{fileName:'synthetic.png',size:bytes.length,sha256}};
 test('Vaste referentiebeelden worden HMAC-ondertekend geïnstalleerd en onafhankelijk op Shows-rechten gecontroleerd',async()=>{
  const h=harness(),root=h.ctx.DriveApp.getFolderById('1HT5DXCzW_Nkzx45Q2HRS_8ck3e7hqHHk');root.createFolder=name=>new root.constructor(name,root);
@@ -19,7 +19,7 @@ test('Vaste referentiebeelden worden HMAC-ondertekend geïnstalleerd en onafhank
 });
 test('Referentiecache bewaart alleen geverifieerde bytes en accepteert geen vrije bestandsvelden',async()=>{
  let calls=0,clock=0;const value={type,mime:'image/png',sha256,base64:bytes.toString('base64')};const service=createBarrierReferenceService({manifest,now:()=>clock,shows:async()=>{calls++;return value;}});
- assert.deepEqual(await service('actor',{type}),value);await service('actor',{type});assert.equal(calls,1);clock=900001;await service('actor',{type});assert.equal(calls,2);
+ const first=await service('actor',{type});assert.equal(first.sha256,sha256);assert.deepEqual(await service('actor',{type}),first);assert.equal(calls,1);clock=900001;await service('actor',{type});assert.equal(calls,2);
  for(const input of [{type,fileId:'outside'},{type:'../private'},{type:'constructor'}])assert.throws(()=>validateReferenceRequest(input),/VALIDATION/);
  await assert.rejects(createBarrierReferenceService({manifest,shows:async()=>({...value,base64:'AAAA'})})('actor',{type}),/ATTACHMENT_INVALID/);
 });
