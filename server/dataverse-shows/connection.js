@@ -5,5 +5,6 @@ const sessions=new WeakMap();
 export function nativeConnection(env=process.env){
  const signature=[env.DATAVERSE_TEST_URL,env.DATAVERSE_TEST_TENANT_ID,env.DATAVERSE_TEST_CLIENT_ID,env.DATAVERSE_TEST_CLIENT_SECRET];
  const previous=sessions.get(env);if(previous&&previous.signature.every((part,index)=>part===signature[index]))return previous.connection;
- const connection=createDataverseSetupConnection({env,bootstrapBatch:true,preloadTables:['esmojo_integratiestatus','esmojo_opdracht','esmojo_medewerker','esmojo_modulerecht']});sessions.set(env,{signature,connection});return connection;
+ // Independent fixed technical reads overlap; publish no metadata before all checks pass.
+ const connection=createDataverseSetupConnection({env,bootstrapBatch:false,preloadTables:['esmojo_integratiestatus','esmojo_opdracht','esmojo_medewerker','esmojo_modulerecht']});sessions.set(env,{signature,connection});return connection;
 }
