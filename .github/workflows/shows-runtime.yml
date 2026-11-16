@@ -1,5 +1,14 @@
 name: Verify native Shows runtime
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/dataverse-shows/rules.js'
+      - 'server/dataverse-shows/rules/**'
+      - 'api/shows-runtime-sync.js'
+      - 'tools/background/check-google-detachment.mjs'
+      - '.github/workflows/shows-runtime.yml'
+      - 'vercel.json'
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,10 +18,22 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Verify native reads and technical atomic writes
         run: node tools/background/check-native-shows.mjs
+
+  google-detachment:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Verify native authorities, rules and existing files without Google
+        run: node tools/background/check-google-detachment.mjs

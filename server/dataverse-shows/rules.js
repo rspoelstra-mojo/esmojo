@@ -1,13 +1,12 @@
 import {readFileSync} from 'node:fs';
-import {createHash,createHmac,randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import vm from 'node:vm';
 // Alleen vertrouwde, meegebouwde bestaande businessregels. Geen gebruikerscode,
-// geen Apps Script-call en geen netwerk/Google Drive-object in deze context.
-const files=['Code.gs','Shows.gs','Research.gs','ShowProfile.gs','TicketData.gs','TicketValidators.gs','FinalValidators.gs','AnalysisFinal.gs','ShowProfilePdf.gs','RiskValidators.gs','ProductionRiskValidators.gs','ProductionRisks.gs','MeasureValidators.gs','MeasureImplementations.gs','BarrierValidators.gs','FloorPressureValidators.gs','BarrierLayout.gs','FloorPressure.gs','OperationalRiskValidators.gs','OperationalRisks.gs','ShowProfileRisks.gs','ShowOpen.gs'];
-let sources;
+// uitsluitend lokale documentobjecten; geen externe service of netwerk.
+let rules;
 const iterator=values=>{let index=0;return{hasNext:()=>index<values.length,next:()=>values[index++]};};
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-export function executeShowRules(source,operation,payload={},binary=new Map()){
+export function executeShowRules(source,operation,payload={},binary=new Map(),{clock=Date,newId=randomUUID}={}){
  const original=JSON.stringify(source.documents||{}),documents=structuredClone(source.documents||{}),objects=new Map(),created=[],removed=new Set();
  class File{
   constructor(id,name,type,content,folder){Object.assign(this,{id,name,type,content,folder});objects.set(id,this);}
@@ -21,7 +20,7 @@ export function executeShowRules(source,operation,payload={},binary=new Map()){
  class Folder{
   constructor(id){this.id=id;this.files=[];objects.set(id,this);}getId(){return this.id;}isTrashed(){return false;}getName(){return source.concertId;}getParents(){return iterator([]);}
   getFiles(){return iterator(this.files.filter(file=>!file.isTrashed()));}getFilesByName(name){return iterator(this.files.filter(file=>file.name===name&&!file.isTrashed()));}
-  createFile(value){const id='native-'+randomUUID(),content=Array.isArray(value.content)?Buffer.from(value.content):value.content,file=new File(id,value.name,value.type,content,this);this.files.push(file);if(value.type==='application/json')documents[value.name]=JSON.parse(Buffer.from(content).toString('utf8'));else created.push(file);return file;}
+  createFile(value){const id='native-'+newId(),content=Array.isArray(value.content)?Buffer.from(value.content):value.content,file=new File(id,value.name,value.type,content,this);this.files.push(file);if(value.type==='application/json')documents[value.name]=JSON.parse(Buffer.from(content).toString('utf8'));else created.push(file);return file;}
  }
  const folder=new Folder('native-series/'+source.concertId);
  for(const [name,value]of Object.entries(documents)){const file=new File('json/'+name,name,'application/json',JSON.stringify(value),folder);folder.files.push(file);}
@@ -29,9 +28,9 @@ export function executeShowRules(source,operation,payload={},binary=new Map()){
  const shows=source.shows,primary=shows.find(show=>show.concertId===source.concertId)||shows[0],selected=shows.find(show=>show.concertId===payload.concertId)||primary;
  const target={folder,primary,selected,seriesShows:shows};
  if(!shows.some(show=>show.concertId===(payload.concertId||source.concertId)))throw Error('NOT_FOUND');
- const context=vm.createContext({Utilities:{Charset:{UTF_8:'utf8'},DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(algorithm,value)=>[...createHash(algorithm).update(typeof value==='string'?value:Buffer.from(value)).digest()],computeHmacSha256Signature:(value,key)=>[...createHmac('sha256',key).update(value).digest()],base64Encode:value=>Buffer.from(value).toString('base64'),base64Decode:value=>[...Buffer.from(value,'base64')],newBlob:blob,getUuid:randomUUID},DriveApp:{getFileById:id=>{const file=objects.get(id);if(!(file instanceof File))throw Error('NOT_FOUND');return file;},getFolderById:id=>{if(id===folder.id)return folder;throw Error('FORBIDDEN');}},PropertiesService:{getScriptProperties:()=>({getProperty:()=>null})},LockService:{getUserLock:()=>({tryLock:()=>true,releaseLock(){}})}});
- sources??=files.map(name=>readFileSync(new URL('../../google-apps-script/'+name,import.meta.url),'utf8'));
- for(let index=0;index<sources.length;index++)vm.runInContext(sources[index],context,{filename:files[index],timeout:1000});
+ const context=vm.createContext({Date:clock,codec:{Charset:{UTF_8:'utf8'},DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(algorithm,value)=>[...createHash(algorithm).update(typeof value==='string'?value:Buffer.from(value)).digest()],base64Encode:value=>Buffer.from(value).toString('base64'),base64Decode:value=>[...Buffer.from(value,'base64')],newBlob:blob,getUuid:newId},documentFiles:{getById:id=>{const file=objects.get(id);if(!(file instanceof File))throw Error('NOT_FOUND');return file;}}});
+ rules??=readFileSync(new URL('./rules/native.js',import.meta.url),'utf8');
+ vm.runInContext(rules,context,{filename:'native-show-rules.js',timeout:1000});
  // Account, MFA and module authorization already happened at the Node API gate.
  context.esmojoHomeActor_=actor=>{if(typeof actor!=='string'||!actor||actor.length>100)throw Error('VALIDATION');};
  context.esmojoResearchTarget_=id=>{if(!shows.some(show=>show.concertId===id))throw Error('NOT_FOUND');return{...target,selected:shows.find(show=>show.concertId===id)};};

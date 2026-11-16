@@ -72,8 +72,8 @@ Vercel-secrets komen niet automatisch in een ChatGPT-cloudomgeving terecht.
 Hergebruik bestaande bindings en bekijk alleen aanwezigheid, nooit geheime waarden.
 Publiceer geen secrets in taaknotities, PR's, chat of logs.
 
-Apps Script wordt via de bestaande workflow op main gepubliceerd, op dezelfde
-deployment-ID. Geen handmatige parallelle publicaties vanuit beide accounts.
+Google-publicatie is definitief afgesloten. Alleen GitHub → Vercel publiceert
+de website; start geen oude Google-workflow of handmatige Apps Script-publicatie.
 Voor Supabase-schemawijzigingen, Google Drive-opslagstructuur, secrets of
 serviceconfiguratie is één eigenaar tegelijk nodig: meld die scope vooraf en
 wacht bij overlap op afstemming. Een Git-merge maakt externe wijzigingen niet
