@@ -22,3 +22,15 @@ test('batched startup contains only fixed technical GETs, validates every part, 
  }});
  assert.equal((await connection.connect()).language,1043);assert.equal(batches,1);assert.equal(connection.metadata(table).LogicalName,table);now=61000;assert.equal((await connection.connect()).headers.Authorization,'Bearer fixture-2');assert.equal(batches,2);now=122000;broken=true;await assert.rejects(connection.connect(),/CHOICE_RESPONSE/);assert.equal(tokens,3);
 });
+
+test('native runtime overlaps all six technical reads and withholds every schema until verification completes',async()=>{
+ const {nativeConnection}=await import('./dataverse-shows/connection.js'),previous=globalThis.fetch,pending=[];
+ try{
+  globalThis.fetch=async(url,options)=>{if(url.includes('/token'))return Response.json({token_type:'bearer',access_token:'synthetic',expires_in:120});assert.equal(options.method,'GET');assert(/solutions\?|organizations\?|EntityDefinitions\(/.test(url));return new Promise(resolve=>pending.push({url,resolve}));};
+  const connection=nativeConnection({...env}),ready=connection.connect();await new Promise(resolve=>setImmediate(resolve));assert.equal(pending.length,6);
+  const tables=['esmojo_integratiestatus','esmojo_opdracht','esmojo_medewerker','esmojo_modulerecht'];for(const name of tables)assert.equal(connection.metadata(name),undefined);
+  const held=pending.find(row=>row.url.includes('solutions?'));for(const row of pending.filter(row=>row!==held)){const table=/EntityDefinitions\(LogicalName='([^']+)'/.exec(row.url)?.[1];row.resolve(Response.json(table?{LogicalName:table,EntitySetName:table+'s',PrimaryIdAttribute:table+'id',ManyToOneRelationships:[]}:{value:[{languagecode:1043}]}));}
+  await new Promise(resolve=>setImmediate(resolve));for(const name of tables)assert.equal(connection.metadata(name),undefined);
+  held.resolve(Response.json({value:[{uniquename:'ESMOJO',solutionid:id,ismanaged:false,publisherid:{customizationprefix:'esmojo'}}]}));await ready;for(const name of tables)assert.equal(connection.metadata(name).LogicalName,name);
+ }finally{globalThis.fetch=previous;}
+});

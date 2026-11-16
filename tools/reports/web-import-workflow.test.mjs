@@ -8,7 +8,7 @@ async function run(results,{daily=false,event='schedule',at='2026-11-08T23:00:00
  const env={GITHUB_EVENT_NAME:event,GITHUB_EVENT_SCHEDULE:daily?'0 22,23 * * *':'*/5 * * * *',ACTIONS_ID_TOKEN_REQUEST_URL:'https://identity.example/oidc',ACTIONS_ID_TOKEN_REQUEST_TOKEN:'synthetic'};
  try{await vm.runInNewContext('(async()=>{'+code+'})()',{URL,Date:Clock,setTimeout:fn=>fn(),process:{env,exit:()=>{skipped=true;throw Error('SKIP');}},AbortSignal,console:{log(){}},fetch:async(url,options)=>{
   if(String(url).startsWith('https://identity.example'))return{ok:true,json:async()=>({value:'synthetic'})};
-  if(!options?.body){calls.push({url:String(url),body:null});return{headers:{get:name=>name==='x-esmojo-artist-runtime'?'11':null}};}
+  if(!options?.body){calls.push({url:String(url),body:null});return{headers:{get:name=>name==='x-esmojo-artist-runtime'?'12':null}};}
   calls.push({url:String(url),body:JSON.parse(options.body)});const result=results.shift();if(!result)throw Error('Unexpected extra request');return{ok:true,json:async()=>result};
  }});return calls;}catch(error){if(skipped)return calls;error.callCount=calls.length;throw error;}
 }

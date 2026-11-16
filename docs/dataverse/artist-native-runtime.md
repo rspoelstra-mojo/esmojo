@@ -90,3 +90,14 @@ Validatie: afzonderlijke browserproef met een API-respons van 750 ms en budget
 warme en koude autorisatie+opening. De backend heeft een budget van 750 ms om
 ruimte voor netwerk, foto en rendering te houden. Testresultaten met een fixture
 bewijzen geen echte ingelogde productiebrowser; rapporteer die apart.
+
+De eerste productieproef (PR207/V1.147) bereidde alle 199 artiesten voor, maar
+haalde het backendbudget niet: oude volledige lezing 2739 ms, warme p50 791/max
+836 ms en koude verbinding 2862 ms. PR208 laat de zes onafhankelijke technische
+bootstrap-GETs gelijktijdig lopen; alle verificaties blijven verplicht voordat
+metadata/verbinding beschikbaar komen. De artiestenbroncontrole verdeelt dezelfde
+complete descriptorlijst in parallelle batches van acht. Cachecontract en
+fingerprint wijzigen niet. Alleen vaste fasen, aantallen en numerieke timings
+van de geautoriseerde onderhoudswerker worden gelogd; geen broninhoud of IDs.
+Autorisatie- en openingstijden worden afzonderlijk gemeten voor verdere diagnose.
+Dit voorbereidende resultaat is nog geen geslaagde éénsecondeproductieproef.
