@@ -1,9 +1,11 @@
-import {backgroundGeometry,defaultLoginBackground,validateFraming} from '../../shared/login-background.js';
+import {backgroundGeometry,defaultLoginBackground,validateFraming,defaultBackgroundBlur,validBackgroundBlur} from '../../shared/login-background.js';
 let current=defaultLoginBackground(),refreshing;
 const listeners=new Set();
 export function rememberLoginBackground(value){if(value.revision<current.revision)return;current=structuredClone(value);for(const listener of listeners)listener(current);}
 export function paintLoginBackground(panel,value,viewport={width:panel.clientWidth,height:panel.clientHeight},device=viewport.width<=700?'mobile':'desktop'){
- const geometry=backgroundGeometry(value,viewport,value.framing[device]);
+ const geometry=backgroundGeometry(value,viewport,value.framing[device]),blur=validBackgroundBlur(value.blur)?value.blur:defaultBackgroundBlur;
+ panel.style.setProperty('--login-blur',blur+'px');
+ panel.style.setProperty('--login-overscan',String(1+6*blur/Math.max(1,Math.min(viewport.width,viewport.height))));
  panel.style.setProperty('--login-image',`url("${value.imageUrl}")`);
  panel.style.setProperty('--login-size',`${geometry.width}px ${geometry.height}px`);
  panel.style.setProperty('--login-position',`${geometry.left}px ${geometry.top}px`);

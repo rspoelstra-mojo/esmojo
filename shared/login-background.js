@@ -2,7 +2,9 @@
 export const initialLoginBackground='/login-background-initial.jpg';
 export const initialBackgroundSize={width:2048,height:1365};
 export const defaultFraming={desktop:{x:.03,y:.4,zoom:1.5},mobile:{x:.5,y:1,zoom:1.2}};
-export const defaultLoginBackground=()=>({revision:0,configured:false,setupRequired:false,imageUrl:initialLoginBackground,...initialBackgroundSize,framing:structuredClone(defaultFraming)});
+export const defaultBackgroundBlur=3;
+export const validBackgroundBlur=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=12;
+export const defaultLoginBackground=()=>({blur:defaultBackgroundBlur,revision:0,configured:false,setupRequired:false,imageUrl:initialLoginBackground,...initialBackgroundSize,framing:structuredClone(defaultFraming)});
 export function validateFraming(value){
  if(!value||Object.keys(value).sort().join(',')!=='desktop,mobile')throw Error('VALIDATION');
  for(const name of ['desktop','mobile']){const crop=value[name];if(!crop||Object.keys(crop).sort().join(',')!=='x,y,zoom'||!['x','y','zoom'].every(key=>typeof crop[key]==='number'&&Number.isFinite(crop[key]))||crop.x<0||crop.x>1||crop.y<0||crop.y>1||crop.zoom<1||crop.zoom>3)throw Error('VALIDATION');}
