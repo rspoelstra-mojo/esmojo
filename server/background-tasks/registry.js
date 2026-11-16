@@ -42,5 +42,10 @@ export function createApplicationTasks({env=process.env,profiles=createProfiles(
   if(!await authorize(row.state.actor,definition))throw Error('FORBIDDEN');const diagnostic=await definition.diagnose({actor:row.state.actor,cursor:row.state.cursor,runId:row.state.epoch,authorizationExpiresAt:row.state.expiresAt});
   if(diagnostic.stage!==(dataset?'dataset-ready':'complete')||diagnostic.code!==null)throw Error('CONTROL_REQUIRED');
   return tasks.control({operation:'resume',type:reportsMigrationType},row.state.actor,{expectedEpoch:row.state.epoch,expectedSequence:row.state.sequence});
+ },async resumeRedisCopy(){
+  const row=await store.get(redisTaskType),definition=registry[redisTaskType];if(!row)throw Error('TASK_NOT_FOUND');if(row.state.status==='complete')return{resumed:false};
+  if(row.state.expiresAt<=now())throw Error('TASK_EXPIRED');if(row.state.status!=='blocked'||row.state.lease?.until>now()||row.state.handlerVersion!==definition.version||row.state.public?.code!=='NOT_FOUND')throw Error('TASK_BUSY');
+  if(!await authorize(row.state.actor,definition))throw Error('FORBIDDEN');if(!await definition.canResumeCopy(row.state.cursor,row.state.epoch))throw Error('CONTROL_REQUIRED');
+  await tasks.control({operation:'resume',type:redisTaskType},row.state.actor,{expectedEpoch:row.state.epoch,expectedSequence:row.state.sequence});return{resumed:true};
  },ensureValidation:()=>ensureShowsValidation({store,tasks,now})};
 }

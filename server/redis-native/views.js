@@ -12,7 +12,9 @@ export function createNativeArtistViews({env=process.env,repo=createNativeShowsR
  function parseEvent(row){const event=parseViewResource(row.esmojo_resourcecode),model=modelFor(event.artistId,event.eventId,event.at);if(migrationDifferences(model,row,model.fields).length)throw Error('ARTIST_VIEWS_UNAVAILABLE');return event;}
  async function record(id,eventId,{at=now(),importing=false}={}){
   if(!validArtistId(id)||!validArtistViewEvent(eventId)||!Number.isFinite(at)||at>now()+1000||at<=now()-ARTIST_VIEW_SECONDS*1000)throw Error('VALIDATION');
-  const master=await catalogue.all(),directory=createReadableArtistDirectory(master.artists.map(row=>({id:row.artistId,name:row.name})),digest);if(!resolveReadableArtist(directory,id))throw Error('NOT_FOUND');const old=await repo.byKey(securityTable,technicalKey(kind,eventId));
+  // Historical technical events retain their original valid ID, even if that
+  // artist is no longer in today's catalogue. Never invent or reassign an artist.
+  if(!importing){const master=await catalogue.all(),directory=createReadableArtistDirectory(master.artists.map(row=>({id:row.artistId,name:row.name})),digest);if(!resolveReadableArtist(directory,id))throw Error('NOT_FOUND');}const old=await repo.byKey(securityTable,technicalKey(kind,eventId));
   if(old){const event=parseEvent(old);if(event.artistId!==id||importing&&event.at!==at)throw Error('VALIDATION');if(event.at+ARTIST_VIEW_SECONDS*1000>now())return{recorded:false};}
   const model=modelFor(id,eventId,at);
   try{await writeTechnical(repo,[[model,old]]);}catch(error){const actual=await repo.byKey(securityTable,model.key);if(!actual)throw error;const event=parseEvent(actual);if(event.artistId!==id||importing&&event.at!==at)throw error;return{recorded:false};}return{recorded:true};
