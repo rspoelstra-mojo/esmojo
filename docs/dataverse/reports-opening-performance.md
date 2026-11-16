@@ -100,3 +100,10 @@ taal- en metadatacontroles parallel lopen na tokenuitgifte. Geen context/metadat
 wordt beschikbaar vóór alle controles slagen; tokenvernieuwing blijft bestaan.
 Na actuele profielcontrole mogen autoriteit en read-only projectiecontrole parallel;
 alleen na beide controles mag data terugkomen. Cacheherbouw/writes wachten op autoriteit.
+
+PR195 productie: 15 samples, mediaan484ms/max665ms, nieuwe verbinding1115ms
+(toegang736ms, render379ms), baseline4853ms. Begroting1000ms nog overschreden.
+PR196 bundelt uitsluitend vaste technische oplossing-/taal-/schema-GETs in één
+multipart-batch. Elke response en metadata blijft volledig gevalideerd vóór de
+verbinding beschikbaar is; geen extra bedrijfsread of rechtencontext. Protocolheader5
+laat de worker wachten op de nieuwe deployment voordat de volgende meting start.
