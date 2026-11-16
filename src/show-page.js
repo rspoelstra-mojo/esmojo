@@ -30,7 +30,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
       const context=await lease.ready;
       // Warm only the selected private reference, without delaying show content.
-      void context.request('barrier-layout',{method:'POST',body:{operation:'read',concertId:show.key}}).then(data=>loadBarrierImage(data.record?.barrierType)).catch(()=>{});
+      void Promise.resolve().then(()=>context.request('barrier-layout',{method:'POST',body:{operation:'read',concertId:show.key}})).then(data=>loadBarrierImage(data?.record?.barrierType)).catch(()=>{});
       const photoData=earlyPhoto||context.photo||null;
       if(context.show)show={...show,...context.show,key:show.key};
       if(disposed)return;
