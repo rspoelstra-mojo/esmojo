@@ -446,6 +446,10 @@
       "destination": "/showbeheer.html"
     },
     {
+      "source": "/api/login-background",
+      "destination": "/api/access?action=login-background"
+    },
+    {
       "source": "/api/mfa",
       "destination": "/api/access?action=mfa"
     },

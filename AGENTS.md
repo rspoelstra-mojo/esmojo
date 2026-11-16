@@ -1,3 +1,21 @@
+## Openbare inlogachtergrond en website-instellingen (16 november 2026)
+
+Gebruiker autoriseert de aangeleverde podiumfoto als openbare loginachtergrond,
+rechts naast het bestaande formulier uitgelijnd, met Beheerder / Instellingen
+voor upload en sleepbare preview inclusief login. Foto en uitsnede zijn na
+expliciete vraag Openbaar bevestigd; opslag in Dataverse. Bij nieuw schema
+verplicht een beveiligde knop in Datatransitie. Gebruik de geïsoleerde tabel
+esmojo_websiteinstelling met File, JSON-config/revisie, hash en unieke sleutel;
+geen gedeeld Shows-schema of keuzelijsten aanpassen. Expliciete setupklik mag
+de vaste tabel inrichten/controleren en de aangeleverde foto initialiseren
+wanneer nog geen instelling bestaat. Alleen actuele beheerder/activatie/MFA;
+geen extra Shows-modulerecht nodig voor algemene website-instellingen.
+Originelen behouden, display zonder vergroting, desktop/mobiel eigen crop,
+automatische seriële saves met ETag/CAS en onafhankelijke readback. Publiek
+uitsluitend vaste presentatieconfig en huidige gepubliceerde foto; geen vrije
+Document-ID, anonieme writes of privégegevens. Login/Auth/MFA blijven behouden
+en wachten nooit op de optionele achtergrondread. Zie docs/dataverse/website-settings.md.
+
 ## Rapportages werkelijk binnen 1,5 seconde (15 november 2026)
 
 Gebruiker vraagt de beloofde laadtijd waar te maken: meet klik tot bruikbare inhoud,

@@ -1,3 +1,4 @@
+import {createWebsiteSettingsView} from './website-settings.js';
 import {createDataTransitionView} from './data-transition.js';
 import {createDataverseTestView} from './dataverse-test.js';
 import {createIncidentAdminView} from './incident-admin.js';
@@ -137,10 +138,10 @@ function renderPage() {
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
-    if(hasModule(profile,'shows')||hasModule(profile,'reports')){
+    const settingsLink=document.createElement('a');settingsLink.href='/beheerder/instellingen';settingsLink.className='submenu-link';settingsLink.textContent='Instellingen';settingsLink.dataset.submenuTitle='Instellingen';submenu.append(settingsLink);
+    if(route==='beheerder/instellingen'){settingsLink.setAttribute('aria-current','page');disposePage=createWebsiteSettingsView(content);}
     const migrationLink=document.createElement('a');migrationLink.href='/beheerder/datatransitie';migrationLink.className='submenu-link';migrationLink.textContent='Datatransitie';migrationLink.dataset.submenuTitle='Datatransitie';submenu.append(migrationLink);
     if(route==='beheerder/datatransitie'){migrationLink.setAttribute('aria-current','page');disposePage=createDataTransitionView(content,{legacyRetired:true,canArtists:hasModule(profile,'artists'),canShows:hasModule(profile,'shows'),canReports:hasModule(profile,'reports')});}
-    }else if(route==='beheerder/datatransitie')content.textContent='Je hebt geen toegang tot deze datatransitie.';
     if(route==='beheerder/dataverse-test')disposePage=createDataverseTestView(content);
     const link = document.createElement('a'); link.href = '/beheerder/accounts'; link.className = 'submenu-link'; link.textContent = 'Accounts';
     if (route === 'beheerder/accounts') link.setAttribute('aria-current', 'page');
