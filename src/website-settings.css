@@ -1,0 +1,22 @@
+.website-settings { display:grid; gap:24px; width:100%; min-width:0; }
+.website-settings h1 { margin:0; font-size:24px; font-weight:600; letter-spacing:-.5px; }
+.website-settings-card { display:grid; gap:20px; padding:24px; min-width:0; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,var(--canvas)); }
+.website-settings-card h2 { margin:0; font-size:16px; font-weight:650; }
+.website-settings-card p { margin:0; font-size:14px; line-height:1.6; color:var(--muted); }
+.website-settings-controls { display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; }
+.website-settings-controls label { display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:14px; }
+.website-settings-controls select { background:var(--canvas); color:var(--text); font:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:8px; }
+.website-settings-controls input[type="range"] { width:160px; max-width:100%; accent-color:var(--accent); }
+.website-settings-upload { display:inline-flex; align-items:center; cursor:pointer; font-size:14px; }
+.website-settings-upload:focus-within { outline:2px solid var(--accent); outline-offset:3px; }
+.login-preview-container { min-width:0; width:100%; overflow:hidden; }
+.login-preview-frame { position:relative; overflow:hidden; border-radius:10px; outline:1px solid var(--line); cursor:grab; touch-action:none; margin:auto; }
+.login-preview-frame:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+.login-preview-frame.is-dragging { cursor:grabbing; }
+.login-preview-viewport.auth-panel { position:absolute; inset:0 auto auto 0; min-height:0; transform-origin:top left; pointer-events:none; user-select:none; }
+.login-preview-viewport.auth-panel::before { position:absolute; }
+.login-preview-input { height:46px; border:1px solid var(--line); border-radius:8px; background:var(--canvas); }
+.login-preview-submit { text-align:center; }
+.website-settings .website-settings-status { color:var(--text); }
+.website-settings .website-settings-error { color:#bd3434; }
+@media(max-width:600px) { .website-settings-card { padding:20px; } }

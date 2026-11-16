@@ -43,6 +43,7 @@ jobs:
           node --test tools/background/continue.test.mjs
           node --test tools/background/wait-reports-validation.test.mjs
           node --test server/show-migration*.test.js
+          node --test server/website-settings.test.js
           node server/accounts-api.test.js
           node --test server/show-management.test.js
           node --test server/reports-schema.test.js

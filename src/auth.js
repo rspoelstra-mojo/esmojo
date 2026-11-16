@@ -1,3 +1,4 @@
+import {attachLoginBackground} from './lib/login-background.js';
 import {createActivationVerification} from './lib/activation-verification.js';
 import {createMfaVerifier} from './lib/mfa-verification.js';
 import {retrySave} from './lib/save-retry.js';
@@ -12,6 +13,7 @@ import { singleSubmission } from './lib/single-submission.js';
 // Een geplakte fragmentlink kan in hetzelfde document landen; start dan schoon.
 window.addEventListener('hashchange',()=>{if(/^#\/activeren\?token=([^&]+)(?:&type=(invite|recovery))?$/.test(location.hash))location.reload();});
 
+let disposeLoginBackground=()=>{};
 let client;
 const mfaVerifier=createMfaVerifier();
 let authEpoch=0;
@@ -93,13 +95,16 @@ async function remember(session) {
 function enter(profile, deadline) {
   homeDashboardCache.bind(profile);
   armExpiry(deadline);
+  disposeLoginBackground();
   panel().hidden = true; panel().replaceChildren(); onReady(profile);
   document.querySelector('#app-boot').hidden=true;
 }
 
 function screen(title, description, fields, submitText, submit) {
   document.querySelector('#app-boot').hidden=true;
+  disposeLoginBackground();
   panel().dataset.screen=title==='Inloggen'?'login':'account';
+  if(title==='Inloggen')disposeLoginBackground=attachLoginBackground(panel());
   panel().hidden = false;
   panel().replaceChildren();
   const form = document.createElement('form');

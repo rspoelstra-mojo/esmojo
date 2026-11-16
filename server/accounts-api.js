@@ -1,4 +1,6 @@
 import {createConcertCatalogue} from './concert-catalogue.js';
+import {createWebsiteSettings} from './website-settings.js';
+import {createWebsiteSettingsSchema} from './website-settings-schema.js';
 import {createApplicationTasks,backgroundTaskModule} from './background-tasks/registry.js';
 import {showMigrationFailure} from './show-migration-errors.js';
 import {createShowMigration} from './show-migration.js';
@@ -45,7 +47,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}), websiteSettings=createWebsiteSettings({env}), websiteSchema=createWebsiteSettingsSchema({env}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows,env});
@@ -304,6 +306,22 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='website-settings'||action==='website-settings-schema'){
+        if(env.VERCEL_ENV==='preview'||previewReads)return reply(403,{error:'Wijzig instellingen uitsluitend in de productieomgeving.'});
+        try{
+          if(action==='website-settings-schema'){
+            if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+            return reply(200,await websiteSchema(req.body));
+          }
+          if(req.method==='GET')return reply(200,await websiteSettings.read());
+          if(req.method==='POST')return reply(200,await websiteSettings.save(req.body));
+          res.setHeader('Allow','GET, POST');return reply(405,{error:'Niet toegestaan.'});
+        }catch(error){
+          if(action==='website-settings-schema'){const pending=metadataProcessing(error);if(pending)return reply(200,pending);}
+          const code=error.message;
+          return reply(code==='VALIDATION'?400:code==='WEBSITE_CONFLICT'?409:code==='WEBSITE_SETUP_REQUIRED'?409:503,{error:code==='VALIDATION'?'Gebruik een geldige JPG-, PNG- of WebP-foto van maximaal 3 MB en een geldige uitsnede.':code==='WEBSITE_CONFLICT'?'De achtergrond is intussen gewijzigd. Laad de actuele instellingen opnieuw voordat je verdergaat.':code==='WEBSITE_SETUP_REQUIRED'?'Richt de inlogachtergrond eerst in via Datatransitie.':'Dataverse heeft de instellingen nog niet bevestigd. Probeer opnieuw.',code:['VALIDATION','WEBSITE_CONFLICT','WEBSITE_SETUP_REQUIRED'].includes(code)?code:'WEBSITE_UNAVAILABLE'});
+        }
+      }
       if(action==='background-tasks'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         if(previewReads||['reports-schema-v1','reports-migration-v1'].includes(req.body?.type)&&env.VERCEL_ENV!=='production')return reply(403,{error:'Achtergrondtaken zijn uitsluitend beschikbaar in de productie-beheerdersomgeving.'});
