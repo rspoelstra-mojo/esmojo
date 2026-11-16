@@ -1,3 +1,20 @@
+## Artiestenopening binnen één seconde (16 november 2026)
+
+Gebruiker vraagt de beloofde snelheid waar te maken; rapportages mogen na de
+bruikbare pagina stil op de achtergrond laden. Profiel/risicoscore en gekozen
+foto samen als voltooiing meten, bestaande vormgeving/berekeningen/rechten
+behouden. Geautoriseerde afgeleide native leesprojectie volgens Shows/Reports-
+patroon, versleuteld in bestaande Integratiestatus, met verse volledige
+bronrijsets/ETags en relatie-lidmaatschap per read. Geen rechten-TTL, schema-
+wijziging, bedrijfsreparatie, testmail/fictieve data of Auth/MFA-wijziging.
+Vaste bestaande main/OIDC-incidentworker mag afgeleid onderhoud voorbereiden
+en numerieke koude/warme performance meten met actuele admin/Reports/Arts-
+rechten, lease/ETag/cursor en broncontrole. Dit verlengt geen oude delegatie.
+Alleen technische OAuth/schema-warmup vóór autorisatie; privéreads daarna.
+Bronnen en originele parser-/risicoberekeningen blijven leidend. Browser- en
+backendbewijzen afzonderlijk; geen éénsecondeclaim op alleen een groene build
+of een skeleton. Zie docs/dataverse/artist-native-runtime.md.
+
 ## Openbare inlogachtergrond en website-instellingen (16 november 2026)
 
 Gebruiker autoriseert de aangeleverde podiumfoto als openbare loginachtergrond,
