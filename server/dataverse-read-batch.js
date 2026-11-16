@@ -1,12 +1,13 @@
 import {randomBytes} from 'node:crypto';
 import {nativeConnection} from './dataverse-shows/connection.js';
 const identifier=value=>typeof value==='string'&&/^[a-z][a-z0-9_]{0,127}$/i.test(value);
+const attribute=value=>identifier(value)||typeof value==='string'&&/^_[a-z][a-z0-9_]{0,119}_value$/i.test(value);
 // Internal read-only transport; callers supply only server-built schema queries.
 // There is deliberately no HTTP endpoint accepting these paths/descriptors.
 export function createDataverseReadBatch({env=process.env,connection=nativeConnection(env),meta,allowedTables}={}){
  return async queries=>{
   if(!Array.isArray(queries)||!queries.length||queries.length>30)throw Error('READ_BATCH_INVALID');
-  const planned=await Promise.all(queries.map(async query=>{if(!allowedTables.has(query.table)||typeof query.filter!=='string'||query.filter.length>4000||query.select&&(!Array.isArray(query.select)||query.select.some(c=>!identifier(c))))throw Error('READ_BATCH_INVALID');const m=query.nativeMetadata||await meta(query.table);if(m.LogicalName!==query.table||!identifier(m.EntitySetName)||!identifier(m.PrimaryIdAttribute))throw Error('READ_BATCH_INVALID');return{...query,primary:m.PrimaryIdAttribute,set:m.EntitySetName,path:m.EntitySetName+'?'+new URLSearchParams({...query.filter?{'$filter':query.filter}:{},...query.select?{'$select':[...new Set([m.PrimaryIdAttribute,...query.select])].join(',')}:{}}),rows:[]};}));
+  const planned=await Promise.all(queries.map(async query=>{if(!allowedTables.has(query.table)||typeof query.filter!=='string'||query.filter.length>4000||query.select&&(!Array.isArray(query.select)||query.select.some(c=>!attribute(c))))throw Error('READ_BATCH_INVALID');const m=query.nativeMetadata||await meta(query.table);if(m.LogicalName!==query.table||!identifier(m.EntitySetName)||!identifier(m.PrimaryIdAttribute))throw Error('READ_BATCH_INVALID');return{...query,primary:m.PrimaryIdAttribute,set:m.EntitySetName,path:m.EntitySetName+'?'+new URLSearchParams({...query.filter?{'$filter':query.filter}:{},...query.select?{'$select':[...new Set([m.PrimaryIdAttribute,...query.select])].join(',')}:{}}),rows:[]};}));
   let pending=[...planned];for(let round=0;pending.length;round++){
    if(round>=50)throw Error('READ_BATCH_LIMIT');const boundary='batch_'+randomBytes(16).toString('hex'),lines=[];
    for(let i=0;i<pending.length;i++)lines.push('--'+boundary,'Content-Type: application/http','Content-Transfer-Encoding: binary','Content-ID: '+(i+1),'','GET /api/data/v9.2/'+pending[i].path+' HTTP/1.1','Accept: application/json','Consistency: Strong','Prefer: odata.maxpagesize=1000','','');lines.push('--'+boundary+'--','');
