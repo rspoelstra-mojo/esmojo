@@ -66,3 +66,26 @@ omweg rond de replaybescherming worden. Alleen het versleutelde MFA-bewijs
 wordt bij beveiligde productie-reads doorgestuurd; geen refresh-cookie of
 Drive-sleutel. Business-writes blijven uitgeschakeld. Een oude previewsessie
 zonder dit bewijs kan na inschakelen een nieuwe aanmelding vereisen.
+
+## Herstel vastgelopen Redis-omschakeling (V1.140)
+
+Een `freeze`-autoriteit pauzeert nieuwe MFA-controles bewust terwijl oude leases
+uitlopen. Een geblokkeerde historische artiestklik-import mag deze pauze niet
+blijvend maken. Import bewaart geldige oorspronkelijke event-/artiest-ID en het
+exacte tijdstip, ook wanneer de artiest niet meer in de actuele catalogus staat.
+Er wordt geen artiest aangemaakt of alias geraden. Gewone nieuwe kliks vereisen
+nog steeds een bestaande canonieke artiest.
+
+De vaste main/OIDC-worker heeft `redis-resume` uitsluitend voor de geblokkeerde
+`NOT_FOUND`-kopiefase. Eerst huidige actor/admin/Shows+Artiesten, oorspronkelijke
+versie/epoch/eindtijd, geen actieve lease, bevestigde bronfence en verstreken drain
+controleren. Alle bestaande native events moeten onafhankelijk exact overeenkomen
+met de onveranderde bron; geen afwijkingen repareren. Daarna conditioneel hervatten
+met behoud van cursor, epoch en absolute eindtijd. Verlopen grants niet heropenen.
+De normale volledige vergelijking/activering/teruglezing blijven gelden.
+
+De beveiligingsworkflow test zowel native readiness als de daadwerkelijk gekozen
+MFA-opslag, zonder account of Auth-challenge, via een willekeurige technische
+probe die wordt verwijderd. Supabase Auth/TOTP en de serverpoort blijven verplicht.
+Het publieke protocolwoord `mode:redis` betekent de bestaande serverpoort, niet
+de feitelijke opslagprovider; de beveiligde healthcheck rapporteert die afzonderlijk.

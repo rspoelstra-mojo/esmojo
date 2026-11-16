@@ -28,3 +28,15 @@ jobs:
             if(response.ok&&data.ok&&data.dataverseReady&&data.secretKeyReady){confirmed=true;break;}await new Promise(resolve=>setTimeout(resolve,10000));
           }if(!confirmed)throw Error('NATIVE_SECURITY_UNCONFIRMED');
           JS
+      - name: Verify the actual selected MFA storage after the approved cutover
+        run: |
+          node --input-type=module <<'JS'
+          const endpoint='https://esmojo.nl/api/mfa';let confirmed=false;
+          for(let n=0;n<40;n++){
+            const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',endpoint);
+            const identity=await fetch(url,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN},signal:AbortSignal.timeout(10000)});if(!identity.ok)throw Error('OIDC_UNAVAILABLE');const {value}=await identity.json();console.log('::add-mask::'+value);
+            const response=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({operation:'health'}),signal:AbortSignal.timeout(30000)}),data=await response.json();
+            console.log(JSON.stringify({selectedMfaHealthy:data.ok===true,dataverseReady:data.dataverseReady===true,enabled:data.enabled===true,elapsedMs:Number.isSafeInteger(data.elapsedMs)?data.elapsedMs:null}));
+            if(response.ok&&data.ok&&data.dataverseReady&&data.enabled&&data.secretKeyReady){confirmed=true;break;}await new Promise(resolve=>setTimeout(resolve,10000));
+          }if(!confirmed)throw Error('SELECTED_MFA_STORAGE_UNCONFIRMED');
+          JS
