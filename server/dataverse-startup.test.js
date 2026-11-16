@@ -10,3 +10,15 @@ test('startup overlaps only technical checks, publishes metadata after verificat
 test('failed environment verification exposes no preloaded metadata or usable connection',async()=>{
  const connection=createDataverseSetupConnection({env,preloadTables:[table],request:async url=>Response.json(url.includes('/token')?{token_type:'bearer',access_token:'fixture',expires_in:3600}:url.includes('solutions?')?{value:[]}:url.includes('organizations?')?{value:[{languagecode:1043}]}:{LogicalName:table,EntitySetName:table+'s',PrimaryIdAttribute:table+'id',ManyToOneRelationships:[]})});await assert.rejects(connection.connect(),/CHOICE_SOLUTION/);assert.equal(connection.metadata(table),undefined);
 });
+
+test('batched startup contains only fixed technical GETs, validates every part, and renews the token',async()=>{
+ let tokens=0,batches=0,now=0,broken=false;
+ const connection=createDataverseSetupConnection({env,preloadTables:[table],bootstrapBatch:true,now:()=>now,request:async(url,options)=>{
+  if(url.includes('/token')){tokens++;return Response.json({token_type:'bearer',access_token:'fixture-'+tokens,expires_in:120});}
+  assert(url.endsWith('/$batch'));assert.equal(options.method,'POST');assert.equal(options.headers.Authorization,'Bearer fixture-'+tokens);batches++;
+  const paths=[...options.body.matchAll(/^GET \/api\/data\/v9\.2\/([^\r\n]+) HTTP\/1\.1$/gm)].map(match=>match[1]);assert.equal(paths.length,3);assert(paths.every(path=>/^(solutions\?|organizations\?|EntityDefinitions\()/.test(path)));assert(!/PATCH|DELETE|esmojo_sleutel|esmojo_payload_json/.test(options.body));
+  const bodies=[{value:[{uniquename:'ESMOJO',solutionid:id,ismanaged:false,publisherid:{customizationprefix:'esmojo'}}]},{value:[{languagecode:1043}]},{LogicalName:table,EntitySetName:table+'s',PrimaryIdAttribute:table+'id',ManyToOneRelationships:[]}];
+  return new Response(bodies.map((value,index)=>'--fixture\r\nContent-Type: application/http\r\n\r\nHTTP/1.1 '+(broken&&index===2?'403 Forbidden':'200 OK')+'\r\nContent-Type: application/json\r\n\r\n'+JSON.stringify(value)+'\r\n').join('')+'--fixture--\r\n',{headers:{'content-type':'multipart/mixed; boundary=fixture'}});
+ }});
+ assert.equal((await connection.connect()).language,1043);assert.equal(batches,1);assert.equal(connection.metadata(table).LogicalName,table);now=61000;assert.equal((await connection.connect()).headers.Authorization,'Bearer fixture-2');assert.equal(batches,2);now=122000;broken=true;await assert.rejects(connection.connect(),/CHOICE_RESPONSE/);assert.equal(tokens,3);
+});

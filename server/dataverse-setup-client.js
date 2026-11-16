@@ -1,7 +1,8 @@
+import {randomBytes} from 'node:crypto';
 // Gedeelde vaste Dataverse-setupverbinding; alleen op geautoriseerde beheeractie.
 const guid=value=>typeof value==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value);
 const origin='https://org5bab852a.crm.dynamics.com',base=origin+'/api/data/v9.2/';
-export function createDataverseSetupConnection({env=process.env,request=fetch,now=Date.now,preloadTables=[]}={}){
+export function createDataverseSetupConnection({env=process.env,request=fetch,now=Date.now,preloadTables=[],bootstrapBatch=false}={}){
  let context=null,pending=null;const metadata=new Map();
  if(!Array.isArray(preloadTables)||preloadTables.some(name=>!['esmojo_integratiestatus','esmojo_opdracht','esmojo_medewerker','esmojo_modulerecht'].includes(name)))throw Error('CHOICE_CONFIG');
  async function call(path,headers,{method='GET',body,code='CHOICE_READ',timeoutMs=15000,multipart}={}){
@@ -22,10 +23,16 @@ export function createDataverseSetupConnection({env=process.env,request=fetch,no
    if(!response.ok)throw Error('CHOICE_AUTH');const token=await json(response);
    if(token.token_type?.toLowerCase()!=='bearer'||typeof token.access_token!=='string'||!token.access_token||token.access_token.length>32000)throw Error('CHOICE_AUTH');
    const headers={Authorization:'Bearer '+token.access_token,Accept:'application/json','OData-Version':'4.0','OData-MaxVersion':'4.0'};
-   const solutionRequest=call('solutions?'+new URLSearchParams({'$select':'uniquename,solutionid,ismanaged','$expand':'publisherid($select=customizationprefix)','$filter':"uniquename eq 'ESMOJO'",'$top':'2'}),headers);
-   const organizationRequest=call('organizations?$select=languagecode&$top=2',headers);
-   const metadataRequest=Promise.all(preloadTables.map(async table=>{const response=await call("EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName,PrimaryIdAttribute&$expand=ManyToOneRelationships($select=ReferencingAttribute,ReferencingEntityNavigationPropertyName)",headers);if(!response.ok)throw Error('CHOICE_SCHEMA');const value=await json(response);if(value.LogicalName!==table||!/^esmojo_[a-z0-9_]+$/.test(value.EntitySetName)||!/^esmojo_[a-z0-9_]+$/.test(value.PrimaryIdAttribute)||!Array.isArray(value.ManyToOneRelationships))throw Error('CHOICE_SCHEMA');return[table,value];}));
-   const [solutionResponse,organization,preparedMetadata]=await Promise.all([solutionRequest,organizationRequest,metadataRequest]);response=solutionResponse;
+   const paths=['solutions?'+new URLSearchParams({'$select':'uniquename,solutionid,ismanaged','$expand':'publisherid($select=customizationprefix)','$filter':"uniquename eq 'ESMOJO'",'$top':'2'}),'organizations?$select=languagecode&$top=2',...preloadTables.map(table=>"EntityDefinitions(LogicalName='"+table+"')?$select=LogicalName,EntitySetName,PrimaryIdAttribute&$expand=ManyToOneRelationships($select=ReferencingAttribute,ReferencingEntityNavigationPropertyName)")];
+   let results;
+   if(bootstrapBatch){
+    // Fixed technical GETs only: no account, authority or report contents here.
+    const boundary='batch_'+randomBytes(16).toString('hex'),lines=[];
+    for(let index=0;index<paths.length;index++)lines.push('--'+boundary,'Content-Type: application/http','Content-Transfer-Encoding: binary','Content-ID: '+(index+1),'','GET /api/data/v9.2/'+paths[index]+' HTTP/1.1','Accept: application/json','Consistency: Strong','','');lines.push('--'+boundary+'--','');
+    const result=await call('$batch',headers,{method:'POST',multipart:{boundary,body:lines.join('\r\n')},code:'CHOICE_RESPONSE'});if(!result.ok)throw Error('CHOICE_RESPONSE');const match=/boundary="?([a-z0-9_.-]+)"?/i.exec(result.headers.get('content-type')||'');if(!match)throw Error('CHOICE_RESPONSE');const parts=(await result.text()).split('--'+match[1]).filter(part=>/HTTP\/1\.[01] /.test(part));if(parts.length!==paths.length)throw Error('CHOICE_RESPONSE');
+    results=parts.map(part=>{const payload=part.slice(part.indexOf('HTTP/1.')),split=payload.indexOf('\r\n\r\n');if(!/^HTTP\/1\.[01] 200\b/.test(payload)||split<0)throw Error('CHOICE_RESPONSE');try{return Response.json(JSON.parse(payload.slice(split+4).trim()));}catch{throw Error('CHOICE_RESPONSE');}});
+   }else results=await Promise.all(paths.map(path=>call(path,headers)));
+   const [solutionResponse,organization,...metadataResponses]=results,preparedMetadata=await Promise.all(metadataResponses.map(async(response,index)=>{const table=preloadTables[index];if(!response.ok)throw Error('CHOICE_SCHEMA');const value=await json(response);if(value.LogicalName!==table||!/^esmojo_[a-z0-9_]+$/.test(value.EntitySetName)||!/^esmojo_[a-z0-9_]+$/.test(value.PrimaryIdAttribute)||!Array.isArray(value.ManyToOneRelationships))throw Error('CHOICE_SCHEMA');return[table,value];}));response=solutionResponse;
    if(!response.ok)throw Error('CHOICE_SOLUTION');const result=await json(response),rows=result.value;
    if(!Array.isArray(rows)||rows.length!==1||rows[0].uniquename?.toLowerCase()!=='esmojo'||rows[0].ismanaged!==false||rows[0].publisherid?.customizationprefix!=='esmojo'||!guid(rows[0].solutionid))throw Error('CHOICE_SOLUTION');
    if(!organization.ok)throw Error('CHOICE_LANGUAGE');const org=await json(organization);

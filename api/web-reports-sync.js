@@ -10,7 +10,7 @@ import {createOnTrackReportStore} from '../server/ontrack-report/service.js';
 export const config={maxDuration:300};
 export function makeWebReportsSync({identify=(token,{metricsOnly=false}={})=>verifyImportIdentity(token,{audience:metricsOnly?'https://esmojo.nl/api/incident-references-sync':'https://esmojo.nl/api/web-reports-sync',workflow:'web-reports.yml'}),online=null,metrics=null,verifyArtists=createArtistRuntimeVerification(),verifyRuntime=createNativeRuntimeVerification(),reportPerformance=createReportPerformance()}={}){
  return async(req,res)=>{
-  res.setHeader('Cache-Control','no-store');res.setHeader('X-ESMOJO-Artist-Runtime','4');if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Niet toegestaan.'});}
+  res.setHeader('Cache-Control','no-store');res.setHeader('X-ESMOJO-Artist-Runtime','5');if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Niet toegestaan.'});}
   try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1],{metricsOnly:req.query?.incidentMetrics==='1'});}catch{return res.status(403).json({error:'Geen toegang.'});}
   try{
    if(req.query?.incidentMetrics==='1'&&['inventory','prepare','measure','baseline'].includes(req.body?.reportPerformance)&&Object.keys(req.body).join(',')==='reportPerformance')return res.status(200).json(await reportPerformance(req.body.reportPerformance));
