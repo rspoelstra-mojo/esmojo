@@ -33,7 +33,7 @@ paginaladen of anonieme verzoeken.
 
 **Beheerder → Instellingen → Achtergrondfoto** accepteert JPG/PNG/WebP tot 3 MiB
 (passend binnen Vercels verzoeklimiet). Sleep de foto of gebruik de pijltjestoetsen;
-Shift vergroot de stap. Zoom is 100–300%. Desktop en mobiel hebben eigen uitsneden.
+Shift vergroot de stap. Zoom is 100–300%. Vervaging is instelbaar van 0 (uit) tot 12 px, standaard 3 px. De blur geldt alleen voor de achtergrond; formulier en logo blijven scherp. Dit openbare presentatieveld staat in de bestaande JSON-config, zonder nieuw schema. Bestaande configuraties zonder dit veld gebruiken de standaard van 3 px. Desktop en mobiel hebben eigen uitsneden.
 De preview gebruikt dezelfde geometrie, vormgeving en formulierafmetingen als de
 login. Wijzigingen worden na het loslaten automatisch serieel opgeslagen. Een
 gelijktijdige wijziging door een andere beheerder geeft een conflict, geen stille
