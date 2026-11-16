@@ -1,4 +1,5 @@
 import {mojoArtistUrl} from '../shared/mojo-artist.js';
+import {publicArtistPhoto} from '../shared/public-artist-photo.js';
 import {renderArtistRiskCard} from './artist-risk-card.js';
 import {peopleIconPaths} from './lib/profile-icons.js';
 import {timetableClock} from '../shared/show-timetable.js';
@@ -43,7 +44,7 @@ export function renderArtistProfile(name,profile={},{loadShow=null,now=Date.now,
  if(typeof profile.photo==='string'&&/^https:\/\/www\.mojo\.nl\/media\//i.test(profile.photo)){
   const image=node('img','artist-profile-photo');
   image.alt='';
-  image.src=profile.photo;
+  image.decoding='async';image.fetchPriority='high';image.src=publicArtistPhoto(profile.photo)||profile.photo;
   const link=node('a','artist-profile-photo-link');link.href=mojoArtistUrl(name);link.target='_blank';link.rel='noopener noreferrer';link.setAttribute('aria-label','Meer over '+name+' op MOJO');link.append(image);
   image.addEventListener('error',()=>link.remove(),{once:true});
   header.append(link);

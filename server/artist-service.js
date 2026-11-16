@@ -1,3 +1,6 @@
+import {createArtistOpening} from './artist-opening.js';
+import {canonical} from './show-migration-writer.js';
+import {hasModule} from '../shared/account-modules.js';
 import {canonicalVenueName} from './mojo-venues.js';
 import {createConcertCatalogue} from './concert-catalogue.js';
 import {createHash} from 'node:crypto';
@@ -8,7 +11,7 @@ import {artistPreparation} from './artist-preparation.js';
 import {artistTopFive,validArtistId} from '../shared/artist-catalogue.js';
 import {researchView} from '../src/lib/research-view.js';
 import {createArtistViews,validArtistViewEvent} from './artist-views.js';
-export function createArtistService({env=process.env,shows,views=createArtistViews({env}),photo=createConcertCatalogue({env}).photo,now=Date.now}={}){
+export function createArtistService({env=process.env,shows,views=createArtistViews({env}),photo=createConcertCatalogue({env}).photo,now=Date.now,opening=(env.VERCEL_ENV==='production'||env.SHOWS_STORAGE_PROVIDER==='dataverse')?createArtistOpening({env}):null}={}){
  let value=null,checked=0;const pending=new Map();
  async function catalogue(actor,force=false){
   if(!force&&value&&now()-checked<30000)return value;
@@ -18,7 +21,7 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
  async function artist(actor,id){if(!validArtistReference(id))throw Error('VALIDATION');let directory=await catalogue(actor),row=resolveReadableArtist(directory,id);if(!row){directory=await catalogue(actor,true);row=resolveReadableArtist(directory,id);}if(!row)throw Error('NOT_FOUND');return row;}
  const top=(directory,counts)=>artistTopFive(directory.artists,foldArtistViews(directory,counts));
  function input(body,click=false){if(!body||Array.isArray(body)||Object.keys(body).sort().join(',')!==(click?'artistId,eventId':body.includeProfile===true?'artistId,includeProfile':'artistId')||!(click?validArtistId(body.artistId):validArtistReference(body.artistId))||click&&!validArtistViewEvent(body.eventId))throw Error('VALIDATION');return body;}
- return{
+ const service={
   async menu(actor){return{artists:(await catalogue(actor)).artists};},
   async ranking(actor){const [directory,counts]=await Promise.all([catalogue(actor),views.counts()]);return{mostViewed:top(directory,counts)};},
   async show(actor,body){
@@ -34,6 +37,15 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
    if(body.performance&&source.report.show?.performance!==body.performance||source.report.show?.date!==body.date||canonicalVenueName(source.report.show?.venue)!==body.venue||readableArtistName(source.report.show?.name)!==row.name)throw Error('REPORT_UNAVAILABLE');
    const data=await createWebReportService({store:async()=>source.report,photo:async()=>null})(actor,{concertId:source.report.show.key});
    return{show:general,timetable:data.report.timetable,kpis:data.report.kpis,reportId:data.show.key,preparation};
+  },
+  async scope(actor,reference){const row=await artist(actor,reference),directory=await catalogue(actor);return{row,artistIds:[row.id,...[...directory.aliases].filter(([,target])=>target===row.id).map(([id])=>id)]};},
+  async openAuthorized(actor,body,incidentService,profile,{prepare=true,beforePublish}={}){
+   if(!profile||profile.id!==actor||!profile.activated||profile.disabled||!hasModule(profile,'artists'))throw Error('FORBIDDEN');
+   input(body);if(body.includeProfile!==undefined)throw Error('VALIDATION');
+   if(opening){const ready=await opening.read(body.artistId);if(ready)return ready;if(!prepare)throw Error('ARTIST_OPENING_NOT_PREPARED');}
+   if(opening)await catalogue(actor,true);
+   const {artistIds}=await service.scope(actor,body.artistId),build=async()=>{const fresh=createArtistService({env,shows,views,photo,now,opening:null}),freshScope=await fresh.scope(actor,body.artistId);if(canonical([...freshScope.artistIds].sort())!==canonical([...artistIds].sort()))throw Error('SOURCE_CHANGED');const [detail,risk]=await Promise.all([fresh.detail(actor,{artistId:body.artistId,includeProfile:true}),fresh.risk(actor,body,incidentService)]);return{...detail,risk};};
+   return opening?opening.prepare(body.artistId,artistIds,build,beforePublish):build();
   },
   async risk(actor,body,incidentService){
    input(body);if(body.includeProfile!==undefined)throw Error('VALIDATION');
@@ -53,4 +65,5 @@ export function createArtistService({env=process.env,shows,views=createArtistVie
    return {...detail,profile:{concerts:profile.concerts,photo:image,biography:null,latestDate:profile.latestDate,audience,audienceStoredAt}};},
   async record(actor,body){input(body,true);await artist(actor,body.artistId);const result=await views.record(body.artistId,body.eventId);try{return{...result,mostViewed:top(await catalogue(actor),await views.counts())};}catch{return result;}},
  };
+ service.opening=opening;service.prepareRead=()=>opening?.warm?.()||Promise.resolve();return service;
 }

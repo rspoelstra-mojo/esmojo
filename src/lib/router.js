@@ -20,7 +20,7 @@ export function installRouter({onNavigate,win=window,doc=document}){
   if(url.pathname===win.location.pathname&&url.hash==='#content'){event.preventDefault();doc.querySelector('#content')?.focus();return;}
   if(!isAppPath(url.pathname)||url.hash)return;
   event.preventDefault();const target=(canonicalReportPath(url.pathname)||url.pathname)+url.search;
-  if(target!==win.location.pathname+win.location.search){if(url.pathname.startsWith('/rapportages/'))win.performance?.mark?.('esmojo-report-click');win.history.pushState(null,'',target);onNavigate();}
+  if(target!==win.location.pathname+win.location.search){if(url.pathname.startsWith('/rapportages/'))win.performance?.mark?.('esmojo-report-click');if(url.pathname.startsWith('/artiest/')){win.performance?.clearMarks?.('esmojo-artist-click');win.performance?.mark?.('esmojo-artist-click');}win.history.pushState(null,'',target);onNavigate();}
  };
  doc.addEventListener('click',click);win.addEventListener('popstate',changed);win.addEventListener('hashchange',changed);
  return()=>{doc.removeEventListener('click',click);win.removeEventListener('popstate',changed);win.removeEventListener('hashchange',changed);};

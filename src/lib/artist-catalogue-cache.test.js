@@ -25,3 +25,9 @@ test('Bestaande lokale naamcache wordt direct leesbaar zonder ID- of puntenverli
 test('Slug-navigatie koppelt metadata en interne klik-ID aan dezelfde lopende read',async()=>{
  const cache=createArtistCatalogueCache(),page=deferred(),calls=[];cache.bind(profile);const request=async action=>{calls.push(action);return action==='artist-detail'?page.promise:{recorded:true};};const opening=cache.detail(request,'u2');cache.trackDetail('u2',[artists[0].id]);const writing=cache.record(request,artists[0].id,randomUUID());await tick();assert.equal(calls.includes('artist-view'),false);page.resolve({artist:artists[0]});await opening;await writing;assert.equal(calls.filter(action=>action==='artist-view').length,1);
 });
+
+
+test('Bundled profile/risk request is one cancellable read and telemetry stays behind the complete landing',async()=>{
+ const cache=createArtistCatalogueCache(),page=deferred(),controller=new AbortController(),calls=[];cache.bind(profile);const request=async(action,options)=>{calls.push(action);if(action==='artist-open'){assert.equal(options.signal,controller.signal);assert.deepEqual(options.body,{artistId:'u2'});return page.promise;}return{recorded:true};};
+ const opening=cache.open(request,'u2',[artists[0].id],controller.signal),recording=cache.record(request,artists[0].id,randomUUID());await tick();assert.deepEqual(calls,['artist-open']);page.resolve({artist:artists[0],risk:{pending:false}});await opening;await recording;assert.deepEqual(calls,['artist-open','artist-view']);
+});

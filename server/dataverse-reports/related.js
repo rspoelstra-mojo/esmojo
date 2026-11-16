@@ -7,7 +7,7 @@ export function createNativeReportsRelated({reader,authorize,concertCatalogue=nu
  const artistId=name=>'a_'+digest(normalizeArtistName(name));
  return async(operation,payload,legacy)=>{
   if(!['artist-catalogue','artist-profile','artist-show','incident-read','incident-source','incident-counts'].includes(operation))return legacy();
-  await authorize(payload.actor,{module:['incident-source','incident-counts'].includes(operation)?'reports':'artists',worker:payload.worker===true,admin:operation==='incident-read'&&!payload.artistIds&&!payload.worker,incident:operation.startsWith('incident-')});
+  await authorize(payload.actor,{module:['incident-source','incident-counts'].includes(operation)?'reports':'artists',worker:payload.worker===true,admin:operation==='incident-read'&&!payload.artistIds&&!payload.worker,incident:operation.startsWith('incident-'),fast:true});
   if(operation==='incident-source'||operation==='incident-counts'){
    const summary=await reader.summary(payload.concertId);if(payload.sourceId&&payload.sourceId!==summary.sourceId)throw Error('SOURCE_CHANGED');
    if(operation==='incident-counts'){if(summary.sourceHash!==payload.sourceHash||canonical(summary.statistics.kpis)!==canonical(payload.kpis))throw Error('SOURCE_CHANGED');return{ok:true};}

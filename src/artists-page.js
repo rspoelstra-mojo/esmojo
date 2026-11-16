@@ -18,8 +18,10 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
   function syncLoading(){const active=busy||reportBusy>0;for(const loader of loaders.values()){if(active&&!loader.finish)loader.finish=loader.ui.start();else if(!active&&loader.finish){loader.finish();loader.finish=null;}}if(active)content.setAttribute('aria-busy','true');else content.removeAttribute('aria-busy');}
   function setLinks(next){const elements=next.length?next:[heading];for(const [el,loader]of loaders)if(!elements.includes(el)){loader.ui.dispose();loaders.delete(el);}for(const el of elements)if(!loaders.has(el)){const ui=createSubmenuLoading(el,content);loaders.set(el,{ui,finish:null});}cache.trackDetail(id,next.map(el=>el.dataset.artistId));syncLoading();}
   async function load(){if(cancelled||busy)return;busy=true;content.classList.remove('artist-selection-empty');content.replaceChildren();syncLoading();
+   const clicked=performance.getEntriesByName('esmojo-artist-click').at(-1)?.startTime??performance.now();
    try{
-    const [data,initialRisk]=await Promise.all([cache.detail(request,id,[...loaders.keys()].map(el=>el.dataset.artistId)),request('artist-risk',{method:'POST',body:{artistId:id},signal:riskAbort.signal})]);if(cancelled)return;
+    const ids=[...loaders.keys()].map(el=>el.dataset.artistId);
+    const [data,initialRisk]=cache.open?await cache.open(request,id,ids,riskAbort.signal).then(data=>[data,data.risk]):await Promise.all([cache.detail(request,id,ids),request('artist-risk',{method:'POST',body:{artistId:id},signal:riskAbort.signal})]);if(cancelled)return;
     const artist=cleanArtistMenu([data.artist])[0];
     if(validArtistId(id)&&artist.id!==id||data.requestedReference!==undefined&&data.requestedReference!==id)throw Error('ARTIST_CATALOGUE');
     const canonicalId=data.canonicalArtistId||artist.id;if(!validArtistId(canonicalId))throw Error('ARTIST_CATALOGUE');
@@ -35,20 +37,23 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
     });
     profileView.updateRisk(initialRisk.score,initialRisk.assessment);
     content.replaceChildren(profileView);
+    const imageReady=profileView.querySelector('.artist-profile-photo')?.decode?.().catch(()=>{})||Promise.resolve();
     async function refreshRisk(){if(cancelled)return;if(document.hidden){riskTimer=setTimeout(refreshRisk,60000);return;}
-     try{const data=await request('artist-risk',{method:'POST',body:{artistId:canonicalId},signal:riskAbort.signal});if(cancelled)return;profileView.updateRisk(data.score,data.assessment);riskTimer=setTimeout(refreshRisk,data.pending?500:60000);}
+     try{const data=cache.open?(await cache.open(request,canonicalId,[],riskAbort.signal)).risk:await request('artist-risk',{method:'POST',body:{artistId:canonicalId},signal:riskAbort.signal});if(cancelled)return;profileView.updateRisk(data.score,data.assessment);riskTimer=setTimeout(refreshRisk,data.pending?500:60000);}
      catch{if(!cancelled){riskTimer=setTimeout(refreshRisk,60000);}}
     }
     riskTimer=setTimeout(refreshRisk,initialRisk.pending?500:60000);
-    requestAnimationFrame(()=>setTimeout(()=>{if(!cancelled)showMemory?.start();},0));
     document.title=artist.name+' · Artiesten · ESMOJO';
     const path='/artiest/'+encodeURIComponent(selected);if(location.pathname!==path)history.replaceState(null,'',path+location.search+location.hash);
     render(cache.current());error.resolved();
+    await imageReady;if(cancelled)return;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!cancelled){performance.clearMeasures('esmojo-artist-opening');performance.measure('esmojo-artist-opening',{start:clicked,end:performance.now()});}}));
+    requestAnimationFrame(()=>setTimeout(()=>{if(!cancelled)showMemory?.start();},0));
    }
    catch{showMemory?.dispose();showMemory=null;if(!cancelled)error.show('De artiest kon niet worden geladen. Probeer opnieuw.',async()=>{await load();return !cancelled&&Boolean(content.querySelector('.artist-page'));},'Opnieuw laden');}
    finally{busy=false;if(!cancelled)syncLoading();}
   }
-  setLinks(links);void load();return{setLinks,dispose(){cancelled=true;clearTimeout(riskTimer);riskAbort.abort();profileView?.dispose();showMemory?.dispose();showMemory=null;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
+  setLinks(links);const ready=load();return{ready,setLinks,dispose(){cancelled=true;clearTimeout(riskTimer);riskAbort.abort();profileView?.dispose();showMemory?.dispose();showMemory=null;for(const loader of loaders.values())loader.ui.dispose();error.dispose();}};
  }
  function render(state){if(disposed||!state)return;const known=new Map([...submenu.querySelectorAll('[data-artist-link]')].map(el=>[el.dataset.artistLink,el])),selectedLinks=[],routes=artistRouteMap([...(state.artists||[]),...state.mostViewed]);submenu.replaceChildren();
   for(const [group,title,rows]of [['most','Meest bekeken',state.mostViewed],['all','Alle artiesten',state.artists||[]]]){
@@ -65,7 +70,7 @@ export function createArtistsPage(content,submenu,{selected=null,forceRefresh=fa
   const menu=cache.refreshMenu(request,{force}).then(()=>{if(!disposed)feedback('menu').resolved();}).catch(()=>{if(!disposed)feedback('menu').show('Het artiestenmenu kon niet worden vernieuwd. De bekende artiesten blijven beschikbaar.',async()=>{await load(true);return cache.current()?.artists!==null;},'Opnieuw laden');}).finally(finish);
   const ranking=cache.refreshRanking(request,{force}).then(()=>{if(!disposed)feedback('ranking').resolved();}).catch(()=>{if(!disposed)feedback('ranking').show('Meest bekeken kon niet worden geladen.',async()=>{await load(true);return Boolean(cache.current()?.rankingLoaded);},'Opnieuw laden');});await Promise.all([menu,ranking]);
  }
- render(cache.current());const unsubscribe=cache.subscribe(render);void load(forceRefresh);
+ render(cache.current());const unsubscribe=cache.subscribe(render);if(selected&&page?.ready)void page.ready.then(()=>requestAnimationFrame(()=>setTimeout(()=>{if(!disposed)void load(false);},0)));else void load(forceRefresh);
  window.addEventListener('focus',()=>void load(true),{signal:controller.signal});document.addEventListener('visibilitychange',()=>{if(!document.hidden)void load(true);},{signal:controller.signal});
  const timer=setInterval(()=>{if(!document.hidden)void load();},30000);
  return()=>{disposed=true;unsubscribe();controller.abort();clearInterval(timer);page?.dispose();menuLoading.dispose();for(const item of feedbacks.values())item.dispose();content.classList.remove('artist-selection-empty');submenu.replaceChildren();content.replaceChildren();};

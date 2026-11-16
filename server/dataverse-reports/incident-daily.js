@@ -22,7 +22,7 @@ export function createNativeIncidentDaily({env=process.env,repo=createNativeShow
  return async(operation,payload)=>{
   const allowed={'incident-daily-read':['actor','referencesOnly'],'incident-daily-state':['worker'],'incident-daily-start':['worker'],'incident-daily-publish':['worker','day','payload']}[operation];
   if(!allowed||!payload||Object.keys(payload).some(key=>!allowed.includes(key))||payload.referencesOnly!==undefined&&typeof payload.referencesOnly!=='boolean')throw Error('VALIDATION');
-  if(operation==='incident-daily-read')await authorize(payload.actor,{module:'artists',admin:payload.referencesOnly!==true,incident:true});else{if(payload.worker!==true)throw Error('FORBIDDEN');await authorize(null,{worker:true,admin:true,module:'reports',incident:true});}
+  if(operation==='incident-daily-read')await authorize(payload.actor,{module:'artists',admin:payload.referencesOnly!==true,incident:true,fast:payload.referencesOnly===true});else{if(payload.worker!==true)throw Error('FORBIDDEN');await authorize(null,{worker:true,admin:true,module:'reports',incident:true});}
   for(let attempt=0;attempt<3;attempt++){
    const observed=await read(),value=observed.value,published=value.published,current=state(value);
    if(operation==='incident-daily-read'){if(!published)return{pending:false,references:null,progress:null,shows:[],score:null,updatedAt:null,day:null,status:'not-ready'};return payload.referencesOnly?{references:published.payload.references,updatedAt:published.updatedAt,day:published.day,status:'ready'}:{...published.payload,pending:false,updatedAt:published.updatedAt,day:published.day,status:'ready'};}

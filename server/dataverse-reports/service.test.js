@@ -24,3 +24,10 @@ test('existing worker delivery contract uses native state with no real email and
 });
 test('recipient admin keeps the complete existing OnTrack status DTO after a native save',async()=>{const f=await fixture(),status=await f.service.request('ontrack-status',admin),saved=await f.service.request('ontrack-recipients',admin,{revision:status.revision,recipientIds:[]});assert.equal(saved.revision,status.revision+1);assert.deepEqual(saved.recipientIds,[]);assert.ok(Array.isArray(saved.accounts));assert.ok(Array.isArray(saved.sources));assert.ok(Array.isArray(saved.latest));assert.ok(Array.isArray(saved.showChoices));assert.equal(typeof saved.processingStatus,'string');});
 test('PDF alerts include current sources added after the immutable migration settings',async()=>{const f=await fixture();await f.service.request('scan',null);await f.service.request('pipeline',null,{status:'assets-missing'});const result=await f.service.request('pdf-alerts','reader');assert.equal(result.alerts.length,1);assert.equal(result.alerts[0].concertId,f.show.concertId);});
+
+test('Fast artist authorization reads current flags once and retains the existing incident admin exception',async()=>{
+ const calls=[];let modules=['artists'],role='beheerder';const profiles=async(operation,actor,input={})=>{calls.push(input);return{id:actor,activated:true,disabled:false,modules,...input.authorizationOnly?{}:{role}};};
+ const service=createNativeReportsService({profiles});assert.equal((await service.authorize('synthetic',{fast:true,module:'artists',incident:true})).id,'synthetic');assert.equal(calls.length,1);assert.equal(calls[0].authorizationOnly,true);
+ modules=[];calls.length=0;assert.equal((await service.authorize('synthetic',{fast:true,module:'artists',incident:true})).role,'beheerder');assert.equal(calls.length,2);
+ role='gebruiker';await assert.rejects(service.authorize('synthetic',{fast:true,module:'artists',incident:true}),/FORBIDDEN/);
+});

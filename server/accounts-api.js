@@ -89,6 +89,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (!token) return reply(401, { error: 'Log eerst in.' });
       // Report warmup only obtains technical OAuth/schema metadata, never rights or business data.
       if(action==='report-web'&&!isFluidPreview(env))void Promise.resolve(ontrackReportStore.prepareRead?.()).catch(()=>{});
+      if(action==='artist-open'&&!isFluidPreview(env))void Promise.resolve(artistService.prepareRead?.()).catch(()=>{});
       const { data, error } = await auth.auth.getUser(token);
       if (error || !data?.user) return restored ? expired() : reply(401, { error: 'Je sessie is verlopen. Log opnieuw in.' });
       // Pas na validatie door Supabase vertrouwen we de claims van ditzelfde token.
@@ -112,7 +113,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       const ownProfile = async () => {
         try {
           if(previewReads){const verified=await previewReads.session();if(verified.profile?.id!==actor||!Number.isFinite(verified.expiresAt)||verified.expiresAt<=Date.now())throw Error('FORBIDDEN');previewDeadline=verified.expiresAt;return verified.profile;}
-          const result=await profiles('self',actor,['report-web','report-menu'].includes(action)?{authorizationOnly:true,reportRead:true}:action==='barrier-reference'||action==='barrier-layout'&&req.body?.operation==='read'?{authorizationOnly:true,moduleRead:true}:action==='show-open'?{authorizationOnly:true}:!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
+          const result=await profiles('self',actor,['report-web','report-menu'].includes(action)?{authorizationOnly:true,reportRead:true}:action==='artist-open'||action==='barrier-reference'||action==='barrier-layout'&&req.body?.operation==='read'?{authorizationOnly:true,moduleRead:true}:action==='show-open'?{authorizationOnly:true}:!['dataverse','managed'].includes(shows.provider)&&['session','restore','login'].includes(action)?{includeHome:true}:{});
           const {homeDashboard:home,emailTestCopyTo:copyTo,...profile}=result;emailTestCopyTo=copyTo||null;homeDashboard=profile.activated&&hasModule(profile,'shows')?home||null:null;return profile;
         }
         catch (failure) {
@@ -167,6 +168,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
         try{return reply(200,await showManagement.manage(req.body));}
         catch(error){const code=error.message;return reply(code==='VALIDATION'?400:code==='FORBIDDEN'?403:503,{code:code==='MANAGEMENT_SCHEMA_REQUIRED'?code:'UNAVAILABLE',error:code==='VALIDATION'?'Ongeldig Showbeheer-verzoek.':code==='FORBIDDEN'?'Showbeheer is alleen beschikbaar voor Gashouder-shows.':code==='MANAGEMENT_SCHEMA_REQUIRED'?'Showbeheer is nog niet ingesteld. De Supabase-migratie moet eerst worden uitgevoerd.':'Showbeheer kon niet worden geladen. Probeer opnieuw.'});}
+      }
+      if(action==='artist-open'){
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await artistService.openAuthorized(actor,req.body,incidentService,own));}
+        catch(error){const status=error.message==='VALIDATION'?400:error.message==='FORBIDDEN'?403:error.message==='NOT_FOUND'?404:503;return reply(status,{error:status===400?'Ongeldig artiestverzoek.':status===403?'Je hebt geen toegang tot Artiesten.':status===404?'Deze artiest is niet beschikbaar.':'De artiest kon niet worden geladen. Probeer opnieuw.'});}
       }
       if(action==='artist-risk'){
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
