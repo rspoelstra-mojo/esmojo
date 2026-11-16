@@ -455,3 +455,10 @@ test('Website-instellingen en hun schema vereisen actuele beheerder, activatie e
  const current={...profile,modules:[]};const r=await run({own:current,action:'website-settings',method:'POST',body:{operation:'save'},websiteService});assert.equal(r.response.code,200);assert.deepEqual(r.calls.map(x=>x[0]),['self']);
  const s=await run({own:current,action:'website-settings-schema',method:'POST',body:{operation:'plan'},websiteSchemaService});assert.equal(s.response.code,200);assert.equal(writes,2);
 });
+
+test('Website-setup stopt bij configuratie/rechtenfouten en herhaalt alleen bekende tijdelijke metadata',async()=>{
+ for(const [code,status] of [['CHOICE_FORBIDDEN',403],['CHOICE_CONFIG',409],['TABLE_CREATE_REJECTED',409]]){
+  const result=await run({action:'website-settings-schema',method:'POST',body:{operation:'apply'},websiteSchemaService:async()=>{throw Error(code);}});assert.equal(result.response.code,status);assert.equal(result.response.data.code,'WEBSITE_SCHEMA_UNCONFIRMED');
+ }
+ const pending=await run({action:'website-settings-schema',method:'POST',body:{operation:'apply'},websiteSchemaService:async()=>{throw Error('TABLE_CREATE_UNCONFIRMED');}});assert.equal(pending.response.code,200);assert.equal(pending.response.data.reason,'METADATA_PROCESSING');assert.equal(pending.response.data.verified,false);
+});

@@ -317,7 +317,10 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
           if(req.method==='POST')return reply(200,await websiteSettings.save(req.body));
           res.setHeader('Allow','GET, POST');return reply(405,{error:'Niet toegestaan.'});
         }catch(error){
-          if(action==='website-settings-schema'){const pending=metadataProcessing(error);if(pending)return reply(200,pending);}
+          if(action==='website-settings-schema'){
+            const pending=metadataProcessing(error);if(pending)return reply(200,pending);
+            if(error.message!=='VALIDATION')return reply(error.message==='CHOICE_FORBIDDEN'?403:409,{code:'WEBSITE_SCHEMA_UNCONFIRMED',error:'De Dataverse-inrichting is niet bevestigd. Controleer de bestaande verbinding, rechten en inrichting. Eerder bevestigde onderdelen blijven behouden.'});
+          }
           const code=error.message;
           return reply(code==='VALIDATION'?400:code==='WEBSITE_CONFLICT'?409:code==='WEBSITE_SETUP_REQUIRED'?409:503,{error:code==='VALIDATION'?'Gebruik een geldige JPG-, PNG- of WebP-foto van maximaal 3 MB en een geldige uitsnede.':code==='WEBSITE_CONFLICT'?'De achtergrond is intussen gewijzigd. Laad de actuele instellingen opnieuw voordat je verdergaat.':code==='WEBSITE_SETUP_REQUIRED'?'Richt de inlogachtergrond eerst in via Datatransitie.':'Dataverse heeft de instellingen nog niet bevestigd. Probeer opnieuw.',code:['VALIDATION','WEBSITE_CONFLICT','WEBSITE_SETUP_REQUIRED'].includes(code)?code:'WEBSITE_UNAVAILABLE'});
         }
