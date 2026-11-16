@@ -52,3 +52,10 @@ niet samen met Google-credentials; Google Script properties zijn geen bron
 voor de native runtime. Supabase Auth- en Dataverse-credentials blijven nodig.
 Google OAuth-/Apps Script-publicatiecredentials zijn geen actieve afhankelijkheid;
 een afzonderlijke credentialopschoning moet de cryptografische sleutel behouden.
+
+De eerste push-audit van V1.150 werd vóór bedrijfsreads geweigerd door de oude
+OIDC-eventregel. V1.151/PR211 gebruikt de exacte vaste audience/route
+`https://esmojo.nl/api/shows-runtime-sync?audit=google-detachment` voor push vanuit
+shows-runtime.yml op main. Deze queryroute weigert de oude technische writeproef
+en iedere andere body vóór uitvoering. De oorspronkelijke audience krijgt geen
+push-toegang. Releaseheader2 voorkomt dat een hercontrole de oude route raakt.

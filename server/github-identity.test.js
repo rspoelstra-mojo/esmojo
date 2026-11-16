@@ -102,3 +102,10 @@ test('MFA technical probe permits only its fixed main publication identity',asyn
  for(const patch of [{aud:'other'},{workflow_ref:claims.workflow_ref},{ref:'refs/heads/task'},{event_name:'pull_request'},{repository_id:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',...patch}),{request,now,audience,workflow}),/FORBIDDEN/);
 });
 test('background publication identity cannot be reused for another endpoint even with matching signed claims',async()=>{const audience='https://esmojo.nl/api/mfa',workflow='background-tasks.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push'}),{request,now,audience,workflow}),/FORBIDDEN/);});
+
+test('Google-detachment push accepts only the fixed main read-only audit audience, never the technical write-probe audience',async()=>{
+ const workflow='shows-runtime.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`,audience='https://esmojo.nl/api/shows-runtime-sync?audit=google-detachment';
+ assert.deepEqual(await verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push'}),{request,now,audience,workflow}),{runId:'123'});
+ for(const change of [{ref:'refs/heads/task'},{repository_id:'other'},{workflow_ref:claims.workflow_ref},{event_name:'pull_request'},{event_name:'workflow_run'},{aud:'other'}])await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref,event_name:'push',...change}),{request,now,audience,workflow}),/FORBIDDEN/);
+ for(const other of ['https://esmojo.nl/api/shows-runtime-sync','https://esmojo.nl/api/mfa'])await assert.rejects(verifyImportIdentity(token({aud:other,workflow_ref,event_name:'push'}),{request,now,audience:other,workflow}),/FORBIDDEN/);
+});
