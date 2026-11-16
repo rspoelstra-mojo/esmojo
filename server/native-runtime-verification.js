@@ -1,3 +1,6 @@
+import {createArtistViews} from './artist-views.js';
+import {createMfaReplay} from './mfa-replay.js';
+import {createTaskStore} from './background-tasks/store.js';
 import {createBarrierDisplay} from './barrier-display.js';
 import {createBarrierReferenceService} from './barrier-references.js';
 import {createNativeShowsService} from './dataverse-shows/service.js';
@@ -15,13 +18,18 @@ import {mapShow} from './show-migration-map.js';
 import {executeShowRules} from './dataverse-shows/rules.js';
 import {createRedisPolicy} from './redis-native/policy.js';
 import {hasModule} from '../shared/account-modules.js';
-export const runtimeAuditStages=Object.freeze(['authority','accounts','shows','reports','files','production-prepare','production']);
+export const runtimeAuditStages=Object.freeze(['authority','accounts','shows','reports','files','production-prepare','production','redis-closure']);
 // Fixed checks plus explicitly named derived-image preparation. No actor, cursor, record ID or table supplied by
 // the workflow. Existing regular worker identity is reauthorized on every stage.
 export function createNativeRuntimeVerification({env=process.env,reports=createNativeReportsService({env}),accounts=createNativeAccountStore({env}),state=createNativeShowState({env}),catalogue=createNativeCatalogue({env,state}),core=createConcertCatalogue({env}),reportAuthority=createReportsAuthority({env}),redis=createRedisPolicy({env}),reportRepository=createNativeReportsRepository({env}),execute=executeShowRules}={}){return async stage=>{
  if(!runtimeAuditStages.includes(stage))throw Error('VALIDATION');
  try{
   const profile=await reports.authorize(null,{worker:true,admin:true});if(!['shows','artists','reports'].every(module=>hasModule(profile,module)))throw Error('FORBIDDEN');const actor=profile.id;
+  if(stage==='redis-closure'){
+   const policy=(await redis.read()).value,task=await createTaskStore({env}).get('redis-retirement-v1');if(policy.mode!=='dataverse'||policy.verified!==true||policy.leaseDrainVerified!==true||task?.state.status!=='complete'||task.state.epoch!==policy.epoch||task.state.public?.progress?.verifiedRecords!==policy.events)throw Error('REDIS_AUTHORITY_INVALID');
+   const keys=['UPSTASH_REDIS_REST_URL','UPSTASH_REDIS_REST_TOKEN','UPSTASH_REDIS_REST_READ_ONLY_TOKEN','KV_REST_API_URL','KV_REST_API_TOKEN','KV_REST_API_READ_ONLY_TOKEN','KV_URL','REDIS_URL'];if(keys.some(key=>env[key]))throw Error('REDIS_CREDENTIALS_ACTIVE');
+   const replay=createMfaReplay({env}),views=createArtistViews({env});await replay.health();const counts=await views.counts();if((await replay.status()).provider!=='dataverse')throw Error('REDIS_AUTHORITY_INVALID');return{ok:true,stage,storage:'dataverse',activeRedisCredentials:0,mfaHealthy:true,verifiedMigrationEvents:policy.events,liveEvents:counts.reduce((total,row)=>total+row.views,0),providerShutdownVerified:false};
+  }
   if(stage==='production-prepare'){
    await assertNativeAuthority({env,repository:state.repo});const native=createNativeShowsService({env,state,diagnostic:true}),projection=createBarrierDisplay({env}),references=createBarrierReferenceService({shows:native,env,projection});let prepared=0;
    for(const type of Object.keys(barrierReferenceManifest)){await references(actor,{type});prepared++;}return{ok:true,stage,preparedImages:prepared};
@@ -44,5 +52,5 @@ export function createNativeRuntimeVerification({env=process.env,reports=createN
   // Public service download validates existing private PDF/File ownership/hash.
   const storedPdf=await reportRepository.query('esmojo_rapportpdf',{filter:'statecode eq 0'});let pdf=0;if(storedPdf.length){await reports.request('download',actor,{reportId:storedPdf[0].esmojo_oudrapportid});pdf++;}
   return{ok:true,stage,verifiedCsvFiles:csv,verifiedPdfFiles:pdf,pdfSampleAvailable:pdf>0};
- }catch(error){const safe=['BARRIER_DISPLAY_INVALID','BARRIER_DISPLAY_UNCONFIRMED','BARRIER_DISPLAY_LIMIT','BARRIER_DISPLAY_CONFIG','VALIDATION','FORBIDDEN','NOT_FOUND','ACCOUNT_CORRUPT','REPORT_CONFLICT','REPORT_UNAVAILABLE','SOURCE_CHANGED','DATAVERSE_SHOWS_CONFLICT','DATAVERSE_SHOWS_RESPONSE','DATAVERSE_SHOWS_NOT_ACTIVE','REPORTS_NOT_ACTIVE','REDIS_AUTHORITY_INVALID','INTEGRATION_RETIRED','DOCUMENT_BYTES_REQUIRED'];const failure=Error(safe.includes(error.message)?error.message:'RUNTIME_AUDIT_UNCONFIRMED');failure.artistStage=stage;throw failure;}
+ }catch(error){const safe=['REDIS_CREDENTIALS_ACTIVE','BARRIER_DISPLAY_INVALID','BARRIER_DISPLAY_UNCONFIRMED','BARRIER_DISPLAY_LIMIT','BARRIER_DISPLAY_CONFIG','VALIDATION','FORBIDDEN','NOT_FOUND','ACCOUNT_CORRUPT','REPORT_CONFLICT','REPORT_UNAVAILABLE','SOURCE_CHANGED','DATAVERSE_SHOWS_CONFLICT','DATAVERSE_SHOWS_RESPONSE','DATAVERSE_SHOWS_NOT_ACTIVE','REPORTS_NOT_ACTIVE','REDIS_AUTHORITY_INVALID','INTEGRATION_RETIRED','DOCUMENT_BYTES_REQUIRED'];const failure=Error(safe.includes(error.message)?error.message:'RUNTIME_AUDIT_UNCONFIRMED');failure.artistStage=stage;throw failure;}
 };}
