@@ -1,0 +1,4 @@
+# Redis-dienst afbouwen na bewezen native activering
+
+Eigenaar account B. Branch task/redis-service-retirement-20261116 vanaf actuele main.
+Gebruiker bevestigt loginhersteld en vraagt Redis-afsluiting afmaken. Bewezen109events/actieve native MFA uitPR200/201 hercontroleren. Productierouters na activering uitsluitend native/fail-closed, geen Rediscontact bij ontbrekende autoriteit. Alleen oude Redis/KV-servervariabelen buiten actief gebruik brengen met behoud van waarde onder RETIRED_REDIS_*; MFA_REPLAY_ENABLED, Supabase/Auth- en crypto-/Dataversekeys behouden. Nieuwe uitrol en vaste main/OIDC-controle zonder actieve Rediscredentials. Providerdienst apart identificeren en afsluiting afzonderlijk bewijzen; geen gedeelde resource blind verwijderen. Zakelijke Vercel-koppeling ondersteunt envnaamwijziging; directe Upstash resourceverwijdering nog te verifiëren. Geen brondata opruimen als migratiestap, geen testmails of Auth-codes.
