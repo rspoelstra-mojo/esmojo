@@ -2,7 +2,12 @@ import {compareShowRules} from '../test-support/show-rules-parity.js';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createNativeShowsService} from './service.js';import {createNativeShowState} from './state.js';import {nativeFixture,sampleSource,samplePeople} from './test-fixture.js';
 const env={GOOGLE_DRIVE_SHARED_SECRET:'synthetic-native-state-secret-1234567890'};
-function fixture(){const db=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople)),state=createNativeShowState({env,repository:db.repo,connection:db.connection}),service=createNativeShowsService({execute:compareShowRules,state,catalogue:{handles:()=>false}});return{...db,state,service};}
+function fixture(){const db=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople)),state=createNativeShowState({env,repository:db.repo,connection:db.connection}),service=createNativeShowsService({execute:parityOrNative,state,catalogue:{handles:()=>false}});return{...db,state,service};}
+// Beoordelingen met de keuze Beheersmaatregel noodzakelijk (barrier, vloerdruk, maatregelen, risicoweergave) zijn native-only:
+// de archiefreferentie kent die keuze niet. Alle andere bewerkingen blijven tegen de archiefreferentie vergeleken.
+import {executeShowRules as nativeRules} from './rules.js';
+const nativeOnly=/^(barrier|floor|measure)-|^risk-view$|^show-open$/;
+const parityOrNative=(source,operation,payload,binary)=>nativeOnly.test(operation)?nativeRules(source,operation,payload,binary):compareShowRules(source,operation,payload,binary);
 const concertId=sampleSource.concertId;
 test('native profile read/save/replay use typed rows and preserve revision conflict rules',async()=>{
  const f=fixture();assert.equal((await f.service('profile-read',{concertId})).revision,0);
@@ -25,7 +30,7 @@ test('typed manual corruption cannot silently fall back to an old JSON projectio
 });
 test('production no-choice and barrier/floor reopen remain consistent in native storage',async()=>{
  const f=fixture(),actor='synthetic-esm';const choice=await f.service('risk-production-save',{concertId,actor,field:'fireworks',value:false,revision:0});assert.equal(choice.choices.fireworks,false);
- const first=await f.service('barrier-read',{concertId,actor}),data={barrierType:'seated',riskLevel:'none',notes:null,uploadId:null,riskNote:''};
+ const first=await f.service('barrier-read',{concertId,actor}),data={barrierType:'seated',riskLevel:'none',notes:null,uploadId:null,measureRequired:false};
  const done=await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data});assert.equal(done.record.completed,true);
  const floor=await f.service('floor-read',{concertId,actor});assert.equal(floor.record.completed,true);
  const reopened=await f.service('barrier-reopen',{concertId,actor,revision:done.record.revision});assert.equal(reopened.record.completed,false);
@@ -40,7 +45,7 @@ test('finalization requires native confirmed analyses and ticket versions, and i
 });
 
 test('custom barrier uploads use native File bytes, scoped downloads and retained unlink history',async()=>{
- const f=fixture(),actor='synthetic-esm',uploadId='22222222-2222-4222-8222-222222222222',data={barrierType:'custom',riskLevel:'low',notes:'Eigen ontwerp',uploadId:null,riskNote:''};
+ const f=fixture(),actor='synthetic-esm',uploadId='22222222-2222-4222-8222-222222222222',data={barrierType:'custom',riskLevel:'low',notes:'Eigen ontwerp',uploadId:null,measureRequired:false};
  const draft=await f.service('barrier-draft',{concertId,actor,revision:0,data});
  const bytes=Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1]),{createHash}=await import('node:crypto'),sha256=createHash('sha256').update(bytes).digest('hex');
  const uploaded=await f.service('barrier-upload',{concertId,actor,revision:draft.record.revision,uploadId,fileName:'test.png',mime:'image/png',base64:bytes.toString('base64'),sha256});assert.equal(uploaded.record.attachment.sha256,sha256);
@@ -120,7 +125,7 @@ test('same-version concurrent writes have one winner and retries resolve a lost 
 });
 test('native measures preserve implementation, explicit Nee, attachments and reopen semantics',async()=>{
  const f=fixture(),actor='synthetic-esm',measureId='production:barrier_layout';
- await f.service('barrier-complete',{concertId,actor,revision:0,data:{barrierType:'end_stage_no_gc',riskLevel:'medium',notes:null,uploadId:null,riskNote:'Extra toezicht'}});
+ await f.service('barrier-complete',{concertId,actor,revision:0,data:{barrierType:'end_stage_no_gc',riskLevel:'medium',notes:null,uploadId:null,measureRequired:true}});
  let view=await f.service('measure-read',{concertId,actor,measureId});const base=record=>({concertId,actor,measureId,revision:record.revision,basis:record.basis});
  view=await f.service('measure-complete',{...base(view.record),data:{riskLevelAfter:'low',briefing:false}});assert.equal(view.record.implemented,true);assert.equal(view.record.briefingChosen,true);
  view=await f.service('measure-reopen',base(view.record));assert.equal(view.record.implemented,false);
@@ -131,20 +136,46 @@ test('native measures preserve implementation, explicit Nee, attachments and reo
  view=await f.service('measure-remove',{...base(view.record),uploadId});assert.equal(view.record.attachments.length,0);assert.equal(f.binary.size,1);
 });
 test('native floor sections retain measured values and are invalidated when the barrier changes',async()=>{
- const f=fixture(),actor='synthetic-esm';const barrier=await f.service('barrier-complete',{concertId,actor,revision:0,data:{barrierType:'end_stage_no_gc',riskLevel:'low',notes:null,uploadId:null,riskNote:''}}),floor=await f.service('floor-read',{concertId,actor});
- const done=await f.service('floor-complete',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows:[{id:'standing',name:'Staanplaatsen',visitors:100,area:80}],riskLevel:'low',note:''}});assert.equal(done.record.completed,true);assert.equal([...f.tables.get('esmojo_publieksvak').values()][0].esmojo_bezoekers,100);
- const reopened=await f.service('barrier-reopen',{concertId,actor,revision:barrier.record.revision});await f.service('barrier-draft',{concertId,actor,revision:reopened.record.revision,data:{barrierType:'end_stage_gc',riskLevel:'low',notes:null,uploadId:null,riskNote:''}});assert.equal((await f.service('floor-read',{concertId,actor})).record.completed,false);
+ const f=fixture(),actor='synthetic-esm';const barrier=await f.service('barrier-complete',{concertId,actor,revision:0,data:{barrierType:'end_stage_no_gc',riskLevel:'low',notes:null,uploadId:null,measureRequired:false}}),floor=await f.service('floor-read',{concertId,actor});
+ const done=await f.service('floor-complete',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows:[{id:'standing',name:'Staanplaatsen',visitors:100,area:80}],riskLevel:'low',measureRequired:false}});assert.equal(done.record.completed,true);assert.equal([...f.tables.get('esmojo_publieksvak').values()][0].esmojo_bezoekers,100);
+ const reopened=await f.service('barrier-reopen',{concertId,actor,revision:barrier.record.revision});await f.service('barrier-draft',{concertId,actor,revision:reopened.record.revision,data:{barrierType:'end_stage_gc',riskLevel:'low',notes:null,uploadId:null,measureRequired:false}});assert.equal((await f.service('floor-read',{concertId,actor})).record.completed,false);
 });
 test('a valid large custom floor remains one transaction instead of a partial batch',async()=>{
- const f=fixture(),actor='synthetic-esm';await f.service('barrier-draft',{concertId,actor,revision:0,data:{barrierType:'custom',riskLevel:null,notes:'Testontwerp',uploadId:null,riskNote:''}});
+ const f=fixture(),actor='synthetic-esm';await f.service('barrier-draft',{concertId,actor,revision:0,data:{barrierType:'custom',riskLevel:null,notes:'Testontwerp',uploadId:null,measureRequired:null}});
  const floor=await f.service('floor-read',{concertId,actor}),rows=[{id:'standing',name:'Staanplaatsen',visitors:100,area:80},...Array.from({length:260},(_,i)=>({id:'vak_'+i,name:'Vak '+i,visitors:0,area:1}))];
- const saved=await f.service('floor-draft',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows,riskLevel:'low',note:''}});assert.equal(saved.record.rows.length,261);assert.equal(f.tables.get('esmojo_publieksvak').size,261);
+ const saved=await f.service('floor-draft',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows,riskLevel:'low',measureRequired:false}});assert.equal(saved.record.rows.length,261);assert.equal(f.tables.get('esmojo_publieksvak').size,261);
 });
 
 test('barrier confirmation carries exactly the current floor basis and valid detail reads avoid full reconstruction',async()=>{
- const f=fixture(),actor='synthetic-esm',first=await f.service('barrier-read',{concertId,actor}),saved=await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:{barrierType:'end_stage_gc',riskLevel:'none',notes:null,uploadId:null,riskNote:''}});assert(saved.floor.basis);assert.equal(saved.floor.barrierType,'end_stage_gc');assert.deepEqual(saved.floor,await f.service('floor-read',{concertId,actor}));
+ const f=fixture(),actor='synthetic-esm',first=await f.service('barrier-read',{concertId,actor}),saved=await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:{barrierType:'end_stage_gc',riskLevel:'none',notes:null,uploadId:null,measureRequired:false}});assert(saved.floor.basis);assert.equal(saved.floor.barrierType,'end_stage_gc');assert.deepEqual(saved.floor,await f.service('floor-read',{concertId,actor}));
  const writes=f.writes();f.state.load=async()=>assert.fail('unnecessary full read');assert.equal((await f.service('barrier-read',{concertId,actor})).record.completed,true);assert.deepEqual(await f.service('floor-read',{concertId,actor}),saved.floor);assert.equal(f.writes(),writes);
 });
 test('detail read detects a changed typed barrier row instead of serving a stale opening',async()=>{
- const f=fixture(),actor='synthetic-esm',first=await f.service('barrier-read',{concertId,actor});await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:{barrierType:'seated',riskLevel:'none',notes:null,uploadId:null,riskNote:''}});const row=[...f.tables.get('esmojo_barrierbeoordeling').values()][0];row.esmojo_barriertype=999999;row['@odata.etag']='W/"999999"';await assert.rejects(f.service('barrier-read',{concertId,actor}),/DATAVERSE_SHOWS_CONFLICT/);
+ const f=fixture(),actor='synthetic-esm',first=await f.service('barrier-read',{concertId,actor});await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:{barrierType:'seated',riskLevel:'none',notes:null,uploadId:null,measureRequired:false}});const row=[...f.tables.get('esmojo_barrierbeoordeling').values()][0];row.esmojo_barriertype=999999;row['@odata.etag']='W/"999999"';await assert.rejects(f.service('barrier-read',{concertId,actor}),/DATAVERSE_SHOWS_CONFLICT/);
+});
+test('Barrieropstelling en Vloerdruk: Beheersmaatregel noodzakelijk bepaalt of er een maatregel is; de tekst wordt bij Maatregelen uitgewerkt',async()=>{
+ const f=fixture(),actor='synthetic-esm',{measureDefinitions}=await import('../../shared/measure-definitions.js');
+ const rows=async()=>measureDefinitions({venue:'Gashouder'},await f.service('risk-view',{concertId})).rows.filter(row=>row.sourceType==='production');
+ const first=await f.service('barrier-read',{concertId,actor}),data=(riskLevel,measureRequired)=>({barrierType:'end_stage_no_gc',riskLevel,notes:null,uploadId:null,measureRequired});
+ // Keuze verplicht bij Laag/Midden/Hoog; Geen risico kent geen maatregel.
+ await assert.rejects(f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:data('high',null)}),/VALIDATION/);
+ await assert.rejects(f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:data('none',true)}),/VALIDATION/);
+ await assert.rejects(f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:{...data('high',true),riskNote:'oude vorm'}}),/VALIDATION/);
+ let done=await f.service('barrier-complete',{concertId,actor,revision:first.record.revision,data:data('high',true)});assert.equal(done.record.measureRequired,true);assert.equal(done.record.riskNote,'');assert.equal(done.overview.assessments.barrier.measureRequired,true);
+ let list=await rows();assert.deepEqual(list.map(row=>[row.id,row.text,row.originalRiskLevel]),[['production:barrier_layout','','high']]);
+ await f.service('measure-edit-text',{concertId,actor,measureId:'production:barrier_layout',revision:0,basis:list[0].basis,text:'**Toezicht** bij de barrier\n- hekken'});
+ list=await rows();assert.equal(list[0].text,'**Toezicht** bij de barrier\n- hekken');
+ // Opnieuw beoordelen met Ja behoudt de tekst, met Nee vervalt die en verdwijnt de maatregel.
+ let reopened=await f.service('barrier-reopen',{concertId,actor,revision:(await f.service('barrier-read',{concertId,actor})).record.revision});
+ done=await f.service('barrier-complete',{concertId,actor,revision:reopened.record.revision,data:data('medium',true)});assert.equal(done.record.riskNote,'**Toezicht** bij de barrier\n- hekken');
+ reopened=await f.service('barrier-reopen',{concertId,actor,revision:done.record.revision});
+ done=await f.service('barrier-complete',{concertId,actor,revision:reopened.record.revision,data:data('medium',false)});assert.equal(done.record.riskNote,'');assert.equal(done.record.measureRequired,false);assert.deepEqual(await rows(),[]);
+ // Vloerdruk volgt dezelfde logica; ook Laag kan een maatregel hebben.
+ const floor=await f.service('floor-read',{concertId,actor}),rowsData=[{id:'standing',name:'Staanplaatsen',visitors:100,area:80}];
+ await assert.rejects(f.service('floor-complete',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows:rowsData,riskLevel:'low',measureRequired:null}}),/VALIDATION/);
+ await assert.rejects(f.service('floor-complete',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows:rowsData,riskLevel:'low',measureRequired:false,note:'oude vorm'}}),/VALIDATION/);
+ const floorDone=await f.service('floor-complete',{concertId,actor,revision:floor.record.revision,basis:floor.basis,data:{rows:rowsData,riskLevel:'low',measureRequired:true}});assert.equal(floorDone.record.measureRequired,true);assert.equal(floorDone.record.note,'');
+ list=await rows();assert.deepEqual(list.map(row=>[row.id,row.text,row.originalRiskLevel]),[['production:floor_pressure','','low']]);
+ await f.service('measure-edit-text',{concertId,actor,measureId:'production:floor_pressure',revision:0,basis:list[0].basis,text:'Vloervak vrijhouden'});
+ assert.equal((await rows())[0].text,'Vloervak vrijhouden');assert.equal((await f.service('floor-read',{concertId,actor})).record.note,'Vloervak vrijhouden');
 });
