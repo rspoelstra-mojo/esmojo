@@ -1,0 +1,7 @@
+/* Projectteam in het showoverzicht: compact, functie links en naam rechts (zelfde vormgeving als het tijdschema). */
+.show-team-body { margin-top:12px; min-width:0; }
+.show-team-list { margin:0; display:grid; }
+.show-team-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:6px 0; border-top:1px solid var(--line); }
+.show-team-row:first-child { border-top:0; padding-top:0; }
+.show-team-row dt { margin:0; min-width:0; font-size:13px; line-height:1.4; color:var(--muted); overflow-wrap:anywhere; }
+.show-team-row dd { margin:0; min-width:0; font-size:13px; line-height:1.4; font-weight:600; text-align:right; overflow-wrap:anywhere; }
