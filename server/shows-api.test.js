@@ -118,6 +118,19 @@ test('automatisch Showbeheer: batches met cursor, create-only, fouten per concer
   for(const managementAfter of ['',5,null,'a/b','x'.repeat(241)]){const bad=await call({operation:'showbeheer',managementAfter});assert.equal(bad.code,503);assert.equal(bad.data.code,'VALIDATION');}
   const closed=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({}),store,management});const res=response();await closed({method:'POST',headers:{authorization:'Bearer w'},body:{operation:'showbeheer'}},res);assert.equal(res.code,409);assert.equal(res.data.code,'IMPORT_WINDOW_CLOSED');
 });
+test('automatisch Showbeheer: tijdelijke 429 wordt maximaal twee keer opnieuw geprobeerd na Retry-After, één concert tegelijk', async () => {
+  const shows=[1,2,3].map(n=>({concertId:'Gashouder_0'+n,date:'2026-11-20'})),store=async operation=>{if(operation==='management-candidates')return{shows};throw Error('onverwachte bewerking '+operation);};
+  const tries={},waits=[];let active=0,peak=0;
+  const management={async ensure(id){active++;peak=Math.max(peak,active);try{tries[id]=(tries[id]||0)+1;await Promise.resolve();
+    if(id==='Gashouder_01'&&tries[id]<2)throw Object.assign(Error('SETUP_THROTTLED'),{retryAfterSeconds:3});
+    if(id==='Gashouder_02')throw Object.assign(Error('SETUP_THROTTLED'),{retryAfterSeconds:999});
+    return'created';}finally{active--;}}};
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>({}),store,management,sleep:async ms=>{waits.push(ms);}});
+  const res=response();await handler({method:'POST',headers:{authorization:'Bearer w'},body:{operation:'showbeheer'}},res);
+  assert.equal(res.code,200);assert.deepEqual(res.data.management,{created:2,existing:0,failed:1});assert.deepEqual(res.data.managementErrors,{SETUP_THROTTLED:1});
+  assert.equal(tries.Gashouder_01,2,'één tijdelijke 429 daarna gelukt');assert.equal(tries.Gashouder_02,3,'maximaal drie pogingen');assert.equal(tries.Gashouder_03,1);
+  assert.deepEqual(waits,[3000,30000,30000],'wachttijd volgt Retry-After, begrensd op 30 seconden');assert.equal(peak,1,'één concert tegelijk');
+});
 test('dagelijkse tijdschemacontrole: batches met cursor, meest recente versie, fouten per concert stoppen de rest niet en alleen veilige codes', async () => {
   const shows=Array.from({length:15},(_,i)=>({concertId:'Show_'+String(i+1).padStart(2,'0'),date:'2026-11-20',sourceUrl:'https://www.mojo.nl/concerten/x',artist:'X',venue:'Gashouder',city:'Amsterdam'})),saves=[],queries=[],fetched=[];
   const store=async(operation,data)=>{
