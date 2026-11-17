@@ -1,6 +1,6 @@
 import {loadBarrierImage} from './barrier-images.js';
 import {publicShowPhoto} from '../shared/public-show-photo.js';
-import {createShowManagement} from './show-management.js';
+import {createShowManagement,createShowManagementPlaceholder} from './show-management.js';
 import './show-tabs.css';
 import {requestedShowTab} from '../shared/show-navigation.js';
 import './show-page.css';
@@ -75,7 +75,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           const block=(className,heading)=>{const section=document.createElement('section');section.className='show-block '+className;const title=document.createElement('h2');title.textContent=heading;section.append(title);return section;};
           const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie'),actions=block('show-actions','Actielijst');
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          createShowTeam(team);layout.append(team,schedule,information,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,data,readOnly});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});
+          createShowTeam(team);layout.append(team,schedule,information,planning);disposeManagement=show.venue==='Gashouder'?createShowManagement(layout,{show,request,data,readOnly}):createShowManagementPlaceholder(layout,{show});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});
           // Placeholder-artiesten; laadt pas bij zichtbaar tabblad, op de achtergrond en alleen met Artiesten-rechten.
           if(!readOnly){similar=createSimilarArtists(panel,{request});disposeSimilar=similar.dispose;}
           // Voorlopig MOJO-tijdschema (dagelijks vernieuwd); de server geeft altijd de meest recente versie.
