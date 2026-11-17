@@ -45,3 +45,8 @@
 
 .measure-text-input { width: 100%; min-width: 0; min-height: 130px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); color: var(--text); font: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
 .measure-text-input[readonly] { cursor: default; }
+
+.measure-export-copy { margin: 0 0 12px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.measure-export-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px 12px; font-size: 13px; }
+.measure-export-button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+.measure-export-button:disabled { opacity: .55; cursor: progress; }

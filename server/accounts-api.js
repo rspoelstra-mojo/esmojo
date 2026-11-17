@@ -36,6 +36,7 @@ import {validateMeasureRequest,measureFileSignature,measureUploadLimit} from '..
 import {createHash} from 'node:crypto';
 import {validateOperationalReview} from '../shared/operational-risk.js';
 import {validateOwnRisk} from '../shared/own-risk.js';
+import {createRiskPdfService,validateRiskPdfRequest} from './risk-pdf/index.js';
 import { validateRiskViewRequest } from './show-risks.js';
 import { validateProductionRiskSelection } from '../shared/production-risks.js';
 import { createClient } from '@supabase/supabase-js';
@@ -163,7 +164,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-timetable','show-team','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','operational-risk-own','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-timetable','show-team','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','operational-risk-own','measure','measure-pdf','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management-stats'){if(req.method!=='GET')return reply(405,{error:'Niet toegestaan.'});if(!isAdministrator(own))return reply(403,{error:'Geen toegang.'});return reply(200,await showManagement.statistics());}
       if(action==='show-management'){
@@ -242,6 +243,12 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Methode niet toegestaan.'});}
         try{const input=validateMeasureRequest(req.body);if(input.operation==='upload'){const bytes=Buffer.from(input.base64,'base64');if(bytes.length>measureUploadLimit||!measureFileSignature(bytes,input.mime)||createHash('sha256').update(bytes).digest('hex')!==input.sha256)throw Error('VALIDATION');}const {operation,...payload}=input;return reply(200,await scopedShows('measure-'+operation,{...payload,actor}));}
         catch(error){const code=error.message;return reply(code==='FORBIDDEN'?403:code==='VALIDATION'?400:['SOURCE_CHANGED','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?409:503,{error:code==='VALIDATION'?'Controleer de verplichte beoordeling en kies een PDF, PNG of JPG van maximaal 2 MB.':code==='FORBIDDEN'?'Je hebt geen toegang tot deze module.':['SOURCE_CHANGED','ASSESSMENT_CONFLICT','ASSESSMENT_COMPLETED','CONFLICT'].includes(code)?'Het risico of de maatregel is intussen gewijzigd. Je invoer is behouden; laad de actuele maatregel.':'Opslag of documentcontrole niet bevestigd. Je invoer is behouden; probeer opnieuw.'});}
+      }
+      if(action==='measure-pdf'){
+        // PDF van één beheersmaatregel, op aanvraag gegenereerd uit de actuele bevestigde gegevens; niets wordt opgeslagen.
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Methode niet toegestaan.'});}
+        try{const result=await createRiskPdfService({shows:scopedShows}).create(validateRiskPdfRequest(req.body),actor);res.setHeader('Cache-Control','no-store');return reply(200,result);}
+        catch(error){const code=error.message;return reply(code==='VALIDATION'?400:code==='SOURCE_CHANGED'?409:503,{error:code==='VALIDATION'?'Deze maatregel kan niet worden geëxporteerd.':code==='SOURCE_CHANGED'?'De maatregel is intussen gewijzigd. Laad de actuele maatregel en probeer opnieuw.':'De PDF kon niet worden gemaakt. Probeer opnieuw.'});}
       }
       if(action==='operational-risk-own'&&req.method==='POST'){
         // Eigen operationeel risico van de ESM, inclusief de beoordeling, in één bevestigde opslag.
