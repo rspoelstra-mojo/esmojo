@@ -33,7 +33,10 @@ export function createShowsStore({ env = process.env, request = fetch, active = 
     const state=nativeService?null:createNativeShowState({env});
     const native=nativeService||createNativeShowsService({env,state});
     const authorityRepo=authority?null:state?.repo||createNativeShowsRepository({env});
-    const unrelated=operation=>operation.startsWith('artist-')||operation.startsWith('incident-')||operation.startsWith('biography-');
+    // De artiestfoto-bewerkingen horen bij de native concertcatalogus, niet bij de artiestmodule: ze beginnen alleen toevallig met artist-.
+    // Via de artiestroute vielen ze terug op de afgesloten Drive-brug (INTEGRATION_RETIRED) en liet de 05:00-import de fotostap falen.
+    const nativeCatalogue=new Set(['artist-photo-candidates','artist-photo-save']);
+    const unrelated=operation=>!nativeCatalogue.has(operation)&&(operation.startsWith('artist-')||operation.startsWith('incident-')||operation.startsWith('biography-'));
     const explicit=nativeShowsSelected(env),check=authority||(()=>assertNativeAuthority({env,repository:authorityRepo}));
     if(!explicit){
       const old=createShowsStore({env,request,active,repository,legacy:true}),route=createManagedShowsRouting({env,repository:authorityRepo});

@@ -145,3 +145,15 @@ test('migratiecatalogus leest ook inactieve primaire reeksdata, zonder eigen tek
  assert.equal(h.writes(),before);assert.equal(JSON.stringify(data).includes('folderId'),false);
  await assert.rejects(h.store('migration-list',{path:'vrij pad'}),/VALIDATION/);assert.equal(h.writes(),before);
 });
+test('artiestfoto-bewerkingen gaan rechtstreeks naar de native catalogus en raken nooit de afgesloten Drive-brug', async () => {
+  const native=Object.assign(async (operation,payload)=>({native:operation,payload}),{related:(operation,body,next)=>operation==='artist-catalogue'?{related:operation}:next(body)});
+  for (const env of [{VERCEL_ENV:'production'}]) {
+    const shows=createShowsStore({env,authority:async()=>{},nativeService:native,request:async()=>assert.fail('afgesloten Drive-brug')});
+    assert.deepEqual(await shows('artist-photo-candidates',{after:'a_'+'1'.repeat(64)}),{native:'artist-photo-candidates',payload:{after:'a_'+'1'.repeat(64)}});
+    assert.deepEqual(await shows('artist-photo-save',{artistId:'a_'+'2'.repeat(64),photo:null}),{native:'artist-photo-save',payload:{artistId:'a_'+'2'.repeat(64),photo:null}});
+    assert.deepEqual(await shows('artist-photo-candidates'),{native:'artist-photo-candidates',payload:{}});
+    // De bestaande artiestoperaties blijven via de artiestroute lopen.
+    assert.deepEqual(await shows('artist-catalogue',{}),{related:'artist-catalogue'});
+    const result=await shows.nativeRequest('artist-photo-candidates',{});assert.equal(result.handled,true);assert.equal(result.result.native,'artist-photo-candidates');
+  }
+});
