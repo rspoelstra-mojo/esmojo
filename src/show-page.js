@@ -14,6 +14,7 @@ import {createShowMemory} from './lib/show-memory.js';
 import {showMemory} from './show-memory.js';
 import {createShowPlanning} from './show-planning.js';
 import {createSimilarArtists} from './similar-artists.js';
+import {createShowTeam} from './show-team.js';
 import {createShowSchedule} from './show-schedule.js';
 
 export function formatShowDates(dates){return dates.map(date=>new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(`${date}T12:00:00Z`))).join(' · ');}
@@ -73,7 +74,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           const block=(className,heading)=>{const section=document.createElement('section');section.className='show-block '+className;const title=document.createElement('h2');title.textContent=heading;section.append(title);return section;};
           const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie'),actions=block('show-actions','Actielijst');
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          layout.append(team,schedule,information,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,data,readOnly});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
+          createShowTeam(team);layout.append(team,schedule,information,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,data,readOnly});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
           // Placeholder-artiesten; laadt pas bij zichtbaar tabblad, op de achtergrond en alleen met Artiesten-rechten.
           if(!readOnly){similar=createSimilarArtists(panel,{request});disposeSimilar=similar.dispose;}
           // Voorlopig MOJO-tijdschema (dagelijks vernieuwd); de server geeft altijd de meest recente versie.
