@@ -62,7 +62,12 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
     // Bij een mislukte showbewerking alleen de bewerking en een vaste foutcode in de serverlog (nooit inhoud, gegevens of providerantwoord).
     const scopedShows=async(operation,payload={})=>{
       try{return await shows(operation,{...payload,...(['dataverse','managed'].includes(shows.provider)&&verifiedProfile?.role&&verifiedProfile?.email?{__actor:verifiedProfile}:{})});}
-      catch(error){const code=/^[A-Z][A-Z0-9_]{2,60}$/.test(error?.message||'')?error.message:'OTHER';if(code!=='VALIDATION')console.error('SHOWS_OPERATION_FAILED '+JSON.stringify({operation,code}));throw error;}
+      catch(error){
+        const code=/^[A-Z][A-Z0-9_]{2,60}$/.test(error?.message||'')?error.message:'OTHER';
+        // Bij een opslagconflict alleen de tabel en de afwijkende kolomnamen met een vaste reden (nooit waarden of sleutels).
+        const migration=error?.migration,safe=/^[a-z0-9_]{1,80}$/,detail=migration&&safe.test(migration.table||'')&&Array.isArray(migration.differences)?{table:migration.table,columns:migration.differences.slice(0,12).filter(item=>safe.test(item?.column||'')&&/^[A-Z_]{3,40}$/.test(item?.reason||'')).map(item=>item.column+':'+item.reason)}:undefined;
+        if(code!=='VALIDATION')console.error('SHOWS_OPERATION_FAILED '+JSON.stringify({operation,code,...(detail?{detail}:{})}));throw error;
+      }
     };
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
