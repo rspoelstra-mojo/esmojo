@@ -13,11 +13,13 @@ export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape =
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');res.setHeader('X-ESMOJO-Agenda-Import','3');
     if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Niet toegestaan.' }); }
-    try { await identify(/^Bearer (\S+)$/.exec(req.headers.authorization || '')?.[1]); }
+    let identity;try { identity=await identify(/^Bearer (\S+)$/.exec(req.headers.authorization || '')?.[1]); }
     catch(error) { return res.status(403).json({ error: 'Geen toegang.',code:'FORBIDDEN',stage:['token','claims','issuer','audience','subject','repository','ref','workflow','jwks','signature'].includes(error.identityStage)?error.identityStage:'identity' }); }
-    if(req.body?.verifyOnly!==true&&timetableClock(now()).hour!==5)return res.status(req.body?.operation?409:200).json({ok:!req.body?.operation,skipped:true,code:'IMPORT_WINDOW_CLOSED'});
+    // Een handmatige run buiten het venster vereist een bevestigde workflow_dispatch-claim op main én manualRun in de aanvraag.
+    const manual=req.body?.manualRun===true&&identity?.event==='workflow_dispatch';
+    if(req.body?.verifyOnly!==true&&!manual&&timetableClock(now()).hour!==5)return res.status(req.body?.operation?409:200).json({ok:!req.body?.operation,skipped:true,code:'IMPORT_WINDOW_CLOSED'});
     let stage='fetch';try {
-      if(req.body?.verifyOnly===true){if(Object.keys(req.body).join(',')!=='verifyOnly')throw Error('VALIDATION');stage='verify-core';const existing=await store('concert-catalogue');stage='fetch';const snapshot=await scrape();return res.status(200).json({ok:true,verified:true,venues:MOJO_VENUES.length,concerts:snapshot.concerts.length,existingConcerts:existing.concerts.length,days:45});}
+      if(req.body?.verifyOnly===true){if(Object.keys(req.body).join(',')!=='verifyOnly')throw Error('VALIDATION');stage='verify-core';const existing=await store('concert-catalogue');stage='fetch';const snapshot=await scrape();stage='photo-candidates';const photoCandidates=(await store('artist-photo-candidates')).artists.length;return res.status(200).json({ok:true,verified:true,venues:MOJO_VENUES.length,concerts:snapshot.concerts.length,existingConcerts:existing.concerts.length,photoCandidates,days:45});}
       // Alleen de fotocursor van de lopende run is toegestaan; geen vrije velden naar de opslag.
       const after=req.body?.photoAfter;if(after!==undefined&&!/^a_[a-f0-9]{64}$/.test(after))throw Error('VALIDATION');
       let result={},snapshot=null;if(req.body?.operation!=='photos'){snapshot=await scrape();stage='native-sync';result=await store('sync',{snapshot});}
@@ -26,6 +28,9 @@ export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape =
       stage='photo-candidates';const candidates=(await store('artist-photo-candidates',after?{after}:{})).artists,batch=candidates.slice(0,24);let next=0,photos=0,photosRetry=0;
       const capture=async()=>{while(next<batch.length){const artist=batch[next++];stage='photo-source';const found=await photo(artist.name);if(found.final!==true){photosRetry++;continue;}stage='photo-save';const saved=await store('artist-photo-save',{artistId:artist.artistId,photo:found.photo?{imageUrl:found.photo.imageUrl,sourceUrl:found.photo.sourceUrl}:null});photos+=Number(saved.saved);}};await Promise.all(Array.from({length:Math.min(3,batch.length)},capture));
       return res.status(200).json({ok:true,...result,photos,photosRetry,photosCursor:batch.at(-1)?.artistId||null,photosPending:candidates.length>batch.length,...snapshot?{checkedAt:snapshot.checkedAt,pages:snapshot.pages}: {}});
-    } catch(error) {const code=['DATAVERSE_SHOWS_NOT_ACTIVE','DATAVERSE_SHOWS_UNAVAILABLE','DATAVERSE_SHOWS_RESPONSE','DATAVERSE_SHOWS_SCHEMA','CONCERT_CATALOGUE_CONFLICT','MOJO_UNAVAILABLE','MOJO_FORMAT','MOJO_DATE','MOJO_PAGINATION','MOJO_ID_COLLISION','VALIDATION','DATAVERSE_SHOWS_CONFLICT','CONCERT_CATALOGUE_CONFLICT','CONCERT_LOCATION_CONFLICT','ARTIST_PHOTO_UNCONFIRMED'].includes(error.message)?error.message:'IMPORT_UNCONFIRMED';return res.status(503).json({error:'Concertimport mislukt. Bestaande documenten blijven behouden.',code,stage,...MOJO_VENUES.some(venue=>venue.id===error.venue)?{venue:error.venue}:{},...Number.isInteger(error.status)?{status:error.status}:{}}); }
+    } catch(error) {const code=['DATAVERSE_SHOWS_NOT_ACTIVE','DATAVERSE_SHOWS_UNAVAILABLE','DATAVERSE_SHOWS_RESPONSE','DATAVERSE_SHOWS_SCHEMA','CONCERT_CATALOGUE_CONFLICT','MOJO_UNAVAILABLE','MOJO_FORMAT','MOJO_DATE','MOJO_PAGINATION','MOJO_ID_COLLISION','VALIDATION','DATAVERSE_SHOWS_CONFLICT','CONCERT_CATALOGUE_CONFLICT','CONCERT_LOCATION_CONFLICT','ARTIST_PHOTO_UNCONFIRMED'].includes(error.message)?error.message:'IMPORT_UNCONFIRMED';
+      // Alleen bij een onbekende fout: foutklasse en een code-achtige foutcode (hoofdletters/underscores), nooit berichttekst of gegevens.
+      const diagnosis=code==='IMPORT_UNCONFIRMED'?{...(/^[A-Z][A-Z0-9_]{2,59}$/.test(error?.message||'')?{detail:error.message}:{}),...(/^[A-Za-z]{1,30}$/.test(error?.name||'')?{kind:error.name}:{})}:{};
+      return res.status(503).json({error:'Concertimport mislukt. Bestaande documenten blijven behouden.',code,stage,...diagnosis,...MOJO_VENUES.some(venue=>venue.id===error.venue)?{venue:error.venue}:{},...Number.isInteger(error.status)?{status:error.status}:{}}); }
   };
 }

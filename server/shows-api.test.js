@@ -77,3 +77,28 @@ test('Artiestfoto-batches lopen met een cursor, leggen alleen definitieve uitkom
   for(const photoAfter of ['zzz',5,null,'a_'+'G'.repeat(64)]){const bad=await call({operation:'photos',photoAfter});assert.equal(bad.code,503);assert.equal(bad.data.code,'VALIDATION');}
   assert.equal(saves.length,29,'ongeldige cursor schrijft niets');
 });
+test('handmatige run buiten 05:00 vereist een bevestigde workflow_dispatch-claim én manualRun; het schema-venster blijft gesloten voor de rest', async () => {
+  const outside=()=>new Date('2026-11-17T09:56:00Z'),calls=[];
+  const make=event=>makeShowsSyncHandler({now:outside,identify:async()=>({runId:'1',event}),scrape:async()=>{calls.push('scrape');return{concerts:[],checkedAt:'t',pages:1};},store:async operation=>{calls.push(operation);return operation==='artist-photo-candidates'?{artists:[]}:{createdConcerts:0};}});
+  const call=async(event,body)=>{const res=response();await make(event)({method:'POST',headers:{authorization:'Bearer workflow'},body},res);return res;};
+  const closed=await call('workflow_dispatch',{});assert.equal(closed.code,200);assert.equal(closed.data.code,'IMPORT_WINDOW_CLOSED');assert.deepEqual(calls,[]);
+  for(const event of ['schedule','push',undefined]){const res=await call(event,{manualRun:true});assert.equal(res.data.code,'IMPORT_WINDOW_CLOSED','alleen workflow_dispatch mag het venster openen: '+event);}
+  assert.deepEqual(calls,[]);
+  for(const manualRun of ['true',1,'yes']){const res=await call('workflow_dispatch',{manualRun});assert.equal(res.data.code,'IMPORT_WINDOW_CLOSED');}
+  const open=await call('workflow_dispatch',{manualRun:true});assert.equal(open.code,200);assert.equal(open.data.ok,true);assert.ok(!open.data.skipped);assert.deepEqual(calls,['scrape','sync','artist-photo-candidates']);
+  const photos=await call('workflow_dispatch',{manualRun:true,operation:'photos'});assert.equal(photos.code,200);assert.ok(!photos.data.skipped);
+  const stranger=response();await makeShowsSyncHandler({now:outside,identify:async()=>{throw Error();}})({method:'POST',headers:{authorization:'Bearer x'},body:{manualRun:true}},stranger);assert.equal(stranger.code,403);
+});
+test('verificatie controleert ook de fotokandidaten (alleen lezen) en meldt het aantal', async () => {
+  const calls=[];
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({runId:'1',event:'push'}),scrape:async()=>({concerts:[{}],checkedAt:'t',pages:1}),store:async operation=>{calls.push(operation);return operation==='concert-catalogue'?{concerts:[1,2]}:{artists:[{artistId:'a_'+'1'.repeat(64),name:'x'},{artistId:'a_'+'2'.repeat(64),name:'y'}]};}});
+  const res=response();await handler({method:'POST',headers:{authorization:'Bearer workflow'},body:{verifyOnly:true}},res);
+  assert.equal(res.code,200);assert.equal(res.data.photoCandidates,2);assert.deepEqual(calls,['concert-catalogue','artist-photo-candidates']);assert.ok(!calls.includes('artist-photo-save')&&!calls.includes('sync'));
+});
+test('onbekende fouten geven alleen foutklasse en code-achtige foutcode; nooit berichttekst', async () => {
+  const run=async error=>{const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>({}),scrape:async()=>({concerts:[],checkedAt:'t',pages:1}),store:async operation=>{if(operation==='artist-photo-candidates')throw error;return{createdConcerts:0};}});const res=response();await handler({method:'POST',headers:{authorization:'Bearer w'},body:{}},res);return res;};
+  const limit=await run(Object.assign(Error('DATAVERSE_SHOWS_LIMIT'),{}));assert.equal(limit.code,503);assert.deepEqual([limit.data.code,limit.data.stage,limit.data.detail,limit.data.kind],['IMPORT_UNCONFIRMED','photo-candidates','DATAVERSE_SHOWS_LIMIT','Error']);
+  const type=await run(new TypeError("Cannot read properties of undefined (reading 'geheim')"));assert.equal(type.data.code,'IMPORT_UNCONFIRMED');assert.equal(type.data.kind,'TypeError');assert.ok(!('detail' in type.data));assert.ok(!JSON.stringify(type.data).includes('geheim'));
+  const known=await run(new Error('MOJO_UNAVAILABLE'));assert.equal(known.data.code,'MOJO_UNAVAILABLE');assert.ok(!('detail' in known.data)&&!('kind' in known.data));
+  const odd=await run(Object.assign(new Error('Een zin met geheim'),{name:'Rare naam met spaties'}));assert.ok(!('detail' in odd.data)&&!('kind' in odd.data));
+});

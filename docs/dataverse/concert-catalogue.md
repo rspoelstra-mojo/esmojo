@@ -49,3 +49,16 @@ Publicatiecontrole gebruikt verifyOnly: actuele centrale catalogus en openbare
 agenda lezen, zonder concerten, foto's, tijdschema's of mails te schrijven. Een
 geslaagde controle bewijst geen uitgevoerde 05:00-import; controleer daarvoor de
 eerstvolgende geplande run en zijn teruggelezen resultaten.
+
+## Handmatige run en foutdiagnose (17 november 2026)
+
+De agenda-import schrijft alleen in het 05-uur Europe/Amsterdam. Voor een eenmalige run op een ander
+moment heeft mojo-shows.yml bij `workflow_dispatch` de input `run_now` (standaard uit, vereist dat
+`verify_only` uit staat). De server laat het gesloten venster alleen toe als de OIDC-claims bevestigen
+dat de aanvraag van een `workflow_dispatch` op main komt én de aanvraag `manualRun: true` bevat. De
+geplande 05:00-run en de 12:00-tijdschemarun veranderen niet. Er is geen andere weg om het venster te openen.
+
+Bij een onbekende fout geeft de server naast de code en stap uitsluitend de foutklasse (`kind`) en een
+code-achtige foutcode (`detail`, alleen hoofdletters/underscores) terug; nooit berichttekst of gegevens.
+De alleen-lezen verificatie (`verify_only`, ook bij elke push van de workflow) controleert nu ook de
+fotokandidaten en meldt het aantal (`photoCandidates`), zonder iets te schrijven.
