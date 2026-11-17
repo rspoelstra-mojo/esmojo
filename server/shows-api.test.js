@@ -54,3 +54,26 @@ test('Productiekeuzes houden oudere clients bruikbaar; alleen capabele clients k
   assert.equal(res.code,200);assert.deepEqual(res.data.choices,{fireworks:false});assert.equal(res.data.revision,1);if(capable)assert.deepEqual(res.data.homePlanning,planning);else assert.deepEqual(Object.keys(res.data).sort(),['choices','revision']);
  }
 });
+test('Artiestfoto-batches lopen met een cursor, leggen alleen definitieve uitkomsten vast en laten tijdelijke fouten voor de volgende run', async () => {
+  const id=n=>'a_'+n.toString(16).padStart(64,'0'),ids=Array.from({length:30},(_,i)=>id(i+1)),saves=[],queries=[];
+  const store=async(operation,data)=>{
+    if(operation==='artist-photo-candidates'){queries.push(data);return{artists:ids.filter(value=>!data.after||value>data.after).map(value=>({artistId:value,name:'Artiest '+value.slice(-2)}))};}
+    if(operation==='artist-photo-save'){saves.push(data);return{saved:Boolean(data.photo)};}
+    if(operation==='sync')return{createdConcerts:0};
+    throw Error('onverwachte bewerking '+operation);
+  };
+  const outcome=name=>{const n=parseInt(name.slice(-2),16);return n===3?{photo:null,final:false}:n%2===0?{photo:{imageUrl:'https://www.mojo.nl/media/x'+n+'.jpg',sourceUrl:'https://www.mojo.nl/artiest'+n},final:true}:{photo:null,final:true};};
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>{},scrape:async()=>({concerts:[],checkedAt:'test',pages:1}),store,photo:async name=>outcome(name)});
+  const call=async body=>{const res=response();await handler({method:'POST',headers:{authorization:'Bearer workflow'},body},res);return res;};
+  const first=await call({operation:'photos'});
+  assert.equal(first.code,200);assert.equal(first.data.photosPending,true);assert.equal(first.data.photosCursor,ids[23]);assert.equal(first.data.photosRetry,1);
+  assert.equal(saves.length,23,'de tijdelijke fout (artiest 3) is niet vastgelegd');assert.ok(!saves.some(save=>save.artistId===ids[2]));
+  assert.ok(saves.filter(save=>save.photo).every(save=>/^https:\/\/www\.mojo\.nl\/media\//.test(save.photo.imageUrl)&&Object.keys(save).sort().join()==='artistId,photo'));
+  assert.equal(first.data.photos,saves.filter(save=>save.photo).length);
+  const second=await call({operation:'photos',photoAfter:first.data.photosCursor});
+  assert.equal(queries.at(-1).after,ids[23]);assert.equal(second.data.photosPending,false);assert.equal(second.data.photosCursor,ids[29]);assert.equal(saves.length,29);
+  assert.deepEqual(queries[0],{});
+  const done=await call({operation:'photos',photoAfter:ids[29]});assert.equal(done.data.photosCursor,null);assert.equal(done.data.photosPending,false);
+  for(const photoAfter of ['zzz',5,null,'a_'+'G'.repeat(64)]){const bad=await call({operation:'photos',photoAfter});assert.equal(bad.code,503);assert.equal(bad.data.code,'VALIDATION');}
+  assert.equal(saves.length,29,'ongeldige cursor schrijft niets');
+});

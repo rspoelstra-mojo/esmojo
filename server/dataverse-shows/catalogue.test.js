@@ -56,3 +56,21 @@ test('noon timetable is validated and stored against the same native concert wit
 });
 
 test('central catalogue route carries server context and checks current native authority before exposing data',async()=>{const f=fixture(),writes=f.writes();await assert.rejects(f.catalogue.request('concert-catalogue'),/DATAVERSE_SHOWS_NOT_ACTIVE/);assert.equal(f.writes(),writes);});
+test('artist photo candidates cover every artist without a photo, ignore the 45-day window, keep stable order and honour the run cursor',async()=>{
+ const f=fixture(),{MOJO_VENUES}=await import('../mojo-venues.js'),{concertId}=await import('../mojo-agenda.js');
+ const snapshot={pages:10,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts:['Shared synthetic artist','Zeta synthetic artist'].flatMap(artist=>MOJO_VENUES.map(venue=>({concertId:concertId(artist,'2026-11-20',venue.name),artist,venue:venue.name,city:venue.city,date:'2026-11-20',sourceUrl:'https://www.mojo.nl/concerten/'+artist.toLowerCase().replace(/[^a-z]+/g,'-')})))};
+ await f.service('sync',{snapshot});
+ // Een halfjaar later valt geen enkele artiest meer in de komende 45 dagen; alle artiesten blijven kandidaat.
+ const late=createNativeCatalogue({state:f.state,now:()=>new Date('2027-06-01T12:00:00Z')}),service=createNativeShowsService({state:f.state,catalogue:late});
+ const all=(await service('artist-photo-candidates')).artists;assert.ok(all.length>=3);assert.ok(['Shared synthetic artist','Zeta synthetic artist'].every(name=>all.some(row=>row.name===name)));
+ assert.deepEqual(all.map(row=>row.artistId),[...all.map(row=>row.artistId)].sort());assert.ok(all.every(row=>/^a_[a-f0-9]{64}$/.test(row.artistId)&&typeof row.name==='string'));
+ assert.deepEqual((await service('artist-photo-candidates',{after:all[0].artistId})).artists.map(row=>row.artistId),all.slice(1).map(row=>row.artistId));
+ assert.deepEqual((await service('artist-photo-candidates',{after:all.at(-1).artistId})).artists,[]);assert.deepEqual((await service('artist-photo-candidates',{after:'a_'+'f'.repeat(64)})).artists,[]);
+ for(const bad of [{after:'zzz'},{after:5},{after:null},{limit:1},{after:all[0].artistId,extra:true}])await assert.rejects(service('artist-photo-candidates',bad),/VALIDATION/);
+ const photo={sourceUrl:'https://www.mojo.nl/'+all[0].name.toLowerCase().replace(/[^a-z0-9]/g,''),imageUrl:'https://www.mojo.nl/media/first.jpg'};
+ assert.equal((await service('artist-photo-save',{artistId:all[0].artistId,photo})).saved,true);
+ assert.deepEqual((await service('artist-photo-candidates')).artists.map(row=>row.artistId),all.slice(1).map(row=>row.artistId));
+ // Een definitief ontbrekende pagina wordt eenmalig vastgelegd en daarna niet opnieuw geprobeerd.
+ assert.equal((await service('artist-photo-save',{artistId:all[1].artistId,photo:null})).saved,false);assert.equal((await service('artist-photo-candidates')).artists.some(row=>row.artistId===all[1].artistId),false);
+ assert.deepEqual((await service('artist-photo-candidates')).artists.map(row=>row.artistId),all.slice(2).map(row=>row.artistId));
+});

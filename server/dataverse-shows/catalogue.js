@@ -105,10 +105,11 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
   await state.verifyPlan(mapShow(loaded.source,loaded.people),loaded.source.nativeGeneration||0);const existing=loaded.source.timetables.find(row=>row.concertId===payload.concertId);const result={state:payload.snapshot.status==='available'?'captured':'missing'};if(existing&&canonical(existing.snapshot)===canonical(payload.snapshot))return result;
   const next={...loaded.source,timetables:[...loaded.source.timetables.filter(row=>row.concertId!==payload.concertId),{concertId:payload.concertId,snapshot:payload.snapshot}]};await state.commit(loaded,next,result,digest('native-timetable/'+payload.concertId+'/'+canonical(payload.snapshot)));return result;
  }
- async function photoCandidates(){
+ // Alle artiesten zonder vastgelegde foto en zonder eerdere definitieve poging, oplopend op ID; `after` is de cursor van de lopende run.
+ async function photoCandidates(after){
+  if(after!==undefined&&!/^a_[a-f0-9]{64}$/.test(after))throw Error('VALIDATION');
   const data=await all(),saved=await repo.query('esmojo_integratiestatus',{filter:"esmojo_integratiecode eq 'artist-photo-import-v1'"}),done=new Set(saved.map(row=>row.esmojo_scopecode));
-  const [am,sm]=await Promise.all(['esmojo_artiest','esmojo_concertreeks'].map(repo.meta)),activeArtists=new Set(data.rows.filter(row=>row.active&&row.date>=calendarDate(now())&&row.date<addDays(calendarDate(now()),45)).map(row=>data.series.find(group=>group[sm.PrimaryIdAttribute]===row.native._esmojo_concertreeks_value)?._esmojo_artiest_value));
-  return data.artists.filter(row=>activeArtists.has(row[am.PrimaryIdAttribute])&&!row.esmojo_fotobronurl&&!done.has(row.esmojo_bronartiestid)).map(row=>({artistId:row.esmojo_bronartiestid,name:row.esmojo_naam})).sort((a,b)=>a.artistId.localeCompare(b.artistId));
+  return data.artists.filter(row=>!row.esmojo_fotobronurl&&!done.has(row.esmojo_bronartiestid)&&(after===undefined||row.esmojo_bronartiestid>after)).map(row=>({artistId:row.esmojo_bronartiestid,name:row.esmojo_naam})).sort((a,b)=>a.artistId.localeCompare(b.artistId));
  }
  async function savePhoto(payload){
   if(!sameKeys(payload,['artistId','photo'])||!/^a_[a-f0-9]{64}$/.test(payload.artistId))throw Error('VALIDATION');
@@ -122,7 +123,7 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
  const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','native-timetable-read','native-timetable-save']);
  async function request(operation,payload={}){
   if(operation==='concert-catalogue')return createConcertCatalogue({env,repository:repo}).all();
-  if(operation==='artist-photo-candidates')return{artists:await photoCandidates()};
+  if(operation==='artist-photo-candidates'){if(Object.keys(payload).some(key=>key!=='after'))throw Error('VALIDATION');return{artists:await photoCandidates(payload.after)};}
   if(operation==='artist-photo-save')return savePhoto(payload);
   if(operation==='native-timetable-read')return{timetable:await readTimetable(payload.concertId)};
   if(operation==='native-timetable-save')return saveTimetable(payload);

@@ -15,11 +15,17 @@ krijgen een ConcertID en showpagina; ontbrekende artiesten worden aangemaakt.
 Bestaande exacte koppelingen worden hergebruikt. Conflicten worden niet samengevoegd.
 Ahoy, AHOY Rotterdam en Rotterdam Ahoy worden Rotterdam AHOY; bestaande IDs blijven.
 
-Bij deze import wordt voor een artiest zonder vastgelegde foto éénmaal de
-MOJO-artiestpagina gelezen. De geselecteerde openbare foto-URL wordt bij de
+Bij deze import wordt voor elke artiest zonder vastgelegde foto éénmaal de
+MOJO-artiestpagina gelezen (sinds 17 november 2026 voor alle artiesten in ESMOJO, ook zonder
+concert in de komende 45 dagen, bijvoorbeeld mojo.nl/thekidlaroi). De geselecteerde openbare foto-URL wordt bij de
 artiest bewaard en hergebruikt op de website. Dit is een vastgelegde URL, geen
 kopie van de afbeeldingsbytes. Een bestaande keuze wordt niet dagelijks opnieuw
 opgehaald of vervangen. Ook een ontbrekende foto wordt als poging geregistreerd.
+De backlog wordt in batches van 24 met een cursor (`photoAfter`) afgewerkt, maximaal honderd
+batches of ca. 35 minuten per run; wat dan nog openstaat volgt bij de volgende import en laat de
+run niet falen. Alleen een duidelijk MOJO-antwoord (foto, geen foto of pagina bestaat niet) wordt
+vastgelegd. Een tijdelijke fout (netwerk, time-out, 429, 5xx) wordt niet vastgelegd: die artiest
+blijft kandidaat voor de volgende run.
 
 Om 12:00 Nederlandse tijd op de concertdag worden openbare tijdschema's gelezen
 en aan hetzelfde native concert gekoppeld. Een al vastgelegde dagsnapshot wordt
