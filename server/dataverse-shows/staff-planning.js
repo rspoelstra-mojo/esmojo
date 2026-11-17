@@ -34,7 +34,7 @@ export function createStaffPlanning({env=process.env,repo,now=()=>new Date()}){
     if(!sameKeys(payload,['venue','from','until','concerts'])||!venue||payload.from!==from||payload.until!==until||!Array.isArray(payload.concerts)||payload.concerts.length>maxPerVenue)throw Error('VALIDATION');
     const seen=new Set(),concerts=[];
     for(const row of payload.concerts){
-      if(!sameKeys(row,['concertId','artist','date','sourceUrl'])||!validId(row.concertId)||typeof row.artist!=='string'||!row.artist.trim()||row.artist.length>160||!validDate(row.date)||row.date<from||row.date>=until||typeof row.sourceUrl!=='string'||!/^https:\/\/www\.mojo\.nl\/concerten\/[\w%/.-]{1,300}$/.test(row.sourceUrl)||seen.has(row.concertId))throw Error('VALIDATION');
+      if(!sameKeys(row,['concertId','artist','date','sourceUrl'])||!validId(row.concertId)||typeof row.artist!=='string'||!row.artist.trim()||row.artist.length>160||!validDate(row.date)||row.date<from||row.date>=until||typeof row.sourceUrl!=='string'||!/^https:\/\/www\.mojo\.nl\/(agenda|concerten\/[\w%/-]+)(\?[^#\s]*)?$/.test(row.sourceUrl)||seen.has(row.concertId))throw Error('VALIDATION');
       seen.add(row.concertId);concerts.push({concertId:row.concertId,artist:row.artist.trim(),date:row.date,sourceUrl:row.sourceUrl});
     }
     const existing=(await listRows()).filter(item=>item.config.venue===venue.id),current=existing.flatMap(item=>item.config.concerts).filter(row=>row.date>=from&&row.date<until).length;
