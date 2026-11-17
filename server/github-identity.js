@@ -33,6 +33,6 @@ export async function verifyImportIdentity(token, { request = fetch, now = Date.
     const key = keys.find(item => item.kid === header.kid && item.kty === 'RSA' && item.use === 'sig');
     identityStage='signature';
     if (!key || !verify('RSA-SHA256', Buffer.from(`${parts[0]}.${parts[1]}`), createPublicKey({ key, format: 'jwk' }), Buffer.from(parts[2], 'base64url'))) throw new Error();
-    return { runId: String(claims.run_id) };
+    return { runId: String(claims.run_id), event: claims.event_name };
   } catch { throw Object.assign(new Error('FORBIDDEN'),{identityStage}); }
 }
