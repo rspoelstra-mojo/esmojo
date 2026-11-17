@@ -104,7 +104,7 @@ function screen(title, description, fields, submitText, submit) {
   document.querySelector('#app-boot').hidden=true;
   disposeLoginBackground();
   panel().dataset.screen=title==='Inloggen'?'login':'account';
-  if(title==='Inloggen')disposeLoginBackground=attachLoginBackground(panel());
+  disposeLoginBackground=attachLoginBackground(panel());
   panel().hidden = false;
   panel().replaceChildren();
   const form = document.createElement('form');

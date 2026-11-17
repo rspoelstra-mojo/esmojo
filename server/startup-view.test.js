@@ -14,7 +14,7 @@ test('Tijdens sessieherstel blijft de loginfoto verborgen; menu wordt voorbereid
 test('Eerste HTML heeft het originele logo, geen loginfoto-preload of zichtbare loginplaceholder',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),logo=readFileSync(new URL('../src/assets/ESMOJO-logo.svg',import.meta.url),'utf8');
  assert.ok(html.includes('id="app-boot"'));assert.ok(html.includes('id="auth-panel" class="auth-panel" aria-label="Inloggen" hidden'));assert.equal(html.includes('Inloggen laden'),false);assert.equal(html.includes('preload" as="image"'),false);assert.equal(html.split(logo).length-1,2);
- const css=readFileSync(new URL('../src/accounts.css',import.meta.url),'utf8');assert.ok(css.includes('.auth-panel[data-screen="login"]::before'));assert.equal(css.includes('.auth-panel::before'),false);
+ const css=readFileSync(new URL('../src/accounts.css',import.meta.url),'utf8');assert.ok(css.includes('.auth-panel[data-screen]::before'));assert.equal(css.includes('.auth-panel::before'),false);
 });
 
 test('Systeemthema geldt vóór eerste paint en schakelt de hele website live mee, zonder opgeslagen override',()=>{

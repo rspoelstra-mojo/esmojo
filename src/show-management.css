@@ -10,11 +10,11 @@
 .show-management-quadrant h3 { margin:0 0 8px; font-size:14px; line-height:1.5; font-weight:600; overflow-wrap:anywhere; }
 .show-management-quadrant p { margin:0; font-size:12px; color:var(--muted); }
 @container (max-width:740px) { .show-management-overview { grid-template-columns:minmax(0,1fr); } }
-/* Zelfstandige zaalpagina: dezelfde foto als de login, met een rustige overgang. */
+/* Zelfstandige zaalpagina: dezelfde instelbare foto als de login (Beheerder / Instellingen), met een rustige overgang. */
 .show-management-page { position:relative; isolation:isolate; padding:0; min-height:100dvh; color:var(--text,#242424); }
-.show-management-background { position:fixed; inset:-32px; z-index:-2; background:#080b12 url('./assets/login-background.webp') center / cover no-repeat; transition:filter 1.2s ease,transform 1.2s ease; }
+.show-management-background { position:fixed; inset:0; z-index:-2; background-color:#080b12; background-image:var(--login-image,url('/login-background-initial.jpg')); background-size:var(--login-size,cover); background-position:var(--login-position,center); background-repeat:no-repeat; filter:blur(var(--login-blur,3px)); transform:scale(var(--login-overscan,1.02)); transition:filter 1.2s ease,transform 1.2s ease; }
 .show-management-page::before { content:''; position:fixed; inset:0; z-index:-1; background:#050b1660; transition:background 1.2s ease; pointer-events:none; }
-.show-management-page.is-open .show-management-background { filter:blur(22px); transform:scale(1.03); }
+.show-management-page.is-open .show-management-background { filter:blur(22px); transform:scale(1.1); }
 .show-management-page.is-open::before { background:#050b1699; }
 .show-management-brand { position:fixed; top:24px; left:13.5px; z-index:2; height:48px; width:48px; display:flex; justify-content:center; opacity:.5; }
 .show-management-brand svg { display:block; height:48px; width:auto; max-width:100%; }
