@@ -442,6 +442,10 @@
   ],
   "rewrites": [
     {
+      "source": "/showbeheer/",
+      "destination": "/showbeheer.html"
+    },
+    {
       "source": "/showbeheer/:path*",
       "destination": "/showbeheer.html"
     },
