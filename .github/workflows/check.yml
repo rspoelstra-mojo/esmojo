@@ -116,7 +116,6 @@ jobs:
           node server/drive-write-diagnostic.test.js
           node server/apps-script.test.js
           node server/mojo-timetable.test.js
-          node server/show-timetables.test.js
           node server/google-drive.test.js
           node tools/apps-script/check-syntax.mjs
           node --test tools/apps-script/check-syntax.test.mjs tools/apps-script/diagnostics.test.mjs
@@ -161,6 +160,7 @@ jobs:
           node server/show-page.test.js
           node src/lib/show-memory.test.js
           node src/lib/show-planning.test.js
+          node --test src/lib/similar-artists.test.js src/lib/show-schedule.test.js
           node --test src/lib/production-choice-saves.test.js
           node server/fluid-preview.test.js
           node server/fluid-preview-source.test.js

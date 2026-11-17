@@ -1,8 +1,7 @@
-name: Import concert catalogue and capture showday timetable
+name: Import concert catalogue and check upcoming timetables
 on:
   schedule:
     - cron: '0 3,4 * * *'
-    - cron: '0 10,11 * * *'
   workflow_dispatch:
     inputs:
       verify_only:
@@ -27,22 +26,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Verify current catalogue; import at five and capture timetable at noon
+      - name: Verify current catalogue; import at five and check upcoming timetables
         env:
           VERIFY_ONLY: ${{ github.event_name == 'push' || inputs.verify_only == true }}
           RUN_NOW: ${{ github.event_name == 'workflow_dispatch' && inputs.run_now == true }}
         run: |
           node --input-type=module <<'JS'
           const hour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date()),verify=process.env.VERIFY_ONLY==='true',manual=!verify&&process.env.RUN_NOW==='true';
-          if(!verify&&!manual&&!['05','12'].includes(hour)){console.log('Geen Nederlandse import- of tijdschemarun.');process.exit(0);}
-          const agenda=verify||manual||hour==='05',endpoint='https://esmojo.nl/api/'+(agenda?'shows-sync':'timetables-sync');
-          if(agenda){let ready=false;for(let n=0;n<24;n++){try{const r=await fetch(endpoint,{method:'GET',cache:'no-store',signal:AbortSignal.timeout(10000)});if(r.status===405&&r.headers.get('x-esmojo-agenda-import')==='3'){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,10000));}if(!ready)throw Error('AGENDA_DEPLOYMENT_NOT_READY');}
+          if(!verify&&!manual&&hour!=='05'){console.log('Geen Nederlandse importrun.');process.exit(0);}
+          const endpoint='https://esmojo.nl/api/shows-sync';
+          {let ready=false;for(let n=0;n<24;n++){try{const r=await fetch(endpoint,{method:'GET',cache:'no-store',signal:AbortSignal.timeout(10000)});if(r.status===405&&r.headers.get('x-esmojo-agenda-import')==='3'){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,10000));}if(!ready)throw Error('AGENDA_DEPLOYMENT_NOT_READY');}
           async function call(body){const identityUrl=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);identityUrl.searchParams.set('audience',endpoint);const identity=await fetch(identityUrl,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}});if(!identity.ok)throw Error('OIDC_UNAVAILABLE');const {value}=await identity.json();console.log('::add-mask::'+value);const response=await fetch(endpoint,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(310000)});const result=await response.json();if(!response.ok){const code=/^[A-Z_0-9]{1,60}$/.test(result.code||'')?result.code:'CONCERT_IMPORT_UNCONFIRMED',stage=/^[a-z-]{1,30}$/.test(result.stage||'')?result.stage:'unknown';console.log(JSON.stringify({code,stage,...Number.isInteger(result.status)?{status:result.status}:{},.../^[A-Za-z]{1,30}$/.test(result.kind||'')?{kind:result.kind}:{},.../^[A-Z][A-Z0-9_]{2,59}$/.test(result.detail||'')?{detail:result.detail}:{},.../^[a-z-]{1,40}$/.test(result.venue||'')?{venue:result.venue}:{}}));throw Error('CONCERT_IMPORT_UNCONFIRMED');}return result;}
           const extra=manual?{manualRun:true}:{};
           let result=await call(verify?{verifyOnly:true}:extra);console.log(JSON.stringify(result));
-          // Artiestfoto's worden in batches met een cursor ingehaald; de backlog mag over meerdere dagen lopen en laat de run niet falen.
-          const started=Date.now();
-          for(let batch=0;agenda&&!verify&&(result.concertsPending||result.photosPending)&&batch<100&&Date.now()-started<35*60*1000;batch++){result=await call({...extra,...result.concertsPending?{operation:'continue'}:{operation:'photos',...result.photosCursor?{photoAfter:result.photosCursor}:{}}});console.log(JSON.stringify(result));}
+          const started=Date.now(),inBudget=()=>Date.now()-started<35*60*1000;
+          // 1. Concerten: vervolgbatches zolang de agenda niet volledig is verwerkt.
+          for(let batch=0;!verify&&result.concertsPending&&batch<100&&inBudget();batch++){result=await call({...extra,operation:'continue'});console.log(JSON.stringify(result));}
           if(result.concertsPending)throw Error('CONCERT_IMPORT_INCOMPLETE');
+          // 2. Dagelijkse controle van het MOJO-tijdschema voor de komende 45 dagen; de meest recente versie wint. Een fout hier
+          // blokkeert de fotostap niet, maar laat de run wel falen.
+          let timetables={timetablesPending:!verify,timetablesCursor:null},timetableFailure=null;
+          try{for(let batch=0;!verify&&timetables.timetablesPending&&batch<20&&inBudget();batch++){timetables=await call({...extra,operation:'timetables',...timetables.timetablesCursor?{timetablesAfter:timetables.timetablesCursor}:{}});console.log(JSON.stringify(timetables));}}catch(error){timetableFailure=error;}
+          // 3. Artiestfoto's worden in batches met een cursor ingehaald; de backlog mag over meerdere dagen lopen en laat de run niet falen.
+          for(let batch=0;!verify&&result.photosPending&&batch<100&&inBudget();batch++){result=await call({...extra,operation:'photos',...result.photosCursor?{photoAfter:result.photosCursor}:{}});console.log(JSON.stringify(result));}
+          if(!verify&&timetables.timetablesPending)console.log('Tijdschemacontrole wordt bij de volgende import voortgezet.');
           if(result.photosPending)console.log('Artiestfoto’s worden bij de volgende import voortgezet.');
+          if(timetableFailure)throw timetableFailure;
           JS

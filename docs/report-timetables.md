@@ -1,5 +1,12 @@
 # MOJO-tijdschema's in de webrapportage
 
+> **Actueel (17 november 2026):** de opname op de showdag om 12:00 is gestopt. De 05:00-import controleert
+> dagelijks, voor alle shows in de komende 45 dagen, of MOJO een tijdschema publiceert en bewaart steeds de
+> meest recente beschikbare versie (operaties `advance-timetable-*`, Integratiestatus
+> `show-timetable-advance-v1` per concert, geen nieuw schema). Het showoverzicht toont die versie in het blok
+> Tijdschema. Reeds opgeslagen showdagopnamen en hun rapportweergave blijven ongewijzigd; nieuwe rapporten lezen
+> het voorlopige schema nog niet. De rest van dit document beschrijft de oorspronkelijke middagopname.
+
 De gebruiker heeft de geplande showtijden op 5 november 2026 Openbaar verklaard.
 Alleen de canonieke MOJO-concertpagina uit de bestaande Productie-/OnTrack-
 concertcatalogi is toegestaan. Geen andere bron, client-URL, CSV-tijdstip of

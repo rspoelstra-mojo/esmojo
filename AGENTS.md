@@ -1,3 +1,16 @@
+## Dagelijkse tijdschemacontrole vooraf (17 november 2026)
+
+Gebruiker vervangt de tijdschema-opname op de showdag (12:00) door een dagelijkse
+controle in de 05:00-import: voor alle shows in de komende 45 dagen leest de import
+op de MOJO-concertpagina of een tijdschema is gepubliceerd. Een schema kan wijzigen,
+dus altijd de meest recente versie gebruiken: elke dag opnieuw ophalen en overschrijven,
+nooit presenteren als 12:00-opname; een later verdwenen bron wist de laatst bekende
+beschikbare versie niet. Openbare showtijden, opslag uitsluitend in Dataverse (bestaande
+Integratiestatus, geen nieuw schema). Weergave beknopt in het blok Tijdschema op het
+showoverzicht: tekst links, tijd rechts. De 12:00-run en het eindpunt timetables-sync
+zijn gestopt; reeds opgeslagen showdagopnamen en rapportweergave blijven ongewijzigd.
+Vervangt de oudere 12:00-instructies in dit bestand. Zie docs/report-timetables.md.
+
 ## Showbeheer PDF delen en anonieme gebruikstelling (17 november 2026)
 
 Gebruiker autoriseert nu uitsluitend de actuele gereedstaande Showprofiel-PDF

@@ -1,4 +1,4 @@
-import {validateTimetable} from '../../shared/show-timetable.js';
+import {validateTimetable,validTimetableSource} from '../../shared/show-timetable.js';
 import {createConcertCatalogue} from '../concert-catalogue.js';
 import {record,reference,recordKey,digest,canonical,choice,migrationDifferences} from '../show-migration-writer.js';
 import {mapShow} from '../show-migration-map.js';
@@ -111,6 +111,43 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
   const data=await all(),saved=await repo.query('esmojo_integratiestatus',{filter:"esmojo_integratiecode eq 'artist-photo-import-v1'"}),done=new Set(saved.map(row=>row.esmojo_scopecode));
   return data.artists.filter(row=>!row.esmojo_fotobronurl&&!done.has(row.esmojo_bronartiestid)&&(after===undefined||row.esmojo_bronartiestid>after)).map(row=>({artistId:row.esmojo_bronartiestid,name:row.esmojo_naam})).sort((a,b)=>a.artistId.localeCompare(b.artistId));
  }
+ // Voorlopig tijdschema: dagelijks vernieuwd vóór de showdag; de meest recente beschikbare versie geldt. Openbare MOJO-gegevens,
+ // bewaard in de bestaande Integratiestatus (geen nieuw schema); een later verdwenen bron wist een eerder beschikbare versie niet.
+ const advanceCode='show-timetable-advance-v1',advanceKey=concertId=>'show-timetable-advance/'+concertId;
+ const validConcertId=value=>typeof value==='string'&&value.length>0&&value.length<=240&&!/[\x00-\x1f/\\]/.test(value);
+ const byCodepoint=(a,b)=>a<b?-1:a>b?1:0;
+ async function advanceCandidates(after){
+  if(after!==undefined&&!validConcertId(after))throw Error('VALIDATION');
+  const data=await all(),today=calendarDate(now()),until=addDays(today,45);
+  return data.rows.filter(row=>row.active&&row.date>=today&&row.date<until&&validTimetableSource(row.sourceUrl)&&(after===undefined||row.concertId>after)).map(row=>({concertId:row.concertId,date:row.date,sourceUrl:row.sourceUrl,artist:row.artist,venue:row.venue,city:row.city})).sort((a,b)=>byCodepoint(a.concertId,b.concertId));
+ }
+ function advanceConfig(row){try{const value=JSON.parse(row.esmojo_configuratie_json);return value&&value.version===1?value:null;}catch{return null;}}
+ async function advanceSave(payload){
+  if(!sameKeys(payload,['concertId','snapshot'])||!validConcertId(payload.concertId))throw Error('VALIDATION');
+  const data=await all(),row=data.rows.find(candidate=>candidate.concertId===payload.concertId&&candidate.active);if(!row||!row.sourceUrl)throw Error('NOT_FOUND');
+  let snapshot;try{snapshot=validateTimetable(payload.snapshot,{concertId:row.concertId,date:row.date,sourceUrl:row.sourceUrl},{advance:true});}catch{throw Error('VALIDATION');}
+  if(snapshot.sourceUrl!==row.sourceUrl||Date.parse(snapshot.capturedAt)>now().getTime()+600000)throw Error('VALIDATION');
+  if(snapshot.status!=='available')return{state:'missing'};
+  const key=recordKey('esmojo_integratiestatus',advanceKey(row.concertId)),previous=await repo.byKey('esmojo_integratiestatus',key),old=previous?advanceConfig(previous):null;
+  if(old&&typeof old.capturedAt==='string'&&old.capturedAt>=snapshot.capturedAt)return{state:'unchanged'};
+  const model=record('integratiestatus',advanceKey(row.concertId),'Voorlopig tijdschema',{integratiecode:advanceCode,scopecode:digest(row.concertId),configuratie_json:canonical({version:1,...snapshot})});
+  const operations=await recordOperations(repo,[model]);try{await repo.atomic(operations);}catch{/* Independent readback below decides whether the write committed. */}
+  const read=await repo.byKey('esmojo_integratiestatus',key);if(!read||migrationDifferences(model,read,model.fields).length)throw Error('TIMETABLE_UNCONFIRMED');
+  return{state:'saved'};
+ }
+ async function advanceRead(concertId){
+  if(!validConcertId(concertId))throw Error('VALIDATION');
+  const data=await all(),rows=data.rows.filter(row=>row.active&&(row.concertId===concertId||row.generalConcertId===concertId)).sort((a,b)=>byCodepoint(a.date+a.concertId,b.date+b.concertId));
+  if(!rows.length)throw Error('NOT_FOUND');
+  const days=[];
+  for(const row of rows){
+   const stored=await repo.byKey('esmojo_integratiestatus',recordKey('esmojo_integratiestatus',advanceKey(row.concertId)));if(!stored)continue;
+   const config=advanceConfig(stored);
+   if(stored.esmojo_integratiecode!==advanceCode||stored.esmojo_scopecode!==digest(row.concertId)||!config||config.concertId!==row.concertId||config.date!==row.date||config.status!=='available'||!Array.isArray(config.entries)||typeof config.capturedAt!=='string')throw Error('TIMETABLE_UNCONFIRMED');
+   days.push({date:row.date,capturedAt:config.capturedAt,entries:config.entries.map(entry=>({kind:entry.kind,label:entry.publishedLabel,time:entry.time,localDate:entry.localDate}))});
+  }
+  return{days,checkedAt:days.map(day=>day.capturedAt).sort().at(-1)||null};
+ }
  async function savePhoto(payload){
   if(!sameKeys(payload,['artistId','photo'])||!/^a_[a-f0-9]{64}$/.test(payload.artistId))throw Error('VALIDATION');
   const key=recordKey('esmojo_integratiestatus','artist-photo-import/'+payload.artistId),previous=await repo.byKey('esmojo_integratiestatus',key);if(previous)return{saved:false};
@@ -120,9 +157,12 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
   const operations=await recordOperations(repo,[marker]);if(photo){const meta=await repo.meta('esmojo_artiest');operations.push({table:'esmojo_artiest',id:artist[meta.PrimaryIdAttribute],method:'PATCH',etag:artist['@odata.etag'],payload:{esmojo_fotobronurl:photo.imageUrl}});}try{await repo.atomic(operations);}catch{/* Independent readback below decides whether the batch committed. */}
   const read=await repo.byKey('esmojo_integratiestatus',key),actual=await repo.byKey('esmojo_artiest',artist.esmojo_sleutel);if(!read||migrationDifferences(marker,read,marker.fields).length||photo&&actual?.esmojo_fotobronurl!==photo.imageUrl)throw Error('ARTIST_PHOTO_UNCONFIRMED');return{saved:!!photo};
  }
- const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','native-timetable-read','native-timetable-save']);
+ const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','advance-timetable-candidates','advance-timetable-save','advance-timetable-read','native-timetable-read','native-timetable-save']);
  async function request(operation,payload={}){
   if(operation==='concert-catalogue')return createConcertCatalogue({env,repository:repo}).all();
+  if(operation==='advance-timetable-candidates'){if(Object.keys(payload).some(key=>key!=='after'))throw Error('VALIDATION');return{shows:await advanceCandidates(payload.after)};}
+  if(operation==='advance-timetable-save')return advanceSave(payload);
+  if(operation==='advance-timetable-read')return advanceRead(payload.concertId);
   if(operation==='artist-photo-candidates'){if(Object.keys(payload).some(key=>key!=='after'))throw Error('VALIDATION');return{artists:await photoCandidates(payload.after)};}
   if(operation==='artist-photo-save')return savePhoto(payload);
   if(operation==='native-timetable-read')return{timetable:await readTimetable(payload.concertId)};

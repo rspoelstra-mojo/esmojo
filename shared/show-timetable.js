@@ -6,11 +6,12 @@ export function timetableClock(value=new Date()){
  return{date:get('year')+'-'+get('month')+'-'+get('day'),hour:Number(get('hour'))};
 }
 export const validTimetableSource=value=>typeof value==='string'&&/^https:\/\/www\.mojo\.nl\/concerten\/[\w%/-]+(?:\?[^#\s]*)?$/.test(value);
-export function validateTimetable(snapshot,show,{now=null}={}){
+// advance: een voorlopige versie die dagelijks vóór de showdag wordt vernieuwd; nooit een 12:00-showdagopname.
+export function validateTimetable(snapshot,show,{now=null,advance=false}={}){
  const fail=()=>{throw Error('TIMETABLE_INVALID');};
  if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot)||Object.keys(snapshot).some(key=>!['concertId','date','sourceUrl','capturedAt','sourceHash','status','reason','entries','unresolved'].includes(key))||snapshot.concertId!==show.concertId||snapshot.date!==show.date||!validTimetableDate(snapshot.date)||!validTimetableSource(snapshot.sourceUrl)||typeof snapshot.capturedAt!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(snapshot.capturedAt)||!Number.isFinite(Date.parse(snapshot.capturedAt))||!/^[a-f0-9]{64}$/.test(snapshot.sourceHash||'')||!['available','missing'].includes(snapshot.status)||!Array.isArray(snapshot.entries)||snapshot.entries.length>100||!Array.isArray(snapshot.unresolved)||snapshot.unresolved.length>100)fail();
- const clock=timetableClock(snapshot.capturedAt);if(clock.date!==snapshot.date||clock.hour!==12)fail();
- if(now!==null&&(timetableClock(now).date!==snapshot.date||Math.abs(new Date(now).getTime()-Date.parse(snapshot.capturedAt))>600000||snapshot.sourceUrl!==show.sourceUrl))fail();
+ const clock=timetableClock(snapshot.capturedAt);if(advance?clock.date>snapshot.date:clock.date!==snapshot.date||clock.hour!==12)fail();
+ if(!advance&&now!==null&&(timetableClock(now).date!==snapshot.date||Math.abs(new Date(now).getTime()-Date.parse(snapshot.capturedAt))>600000||snapshot.sourceUrl!==show.sourceUrl))fail();
  if(snapshot.status==='available'?!snapshot.entries.length||snapshot.reason!==null:snapshot.entries.length||!['NOT_PUBLISHED','DATE_NOT_PUBLISHED','TIME_NOT_PUBLISHED'].includes(snapshot.reason))fail();
  const safe=value=>typeof value==='string'&&value.trim()&&value.length<=300&&!/[\x00-\x1f]/.test(value);
  const seen=new Set();for(const [index,entry]of snapshot.entries.entries()){

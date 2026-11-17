@@ -51,8 +51,11 @@ test('Rapportworker heeft uitsluitend de eigen audience en eigen vaste workflow 
  assert.deepEqual(await runIdOf(signed,{request,now,audience,workflow}),{runId:'123'});await assert.rejects(verifyImportIdentity(signed,{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience,workflow}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(signed,{request,now,audience,workflow:'unknown.yml'}),/FORBIDDEN/);
 });
 
-test('Tijdschema-opname heeft eigen audience en uitsluitend de bestaande middagworkflow op main',async()=>{
- const audience='https://esmojo.nl/api/timetables-sync';assert.deepEqual(await runIdOf(token({aud:audience}),{request,now,audience}),{runId:'123'});await assert.rejects(verifyImportIdentity(token(),{request,now,audience}),/FORBIDDEN/);await assert.rejects(verifyImportIdentity(token({aud:audience,workflow_ref:'rspoelstra-mojo/esmojo/.github/workflows/ontrack-reports.yml@refs/heads/main'}),{request,now,audience}),/FORBIDDEN/);
+test('de opname op de showdag is gestopt: de audience van het oude tijdschemaeindpunt wordt niet meer geaccepteerd', async () => {
+ const request = async () => ({ ok: true, json: async () => ({ keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'test-key', use: 'sig' }] }) });
+ const audience='https://esmojo.nl/api/timetables-sync';
+ await assert.rejects(verifyImportIdentity(token({aud:audience}),{request,now,audience}),/FORBIDDEN/);
+ assert.equal((await verifyImportIdentity(token(),{request,now,audience:'https://esmojo.nl/api/shows-sync'})).runId,'123');
 });
 
 test('Homepageprojectie vereist eigen audience en de vaste middagworkflow op main',async()=>{
