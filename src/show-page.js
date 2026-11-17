@@ -67,8 +67,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
         const button=document.createElement('button');button.type='button';button.className='show-tab';button.textContent=label;button.id=`show-tab-${index}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`show-panel-${index}`);
         const panel=document.createElement('section');panel.id=`show-panel-${index}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);panel.tabIndex=0;
         if(label==='Overzicht'){
-          // Vijf kolommen (zie show-planning.css): Projectteam en Tijdschema (1/5), Show informatie en Planning (2/5);
-          // daaronder Showbeheer (1/5), Gashouder en Actielijst (2/5). De blokken zonder inhoud blijven voorlopig leeg.
+          // Tien kolommen (zie show-planning.css): Projectteam, Tijdschema en Showbeheer (3/10), Show informatie en Gashouder (3/10), Planning en Actielijst (4/10);
+          // De blokken zonder inhoud blijven voorlopig leeg.
           const layout=document.createElement('div');layout.className='show-overview';
           const block=(className,heading)=>{const section=document.createElement('section');section.className='show-block '+className;const title=document.createElement('h2');title.textContent=heading;section.append(title);return section;};
           const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie'),actions=block('show-actions','Actielijst');

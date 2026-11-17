@@ -6,8 +6,9 @@
 .show-management-card-body { display:grid; gap:16px; justify-items:start; }
 .show-management-card-body > * { max-width:100%; }
 .show-management-quadrants { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:4px; }
-.show-management-quadrant { min-width:0; padding:16px; border-top:1px solid var(--line); }
+.show-management-quadrant { min-width:0; padding:16px 12px; border-top:1px solid var(--line); }
 .show-management-quadrant:nth-child(odd) { padding-left:0; border-right:1px solid var(--line); }
+.show-management-quadrant:nth-child(even) { padding-right:0; }
 .show-management-quadrant h3 { margin:0 0 8px; font-size:14px; line-height:1.5; font-weight:600; overflow-wrap:anywhere; }
 .show-management-quadrant p { margin:0; font-size:12px; color:var(--muted); }
 /* Zelfstandige zaalpagina: dezelfde instelbare foto als de login (Beheerder / Instellingen), met een rustige overgang. */
