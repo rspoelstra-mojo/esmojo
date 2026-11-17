@@ -28,8 +28,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
   async function open(){
     if(disposed||opening)return;const began=firstOpen&&Number.isFinite(startedAt)?startedAt:globalThis.performance?.now?.()??Date.now();firstOpen=false;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
-    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeInformation=()=>{},disposeActions=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
-    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeInformation();disposeActions();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
+    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeInformation=()=>{},disposeActions=()=>{},disposeTeam=()=>{},teamView=null,disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
+    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeInformation();disposeActions();disposeTeam();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
       const earlyPhoto=lease.view.photo||loadPhoto.peek?.(show.key)||null;
       if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
@@ -65,7 +65,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       const indicator=document.createElement('span');indicator.className='show-tab-indicator';indicator.setAttribute('aria-hidden','true');
       const panels=document.createElement('div');panels.className='show-panels';const buttons=[],views=[];let active=Number.isInteger(initialTab)&&initialTab>=0&&initialTab<tabs.length?initialTab:lease.view.tab;
       function position(){const button=buttons[active];indicator.style.width=`${button.offsetWidth}px`;indicator.style.transform=`translate(${button.offsetLeft}px, ${button.offsetTop+button.offsetHeight-3}px)`;}
-      function select(index,focus=false){active=index;lease.view.tab=index;buttons.forEach((button,i)=>{button.setAttribute('aria-selected',String(i===index));button.tabIndex=i===index?0:-1;views[i].hidden=i!==index;});if(tabs[index]==='Overzicht'){similar?.start();scheduleView?.start();}position();if(focus)buttons[index].focus();if(tabs[index]==='Risicoanalyse')risks?.activate();}
+      function select(index,focus=false){active=index;lease.view.tab=index;buttons.forEach((button,i)=>{button.setAttribute('aria-selected',String(i===index));button.tabIndex=i===index?0:-1;views[i].hidden=i!==index;});if(tabs[index]==='Overzicht'){similar?.start();scheduleView?.start();teamView?.start();}position();if(focus)buttons[index].focus();if(tabs[index]==='Risicoanalyse')risks?.activate();}
       // Bestemming vanuit de actielijst of een diepe link: kies het tabblad en open daarbinnen de juiste pagina.
       let openTarget=()=>{};
       openTarget=target=>{
@@ -87,7 +87,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           const block=(className,heading)=>{const section=document.createElement('section');section.className='show-block '+className;const title=document.createElement('h2');title.textContent=heading;section.append(title);return section;};
           const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie'),actions=block('show-actions','Actielijst');
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          createShowTeam(team);layout.append(team,schedule,information,planning);disposeManagement=show.venue==='Gashouder'?createShowManagement(layout,{show,request,data,readOnly}):createShowManagementPlaceholder(layout,{show});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});disposeActions=createShowActions(actions,{show,data,onOpen:target=>openTarget(target)});
+          teamView=createShowTeam(team,{show,request:readOnly?null:request});disposeTeam=teamView.dispose;layout.append(team,schedule,information,planning);disposeManagement=show.venue==='Gashouder'?createShowManagement(layout,{show,request,data,readOnly}):createShowManagementPlaceholder(layout,{show});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});disposeActions=createShowActions(actions,{show,data,onOpen:target=>openTarget(target)});
           // Placeholder-artiesten; laadt pas bij zichtbaar tabblad, op de achtergrond en alleen met Artiesten-rechten.
           if(!readOnly){similar=createSimilarArtists(panel,{request});disposeSimilar=similar.dispose;}
           // Voorlopig MOJO-tijdschema (dagelijks vernieuwd); de server geeft altijd de meest recente versie.

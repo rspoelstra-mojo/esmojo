@@ -11,7 +11,7 @@ export async function scrapeConcertCatalogue({scrape=scrapeMojo,now=new Date()}=
  const results=[];for(let index=0;index<MOJO_VENUES.length;index+=2)results.push(...await Promise.all(MOJO_VENUES.slice(index,index+2).map(async venue=>{try{return await scrape({venue:venue.id,now,days:45});}catch(error){error.venue=venue.id;throw error;}})));
  const first=results[0];if(results.some(row=>row.from!==first.from||row.until!==first.until))throw Error('MOJO_DATE');return{from:first.from,until:first.until,checkedAt:now.toISOString(),pages:results.reduce((sum,row)=>sum+row.pages,0),concerts:results.flatMap(row=>row.concerts)};
 }
-export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape = scrapeConcertCatalogue, store = createShowsStore({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}), photo=getMojoArtistPhotoResult,timetable=fetchMojoTimetable,management=null,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),now=()=>new Date() } = {}) {
+export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape = scrapeConcertCatalogue, store = createShowsStore({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}), photo=getMojoArtistPhotoResult,timetable=fetchMojoTimetable,management=null,scrapeStaff=scrapeMojo,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),now=()=>new Date() } = {}) {
   let defaultManagement=null;
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');res.setHeader('X-ESMOJO-Agenda-Import','3');
@@ -32,6 +32,16 @@ export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape =
         const work=async()=>{while(next<batch.length){const show=batch[next++];try{stage='timetable-source';const snapshot=await timetable(show,{now,advance:true});stage='timetable-save';const saved=await store('advance-timetable-save',{concertId:show.concertId,snapshot});counts[['saved','missing'].includes(saved.state)?saved.state:'unchanged']++;}catch(error){counts.failed++;const code=/^[A-Z][A-Z0-9_]{2,59}$/.test(error?.message||'')?error.message:'UNKNOWN';codes[code]=(codes[code]||0)+1;}}};
         await Promise.all(Array.from({length:Math.min(3,batch.length)},work));
         return res.status(200).json({ok:true,timetables:counts,...Object.keys(codes).length?{timetableErrors:codes}:{},timetablesCursor:batch.at(-1)?.concertId||null,timetablesPending:shows.length>batch.length});
+      }
+      // Personeelsplanning: de MOJO-concerten van de komende 365 dagen voor de tien vaste zalen, per zaal in batches van drie met een cursor.
+      // Los van de 45-dagencatalogus (menu's, foto's, tijdschema's en Showbeheer blijven daarop gebouwd); bewaard als openbare lijst.
+      if(req.body?.operation==='staffplanning'){
+        const after=req.body?.staffAfter;if(after!==undefined&&!MOJO_VENUES.some(venue=>venue.id===after))throw Error('VALIDATION');
+        const start=after===undefined?0:MOJO_VENUES.findIndex(venue=>venue.id===after)+1,batch=MOJO_VENUES.slice(start,start+3);
+        let next=0;const counts={venues:0,concerts:0,saved:0,unchanged:0,failed:0},codes={};
+        const work=async()=>{while(next<batch.length){const venue=batch[next++];try{stage='staff-source';const found=await scrapeStaff({venue:venue.id,now:now(),days:365});stage='staff-save';const saved=await store('staff-planning-store',{venue:venue.id,from:found.from,until:found.until,concerts:found.concerts.map(row=>({concertId:row.concertId,artist:row.artist,date:row.date,sourceUrl:row.sourceUrl}))});counts.venues++;counts.concerts+=saved.concerts;counts.saved+=saved.saved;counts.unchanged+=saved.unchanged;}catch(error){counts.failed++;const code=/^[A-Z][A-Z0-9_]{2,59}$/.test(error?.message||'')?error.message:'UNKNOWN';codes[code]=(codes[code]||0)+1;}}};
+        await Promise.all(Array.from({length:Math.min(2,batch.length)},work));
+        return res.status(200).json({ok:true,staffPlanning:counts,...Object.keys(codes).length?{staffErrors:codes}:{},staffCursor:batch.at(-1)?.id||null,staffPending:start+batch.length<MOJO_VENUES.length});
       }
       // Showbeheer wordt automatisch aangemaakt zodra een Gashouder-show in het showmenu komt (komende 45 dagen). Create-only:
       // bestaande toegang blijft ongemoeid. Per concert een fout (alleen veilige codes geteld) stopt de overige concerten niet.

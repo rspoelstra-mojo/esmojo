@@ -1,3 +1,20 @@
+## Personeelsplanning onder Beheerder (17 november 2026)
+
+Gebruiker vraagt Beheerder / Personeelsplanning met een titelblok, een tabjesmenu (nu alleen Totaalplanning)
+en een paginabrede tabel van alle MOJO-concerten van de komende 365 dagen voor de tien vaste zalen. Kolommen
+in drie kleurgroepen: Artiestnaam, Locatie, Datum | Productie manager, Event Safety manager, Projectleider
+beveiliging, CMT leider MOJO | Productie manager zaal, Event manager zaal, CMT leider zaal. Elke functiecel
+is een tekstveld dat automatisch opslaat. De ingevoerde namen zijn door de gebruiker als Vertrouwelijk
+geclassificeerd en staan versleuteld (AES-GCM, domeingescheiden sleutel) in de bestaande Integratiestatus,
+geen nieuw schema; alleen actuele beheerders met MFA lezen/schrijven. De 05:00-import vult de concertlijst
+(openbare MOJO-gegevens, per zaal en maand in dezelfde tabel) en blijft daarnaast de bestaande
+45-dagencatalogus gebruiken: menu's, foto's, tijdschema's en Showbeheer blijven op 45 dagen gebouwd.
+De gebruiker koos eerst voor een 365-dagencatalogus; dat is niet gedaan omdat de catalogus-import per
+concert volledige Shows-structuren en automatische toewijzingen aanmaakt (zou o.a. Mijn shows-tellers
+en schrijfbelasting beïnvloeden). Het blok Projectteam op de showpagina toont uit deze tabel Productie manager,
+Event Safety manager, Projectleider beveiliging (als Projectleider TSC) en CMT leider MOJO (als CMT leider),
+alleen lezen achter de Shows-module. Zie docs/personeelsplanning.md.
+
 ## Actielijst op het showoverzicht (17 november 2026)
 
 Gebruiker vult het blok Actielijst als to-do-lijst voor de event safety manager: status rechtsboven

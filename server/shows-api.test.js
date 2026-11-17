@@ -102,6 +102,21 @@ test('onbekende fouten geven alleen foutklasse en code-achtige foutcode; nooit b
   const known=await run(new Error('MOJO_UNAVAILABLE'));assert.equal(known.data.code,'MOJO_UNAVAILABLE');assert.ok(!('detail' in known.data)&&!('kind' in known.data));
   const odd=await run(Object.assign(new Error('Een zin met geheim'),{name:'Rare naam met spaties'}));assert.ok(!('detail' in odd.data)&&!('kind' in odd.data));
 });
+test('personeelsplanning: 365 dagen per zaal in batches van drie met cursor; fouten per zaal stoppen de rest niet en alleen veilige codes', async () => {
+  const {MOJO_VENUES}=await import('./mojo-venues.js'),saved=[],asked=[];
+  const scrapeStaff=async({venue,now,days})=>{asked.push([venue,days]);if(venue==='ziggo-dome')throw Error('MOJO_UNAVAILABLE');if(venue==='afas-live')throw new TypeError('geheime tekst');return{from:'2026-11-15',until:'2027-11-15',concerts:[{concertId:'A_'+venue,artist:'A',venue:'x',city:'y',date:'2026-12-01',sourceUrl:'https://www.mojo.nl/concerten/a',extra:'niet doorsturen'}]};};
+  const store=async(operation,data)=>{if(operation==='staff-planning-store'){saved.push(data);return{venue:data.venue,concerts:data.concerts.length,saved:1,unchanged:0};}throw Error('onverwachte bewerking '+operation);};
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>({}),store,scrapeStaff});
+  const call=async body=>{const res=response();await handler({method:'POST',headers:{authorization:'Bearer w'},body},res);return res;};
+  const first=await call({operation:'staffplanning'});
+  assert.equal(first.code,200);assert.deepEqual(first.data.staffPlanning,{venues:1,concerts:1,saved:1,unchanged:0,failed:2});assert.deepEqual(first.data.staffErrors,{MOJO_UNAVAILABLE:1,UNKNOWN:1});
+  assert.equal(first.data.staffCursor,MOJO_VENUES[2].id);assert.equal(first.data.staffPending,true);assert.ok(asked.every(([,days])=>days===365),'365 dagen vooruit');
+  assert.ok(saved.every(row=>Object.keys(row.concerts[0]).sort().join(',')==='artist,concertId,date,sourceUrl'),'alleen de vier toegestane velden gaan naar de opslag');
+  assert.ok(!JSON.stringify(first.data).includes('geheim'));
+  const last=await call({operation:'staffplanning',staffAfter:MOJO_VENUES[MOJO_VENUES.length-2].id});assert.equal(last.data.staffPending,false);assert.equal(last.data.staffCursor,MOJO_VENUES.at(-1).id);
+  for(const staffAfter of ['',5,null,'onbekend']){const bad=await call({operation:'staffplanning',staffAfter});assert.equal(bad.code,503);assert.equal(bad.data.code,'VALIDATION');}
+  const closed=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({}),store,scrapeStaff});const res=response();await closed({method:'POST',headers:{authorization:'Bearer w'},body:{operation:'staffplanning'}},res);assert.equal(res.code,409);assert.equal(res.data.code,'IMPORT_WINDOW_CLOSED');
+});
 test('automatisch Showbeheer: batches met cursor, create-only, fouten per concert stoppen de rest niet en alleen veilige codes', async () => {
   const shows=Array.from({length:15},(_,i)=>({concertId:'Gashouder_'+String(i+1).padStart(2,'0'),date:'2026-11-20'})),queries=[],ensured=[];
   const store=async(operation,data)=>{if(operation==='management-candidates'){queries.push(data);return{shows:shows.filter(show=>!data.after||show.concertId>data.after)};}throw Error('onverwachte bewerking '+operation);};

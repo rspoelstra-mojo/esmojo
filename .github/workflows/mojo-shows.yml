@@ -1,4 +1,4 @@
-name: Import concert catalogue, create Showbeheer and check upcoming timetables
+name: Import concert catalogue, staff planning, Showbeheer and upcoming timetables
 on:
   schedule:
     - cron: '0 3,4 * * *'
@@ -43,19 +43,26 @@ jobs:
           // 1. Concerten: vervolgbatches zolang de agenda niet volledig is verwerkt.
           for(let batch=0;!verify&&result.concertsPending&&batch<100&&inBudget();batch++){result=await call({...extra,operation:'continue'});console.log(JSON.stringify(result));}
           if(result.concertsPending)throw Error('CONCERT_IMPORT_INCOMPLETE');
-          // 2. Showbeheer voor Gashouder-shows die in het showmenu staan (komende 45 dagen) wordt automatisch aangemaakt (create-only).
+          // 2. Personeelsplanning: concerten van de komende 365 dagen voor de tien vaste zalen, per zaal in batches met een cursor.
+          // Een fout blokkeert de overige stappen niet, maar laat de run wel falen.
+          let staff={staffPending:!verify,staffCursor:null},staffFailed=0,staffFailure=null;
+          try{for(let batch=0;!verify&&staff.staffPending&&batch<10&&inBudget();batch++){staff=await call({...extra,operation:'staffplanning',...staff.staffCursor?{staffAfter:staff.staffCursor}:{}});staffFailed+=staff.staffPlanning?.failed||0;console.log(JSON.stringify(staff));}}catch(error){staffFailure=error;}
+          // 3. Showbeheer voor Gashouder-shows die in het showmenu staan (komende 45 dagen) wordt automatisch aangemaakt (create-only).
           // Een fout blokkeert de overige stappen niet, maar laat de run wel falen.
           let management={managementPending:!verify,managementCursor:null},managementFailed=0,managementFailure=null;
           try{for(let batch=0;!verify&&management.managementPending&&batch<20&&inBudget();batch++){management=await call({...extra,operation:'showbeheer',...management.managementCursor?{managementAfter:management.managementCursor}:{}});managementFailed+=management.management?.failed||0;console.log(JSON.stringify(management));}}catch(error){managementFailure=error;}
-          // 3. Dagelijkse controle van het MOJO-tijdschema voor de komende 45 dagen; de meest recente versie wint. Een fout hier
+          // 4. Dagelijkse controle van het MOJO-tijdschema voor de komende 45 dagen; de meest recente versie wint. Een fout hier
           // blokkeert de fotostap niet, maar laat de run wel falen.
           let timetables={timetablesPending:!verify,timetablesCursor:null},timetableFailure=null;
           try{for(let batch=0;!verify&&timetables.timetablesPending&&batch<20&&inBudget();batch++){timetables=await call({...extra,operation:'timetables',...timetables.timetablesCursor?{timetablesAfter:timetables.timetablesCursor}:{}});console.log(JSON.stringify(timetables));}}catch(error){timetableFailure=error;}
-          // 4. Artiestfoto's worden in batches met een cursor ingehaald; de backlog mag over meerdere dagen lopen en laat de run niet falen.
+          // 5. Artiestfoto's worden in batches met een cursor ingehaald; de backlog mag over meerdere dagen lopen en laat de run niet falen.
           for(let batch=0;!verify&&result.photosPending&&batch<100&&inBudget();batch++){result=await call({...extra,operation:'photos',...result.photosCursor?{photoAfter:result.photosCursor}:{}});console.log(JSON.stringify(result));}
+          if(!verify&&staff.staffPending)console.log('Personeelsplanning wordt bij de volgende import voortgezet.');
           if(!verify&&management.managementPending)console.log('Showbeheer-aanmaak wordt bij de volgende import voortgezet.');
           if(!verify&&timetables.timetablesPending)console.log('Tijdschemacontrole wordt bij de volgende import voortgezet.');
           if(result.photosPending)console.log('Artiestfoto’s worden bij de volgende import voortgezet.');
+          if(staffFailure)throw staffFailure;
+          if(staffFailed)throw Error('PERSONEELSPLANNING_INCOMPLETE');
           if(managementFailure)throw managementFailure;
           if(managementFailed)throw Error('SHOWBEHEER_INCOMPLETE');
           if(timetableFailure)throw timetableFailure;
