@@ -1,17 +1,26 @@
 import './show-management.css';
 import {createShowManagementCards} from './show-management-view.js';
 export function createShowManagement(container,{show,request,data,readOnly=false}){
- const ui=createShowManagementCards();container.append(ui.row);let disposed=false,busy=false,reloadAfterBusy=false;const controller=new AbortController();
+ const showData=data,sentFormat=new Intl.DateTimeFormat('nl-NL',{dateStyle:'long',timeStyle:'short',timeZone:'Europe/Amsterdam'});
+ const ui=createShowManagementCards();container.append(ui.row);let disposed=false,busy=false,reloadAfterBusy=false,sending=false;const controller=new AbortController();
  const call=operation=>request('show-management',{method:'POST',body:{concertId:show.key,operation},signal:controller.signal});
  const element=(tag,className,text)=>{const node=document.createElement(tag);node.className=className;node.textContent=text;return node;};
  function display(data){
   if(disposed)return;ui.body.replaceChildren();ui.venue.hidden=!data.available;
+  // De planning toont alleen een door de server bevestigde verzending (per huidige PDF-revisie).
+  showData?.setProfileSent?.(data.available&&data.canSend===true?data.sentAt:null);
   if(!data.available){ui.create.disabled=false;ui.body.append(ui.create);return;}
   const url=new URL(data.url);if(url.origin!=='https://esmojo.nl'||url.pathname!=='/showbeheer/'||!/^#[a-f0-9]{64}$/.test(url.hash)||!/^\d{6}$/.test(data.pin))throw Error('De Showbeheer-toegang kon niet worden bevestigd.');
   const linkRow=element('div','show-management-link-row',''),link=element('a','show-management-url',data.url);link.href=data.url;link.target='_blank';link.rel='noopener noreferrer';
   const copy=element('button','secondary-button','Kopieer URL');copy.type='button';copy.onclick=async()=>{try{await navigator.clipboard.writeText(data.url);if(!disposed){copy.textContent='Gekopieerd';setTimeout(()=>{if(!disposed)copy.textContent='Kopieer URL';},2000);}}catch{window.prompt('Kopieer de Showbeheer-URL:',data.url);}};linkRow.append(link,copy);
   const pin=element('p','show-management-code','Pincode: ');pin.append(element('strong','',data.pin));
-  ui.body.append(linkRow,pin);if(data.canSend===true&&!readOnly){const send=element('a','primary-button','Showbeheer verzenden');send.href='mailto:?body='+encodeURIComponent(data.pin+'\r\n'+data.url);ui.body.append(send);}
+  ui.body.append(linkRow,pin);
+  if(data.canSend===true&&!readOnly){
+   const send=element('a','primary-button','Showbeheer verzenden'),note=element('p','profile-message','');note.setAttribute('role','alert');note.hidden=true;send.href='mailto:?body='+encodeURIComponent(data.pin+'\r\n'+data.url);
+   // De mailto opent het mailprogramma; de registratie legt vast dat de knop is gebruikt (geen verzendbevestiging).
+   send.onclick=()=>{if(sending||disposed)return;sending=true;note.hidden=true;void call('sent').then(result=>{if(!disposed)display(result);}).catch(()=>{if(!disposed){note.textContent='De verzending kon niet worden vastgelegd. Gebruik Showbeheer verzenden opnieuw.';note.hidden=false;}}).finally(()=>{sending=false;});};
+   ui.body.append(send);if(typeof data.sentAt==='string'&&Number.isFinite(Date.parse(data.sentAt)))ui.body.append(element('p','show-management-sent','Showprofiel verzonden op '+sentFormat.format(new Date(data.sentAt))+'.'));ui.body.append(note);
+  }
  }
  function error(failure,retry){if(disposed)return;const message=element('p','profile-message',failure.message||'Showbeheer kon niet worden geladen.');message.setAttribute('role','alert');const button=element('button','secondary-button','Opnieuw proberen');button.type='button';button.onclick=retry;ui.body.replaceChildren(message,button);}
  async function load(){if(disposed)return;if(busy){reloadAfterBusy=true;return;}busy=true;ui.create.disabled=true;ui.body.replaceChildren(element('p','show-management-state','Showbeheer laden…'));try{const data=await call('status');if(!disposed)display(data);}catch(failure){if(!disposed)error(failure,()=>void load());}finally{busy=false;if(reloadAfterBusy&&!disposed){reloadAfterBusy=false;void load();}}}

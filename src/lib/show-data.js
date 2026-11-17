@@ -12,6 +12,7 @@ export function createShowData(bundle,request,concertId){
   const finalTransitions=[],barrierWrites=new Set();
   const sameFinalBasis=(a,b)=>Boolean(a&&b&&a.profileRevision===b.profileRevision&&a.finalRevision===b.finalRevision&&['ticket_sales','visitor_origins','domestic_origins'].every(key=>a.ticketVersions?.[key]===b.ticketVersions?.[key]));
   const previousValues=new Map(values),pendingWrites=new Set(),listeners=new Set(),operationalReviews=createOperationalReviewMemory(),measureDrafts=new Map();
+  let profileSentAt=null;
   let notifyPending=false;const notify=()=>{if(notifyPending||disposed)return;notifyPending=true;queueMicrotask(()=>{notifyPending=false;if(!disposed)for(const listener of listeners){try{listener();}catch{/* Een weergavefout onderbreekt geen opslag. */}}});};
   const forget=key=>{if(values.has(key))previousValues.set(key,values.get(key));values.delete(key);};
   const settled=async()=>{while(pendingWrites.size)await Promise.allSettled([...pendingWrites]);};
@@ -80,9 +81,12 @@ export function createShowData(bundle,request,concertId){
       if(final?.categories.visitors.completedAt&&final?.categories.artist.completedAt&&!values.has('show-profile-pdf'))await context.request('show-profile-pdf',{method:'POST',body:{operation:'status',concertId}});
       if(disposed)throw Error('Show gesloten.');return context;
     },
+    // Alleen bevestigd door de server (Showbeheer); nooit lokaal aangenomen. Sessiegeheugen, geen opslag.
+    profileSent(){return profileSentAt;},
+    setProfileSent(value){const next=typeof value==='string'&&Number.isFinite(Date.parse(value))?value:null;if(next===profileSentAt)return;profileSentAt=next;notify();},
     planningSnapshot(){
       const risks=values.get('show-risks')||(context.busy?previousValues.get('show-risks'):null);
-      return structuredClone({profile:{finalization:values.get('show-profile')?.finalization},pdf:values.get('show-profile-pdf'),risks:{
+      return structuredClone({profileSentAt,profile:{finalization:values.get('show-profile')?.finalization},pdf:values.get('show-profile-pdf'),risks:{
         state:risks?.state,risks:risks?.risks,operational:risks?.operational,measureImplementations:risks?.measureImplementations,
         production:risks?.production||productionChoices.server,
         assessments:risks?.assessments||{barrier:values.get('barrier-layout')?.record,floor:values.get('floor-pressure')?.record},

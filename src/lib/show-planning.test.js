@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {calendarDay,dutchToday,showPlanning,showMeasures} from './show-planning.js';
+import {calendarDay,dutchToday,showPlanning,showMeasures,showPagePlanning} from './show-planning.js';
 const show={dates:['2026-11-05'],venue:'Gashouder'},now=new Date('2026-11-03T12:00:00Z');
 const snapshot=()=>({pdf:{state:'ready'},profile:{finalization:{categories:{visitors:{completedAt:'2026-10-23T12:00:00Z'},artist:{completedAt:'2026-10-24T12:00:00Z'}}}},risks:{production:{choices:{escape_routes:false,fireworks:false,open_fire:false,lasers:false,drones:false}},assessments:{barrier:{completed:true},floor:{completed:true}}}});
 test('Voorbereiding gebruikt de eerste reeksdatum; vóór de reeks staat Showdag op de eerste datum',()=>{
@@ -70,4 +70,30 @@ test('Showdag volgt echte datums en Nederlandse daggrenzen, inclusief jaarwissel
  ]){assert.equal(showPlanning({...show,dates},{},new Date(before)).steps[4].completed,false);assert.equal(showPlanning({...show,dates},{},new Date(after)).steps[4].completed,true);}
  assert.equal(showPlanning({...show,dates:['2026-11-06','2026-11-08']},{},new Date('2026-11-07T12:00:00Z')).steps[4].date,'2026-11-08');
  assert.equal(showPlanning({...show,dates:['2026-11-06','2026-11-07','2026-11-08'],activeDates:['2026-11-08']},{},new Date('2026-11-07T12:00:00Z')).steps[4].date,'2026-11-08');
+});
+test('Showpagina-planning: 30/7/1 dagen vóór de eerste reeksdatum en status per stap',()=>{
+ const reeks={...show,dates:['2026-11-27','2026-11-26','2026-11-28']},model=showPagePlanning(reeks,{},new Date('2026-10-20T12:00:00Z'));
+ assert.deepEqual(model.steps.map(step=>[step.id,step.label,step.date]),[['profile','Showprofiel verzonden','2026-10-27'],['risks','Risico’s beoordeeld','2026-11-19'],['measures','Beheersmaatregelen afgerond','2026-11-25']]);
+ assert.equal(model.show.date,'2026-11-26');assert.equal(model.show.label,'Eerste show');assert.equal(showPagePlanning({...show,dates:['2026-11-26']},{},now).show.label,'Showdag');
+ assert.deepEqual(model.steps.map(step=>step.state),['current','pending','pending']);assert.equal(model.steps[0].badge,'Over 7 dagen');assert.equal(model.done,0);assert.equal(model.next.id,'profile');
+ const late=showPagePlanning(reeks,{},new Date('2026-11-20T12:00:00Z'));assert.deepEqual(late.steps.map(step=>step.state),['overdue','overdue','pending']);assert.equal(late.steps[0].badge,'24 dagen te laat');assert.equal(late.steps[1].badge,'1 dag te laat');
+ assert.equal(showPagePlanning({...show,dates:[]},{},now),null);assert.equal(showPagePlanning({...show,dates:['2026-02-30']},{},now),null);
+});
+test('Showprofiel verzonden telt alleen met een geldige registratie; PDF-gereed is niet genoeg',()=>{
+ const reeks={...show,dates:['2026-11-26']},ready=snapshot(),day=new Date('2026-10-30T12:00:00Z');
+ assert.equal(showPagePlanning(reeks,ready,day).steps[0].completed,false);
+ for(const profileSentAt of ['',null,'geen-datum'])assert.equal(showPagePlanning(reeks,{...ready,profileSentAt},day).steps[0].completed,false);
+ const sent=showPagePlanning(reeks,{...ready,profileSentAt:'2026-10-29T22:30:00Z'},day);assert.equal(sent.steps[0].completed,true);assert.equal(sent.steps[0].badge,'Verzonden · 29 okt');assert.equal(sent.steps[0].state,'completed');assert.equal(sent.next.id,'risks');assert.equal(sent.done,1);
+});
+test('Risico’s en maatregelen volgen de bestaande afrondregels; show-teller telt af naar de eerste datum',()=>{
+ const reeks={...show,dates:['2026-11-26']},day=new Date('2026-11-22T12:00:00Z'),all={...snapshot(),profileSentAt:'2026-10-29T12:00:00Z'};
+ const old=showPlanning(reeks,all,day),model=showPagePlanning(reeks,all,day);
+ assert.equal(model.steps[1].completed,old.steps[1].completed&&old.steps[2].completed);assert.equal(model.steps[2].completed,old.steps[3].completed);
+ assert.equal(model.show.badge,'Over 4 dagen');assert.equal(showPagePlanning(reeks,{},new Date('2026-11-26T12:00:00Z')).show.badge,'Vandaag');assert.equal(showPagePlanning(reeks,{},new Date('2026-11-27T12:00:00Z')).show.badge,'Gestart');
+ assert.equal(showPagePlanning(reeks,{},day).allDone,false);
+});
+test('Alle drie stappen afgerond: allDone, geen volgende stap en alle statussen Afgerond',()=>{
+ const reeks={...show,dates:['2026-11-26']},day=new Date('2026-11-10T12:00:00Z'),all={...completeMeasureSnapshot(),profileSentAt:'2026-10-29T12:00:00Z'},model=showPagePlanning(reeks,all,day);
+ assert.equal(model.allDone,true);assert.equal(model.done,3);assert.equal(model.next,null);assert.deepEqual(model.steps.map(step=>step.state),['completed','completed','completed']);
+ const copy=structuredClone(all);delete copy.profileSentAt;const open=showPagePlanning(reeks,copy,day);assert.equal(open.done,2);assert.equal(open.next.id,'profile');assert.equal(open.steps[0].state,'overdue');
 });
