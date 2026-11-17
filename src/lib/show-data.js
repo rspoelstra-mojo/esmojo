@@ -92,6 +92,16 @@ export function createShowData(bundle,request,concertId){
         assessments:risks?.assessments||{barrier:values.get('barrier-layout')?.record,floor:values.get('floor-pressure')?.record},
       }});
     },
+    // Alleen de velden die het blok Show informatie toont; uit dezelfde bevestigde snapshots als de rest van de pagina.
+    informationSnapshot(){
+      const current=key=>values.get(key)||(context.busy?previousValues.get(key):undefined),risks=current('show-risks'),profile=current('show-profile'),tickets=current('ticket-data');
+      return structuredClone({
+        risks:{state:risks?.state,risks:risks?.risks,operational:risks?.operational,production:risks?.production||productionChoices.server,assessments:risks?.assessments||{barrier:current('barrier-layout')?.record,floor:current('floor-pressure')?.record}},
+        finalization:profile?.finalization,
+        analyses:{1:profile?.analyses?.[1],2:profile?.analyses?.[2]},
+        ticketSales:tickets?.workflow?.visitors?.fields?.ticket_sales?.content,
+      });
+    },
     notify,
     subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
     version:()=>riskVersion,

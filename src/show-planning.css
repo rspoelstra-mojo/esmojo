@@ -17,6 +17,8 @@
   .show-management-overview > .show-management-card:not(.show-management-venue) { grid-column:1 / span 3; grid-row:3; }
   .show-management-overview > .show-management-venue { grid-column:4 / span 3; grid-row:3; }
   .show-actions { grid-column:7 / span 4; grid-row:3; }
+  /* Show informatie bepaalt nooit de hoogte van de rijen: Planning blijft leidend, bij overloop scrolt het blok. */
+  .show-information { contain:size; overflow:auto; }
 }
 .show-planning { --planning-surface:var(--fluid-card,#fff); --planning-footer:var(--canvas); --planning-text:var(--text); --planning-muted:var(--muted); --planning-line:var(--line); --planning-blue:var(--blue,#002ff4); --planning-blue-soft:#edf2ff; --planning-blue-text:#315bc5; --planning-green:#25744b; --planning-green-soft:#e6f4eb; --planning-red:#b3261e; --planning-red-soft:#fdecea; color:var(--planning-text); background:var(--planning-surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 :root[data-theme="dark"] .show-planning { --planning-blue:#7092ff; --planning-blue-soft:#192b4a; --planning-blue-text:#8eacff; --planning-green:#9fd2b1; --planning-green-soft:#163b2a; --planning-red:#ff8a80; --planning-red-soft:#3d1f1d; }

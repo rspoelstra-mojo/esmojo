@@ -35,7 +35,7 @@ test('finalization requires native confirmed analyses and ticket versions, and i
  const contents={ticket_sales:'100',visitor_origins:JSON.stringify({netherlands:'90',foreign:[{country:'Duitsland',percentage:'5'},{country:'België',percentage:'3'},{country:'Frankrijk',percentage:'2'}]}),domestic_origins:JSON.stringify([{province:'Noord-Holland',percentage:'50'},{province:'Zuid-Holland',percentage:'30'},{province:'Utrecht',percentage:'20'}])};
  for(const [field,content]of Object.entries(contents)){const request={concertId,actor,field,token:'11111111-1111-4111-8111-111111111111',expectedVersion:0};await f.service('ticket-reserve',request);await f.service('ticket-review',{...request,content});}
  let read=await f.service('profile-read',{concertId});assert.equal(read.finalization.categories.visitors.ready,true);
- await f.service('final-complete',{concertId,category:'visitors',score:7,note:'Eigen beoordeling',basis:read.finalization.basis});read=await f.service('profile-read',{concertId});assert.ok(read.finalization.categories.visitors.completedAt);
+ await f.service('final-complete',{concertId,category:'visitors',score:7,note:'Eigen beoordeling',basis:read.finalization.basis});read=await f.service('profile-read',{concertId});assert.ok(read.finalization.categories.visitors.completedAt);assert.equal(read.finalization.categories.visitors.score,7,'het eindcijfer is zichtbaar na afronden');assert.equal(read.finalization.categories.artist.score,null,'zonder afronding geen cijfer');
  await f.service('profile-save',{concertId,questionNumber:1,status:'draft',summary:'Aangepast',revision:read.revision});read=await f.service('profile-read',{concertId});assert.equal(read.finalization.categories.visitors.completedAt,null);
 });
 

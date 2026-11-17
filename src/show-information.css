@@ -1,0 +1,23 @@
+/* Show informatie in het overzicht: compact, zelfde rij-opmaak (label links, waarde rechts) als Tijdschema en Projectteam. */
+.show-information-body { margin-top:12px; min-width:0; display:grid; gap:16px; }
+.show-information-subtitle { margin:0 0 8px; font-size:12px; line-height:18px; font-weight:600; color:var(--muted); }
+.show-information-tiles { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.show-information-tile { padding:10px 12px; border-radius:10px; display:grid; gap:4px; }
+.show-information-tile dt { margin:0; font-size:12px; line-height:1.4; }
+.show-information-tile dd { margin:0; font-size:24px; line-height:1.1; font-weight:700; font-variant-numeric:tabular-nums; }
+/* Dezelfde kleuren als de risicotegels op de artiestenpagina. */
+.show-risk-low { background:#fff4dc; color:#805b10; }
+.show-risk-medium { background:#ffead5; color:#99500d; }
+.show-risk-high { background:#fde8e8; color:#a22929; }
+:root[data-theme="dark"] .show-risk-low { background:#372f1b; color:#f4cf77; }
+:root[data-theme="dark"] .show-risk-medium { background:#3d291a; color:#ffb06b; }
+:root[data-theme="dark"] .show-risk-high { background:#3c2027; color:#ff9292; }
+.show-information-list { margin:0; display:grid; }
+.show-information-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:6px 0; border-top:1px solid var(--line); }
+.show-information-row:first-child { border-top:0; padding-top:0; }
+.show-information-row dt { margin:0; flex:none; font-size:13px; line-height:1.4; color:var(--muted); }
+.show-information-row dd { margin:0; min-width:0; font-size:13px; line-height:1.4; font-weight:600; text-align:right; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.show-information-row dd[data-empty="true"] { font-weight:400; color:var(--muted); }
+.show-information-row[data-long="true"] { flex-direction:column; align-items:stretch; gap:2px; }
+.show-information-row[data-long="true"] dd { text-align:left; font-weight:600; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; text-overflow:ellipsis; }
+.show-information-row[data-long="true"] dd[data-empty="true"] { font-weight:400; }
