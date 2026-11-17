@@ -31,7 +31,8 @@ showpagina blijft werken. Geef nooit een service-role-key aan de browser of chat
    kaart) en twee knoppen: Link kopiëren en Verzenden. Zolang de toegang nog niet
    bestaat staat er een korte tekst. De kaart is nooit hoger dan de Gashouder-kaart
    (die bepaalt de rijhoogte); bij overloop scrolt de kaart.
-3. Verzenden is uitgeschakeld tot het showprofiel/de PDF gereed is; er worden geen
+3. Andere concertzalen tonen dezelfde twee kaarten als plaatshouder: Showbeheer met "Nog niet beschikbaar voor deze locatie" en een zaalkaart met de naam van de zaal en dezelfde vier statusvakken. Geen verzoeken of opslag; Showbeheer blijft alleen voor Gashouder.
+4. Verzenden is uitgeschakeld tot het showprofiel/de PDF gereed is; er worden geen
    e-mails verstuurd.
 4. Na een juiste pincode verschijnen de vijf lege blokken. De foto vervaagt;
    gebruikers met verminderde beweging krijgen de overgang zonder animatie.
