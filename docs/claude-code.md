@@ -24,7 +24,7 @@ blijven de gedeelde bron. De context staat in docs/projectcontext.md.
 4. GitHub→Vercel publiceert main al automatisch. Een Claude-/Vercel-login is geen
    reden voor een tweede deploymentroute of het kopiëren van production-secrets.
    Testen/bouwen kan met fixtures; productiechecks via bestaande beveiligde routes.
-5. Gebruik Node.js24 en bestaande package-lock.json. Installeer waar nodig met
+5. Gebruik Node.js 24 en bestaande package-lock.json. Installeer waar nodig met
    npm ci; geen dependency-upgrade om alleen deze agent aan te sluiten.
 
 De GitHub-/Vercel-koppelingen van ChatGPT geven Claude geen automatische toegang.

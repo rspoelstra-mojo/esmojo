@@ -9,7 +9,7 @@ Dit is dezelfde context voor account A, andere Codex-sessies en Claude Code.
 ESMOJO ondersteunt concertvoorbereiding, Shows, Artiesten, Rapportages en beheer.
 Repository: rspoelstra-mojo/esmojo. Productie: https://esmojo.nl.
 GitHub-main publiceert automatisch via het bestaande zakelijke Vercel-project
-(team esmojo, project esmojo). Vite, vanilla JavaScript/CSS, Node.js24,
+(team esmojo, project esmojo). Vite, vanilla JavaScript/CSS, Node.js 24,
 serverless API's. Bestaande vormgeving en functionele berekeningen behouden.
 
 ## Opslag en toegang — huidige besluiten
@@ -48,8 +48,8 @@ Andere recente onderdelen: beheerdersinstellingen voor loginachtergrond met
 uitsnede/blur in Dataverse; native Rapportages; stille rapportagelading op artiest-
 pagina's; afgeschermde voorbeeldafbeeldingen voor barrieropstelling/vloerdruk.
 
-De 05:00-agenda-import (Europe/Amsterdam) kijkt45dagen vooruit voor de tien
-vastgelegde MOJO-locaties. Tijdschema-opname om12:00 op showdagen blijft behouden.
+De 05:00-agenda-import (Europe/Amsterdam) kijkt 45 dagen vooruit voor de tien
+vastgelegde MOJO-locaties. Tijdschema-opname om 12:00 op showdagen blijft behouden.
 Artiestfoto wordt bij de eerste relevante import vastgelegd, niet dagelijks vernieuwd.
 MCP in ESMOJO is verwijderd; geen routes/consent/publicatie daarvan herstellen.
 De korte artiesttekst is bewust [Description placeholder], geen migratiebacklog.
@@ -60,7 +60,7 @@ De korte artiesttekst is bewust [Description placeholder], geen migratiebacklog.
   is verwijderd en mag niet terugkomen.
 - Verdere invulling van de Showbeheer-mailto en eventuele vervanging van andere
   Resend-mailstromen vereisen een eigen opdracht; bestaande mails niet stil stoppen.
-- Projectteam-kaart; Showbeheer-blokkenA–D (E is nu PDF); Gashouder-statusvakken.
+- Projectteam-kaart; Showbeheer-blokken A–D (E is nu PDF); Gashouder-statusvakken.
 - Detailformulieren voor Entreeproces (Gashouder=NVT), Vluchtweg beperkingen,
   Vuurwerk, Open vuur, Lasers en Drones. De bestaande Ja/Nee-keuzes werken al.
 - Productiemanager, projectleider TSC/The Firm en ingangsconstructie bij Artiesten.
@@ -69,7 +69,7 @@ De korte artiesttekst is bewust [Description placeholder], geen migratiebacklog.
   uitzonderingen behouden. Geen nieuwe scrape/import starten op basis van deze lijst.
 - De gebruiker doet de ingelogde acceptatietest; ontbrekend bewijs niet invullen.
 
-Artiesten binnen1seconde is niet bewezen. Gebruiker heeft verdere optimalisatie
+Artiesten binnen 1 seconde is niet bewezen. Gebruiker heeft verdere optimalisatie
 na V1.149 expliciet laten stoppen. Geen nieuwe performancewerkzaamheden zonder
 opdracht. Metingen van backend, synthetische browser en echte sessie onderscheiden.
 
