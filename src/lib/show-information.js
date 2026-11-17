@@ -12,3 +12,5 @@ export function showInformation(show,snapshot={}){
     gender:text(snapshot.analyses?.[1]?.summary),ageRange:text(snapshot.analyses?.[2]?.summary),
   };
 }
+// Zelfde kleurschaal als de cijferkeuze bij het afronden van een analyse: 1 = groen (tint 140), 10 = rood (tint 0).
+export const scoreHue=score=>Number.isInteger(score)&&score>=1&&score<=10?(score<=5?140-(score-1)*110/4:30-(score-5)*30/5):null;

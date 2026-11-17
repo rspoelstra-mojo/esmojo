@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {showInformation} from './show-information.js';
+import {showInformation,scoreHue} from './show-information.js';
 const show={venue:'Gashouder',dates:['2026-11-27']};
 test('Zonder gegevens: risico’s 0 en de rest onbekend',()=>{
  assert.deepEqual(showInformation(show,{}),{risks:{low:0,medium:0,high:0},scores:{visitors:null,artist:null},soldTickets:null,soldDays:null,gender:null,ageRange:null});
@@ -24,4 +24,9 @@ test('Risico’s tellen de ESM-beoordelingen per klasse',()=>{
  const risks={state:'ready',risks:[{id:'R01'},{id:'R02'},{id:'R03'},{id:'R04'}],operational:{assessments:{R01:{riskLevel:'low'},R02:{riskLevel:'medium'},R03:{riskLevel:'high'},R04:{riskLevel:'high'}}},production:{choices:{}},assessments:{}};
  const info=showInformation(show,{risks});
  assert.deepEqual(info.risks,{low:1,medium:1,high:2});
+});
+test('Score 1 is groen, 10 is rood en ongeldige cijfers hebben geen tint',()=>{
+ assert.equal(scoreHue(1),140);assert.equal(scoreHue(5),30);assert.equal(scoreHue(10),0);
+ assert.ok(scoreHue(3)>scoreHue(4)&&scoreHue(7)>scoreHue(8));
+ for(const bad of [0,11,null,undefined,'7',5.5])assert.equal(scoreHue(bad),null);
 });
