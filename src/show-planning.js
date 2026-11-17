@@ -22,9 +22,6 @@ export function createShowPlanning(parent,{show,data,now=()=>new Date()}){
     const summary=node('span','planning-summary',model.allDone?'Alles afgerond':`${model.done} van ${model.total} afgerond`);summary.dataset.complete=String(model.allDone);header.append(summary);
     const bar=node('div','planning-progress');bar.setAttribute('role','img');bar.setAttribute('aria-label',`${model.done} van ${model.total} stappen afgerond`);
     for(const step of model.steps){const part=node('span','planning-progress-part');part.dataset.state=step.state;bar.append(part);}
-    const next=node('p','planning-next');
-    if(model.next){next.append(document.createTextNode('Volgende stap: '),node('strong','',model.next.label),document.createTextNode(` · uiterlijk ${planningDate(model.next.date)} · ${model.next.badge.toLowerCase()}`));if(model.next.state==='overdue')next.dataset.overdue='true';}
-    else next.textContent='Alle voorbereidende stappen zijn afgerond.';
     const items=[...model.steps.map(step=>({...step,kind:'step'})),{kind:'show',label:model.show.label,date:model.show.date,badge:model.show.badge,state:'pending'}];
     const firstOpen=items.findIndex(item=>item.kind==='step'&&!item.completed);if(firstOpen>=0)items[firstOpen].first=true;
     // Vandaag staat op de plek in de tijdlijn waar we nu zijn.
@@ -32,7 +29,7 @@ export function createShowPlanning(parent,{show,data,now=()=>new Date()}){
     const marker=()=>{const li=node('li','planning-today-row');li.setAttribute('aria-label','Vandaag');li.append(node('span','planning-today-label','Vandaag · '+planningDate(model.today)));return li;};
     items.forEach((item,index)=>{if(!placed&&item.date>=model.today){list.append(marker());placed=true;}list.append(row(item,index));});
     if(!placed)list.append(marker());
-    card.append(header,bar,next,list);
+    card.append(header,bar,list);
   }
   const unsubscribe=data.subscribe(render);render();
   // Ook een pagina die over middernacht open blijft gebruikt de juiste NL-dag.
