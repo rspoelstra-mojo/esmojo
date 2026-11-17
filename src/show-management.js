@@ -40,10 +40,11 @@ export function createShowManagement(container,{show,request,data,readOnly=false
  return()=>{unsubscribe?.();disposed=true;controller.abort();ui.row.remove();};
 }
 
-// Andere concertzalen dan de Gashouder: dezelfde twee kaarten (zaalnaam met vier statusvakken), maar Showbeheer is daar nog niet beschikbaar.
-// Geen verzoeken of opslag; alleen presentatie.
+// Andere concertzalen dan de Gashouder: dezelfde twee kaarten (Showbeheer en de zaalkaart met de naam van de zaal), maar verder leeg met alleen
+// de melding dat het daar nog niet beschikbaar is. Geen verzoeken of opslag; alleen presentatie.
 export function createShowManagementPlaceholder(container,{show}){
- const ui=createShowManagementCards({venueName:typeof show.venue==='string'&&show.venue.trim()?show.venue.trim():'Concertzaal'});
- const text=document.createElement('p');text.className='show-management-state';text.textContent='Nog niet beschikbaar voor deze locatie';ui.body.append(text);container.append(ui.row);
+ const ui=createShowManagementCards({venueName:typeof show.venue==='string'&&show.venue.trim()?show.venue.trim():'Concertzaal',statusBoxes:false});
+ const message=()=>{const text=document.createElement('p');text.className='show-management-state';text.textContent='Nog niet beschikbaar voor deze locatie';return text;};
+ ui.body.append(message());ui.venue.append(message());container.append(ui.row);
  return()=>ui.row.remove();
 }
