@@ -4,6 +4,11 @@ Google-publicatie is definitief afgesloten. De instructies en oude toegangsbewij
 hieronder zijn uitsluitend historie en mogen geen nieuwe Google-publicatie starten.
 Zie [Google loskoppelen](dataverse/google-detachment.md). Supabase Auth/MFA blijft.
 
+Voor actuele samenwerking met account A, andere Codex-sessies en Claude Code:
+[werkwijze](samenwerken.md), [projectcontext](projectcontext.md) en
+[Claude Code starten](claude-code.md). De toegangstabel verderop is historisch;
+iedere agent controleert zijn eigen huidige rechten per dienst.
+
 # ESMOJO beheren vanuit twee Codex-accounts
 
 Beide accounts werken aan rspoelstra-mojo/esmojo via de bestaande zakelijke
