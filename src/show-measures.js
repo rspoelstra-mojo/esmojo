@@ -1,3 +1,4 @@
+import {richTextToPlain} from '../shared/rich-text.js';
 import './show-profile.css';
 import {createMeasureImplementationPage} from './measure-implementation-page.js';
 import './show-measures.css';
@@ -15,7 +16,7 @@ export function createShowMeasures(panel,{show,data,readOnly=false}){
   if(!model.rows.length)card.append(node('p','measure-empty',model.complete?'Geen beheersmaatregelen voor deze show':'Nog geen beheersmaatregelen ingevuld. De risicobeoordelingen zijn nog niet volledig afgerond.'));
   for(const measure of model.rows){
    const frame=node('div','visitor-analysis'),button=node('button','visitor-analysis-summary measure-summary');button.type='button';button.dataset.measureId=measure.id;button.disabled=Boolean(data.measureDrafts?.get(measure.id)?.finishing);
-   const label=node('span','measure-summary-text');label.append(node('span','measure-text',measure.text),node('span','measure-origin',measure.origin));button.append(label,status(measure),icon('chevron'));button.onclick=()=>{selected=measure.id;render();const title=root.querySelector('h2');title?.setAttribute('tabindex','-1');title?.focus({preventScroll:true});};frame.append(button);card.append(frame);
+   const label=node('span','measure-summary-text');label.append(node('span','measure-text',richTextToPlain(measure.text)||'Nog uit te werken'),node('span','measure-origin',measure.origin));button.append(label,status(measure),icon('chevron'));button.onclick=()=>{selected=measure.id;render();const title=root.querySelector('h2');title?.setAttribute('tabindex','-1');title?.focus({preventScroll:true});};frame.append(button);card.append(frame);
   }
   root.append(card);
  }

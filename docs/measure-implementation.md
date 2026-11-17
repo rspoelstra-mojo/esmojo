@@ -63,3 +63,10 @@ als geïmplementeerd. Na afronden is het tekstvak read-only en weigert de server
 edit-text tot expliciet heropenen. De briefingvolgorde is Nee links, Ja rechts.
 Geen normale statustekst onder de afrondknop. Terug is de gedeelde 40px-pijl in de
 titelregel. Zie docs/background-saves.md voor navigatie, fouten en afsluitwaarschuwing.
+
+## Maatregel uitwerken (V1.184)
+
+Een operationeel risico verschijnt bij Maatregelen zodra de beoordeling Beheersmaatregel noodzakelijk op Ja heeft (Laag, Midden of
+Hoog). De tekst is eerst leeg ("Nog uit te werken") en wordt op de maatregelpagina in de rich text editor uitgewerkt
+(src/rich-text-editor.js; opslag als gewone tekst met opmaaktekens, zie shared/rich-text.js). Het blok Beheersmaatregel staat op
+volle breedte onder Gedefinieerd risico; Document uploaden staat eronder. Productionele maatregelen volgen dit in een vervolgstap.

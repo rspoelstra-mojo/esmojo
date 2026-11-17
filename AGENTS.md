@@ -1,3 +1,19 @@
+## Risico bewerken, Beheersmaatregel noodzakelijk en opgemaakte maatregel (17 november 2026)
+
+Gebruiker vraagt: (1) elk operationeel risico (ook uit de analyse) bewerken: titel, gedefinieerd risico en mogelijk gevolg, opgeslagen
+als bewerkte tekst per analyserevisie (`operationalEdits`) of in het eigen risico zelf, met bewerkrevisie tegen overschrijven;
+de analyse blijft ongewijzigd. (2) Het beoordelingsblok krijgt de knop Beoordelen; Geen risico heeft geen toelichting en geen
+maatregel; bij Laag/Midden/Hoog een verplichte Ja/Nee-keuze Beheersmaatregel noodzakelijk (zonder standaardkeuze) die het
+invullen van de maatregeltekst bij de beoordeling vervangt. Bij Ja verschijnt het risico bij Maatregelen en werkt de gebruiker
+de maatregel daar uit; een uitgewerkte tekst blijft bij een nieuwe beoordeling met Ja behouden en vervalt bij Nee. Oudere
+beoordelingen zonder keuze gelden als Ja bij Midden/Hoog met maatregeltekst en anders als Nee. Maatregelen kunnen ook bij Laag
+bestaan. De planningsstap Risico's beoordeeld rondt af zodra alle operationele risico's zo zijn beoordeeld en alle
+productionele risico's zijn afgerond. (3) De maatregelpagina heeft een rich text editor (vet, onderstrepen, opsomming, nummering;
+opslag als gewone tekst met lichte opmaaktekens, shared/rich-text.js), op dezelfde breedte als Gedefinieerd risico, met
+Document uploaden eronder. Dezelfde opmaak staat in de risico-PDF. Opslag blijft de bestaande Vertrouwelijke
+productionele-risicos.json in Dataverse; geen nieuw schema. Barrieropstelling en Vloerdruk volgen dezelfde beoordelingslogica in
+een vervolgstap (eigen gegevensmodel en validatie). Zie docs/own-risks.md, docs/risk-pdf.md en docs/measure-implementation.md.
+
 ## Titel en omschrijving bij risico's en PDF-opmaak (17 november 2026)
 
 Gebruiker vraagt dat een eigen operationeel risico een aparte Titel (kort, max 120) en Omschrijving (gedefinieerd risico) krijgt,

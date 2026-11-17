@@ -50,7 +50,7 @@ export function createShowData(bundle,request,concertId){
       if(!disposed){
         if(read){if(action!=='measure')remember(action,data);overview(data);}
         else if(action==='show-profile-pdf'&&body.operation!=='download')remember(action,data);
-        else if(['operational-risk','operational-risk-own','measure'].includes(action)){if(action==='measure'&&body.operation==='download')return data;overview(data);if(action==='measure'&&body.operation==='edit-text'){if(body.measureId?.startsWith('operational:')){operationalReviews.drafts.delete(body.measureId.split(':').at(-1));}if(body.measureId==='production:barrier_layout')forget('barrier-layout');if(body.measureId==='production:floor_pressure')forget('floor-pressure');}}
+        else if(['operational-risk','operational-risk-own','operational-risk-edit','measure'].includes(action)){if(action==='measure'&&body.operation==='download')return data;overview(data);if(action==='measure'&&body.operation==='edit-text'){if(body.measureId?.startsWith('operational:')){operationalReviews.drafts.delete(body.measureId.split(':').at(-1));}if(body.measureId==='production:barrier_layout')forget('barrier-layout');if(body.measureId==='production:floor_pressure')forget('floor-pressure');}}
         else if(action==='production-risks')overview({overview:{production:data}});
         else if(['show-profile','analysis-finalization','ticket-data','barrier-layout','floor-pressure'].includes(action)){
           if(body.operation==='download')return data;

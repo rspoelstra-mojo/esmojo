@@ -3,6 +3,7 @@
 import {PDFDocument,rgb} from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import {readFile} from 'node:fs/promises';
+import {parseRichText} from '../../shared/rich-text.js';
 export const RISK_PDF_LAYOUT='risk-v1-showprofile-style';
 const W=595.2,H=841.92,BLUE=rgb(0,71/255,186/255),NAVY=rgb(8/255,24/255,48/255),LIGHT=rgb(.96,.97,.98),BORDER=rgb(.85,.88,.91),WHITE=rgb(1,1,1),TEXT=rgb(.12,.16,.22),MUTED=rgb(.36,.41,.48);
 const levelColor={high:rgb(.74,.13,.13),medium:rgb(.72,.40,.04),low:rgb(.60,.45,.04),none:rgb(.12,.50,.28)};
@@ -38,22 +39,55 @@ export async function createRiskPdf(data,assets,{now=new Date()}={}){
   page.drawRectangle({x:x+r,y,width:w-2*r,height,color:fill});page.drawRectangle({x,y:y+r,width:w,height:height-2*r,color:fill});
   for(const [cx,cy] of [[x+r,y+r],[x+w-r,y+r],[x+r,y+height-r],[x+w-r,y+height-r]])page.drawCircle({x:cx,y:cy,size:r,color:fill});
  }
- // Rijen met optionele opsommingstekens: regels die met •, -, * of – beginnen worden netjes ingesprongen.
+ // Rijen met segmenten (tekst met optioneel vet/onderstreept) en optionele opsommings- of nummertekens.
  const bulletPattern=/^\s*[•\-*–·]\s+(.*)$/;
+ const plainRow=(text,x=66,extra={})=>({x,segs:text?[{text}]:[],...extra});
  function rowsOf(value,width){
   const rows=[];
   for(const paragraph of String(value).replace(/\r/g,'').split('\n')){
    const match=bulletPattern.exec(paragraph);
-   if(match){wrap(match[1],width-14).forEach((text,i)=>rows.push({text,x:80,bullet:i===0}));}
-   else wrap(paragraph,width).forEach(text=>rows.push({text,x:66}));
+   if(match){wrap(match[1],width-14).forEach((text,i)=>rows.push(plainRow(text,80,{bullet:i===0})));}
+   else wrap(paragraph,width).forEach(text=>rows.push(plainRow(text)));
   }
   return rows;
  }
+ // Opgemaakte tekst (beheersmaatregel): vet, onderstreept, opsommingen en nummering, met omslag per woord.
+ function layoutRuns(runs,width){
+  const lines=[[]];let used=0;
+  const fontOf=run=>run.bold?head:body;
+  for(const run of runs)for(const token of run.text.split(/(\s+)/).filter(Boolean)){
+   const font=fontOf(run),isSpace=/^\s+$/.test(token),size=font.widthOfTextAtSize(isSpace?' ':token,SIZE);
+   if(isSpace){if(used>0){lines.at(-1).push({text:' ',bold:run.bold,underline:run.underline});used+=size;}continue;}
+   if(used+size>width&&used>0){lines.push([]);used=0;}
+   if(size>width){for(const character of token){const cw=font.widthOfTextAtSize(character,SIZE);if(used+cw>width&&used>0){lines.push([]);used=0;}lines.at(-1).push({text:character,bold:run.bold,underline:run.underline});used+=cw;}continue;}
+   lines.at(-1).push({text:token,bold:run.bold,underline:run.underline});used+=size;
+  }
+  return lines.map(line=>{const merged=[];for(const seg of line){const last=merged.at(-1);if(last&&last.bold===seg.bold&&last.underline===seg.underline)last.text+=seg.text;else merged.push({...seg});}while(merged.length&&!merged.at(-1).text.trim()&&merged.length>0)merged.pop();if(merged.length)merged.at(-1).text=merged.at(-1).text.trimEnd();return merged;});
+ }
+ function richRows(value,width){
+  const rows=[];
+  for(const block of parseRichText(value))block.items.forEach((runs,index)=>{
+   const x=block.type==='p'?66:block.type==='ul'?80:84,w=block.type==='p'?width:block.type==='ul'?width-14:width-18;
+   layoutRuns(runs,w).forEach((segs,i)=>rows.push({x,segs,...(i===0&&block.type==='ul'?{bullet:true}:{}),...(i===0&&block.type==='ol'?{number:`${index+1}.`}:{})}));
+  });
+  return rows;
+ }
+ function drawRow(page,row,baseline,color,font){
+  if(row.bullet)line(page,'•',68,baseline,SIZE,body,BLUE);
+  if(row.number)line(page,row.number,66,baseline,SIZE,body,BLUE);
+  let x=row.x;
+  for(const seg of row.segs){
+   const f=seg.bold?head:font,width=f.widthOfTextAtSize(seg.text,SIZE);
+   line(page,seg.text,x,baseline,SIZE,f,color);
+   if(seg.underline)page.drawLine({start:{x,y:H-baseline-1.6},end:{x:x+width,y:H-baseline-1.6},thickness:.7,color});
+   x+=width;
+  }
+ }
  function card(title,rows,color=TEXT,font=body){
   return{height:PAD+rows.length*LEADING,split(available){const take=Math.min(rows.length-2,Math.floor((available-PAD)/LEADING));if(take<2||rows.length-take<2)return null;return[card(title,rows.slice(0,take),color,font),card(title+' (vervolg)',rows.slice(take),color,font)];},
-   draw(page,top,height){panel(page,top,height);line(page,title,66,top+TITLE_TOP,12,head,NAVY);rows.forEach((row,i)=>{const baseline=top+TEXT_TOP+SIZE+i*LEADING;if(row.bullet)line(page,'•',68,baseline,SIZE,body,BLUE);line(page,row.text,row.x,baseline,SIZE,font,color);});}};
+   draw(page,top,height){panel(page,top,height);line(page,title,66,top+TITLE_TOP,12,head,NAVY);rows.forEach((row,i)=>drawRow(page,row,top+TEXT_TOP+SIZE+i*LEADING,color,font));}};
  }
- const full=(title,value,color,font)=>card(title,rowsOf(value,463),color,font);
+ const full=(title,value,color,font,rich=false)=>card(title,rich?richRows(value,463):rowsOf(value,463),color,font);
  function pair(leftTitle,left,rightTitle,right,colors=[TEXT,TEXT]){
   const a=wrap(left,215.5),b=wrap(right,215.5),count=Math.max(a.length,b.length);
   return{height:PAD+count*LEADING,draw(page,top,height){panel(page,top,height);page.drawLine({start:{x:297.5,y:H-top-16},end:{x:297.5,y:H-top-height+16},color:BORDER,thickness:.7});
@@ -66,7 +100,7 @@ export async function createRiskPdf(data,assets,{now=new Date()}={}){
  const blocks=[];
  blocks.push(full('Risico',risk.description||risk.title));
  if(risk.consequence)blocks.push(full('Mogelijk gevolg',risk.consequence));
- blocks.push(full('Beheersmaatregel',measure.text));
+ blocks.push(full('Beheersmaatregel',measure.text||'Nog niet uitgewerkt.',measure.text?TEXT:MUTED,body,true));
  // Classificatie voor en na de maatregel: twee gelijke kleurvakken.
  const tint={high:rgb(.99,.91,.91),medium:rgb(1,.94,.86),low:rgb(1,.97,.85),none:rgb(.90,.97,.92)};
  const classBox=(page,x,top,height,title,value,note,level)=>{

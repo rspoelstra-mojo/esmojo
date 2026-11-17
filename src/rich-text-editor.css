@@ -1,0 +1,14 @@
+.rich-text-editor { display: grid; gap: 0; border: 1px solid var(--line,#dfe4ea); border-radius: 10px; background: var(--canvas,#fff); overflow: hidden; min-width: 0; }
+.rich-text-editor:focus-within { border-color: var(--profile-blue,#0046f2); box-shadow: 0 0 0 1px var(--profile-blue,#0046f2); }
+.rich-text-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line,#dfe4ea); background: var(--profile-tint,#f6f8fb); }
+.rich-text-button { display: inline-grid; place-items: center; width: 34px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+.rich-text-button svg { width: 18px; height: 18px; }
+.rich-text-button:hover:not(:disabled) { background: var(--canvas,#fff); border-color: var(--line,#dfe4ea); }
+.rich-text-button[aria-pressed="true"] { background: var(--canvas,#fff); border-color: var(--profile-blue,#0046f2); color: var(--profile-blue,#0046f2); }
+.rich-text-button:focus-visible { outline: 2px solid var(--profile-blue,#0046f2); outline-offset: 1px; }
+.rich-text-button:disabled { opacity: .45; cursor: default; }
+.rich-text-area { min-height: 160px; padding: 12px 14px; font: inherit; font-size: 14px; line-height: 1.6; outline: none; overflow-wrap: anywhere; white-space: pre-wrap; }
+.rich-text-area > div, .rich-text-area li { min-height: 1.6em; }
+.rich-text-area ul, .rich-text-area ol { margin: 0; padding-left: 24px; }
+.rich-text-area[data-too-long="true"] { box-shadow: inset 0 0 0 2px #d94c4c; }
+.rich-text-editor.is-readonly .rich-text-area { background: var(--profile-tint,#f6f8fb); color: var(--muted); }

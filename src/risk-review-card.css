@@ -16,3 +16,8 @@
 .fluid-layout .barrier-assessment-layout { grid-template-columns: minmax(0,1fr) minmax(260px,300px); }
 @container fluid (min-width: 1250px) { .fluid-layout .barrier-assessment-layout { grid-template-columns: minmax(0,1fr) minmax(260px,340px); } }
 @container fluid (max-width: 849px) { .fluid-layout .barrier-assessment-layout { grid-template-columns: minmax(0,1fr); } }
+
+.risk-review-card .risk-review-measure { min-width: 0; margin: 18px 0 0; padding: 0; border: 0; }
+.risk-review-card .risk-review-measure-title { padding: 0; margin: 0 0 8px; font-size: 14px; font-weight: 650; }
+.risk-review-measure-option span { background: #f3f4f6; color: #4b5563; }
+.risk-review-measure-option[data-choice="yes"] input:checked + span { background: #e7f5ed; color: #28734d; }

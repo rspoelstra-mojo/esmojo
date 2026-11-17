@@ -2,7 +2,7 @@ import {barrierTypes} from '../shared/barrier-layout.js';
 import {floorDensity} from '../shared/floor-pressure.js';
 import {parseTicketSales,validSaleCount,parseVisitorOrigins} from '../shared/ticket-data.js';
 import {riskLevelCounts} from '../shared/risk-level-counts.js';
-import {measureDefinitions} from '../shared/measure-workflow.js';
+import {measureDefinitions} from '../shared/measure-definitions.js';
 
 const person=value=>typeof value==='string'&&value.trim()&&value.length<=250&&!/[\x00-\x1f@]/.test(value)?value.trim():null;
 export function artistPreparation(source,show){

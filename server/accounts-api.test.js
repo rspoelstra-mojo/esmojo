@@ -222,7 +222,7 @@ test('Rapportacties zijn beheerder/MFA-only en accepteren geen eigen showmetadat
 });
 
 test('Modules zijn onafhankelijk: ieder niet-toegekend onderdeel wordt vóór gegevensophaal/download en ongeacht beheerdersrol geweigerd',async()=>{
- const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['artists','artist-menu','GET'],['artists','artist-ranking','GET'],['artists','artist-view','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-timetable','POST'],['shows','show-team','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['shows','operational-risk','POST'],['shows','operational-risk-own','POST'],['shows','measure','POST'],['shows','measure-pdf','POST'],['reports','report-menu','GET'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
+ const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['artists','artist-menu','GET'],['artists','artist-ranking','GET'],['artists','artist-view','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-timetable','POST'],['shows','show-team','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['shows','operational-risk','POST'],['shows','operational-risk-own','POST'],['shows','operational-risk-edit','POST'],['shows','measure','POST'],['shows','measure-pdf','POST'],['reports','report-menu','GET'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
  for(const modules of [[],['shows'],['artists'],['reports']])for(const role of ['gebruiker','beheerder'])for(const [required,action,method]of actions){
   if(modules.includes(required))continue;
   const {response,calls}=await run({own:{...profile,role,modules},action,method,body:{operation:'download',reportId:'bekend-id',modules:['shows','artists','reports']}});
@@ -265,18 +265,26 @@ test('Maatregel-PDF vereist MFA/Shows, bindt actor aan de sessie en levert allee
  const get=await run({action:'measure-pdf',method:'GET',showsSource:async()=>exportData});assert.equal(get.response.code,405);
 });
 
+test('Risico bewerken vereist MFA/Shows, bindt actor aan de sessie en weigert vrije velden',async()=>{
+ const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},riskId:'R01',editRevision:0,title:'Synthetische titel',description:'Synthetische omschrijving',consequence:'Synthetisch gevolg'};
+ for(const config of [{auth:false},{aal:'aal1'},{own:{...profile,modules:['reports']}}]){const result=await run({action:'operational-risk-edit',method:'POST',body,...config});assert.ok([401,403].includes(result.response.code));assert.equal(result.calls.some(call=>call[0]==='shows'),false);}
+ const ok=await run({action:'operational-risk-edit',method:'POST',body});assert.equal(ok.response.code,200);const call=ok.calls.find(item=>item[0]==='shows');assert.equal(call[1],'risk-operational-edit');assert.equal(call[2].actor,id);assert.equal(call[2].title,body.title);
+ for(const change of [{actor:other},{title:' '},{description:''},{consequence:'x'.repeat(601)},{title:'x'.repeat(121)},{editRevision:-1},{riskId:'X1'},{extra:1}]){const rejected=await run({action:'operational-risk-edit',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(item=>item[0]==='shows'),false);}
+ const conflict=await run({action:'operational-risk-edit',method:'POST',body,showsSource:async()=>{throw Error('ASSESSMENT_CONFLICT');}});assert.equal(conflict.response.code,409);
+});
+
 test('Eigen operationeel risico vereist MFA/Shows, bindt actor aan de sessie en weigert vrije velden',async()=>{
- const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'Synthetisch eigen risico',description:'Synthetische omschrijving',consequence:'Synthetisch gevolg',riskLevel:'high',riskNote:'Synthetische maatregel'};
+ const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'Synthetisch eigen risico',description:'Synthetische omschrijving',consequence:'Synthetisch gevolg',riskLevel:'high',riskNote:'',measureRequired:true};
  for(const config of [{auth:false},{aal:'aal1'},{own:{...profile,modules:['reports']}}]){const result=await run({action:'operational-risk-own',method:'POST',body,...config});assert.ok([401,403].includes(result.response.code));assert.equal(result.calls.some(call=>call[0]==='shows'),false);}
  const ok=await run({action:'operational-risk-own',method:'POST',body});assert.equal(ok.response.code,200);const call=ok.calls.find(item=>item[0]==='shows');assert.equal(call[1],'risk-own-add');assert.equal(call[2].actor,id);assert.equal(call[2].title,body.title);
- for(const change of [{actor:other},{title:''},{description:''},{consequence:''},{riskNote:''},{riskLevel:null},{requestId:'x'},{extra:1}]){const rejected=await run({action:'operational-risk-own',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(item=>item[0]==='shows'),false);}
+ for(const change of [{actor:other},{title:''},{description:''},{consequence:''},{riskLevel:'none',measureRequired:true},{measureRequired:null},{riskLevel:null},{requestId:'x'},{extra:1}]){const rejected=await run({action:'operational-risk-own',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(item=>item[0]==='shows'),false);}
 });
 
 test('Operationele beoordeling vereist MFA/Shows en bindt actor uitsluitend aan de sessie',async()=>{
- const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},riskId:'R01',revision:0,riskLevel:'medium',riskNote:'Synthetische maatregel'};
+ const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},riskId:'R01',revision:0,riskLevel:'medium',riskNote:'',measureRequired:true};
  for(const config of [{auth:false},{aal:'aal1'},{own:{...profile,modules:['reports']}}]){const result=await run({action:'operational-risk',method:'POST',body,...config});assert.ok([401,403].includes(result.response.code));assert.equal(result.calls.some(call=>call[0]==='shows'),false);}
  const ok=await run({action:'operational-risk',method:'POST',body});assert.equal(ok.response.code,200);assert.equal(ok.calls.find(call=>call[0]==='shows')[1],'risk-operational-save');assert.equal(ok.calls.find(call=>call[0]==='shows')[2].actor,id);
- for(const change of [{actor:other},{riskNote:''},{riskLevel:null}]){const rejected=await run({action:'operational-risk',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(call=>call[0]==='shows'),false);}
+ for(const change of [{actor:other},{measureRequired:'ja'},{measureRequired:undefined},{riskLevel:'none',measureRequired:true},{riskLevel:null}]){const rejected=await run({action:'operational-risk',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(call=>call[0]==='shows'),false);}
 });
 
 

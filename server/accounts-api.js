@@ -34,8 +34,9 @@ import { validateTicketRequest } from './ticket-data.js';
 import { validateShowProfile } from './show-profile.js';
 import {validateMeasureRequest,measureFileSignature,measureUploadLimit} from '../shared/measure-workflow.js';
 import {createHash} from 'node:crypto';
-import {validateOperationalReview} from '../shared/operational-risk.js';
+import {validateOperationalReview} from '../shared/operational-review.js';
 import {validateOwnRisk} from '../shared/own-risk.js';
+import {validateRiskEdit} from '../shared/risk-edit.js';
 import {createRiskPdfService,validateRiskPdfRequest} from './risk-pdf/index.js';
 import { validateRiskViewRequest } from './show-risks.js';
 import { validateProductionRiskSelection } from '../shared/production-risks.js';
@@ -164,7 +165,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-timetable','show-team','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','operational-risk-own','measure','measure-pdf','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-timetable','show-team','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','operational-risk-own','operational-risk-edit','measure','measure-pdf','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management-stats'){if(req.method!=='GET')return reply(405,{error:'Niet toegestaan.'});if(!isAdministrator(own))return reply(403,{error:'Geen toegang.'});return reply(200,await showManagement.statistics());}
       if(action==='show-management'){
@@ -249,6 +250,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Methode niet toegestaan.'});}
         try{const result=await createRiskPdfService({shows:scopedShows}).create(validateRiskPdfRequest(req.body),actor);res.setHeader('Cache-Control','no-store');return reply(200,result);}
         catch(error){const code=error.message;return reply(code==='VALIDATION'?400:code==='SOURCE_CHANGED'?409:503,{error:code==='VALIDATION'?'Deze maatregel kan niet worden geëxporteerd.':code==='SOURCE_CHANGED'?'De maatregel is intussen gewijzigd. Laad de actuele maatregel en probeer opnieuw.':'De PDF kon niet worden gemaakt. Probeer opnieuw.'});}
+      }
+      if(action==='operational-risk-edit'&&req.method==='POST'){
+        // Titel, gedefinieerd risico en mogelijk gevolg van een operationeel risico bewerken (met bewerkrevisie tegen overschrijven).
+        try{return reply(200,await scopedShows('risk-operational-edit',{...validateRiskEdit(req.body),actor}));}
+        catch(error){const conflict=['SOURCE_CHANGED','CONFLICT','REPORT_NOT_READY','ASSESSMENT_CONFLICT'].includes(error.message);return reply(error.message==='VALIDATION'?400:conflict?409:503,{error:error.message==='VALIDATION'?'Vul de titel, het gedefinieerde risico en het mogelijke gevolg in.':conflict?'Het risico is intussen gewijzigd. Laad het actuele risico; je invoer is behouden.':'Opslag niet bevestigd. Je invoer is behouden; probeer opnieuw.'});}
       }
       if(action==='operational-risk-own'&&req.method==='POST'){
         // Eigen operationeel risico van de ESM, inclusief de beoordeling, in één bevestigde opslag.
