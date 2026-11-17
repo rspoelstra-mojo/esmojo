@@ -2,7 +2,7 @@ import './show-management.css';
 import {createShowManagementCards} from './show-management-view.js';
 export function createShowManagement(container,{show,request,data,readOnly=false}){
  const showData=data,sentFormat=new Intl.DateTimeFormat('nl-NL',{dateStyle:'long',timeStyle:'short',timeZone:'Europe/Amsterdam'});
- const ui=createShowManagementCards();container.append(ui.row);let disposed=false,busy=false,reloadAfterBusy=false,sending=false;const controller=new AbortController();
+ const ui=createShowManagementCards({venueName:show.venue});container.append(ui.row);let disposed=false,busy=false,reloadAfterBusy=false,sending=false;const controller=new AbortController();
  const call=operation=>request('show-management',{method:'POST',body:{concertId:show.key,operation},signal:controller.signal});
  const element=(tag,className,text)=>{const node=document.createElement(tag);node.className=className;node.textContent=text;return node;};
  const icons={copy:'<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"/>',check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',send:'<path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4z"/>'};
@@ -38,4 +38,12 @@ export function createShowManagement(container,{show,request,data,readOnly=false
  void load();
  let stateKey=null;const unsubscribe=readOnly?null:data?.subscribe?.(()=>{const next=JSON.stringify(data.planningSnapshot?.().pdf||null);if(next!==stateKey){stateKey=next;void load();}});
  return()=>{unsubscribe?.();disposed=true;controller.abort();ui.row.remove();};
+}
+
+// Andere concertzalen dan de Gashouder: dezelfde twee kaarten (zaalnaam met vier statusvakken), maar Showbeheer is daar nog niet beschikbaar.
+// Geen verzoeken of opslag; alleen presentatie.
+export function createShowManagementPlaceholder(container,{show}){
+ const ui=createShowManagementCards({venueName:typeof show.venue==='string'&&show.venue.trim()?show.venue.trim():'Concertzaal'});
+ const text=document.createElement('p');text.className='show-management-state';text.textContent='Nog niet beschikbaar voor deze locatie';ui.body.append(text);container.append(ui.row);
+ return()=>ui.row.remove();
 }
