@@ -24,13 +24,21 @@ test('dezelfde bron-URL’s als de bestaande catalogus: de agenda-terugval en qu
  const f=fixture();
  const rows=[{...day('2026-12-05',1),sourceUrl:'https://www.mojo.nl/agenda'},{...day('2026-12-06',2),sourceUrl:'https://www.mojo.nl/concerten/artiest-2?ref=agenda'},{...day('2026-12-07',3),sourceUrl:'https://www.mojo.nl/agenda?query=Ziggo%20Dome'}];
  assert.deepEqual(await f.staff.handle('staff-planning-store',body('ziggo-dome',rows)),{venue:'ziggo-dome',concerts:3,saved:1,unchanged:0});
- await assert.rejects(f.staff.handle('staff-planning-store',body('ziggo-dome',[{...rows[0],sourceUrl:'https://www.mojo.nl.evil.example/agenda'}])),/VALIDATION/);
- await assert.rejects(f.staff.handle('staff-planning-store',body('ziggo-dome',[{...rows[0],sourceUrl:'http://www.mojo.nl/agenda'}])),/VALIDATION/);
+ await assert.rejects(f.staff.handle('staff-planning-store',body('ziggo-dome',[{...rows[0],sourceUrl:'https://www.mojo.nl.evil.example/agenda'}])),/STAFF_BAD_URL/);
+ await assert.rejects(f.staff.handle('staff-planning-store',body('ziggo-dome',[{...rows[0],sourceUrl:'http://www.mojo.nl/agenda'}])),/STAFF_BAD_URL/);
+ // Slugs met apostrofs, punten of plustekens zijn gewone MOJO-adressen.
+ const odd=[{...day('2026-12-08',4),sourceUrl:"https://www.mojo.nl/concerten/guns-n'-roses"},{...day('2026-12-09',5),sourceUrl:'https://www.mojo.nl/concerten/dj.set+friends'},{...day('2026-12-10',6),sourceUrl:'https://www.mojo.nl/concerten/andré-2027'}];
+ assert.equal((await f.staff.handle('staff-planning-store',body('afas-live',odd))).concerts,3);
 });
 test('ongeldige of verdachte lijsten worden geweigerd en wissen niets',async()=>{
  const f=fixture(),list=Array.from({length:6},(_,i)=>day('2026-12-0'+(i+1),i+1));await f.staff.handle('staff-planning-store',body('gashouder',list));
  await assert.rejects(f.staff.handle('staff-planning-store',body('gashouder',[])),/STAFF_LIST_SUSPECT/);
- for(const bad of [body('onbekend',list),body('gashouder',list,'2026-11-16'),body('gashouder',list,'2026-11-17','2027-11-18'),{...body('gashouder',list),extra:1},body('gashouder',[{...list[0],sourceUrl:'https://evil.example/x'}]),body('gashouder',[{...list[0],date:'2028-01-01'}]),body('gashouder',[list[0],list[0]]),body('gashouder',[{...list[0],artist:' '}])])await assert.rejects(f.staff.handle('staff-planning-store',bad),/VALIDATION/);
+ for(const bad of [body('onbekend',list),body('gashouder',list,'2026-11-16'),body('gashouder',list,'2026-11-17','2027-11-18'),{...body('gashouder',list),extra:1}])await assert.rejects(f.staff.handle('staff-planning-store',bad),/VALIDATION/);
+ // Per rij een eigen veilige foutcode.
+ const code=async(row,expected)=>assert.rejects(f.staff.handle('staff-planning-store',body('gashouder',[row])),new RegExp(expected));
+ await code({...list[0],extra:1},'STAFF_BAD_SHAPE');await code({...list[0],concertId:'a/b'},'STAFF_BAD_ID');await code({...list[0],artist:' '},'STAFF_BAD_ARTIST');await code({...list[0],artist:'x'.repeat(161)},'STAFF_BAD_ARTIST');
+ await code({...list[0],date:'2028-01-01'},'STAFF_BAD_DATE');await code({...list[0],date:'2026-02-30'},'STAFF_BAD_DATE');await code({...list[0],sourceUrl:'https://evil.example/x'},'STAFF_BAD_URL');
+ await assert.rejects(f.staff.handle('staff-planning-store',body('gashouder',[list[0],list[0]])),/STAFF_DUPLICATE/);
  assert.equal((await f.staff.handle('staff-planning-read')).concerts.length,6);
 });
 test('namen worden versleuteld opgeslagen, met revisiecontrole en idempotente herhaling',async()=>{
