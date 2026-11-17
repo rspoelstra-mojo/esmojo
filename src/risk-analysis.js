@@ -30,7 +30,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
   let disposed=false, loaded=false, loadingNow=false, risks=[], state='pending', error='', view='overview';
   let loadedVersion=-1,operational=null,activeRisk=null;
   // Eigen risico van de ESM in voorbereiding of in opslag; alleen sessiegeheugen. De requestId blijft gelijk tot de opslag bevestigd is.
-  const freshOwn=()=>({title:'',consequence:'',riskLevel:null,riskNote:'',requestId:crypto.randomUUID(),busy:false,error:'',payload:null});
+  const freshOwn=()=>({title:'',description:'',consequence:'',riskLevel:null,riskNote:'',requestId:crypto.randomUUID(),busy:false,error:'',payload:null});
   let own=freshOwn();
   const ownsReviews=!reviewMemory;reviewMemory ||= createOperationalReviewMemory();
   const reviewDrafts=reviewMemory.drafts;let refreshOperational=()=>{};
@@ -206,14 +206,14 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro'),title=node('h2','','Eigen risico toevoegen');title.tabIndex=-1;
     intro.append(title,node('p','',"Operationele risico's"));header.append(back,glyph('operational','profile-category-icon'),intro);
     const content=node('div','analysis-editor-form'),fields={};
-    for(const [key,label,max,rows]of [['title','Gedefinieerd risico',ownRiskLimits.title,3],['consequence','Mogelijk gevolg',ownRiskLimits.consequence,5]]){
+    for(const [key,label,max,rows]of [['title','Titel',ownRiskLimits.title,1],['description','Omschrijving',ownRiskLimits.description,4],['consequence','Mogelijk gevolg',ownRiskLimits.consequence,4]]){
       const card=node('section','analysis-editor-card'),heading=node('label','analysis-editor-label',label),input=node('textarea','analysis-summary');
       input.id='own-risk-'+key;heading.htmlFor=input.id;input.rows=rows;input.maxLength=max;input.required=true;input.value=own[key];
       const counter=node('span','analysis-character-count',`${input.value.length} / ${max}`);
       input.oninput=()=>{own[key]=input.value;own.error='';own.payload=null;counter.textContent=`${input.value.length} / ${max}`;update();};
       card.append(heading,input,counter);content.append(card);fields[key]=input;
     }
-    const values=()=>({concertId:show.key,source:operational?.source,requestId:own.requestId,title:own.title,consequence:own.consequence,riskLevel:own.riskLevel,riskNote:own.riskNote});
+    const values=()=>({concertId:show.key,source:operational?.source,requestId:own.requestId,title:own.title,description:own.description,consequence:own.consequence,riskLevel:own.riskLevel,riskNote:own.riskNote});
     const valid=()=>{try{validateOwnRisk(values());return true;}catch{return false;}};
     const ownFeedback=feedback(saveRequestInfo('operational-risk-own',{concertId:show.key}));
     const review=createRiskReviewCard({name:'own-risk',onChange:(level,note)=>{own.riskLevel=level;own.riskNote=level==='low'?'':note;own.error='';own.payload=null;update();},onSave:()=>void save()});
@@ -226,12 +226,12 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
   // Valideert lokaal, keert direct terug naar het overzicht en bevestigt op de achtergrond; pas na serverbevestiging staat het risico (met beoordeling) in de lijst.
   async function save(){
     if(disposed||readOnly||own.busy||!operational?.source)return false;
-    let payload;try{own.payload||=validateOwnRisk({concertId:show.key,source:operational.source,requestId:own.requestId,title:own.title,consequence:own.consequence,riskLevel:own.riskLevel,riskNote:own.riskNote});payload=structuredClone(own.payload);}catch{return false;}
+    let payload;try{own.payload||=validateOwnRisk({concertId:show.key,source:operational.source,requestId:own.requestId,title:own.title,description:own.description,consequence:own.consequence,riskLevel:own.riskLevel,riskNote:own.riskNote});payload=structuredClone(own.payload);}catch{return false;}
     const ownFeedback=feedback(saveRequestInfo('operational-risk-own',{concertId:show.key})),sourceKey=JSON.stringify(operational.source);
     own.busy=true;own.error='';view='overview';overview();
     try{
       const data=await reviewMemory.run(()=>requestAccess('operational-risk-own',{method:'POST',body:payload}));
-      const created=data?.overview?.risks?.find(risk=>risk.id===data.riskId&&risk.own===true&&risk.title===payload.title&&risk.consequence===payload.consequence);
+      const created=data?.overview?.risks?.find(risk=>risk.id===data.riskId&&risk.own===true&&risk.title===payload.title&&risk.description===payload.description&&risk.consequence===payload.consequence);
       if(!data?.record?.completedAt||data.record.riskLevel!==payload.riskLevel||data.record.riskNote!==payload.riskNote||!created||!data.overview?.operational||JSON.stringify(data.overview.operational.source)!==sourceKey)throw Error('UNCONFIRMED');
       own=freshOwn();ownFeedback.resolved();if(disposed)return true;
       operational=data.overview.operational;risks=data.overview.risks;state=data.overview.state;loadedVersion=version();if(view==='overview')overview(data.riskId);return true;

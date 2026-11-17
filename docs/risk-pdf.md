@@ -2,7 +2,7 @@
 
 Op de maatregelpagina staat onder Meenemen in briefing een blok Exporteren met de knop PDF exporteren.
 
-**Inhoud (één PDF per risico)**: blauwe kop met artiest, datum(s), zaal en stad; kaarten Risico (titel + omschrijving), Mogelijk
+**Inhoud (één PDF per risico)**: blauwe kop met de risicotitel en daaronder `artiest - datum(s) - zaal, stad`; kaarten Risico (omschrijving, gewone tekst), Mogelijk
 gevolg (alleen operationele risico's), Beheersmaatregel; twee kleurvakken Risicoklasse vóór en na de maatregel (na = Nog niet
 beoordeeld zolang de maatregel niet is geïmplementeerd). Voet en watermerk volgen het Showprofiel-PDF, inclusief de
 vertrouwelijkheidsregel. Lange teksten lopen door naar een volgende pagina, zonder inkorten.
@@ -13,3 +13,5 @@ tijdelijke blob-download. Niets wordt opgeslagen. Maximaal 2 MiB. Opmaakversie `
 
 **Beperkingen**: alleen risico's met een beheersmaatregel (Midden/Hoog); geen bewaarde versies; de PDF toont de actuele
 bevestigde gegevens op het moment van exporteren.
+
+Opsommingen in de beheersmaatregel (regels die met •, -, * of – beginnen) worden als opsomming met ingesprongen regels getoond.

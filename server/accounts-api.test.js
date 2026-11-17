@@ -266,10 +266,10 @@ test('Maatregel-PDF vereist MFA/Shows, bindt actor aan de sessie en levert allee
 });
 
 test('Eigen operationeel risico vereist MFA/Shows, bindt actor aan de sessie en weigert vrije velden',async()=>{
- const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'Synthetisch eigen risico',consequence:'Synthetisch gevolg',riskLevel:'high',riskNote:'Synthetische maatregel'};
+ const body={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'Synthetisch eigen risico',description:'Synthetische omschrijving',consequence:'Synthetisch gevolg',riskLevel:'high',riskNote:'Synthetische maatregel'};
  for(const config of [{auth:false},{aal:'aal1'},{own:{...profile,modules:['reports']}}]){const result=await run({action:'operational-risk-own',method:'POST',body,...config});assert.ok([401,403].includes(result.response.code));assert.equal(result.calls.some(call=>call[0]==='shows'),false);}
  const ok=await run({action:'operational-risk-own',method:'POST',body});assert.equal(ok.response.code,200);const call=ok.calls.find(item=>item[0]==='shows');assert.equal(call[1],'risk-own-add');assert.equal(call[2].actor,id);assert.equal(call[2].title,body.title);
- for(const change of [{actor:other},{title:''},{consequence:''},{riskNote:''},{riskLevel:null},{requestId:'x'},{extra:1}]){const rejected=await run({action:'operational-risk-own',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(item=>item[0]==='shows'),false);}
+ for(const change of [{actor:other},{title:''},{description:''},{consequence:''},{riskNote:''},{riskLevel:null},{requestId:'x'},{extra:1}]){const rejected=await run({action:'operational-risk-own',method:'POST',body:{...body,...change}});assert.equal(rejected.response.code,400);assert.equal(rejected.calls.some(item=>item[0]==='shows'),false);}
 });
 
 test('Operationele beoordeling vereist MFA/Shows en bindt actor uitsluitend aan de sessie',async()=>{
