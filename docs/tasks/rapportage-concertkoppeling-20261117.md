@@ -1,0 +1,3 @@
+# Concertkoppeling CSV-ontvangst
+
+Eigenaar: Codex. Beperk opdracht tot het koppelen van de CSV-bestandsnaam aan één bestaand canoniek Dataverse-concert. Bestandsformaat incidents_<artiest>_<locatie>_DDMMYYYY[_s1|_s2].csv. Bestaande catalogus en expliciete uitvoeringscodes zijn leidend; bij geen of meerdere matches geen koppeling. Controleer actuele rechten, ontbrekende en dubbele matches, S1/S2, concurrency en onafhankelijke teruglezing. Geen verwerking, rapportagepublicatie, nieuwe concerten, e-mail of testdata in productie. Nieuwe schemaonderdelen alleen via beveiligde Datatransitie-inrichting. Onderzoek en tests vóór publicatie; productieclaim uitsluitend na bewijs.
