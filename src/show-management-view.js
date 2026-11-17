@@ -20,12 +20,12 @@ export function createShowManagementView({logo}){
  return{root,form,inputs,message,submit,open(){gate.hidden=true;workspace.hidden=false;root.classList.add('is-open');heading.focus();}};
 }
 
-export function createShowManagementCards(){
+export function createShowManagementCards({venueName='Gashouder'}={}){
  const row=element('div','show-management-overview');
  const management=element('section','show-management-card show-management-access');management.append(element('h2',null,'Showbeheer'));
  const body=element('div','show-management-card-body');management.append(body);
- // De Gashouder-kaart staat altijd naast Showbeheer, zodat beide kaarten even hoog blijven.
- const venue=element('section','show-management-card show-management-venue');venue.append(element('h2',null,'Gashouder'));
+ // De zaalkaart (Gashouder of de naam van de andere concertzaal) staat altijd naast Showbeheer, zodat beide kaarten even hoog blijven.
+ const venue=element('section','show-management-card show-management-venue');venue.append(element('h2',null,venueName));
  const quadrants=element('div','show-management-quadrants');
  for(const label of ['Personele bezetting','Omgevingsbeeld','Veiligheidsbeleid','Rapportages']){const quadrant=element('div','show-management-quadrant');quadrant.append(element('h3',null,label),element('p',null,'Nog niet ingevuld'));quadrants.append(quadrant);}
  venue.append(quadrants);row.append(management,venue);
