@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';
-import {harness} from './test-support/production-drive.js';import {validateOperationalReview} from '../shared/operational-risk.js';import {showPlanning} from '../src/lib/show-planning.js';
+import {harness} from './test-support/production-drive.js';import {validateOperationalReview} from '../shared/operational-risk.js';import {validateOwnRisk} from '../shared/own-risk.js';import {showPlanning} from '../src/lib/show-planning.js';
 const actor='synthetic-reviewer',at='2026-11-05T10:00:00Z';
 async function setup(){
  const h=harness(),register=JSON.parse(h.registerFile.content),revision=Object.keys(register.reports)[0],source={revision,sha256:register.reports[revision].sha256};
@@ -52,3 +52,11 @@ test('Geen maatregelen na alle beoordelingen: planning/home direct afgerond; pro
  const changed=await h.save('R03','high','Vertrouwelijke uitvoeringstaak.',1);assert.equal(changed.homePlanning.completion.measures,false);assert.equal(h.production.files.find(file=>file.name==='_esmojo_home_planning_v1.json').content.includes('Vertrouwelijke uitvoeringstaak'),false);
  const view=await h.view();assert.equal(view.assessments.barrier.riskNote,'');assert.equal(view.assessments.floor.note,'');assert.equal(view.operational.assessments.R03.riskNote,'Vertrouwelijke uitvoeringstaak.');
 });
+
+// Eigen risico: invoer wordt gevalideerd en genormaliseerd; Midden/Hoog vereisen een beheersmaatregel.
+{
+ const base={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'  Eigen   risico ',consequence:' Gevolg ',riskLevel:'medium',riskNote:' Maatregel '};
+ const ok=validateOwnRisk(base);assert.equal(ok.title,'Eigen risico');assert.equal(ok.consequence,'Gevolg');assert.equal(ok.riskNote,'Maatregel');
+ assert.equal(validateOwnRisk({...base,riskLevel:'low',riskNote:'weg'}).riskNote,'');
+ for(const change of [{title:' '},{consequence:''},{title:'x'.repeat(201)},{consequence:'x'.repeat(601)},{riskNote:' '},{riskLevel:'high',riskNote:''},{requestId:'x'},{extra:1}])assert.throws(()=>validateOwnRisk({...base,...change}),/VALIDATION/);
+}

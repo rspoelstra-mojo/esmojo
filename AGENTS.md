@@ -1,3 +1,14 @@
+## Eigen operationele risico's (17 november 2026)
+
+Gebruiker vraagt onder Risicoanalyse bij Operationele risico's een knop (even breed als de rij, "Eigen risico toevoegen")
+die een pagina in het tabblad opent met Gedefinieerd risico, Mogelijk gevolg en direct een risicobeoordeling; Midden/Hoog
+vereisen meteen een Beheersmaatregel. Een eigen risico is per definitie operationeel (productionele risico's zijn vooraf
+gedefinieerd). Beschikbaar pas nadat de operationele analyse bestaat. Eigen risico's blijven bij een nieuwe PDF/analyse
+bestaan, de beoordeling moet opnieuw. Opslag: show-niveau `ownRisks` in het bestaande Vertrouwelijke
+productionele-risicos.json in Dataverse (ids R31+, samen met analyse-risico's maximaal 30), beoordeling per bronrevisie,
+idempotent per requestId; geen nieuw schema, wel typed rij met bronidentiteit `own-risk/v1`. Nog geen bewerken/verwijderen.
+Zie docs/own-risks.md.
+
 ## Personeelsplanning onder Beheerder (17 november 2026)
 
 Gebruiker vraagt Beheerder / Personeelsplanning met een titelblok, een tabjesmenu (nu alleen Totaalplanning)

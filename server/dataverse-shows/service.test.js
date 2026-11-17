@@ -72,6 +72,24 @@ test('native PDF lifecycle, source-bound risks and operational review retain the
  const reviewed=await f.service('risk-operational-save',{concertId,actor:'synthetic-esm',source,riskId:'R01',revision:0,riskLevel:'medium',riskNote:'Toezicht bij de ingang'});assert.equal(reviewed.record.riskLevel,'medium');
  const read=await f.service('risk-view',{concertId});assert.equal(read.operational.assessments.R01.revision,1);
  await assert.rejects(f.service('risk-operational-save',{concertId,actor:'synthetic-esm',source,riskId:'R01',revision:0,riskLevel:'low',riskNote:'Andere tekst'}),/ASSESSMENT_CONFLICT/);
+ // Eigen operationele risico's van de ESM (native regels; de archiefreferentie kent ze niet, dus zonder pariteitsvergelijking).
+ const {executeShowRules}=await import('./rules.js'),own=createNativeShowsService({execute:executeShowRules,state:f.state,catalogue:{handles:()=>false}});
+ const add={concertId,actor:'synthetic-esm',source,requestId:'11111111-1111-4111-8111-111111111111',title:'  Eigen   testrisico ',consequence:'Mogelijk gevolg van de test',riskLevel:'high',riskNote:'Extra toezicht plaatsen'};
+ const added=await own('risk-own-add',add);assert.equal(added.riskId,'R31');assert.equal(added.record.riskLevel,'high');assert.equal(added.record.revision,1);
+ let view=await own('risk-view',{concertId});
+ assert.deepEqual(view.risks.map(row=>row.id),['R01','R31']);assert.equal(view.risks[1].title,'Eigen testrisico');assert.equal(view.risks[1].own,true);assert.equal(view.risks[1].description,'Eigen testrisico','het gedefinieerde risico is ook de omschrijving');assert.equal(view.risks[0].own,undefined);
+ assert.equal(view.operational.assessments.R31.riskLevel,'high');assert.equal(view.operational.assessments.R31.riskNote,'Extra toezicht plaatsen');
+ const {measureDefinitions}=await import('../../shared/measure-workflow.js');assert.ok(measureDefinitions({venue:'Gashouder'},view).rows.some(row=>row.id==='operational:'+source.revision+':R31'&&row.text==='Extra toezicht plaatsen'),'de maatregel van het eigen risico staat tussen de beheersmaatregelen');
+ // Een herhaalde opdracht (verloren bevestiging) maakt geen tweede risico; een nieuwe opdracht krijgt het volgende id.
+ assert.equal((await own('risk-own-add',add)).riskId,'R31');assert.equal((await own('risk-view',{concertId})).risks.length,2);
+ const second=await own('risk-own-add',{...add,requestId:'22222222-2222-4222-8222-222222222222',title:'Tweede',riskLevel:'low',riskNote:'wordt gewist'});assert.equal(second.riskId,'R32');assert.equal(second.record.riskNote,'');
+ // Beoordelen of heropenen van een eigen risico gaat via dezelfde route als de AI-risico's.
+ const rereviewed=await own('risk-operational-save',{concertId,actor:'synthetic-esm',source,riskId:'R31',revision:1,riskLevel:'medium',riskNote:'Aangepaste maatregel'});assert.equal(rereviewed.record.revision,2);
+ // Validatie: midden/hoog vereist een beheersmaatregel, tekstvelden zijn verplicht en begrensd, niets extra.
+ for(const bad of [{...add,requestId:'33333333-3333-4333-8333-333333333333',riskLevel:'medium',riskNote:' '},{...add,requestId:'33333333-3333-4333-8333-333333333333',title:' '},{...add,requestId:'33333333-3333-4333-8333-333333333333',consequence:''},{...add,requestId:'33333333-3333-4333-8333-333333333333',title:'x'.repeat(201)},{...add,requestId:'33333333-3333-4333-8333-333333333333',consequence:'x'.repeat(601)},{...add,requestId:'nope'},{...add,requestId:'33333333-3333-4333-8333-333333333333',riskLevel:'extreem'},{...add,requestId:'33333333-3333-4333-8333-333333333333',extra:1}])await assert.rejects(own('risk-own-add',bad),/VALIDATION/);
+ await assert.rejects(own('risk-operational-save',{concertId,actor:'synthetic-esm',source,riskId:'R40',revision:0,riskLevel:'low',riskNote:''}),/SOURCE_CHANGED/);
+ // De typed rijen blijven consistent met het document (verifyPlan loopt bij iedere volgende bewerking).
+ view=await own('risk-view',{concertId});assert.deepEqual(view.risks.map(row=>row.id),['R01','R31','R32']);
 });
 test('same-version concurrent writes have one winner and retries resolve a lost commit response',async()=>{
  const f=fixture(),a={concertId,questionNumber:1,status:'draft',summary:'A',revision:0},b={...a,summary:'B'};
