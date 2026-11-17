@@ -64,7 +64,7 @@ De login wacht nooit op de optionele achtergrond-API. De initiële foto blijft
 zichtbaar bij een fout; de dienst meldt een echte fout in plaats van dat een
 mislukte Dataverse-read als geslaagde opslag wordt voorgesteld. Het ophalen van
 de achtergrond verandert geen sessies, authenticatie, MFA of accountrechten.
-De aparte zaal-/Showbeheer-achtergrond blijft ongewijzigd.
+Vanaf V1.155 gebruiken ook de overige authenticatieschermen (2-stapsverificatie, wachtwoord kiezen, activeren) en de externe Showbeheer-pagina dezelfde instelbare foto, uitsnede en vervaging via dezelfde openbare uitlezing; de gebundelde aparte Showbeheer-foto is verwijderd. Showbeheer houdt zijn eigen vervaging (22 px) nadat de pincode is geaccepteerd.
 
 ## Verificatie
 

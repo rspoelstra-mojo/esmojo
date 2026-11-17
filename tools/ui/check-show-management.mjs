@@ -14,7 +14,7 @@ const html=`<!doctype html><html lang="nl"><head><link rel="stylesheet" href="/s
 const server=createServer(async(req,res)=>{
  if(req.url==='/api/show-management'){let body='';for await(const chunk of req)body+=chunk;const data=JSON.parse(body);res.setHeader('Content-Type','application/json');const ok=data.pin==='123456'||data.operation==='visit';res.statusCode=ok?200:403;res.end(JSON.stringify(ok?{available:true,pdf:{available:true,expiresAt:Date.now()+60000}}:{error:'De pincode is niet geldig.'}));return;}
  if(new URL(req.url,'http://localhost').pathname==='/'){res.setHeader('Content-Type','text/html');res.end(html);return;}
- const url=new URL(req.url,'http://localhost'),file=resolve(root,'.'+url.pathname);if(!file.startsWith(root+'/src/')){res.writeHead(404);res.end();return;}
+ const url=new URL(req.url,'http://localhost'),file=resolve(root,'.'+url.pathname);if(!file.startsWith(root+'/src/')&&!file.startsWith(root+'/shared/')){res.writeHead(404);res.end();return;}
  if(url.searchParams.has('raw')){res.setHeader('Content-Type','text/javascript');res.end('export default '+JSON.stringify(readFileSync(file,'utf8')));return;}
  res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.webp')?'image/webp':'text/javascript');res.end(file.endsWith('.js')?readFileSync(file,'utf8').replace(/^import ['"].*\.css['"];\n/gm,''):readFileSync(file));
 });await new Promise(done=>server.listen(0,'127.0.0.1',done));
@@ -43,7 +43,7 @@ try{
   await send('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/?case='+theme+width+'#'+'a'.repeat(64)});
   await until("document.querySelectorAll('.show-management-pin input').length===6");
   await evaluate(`document.documentElement.dataset.theme='${theme}'`);
-  assert.equal(await evaluate("getComputedStyle(document.querySelector('.show-management-background')).filter"),'none');
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.show-management-background')).filter"),'blur(3px)');
   assert.equal(await evaluate("document.querySelector('.show-management-workspace').hidden"),true);
   assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,'PIN-pagina past mobiel');
   if(theme==='light'&&width===1440){const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});writeFileSync('/tmp/showbeheer-pincode.png',Buffer.from(shot.data,'base64'));}
