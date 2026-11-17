@@ -1,0 +1,15 @@
+/* Vergelijkbare artiesten: kleine titel zonder blok; vier tegels van 1/8 paginabreedte. */
+.similar-artists { margin-top:28px; min-width:0; }
+.similar-artists[hidden] { display:none; }
+.similar-artists-title { margin:0 0 12px; font-size:14px; line-height:1.5; font-weight:600; color:var(--text); }
+.similar-artists-list { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,calc((100% - 7 * 20px) / 8)); gap:20px; }
+.similar-artist-item { min-width:0; }
+.similar-artist { display:flex; flex-direction:column; gap:6px; min-width:0; height:100%; padding:0 0 12px; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,#fff); color:var(--text); text-decoration:none; }
+a.similar-artist:hover { border-color:var(--blue,#002ff4); }
+a.similar-artist:focus-visible { outline:2px solid var(--blue,#002ff4); outline-offset:2px; }
+.similar-artist-photo { display:block; aspect-ratio:750 / 338; background:var(--canvas); overflow:hidden; }
+.similar-artist-photo img { display:block; width:100%; height:100%; object-fit:cover; }
+.similar-artist-name { padding:0 12px; font-size:14px; line-height:1.4; font-weight:600; overflow-wrap:anywhere; }
+.similar-artist-score { padding:0 12px; font-size:12px; line-height:1.4; color:var(--muted); font-variant-numeric:tabular-nums; }
+.similar-artist[data-unavailable="true"] { opacity:.7; }
+@container (max-width: 880px) { .similar-artists-list { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); } }

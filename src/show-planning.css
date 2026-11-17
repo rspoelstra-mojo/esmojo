@@ -1,9 +1,19 @@
-.show-overview { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:20px; align-items:stretch; }
-.show-team { min-width:0; padding:20px; background:var(--fluid-card,#fff); border:1px solid var(--line); border-radius:12px; }
-.show-team h2 { margin:0; color:var(--text); font-size:16px; line-height:1.5; font-weight:600; }
+/* Overzicht: vijf kolommen. Projectteam en Tijdschema 1/5 (samen zo hoog als Planning), Show informatie en Planning 2/5;
+   daaronder Showbeheer 1/5, Gashouder 2/5 en Actielijst 2/5. Onder 880px paginabreedte staat alles onder elkaar. */
+.show-overview { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-items:stretch; }
+.show-block { min-width:0; padding:20px; background:var(--fluid-card,#fff); border:1px solid var(--line); border-radius:12px; }
+.show-block h2 { margin:0; color:var(--text); font-size:16px; line-height:1.5; font-weight:600; }
 .show-overview-planning { min-width:0; container-type:inline-size; }
-@container (max-width: 880px) {
-  .show-overview { grid-template-columns:minmax(0,1fr); }
+.show-management-overview { display:contents; }
+@container (min-width: 881px) {
+  .show-overview { grid-template-columns:repeat(5,minmax(0,1fr)); }
+  .show-team { grid-column:1; grid-row:1; }
+  .show-schedule { grid-column:1; grid-row:2; }
+  .show-information { grid-column:2 / span 2; grid-row:1 / span 2; }
+  .show-overview-planning { grid-column:4 / span 2; grid-row:1 / span 2; }
+  .show-management-overview > .show-management-card:not(.show-management-venue) { grid-column:1; grid-row:3; }
+  .show-management-overview > .show-management-venue { grid-column:2 / span 2; grid-row:3; }
+  .show-actions { grid-column:4 / span 2; grid-row:3; }
 }
 .show-planning { --planning-surface:var(--fluid-card,#fff); --planning-footer:var(--canvas); --planning-text:var(--text); --planning-muted:var(--muted); --planning-line:var(--line); --planning-blue:var(--blue,#002ff4); --planning-blue-soft:#edf2ff; --planning-blue-text:#315bc5; --planning-green:#25744b; --planning-green-soft:#e6f4eb; --planning-red:#b3261e; --planning-red-soft:#fdecea; color:var(--planning-text); background:var(--planning-surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 :root[data-theme="dark"] .show-planning { --planning-blue:#7092ff; --planning-blue-soft:#192b4a; --planning-blue-text:#8eacff; --planning-green:#9fd2b1; --planning-green-soft:#163b2a; --planning-red:#ff8a80; --planning-red-soft:#3d1f1d; }
