@@ -33,8 +33,15 @@ export function createStaffPlanning({env=process.env,repo,now=()=>new Date()}){
     const {from,until}=horizonWindow(),venue=MOJO_VENUES.find(v=>v.id===payload?.venue);
     if(!sameKeys(payload,['venue','from','until','concerts'])||!venue||payload.from!==from||payload.until!==until||!Array.isArray(payload.concerts)||payload.concerts.length>maxPerVenue)throw Error('VALIDATION');
     const seen=new Set(),concerts=[];
+    // Per soort fout een eigen veilige code (zonder gegevens), zodat de importrun precies aangeeft wat afwijkt.
     for(const row of payload.concerts){
-      if(!sameKeys(row,['concertId','artist','date','sourceUrl'])||!validId(row.concertId)||typeof row.artist!=='string'||!row.artist.trim()||row.artist.length>160||!validDate(row.date)||row.date<from||row.date>=until||typeof row.sourceUrl!=='string'||!/^https:\/\/www\.mojo\.nl\/(agenda|concerten\/[\w%/-]+)(\?[^#\s]*)?$/.test(row.sourceUrl)||seen.has(row.concertId))throw Error('VALIDATION');
+      if(!sameKeys(row,['concertId','artist','date','sourceUrl']))throw Error('STAFF_BAD_SHAPE');
+      if(!validId(row.concertId))throw Error('STAFF_BAD_ID');
+      if(typeof row.artist!=='string'||!row.artist.trim()||row.artist.length>160)throw Error('STAFF_BAD_ARTIST');
+      if(!validDate(row.date)||row.date<from||row.date>=until)throw Error('STAFF_BAD_DATE');
+      // Alleen een verwijzing naar MOJO; geen eisen aan het pad (slugs kunnen apostrofs, punten of plustekens bevatten).
+      if(typeof row.sourceUrl!=='string'||!/^https:\/\/www\.mojo\.nl\/[^\s#\x00-\x1f]{0,400}$/.test(row.sourceUrl))throw Error('STAFF_BAD_URL');
+      if(seen.has(row.concertId))throw Error('STAFF_DUPLICATE');
       seen.add(row.concertId);concerts.push({concertId:row.concertId,artist:row.artist.trim(),date:row.date,sourceUrl:row.sourceUrl});
     }
     const existing=(await listRows()).filter(item=>item.config.venue===venue.id),current=existing.flatMap(item=>item.config.concerts).filter(row=>row.date>=from&&row.date<until).length;
