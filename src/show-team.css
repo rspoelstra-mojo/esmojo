@@ -5,3 +5,4 @@
 .show-team-row:first-child { border-top:0; padding-top:0; }
 .show-team-row dt { margin:0; min-width:0; font-size:13px; line-height:1.4; color:var(--muted); overflow-wrap:anywhere; }
 .show-team-row dd { margin:0; min-width:0; font-size:13px; line-height:1.4; font-weight:600; text-align:right; overflow-wrap:anywhere; }
+.show-team-updated { margin:12px 0 0; font-size:12px; line-height:18px; color:var(--muted); }
