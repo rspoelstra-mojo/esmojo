@@ -35,9 +35,6 @@
 .planning-progress-part[data-state="completed"] { background:var(--planning-green); }
 .planning-progress-part[data-state="current"] { background:var(--planning-blue); }
 .planning-progress-part[data-state="overdue"] { background:var(--planning-red); }
-.planning-next { margin:14px 0 0; font-size:14px; line-height:1.5; color:var(--planning-muted); }
-.planning-next strong { color:var(--planning-text); font-weight:600; }
-.planning-next[data-overdue="true"] { color:var(--planning-red); }
 .planning-steps { list-style:none; margin:28px 0 0; padding:0; display:grid; }
 .planning-step,.planning-today-row { position:relative; }
 .planning-step { display:grid; grid-template-columns:28px minmax(0,1fr) auto; column-gap:12px; align-items:center; padding:0 0 30px; }
