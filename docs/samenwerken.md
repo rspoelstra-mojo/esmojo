@@ -2,12 +2,12 @@
 
 GitHub `rspoelstra-mojo/esmojo` is de gedeelde bron. Chats en lokale werkmappen
 zijn niet gedeeld. `main` is productie en wordt automatisch door Vercel naar
-https://esmojo.nl uitgerold. Beide accounts mogen afgerond en gecontroleerd werk
+https://esmojo.nl uitgerold. Alle afgesproken projectagents mogen afgerond en gecontroleerd werk
 publiceren zonder opnieuw toestemming te vragen voor normale stappen.
 
 ## Taken verdelen en zichtbaar maken
 
-Geef de accounts verschillende, concrete taken, bijvoorbeeld Shows en Artiest.
+Geef account A, andere Codex-sessies en Claude Code verschillende, concrete taken, bijvoorbeeld Shows en Artiest.
 Eén taak heeft één eigenaar. Werk niet tegelijk aan dezelfde pagina of gedeelde
 indeling als dat vermijdbaar is. Hoofdmenu, router, globale CSS, dependencies,
 datamodellen en serviceconfiguratie zijn gedeeld en vragen extra afstemming.
@@ -38,9 +38,9 @@ af. Blijf ondertussen werken aan onafhankelijke onderdelen.
    CSS-selectors; verbouw gedeelde code alleen als de taak dat nodig heeft.
 2. Installeer ontbrekende dependencies met `npm ci`. Controleer met
    `npm run build`, `git diff --check` en passende functionele controles.
-   Bestaande servertests: `node server/apps-script.test.js`,
-   `node server/google-drive.test.js`, `node tools/apps-script/deploy.test.mjs`.
-   Draai de relevante tests bij veranderingen aan die onderdelen.
+   Gebruik `.github/workflows/check.yml` voor de actuele testcommando's.
+   Draai passende server-/beveiligings- en browserchecks voor gewijzigde onderdelen.
+   Google-tests zijn uitsluitend offline referenties, geen publicatiestap.
 3. Haal vlak vóór samenvoegen opnieuw `origin/main` op en merge die in je
    taakbranch. Bewaar zowel het werk van de ander als het eigen werk. Los alleen
    conflicten op waarvan de bedoeling duidelijk is; gebruik nooit blind
@@ -74,7 +74,7 @@ Publiceer geen secrets in taaknotities, PR's, chat of logs.
 
 Google-publicatie is definitief afgesloten. Alleen GitHub → Vercel publiceert
 de website; start geen oude Google-workflow of handmatige Apps Script-publicatie.
-Voor Supabase-schemawijzigingen, Google Drive-opslagstructuur, secrets of
+Voor Dataverse-schema-/autoriteitswijzigingen, Auth/MFA, secrets of
 serviceconfiguratie is één eigenaar tegelijk nodig: meld die scope vooraf en
 wacht bij overlap op afstemming. Een Git-merge maakt externe wijzigingen niet
 automatisch veilig of atomair. Deel geen productiegegevens als coördinatiemiddel.
@@ -92,11 +92,10 @@ wordt gevraagd, maximaal 1000 px breed en gecentreerd naast het submenu. Submenu
 is 210 px breed, titel 16 px. Typografie schaalt niet mee met de schermbreedte;
 onderdelen gaan onder elkaar wanneer de ruimte te smal is.
 
-De gebruiker heeft GitHub → Vercel, Drive-bereikbaarheid via ondertekend Apps
-Script en een succesvolle Apps Script-publicatierun bevestigd. Supabase-gebruik,
-medewerkersauthenticatie, Drive-bestandsfuncties en een echte e-mailflow zijn
-nog niet gebouwd of functioneel bewezen. Deze beschrijving kan verouderen:
-actuele code, commits en aantoonbare resultaten zijn leidend.
+De actuele bedrijfsopslag is Dataverse; Supabase Auth/MFA blijft behouden.
+Google/Apps Script-publicatie is afgesloten. Nieuwe inrichting krijgt zo nodig
+een beveiligde Datatransitie-knop. Zie docs/projectcontext.md en de relevante
+native runtime-documentatie. Historische notities zijn geen actuele bronautoriteit.
 
 ## Na de historische opschoning van 7 november 2026
 
@@ -110,12 +109,36 @@ nieuwe geschiedenis. Merge of push geen oude branches terug: daarmee kunnen juis
 verwijderde gegevens opnieuw bereikbaar worden. Een publieke herstelbranch met de
 oude geschiedenis is niet toegestaan. Oude PR-/cachekopieën beheert GitHub zelf.
 
-## Publicatie en beheer met beide accounts
+## Publicatie en toegang per agent
 
-Lees voor Apps Script- of rechtenwerk ook docs/beheer-publicatie.md en
-tools/apps-script/README.md. Beide accounts gebruiken één gedeelde main-workflow,
-geen eigen Google-deployment of gekopieerde productiecredentials. Een geslaagde
-Vercel-uitrol bewijst geen geslaagde Apps Script-uitrol. De Google-workflow test
-actuele main, vergelijkt de vaste gedeployde bron terug en biedt verify_only voor
-een herhaalbare controle zonder schrijfacties. Controleer toegang per Codex-sessie;
-repository-admin is niet automatisch Actions-secret- of Vercel-connectorbeheer.
+Deze werkwijze geldt ook voor Claude Code. CLAUDE.md importeert de gedeelde
+AGENTS.md, deze afspraken en docs/projectcontext.md; onderhoud geen afwijkende
+kopie van autorisatie-/migratieregels voor één client.
+
+Iedere agent verifieert eigen GitHub-/Vercel-/eventuele browservaardigheden.
+ChatGPT-connectoren worden niet doorgegeven aan Claude; repository-admin is geen
+bewijs van toegang tot Vercel, Actions-secrets, Dataverse of een MFA-sessie.
+Gebruik bestaande zakelijke accounts/projecten. Geen nieuwe credentials kopiëren,
+waarden dumpen, publieke bestanden maken of tijdelijke authenticatieroutes openen.
+Zie docs/claude-code.md voor de concrete start en een herbruikbare prompt.
+
+Werk niet gelijktijdig in één fysieke checkout: branches horen bij de map, niet
+bij een chat. Gebruik ieders eigen uitvoeromgeving/checkout en nieuwe taakbranch;
+maak geen extra worktrees. Als een andere agent dezelfde map gebruikt, coördineer
+vóór branchwissels of schrijfacties. Chats, clientgeheugen en lokale bestanden
+zijn geen gedeeld taakregister; GitHub-notities en draft-PR's zijn dat wel.
+
+## Overdracht en afronding
+
+Noteer eigenaar (bijvoorbeeld Account A of Claude Code), doel, branch, draft-PR,
+verwachte bestanden/diensten, voortgang, controles en concrete volgende stap.
+Neem een taak pas schrijvend over wanneer de vorige uitvoering gestopt is.
+Begin ook bij overname vanaf actuele main; geen oude branch/historie terugmergen.
+Bewaar ongepubliceerde wijzigingen van anderen en bespreek echte scopeconflicten.
+
+Rapporteer de uiteindelijke PR/commit, geteste functies, uitrolstatus en werkelijk
+geverifieerd gedrag. Een groene build bewijst geen productiewerking, bron/doel-
+gelijkheid of bereikte laadtijd. Gebruik alleen geldige beschikbare sessies;
+geen productie-testmails of fictieve concerten/incidenten/kliks. Voor normale
+geautoriseerde vervolgstappen niet opnieuw toestemming vragen; bij concrete
+ontbrekende toegang of onverenigbare inhoudelijke keuze wel uitleggen wat nodig is.
