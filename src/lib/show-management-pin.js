@@ -12,7 +12,7 @@ export function bindShowManagementPin(view,{open}){
   event.preventDefault();if(busy)return;const pin=inputs.map(input=>input.value).join('');
   if(!/^\d{6}$/.test(pin)){message.textContent='Vul alle zes cijfers in.';inputs.find(input=>!input.value)?.focus();return;}
   busy=true;submit.disabled=true;submit.textContent='Pincode controleren…';form.setAttribute('aria-busy','true');message.textContent='';for(const input of inputs)input.disabled=true;
-  try{await open(pin);for(const input of inputs)input.value='';view.open();}
+  try{await open(pin);for(const input of inputs)input.value='';if(!view.root.classList.contains('is-open'))view.open();}
   catch(error){message.textContent=error.message||'Showbeheer is tijdelijk niet beschikbaar. Probeer opnieuw.';for(const input of inputs)input.value='';}
   finally{busy=false;submit.disabled=false;submit.textContent='Open showbeheer';form.removeAttribute('aria-busy');for(const input of inputs)input.disabled=false;if(!view.root.classList.contains('is-open'))inputs[0].focus();}
  };

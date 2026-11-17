@@ -1,3 +1,4 @@
+import {createShowManagementStats} from './show-management-stats.js';
 import {createWebsiteSettingsView} from './website-settings.js';
 import {createDataTransitionView} from './data-transition.js';
 import {createDataverseTestView} from './dataverse-test.js';
@@ -138,6 +139,7 @@ function renderPage() {
   }
   if (root === 'beheerder') {
     if (!isAdministrator(profile)) { submenuSearch.setSection(root, false); content.textContent = 'Je hebt geen toegang tot deze pagina.'; return; }
+    if(hasModule(profile,'shows')){const managementLink=document.createElement('a');managementLink.href='/beheerder/showbeheer';managementLink.className='submenu-link';managementLink.textContent='Showbeheer';submenu.append(managementLink);if(route==='beheerder/showbeheer'){managementLink.setAttribute('aria-current','page');disposePage=createShowManagementStats(content);}}
     const settingsLink=document.createElement('a');settingsLink.href='/beheerder/instellingen';settingsLink.className='submenu-link';settingsLink.textContent='Instellingen';settingsLink.dataset.submenuTitle='Instellingen';submenu.append(settingsLink);
     if(route==='beheerder/instellingen'){settingsLink.setAttribute('aria-current','page');disposePage=createWebsiteSettingsView(content);}
     const migrationLink=document.createElement('a');migrationLink.href='/beheerder/datatransitie';migrationLink.className='submenu-link';migrationLink.textContent='Datatransitie';migrationLink.dataset.submenuTitle='Datatransitie';submenu.append(migrationLink);
