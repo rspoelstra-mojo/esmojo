@@ -525,6 +525,28 @@
   ],
   "redirects": [
     {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "esmojo-esmojo.vercel.app"
+        }
+      ],
+      "destination": "https://esmojo.nl/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "esmojo-git-main-esmojo.vercel.app"
+        }
+      ],
+      "destination": "https://esmojo.nl/:path*",
+      "permanent": false
+    },
+    {
       "source": "/statistieken/jungle",
       "destination": "/rapportages/Jungle_Ziggo-Dome_03112026",
       "permanent": true

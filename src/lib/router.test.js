@@ -30,7 +30,7 @@ test('Rapportages gebruikt het opgeslagen concert-ID en normaliseert oude URL’
  assert.equal(legacyPageUrl(new URL('https://esmojo.nl/#/statistieken/jungle?view=voorbeeld')),canonical+'?view=voorbeeld');
  assert.equal(isAppPath('/rapportages/Jungle_Ziggo-Dome_03112026'),true);
  const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));assert.ok(config.rewrites.some(row=>row.source==='/rapportages/:path*'));
- assert.equal(config.redirects.find(row=>row.source==='/statistieken/jungle').destination,canonical);assert.equal(config.redirects.find(row=>row.source==='/rapportages/jungle').destination,canonical);assert.ok(config.redirects.every(row=>row.permanent));
+ for(const host of ['esmojo-esmojo.vercel.app','esmojo-git-main-esmojo.vercel.app'])assert.deepEqual(config.redirects.find(row=>row.has?.[0]?.value===host),{source:'/:path*',has:[{type:'host',value:host}],destination:'https://esmojo.nl/:path*',permanent:false});assert.ok(config.redirects.filter(row=>row.has).every(row=>row.destination.startsWith('https://esmojo.nl/'))); assert.equal(config.redirects.find(row=>row.source==='/statistieken/jungle').destination,canonical);assert.equal(config.redirects.find(row=>row.source==='/rapportages/jungle').destination,canonical);assert.ok(config.redirects.filter(row=>!row.has).every(row=>row.permanent));
 });
 
 test('Showtab-query is expliciet gewhitelist en blijft beschikbaar bij schone en oude URL’s',async()=>{
