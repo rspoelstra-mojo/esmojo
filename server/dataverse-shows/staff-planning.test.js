@@ -20,6 +20,13 @@ test('de lijst voor 365 dagen wordt per zaal en maand opgeslagen; alleen gewijzi
  // Buiten het venster van 365 dagen en in het verleden wordt niet getoond.
  f.set('2027-12-01T04:00:00Z');assert.deepEqual((await f.staff.handle('staff-planning-read')).concerts,[]);
 });
+test('dezelfde bron-URL’s als de bestaande catalogus: de agenda-terugval en queryparameters zijn geldig',async()=>{
+ const f=fixture();
+ const rows=[{...day('2026-12-05',1),sourceUrl:'https://www.mojo.nl/agenda'},{...day('2026-12-06',2),sourceUrl:'https://www.mojo.nl/concerten/artiest-2?ref=agenda'},{...day('2026-12-07',3),sourceUrl:'https://www.mojo.nl/agenda?query=Ziggo%20Dome'}];
+ assert.deepEqual(await f.staff.handle('staff-planning-store',body('ziggo-dome',rows)),{venue:'ziggo-dome',concerts:3,saved:1,unchanged:0});
+ await assert.rejects(f.staff.handle('staff-planning-store',body('ziggo-dome',[{...rows[0],sourceUrl:'https://www.mojo.nl.evil.example/agenda'}])),/VALIDATION/);
+ await assert.rejects(f.staff.handle('staff-planning-store',body('ziggo-dome',[{...rows[0],sourceUrl:'http://www.mojo.nl/agenda'}])),/VALIDATION/);
+});
 test('ongeldige of verdachte lijsten worden geweigerd en wissen niets',async()=>{
  const f=fixture(),list=Array.from({length:6},(_,i)=>day('2026-12-0'+(i+1),i+1));await f.staff.handle('staff-planning-store',body('gashouder',list));
  await assert.rejects(f.staff.handle('staff-planning-store',body('gashouder',[])),/STAFF_LIST_SUSPECT/);
