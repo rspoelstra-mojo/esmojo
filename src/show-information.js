@@ -14,6 +14,7 @@ export function createShowInformation(block,{show,data}){
   }
   function render(){
     if(disposed)return;const info=showInformation(show,data.informationSnapshot());body.replaceChildren();
+    // Volgorde: kerngegevens, Analyses en direct daaronder Risico's.
     // Analyses: twee tegels die meekleuren met het eindcijfer (1 groen … 10 rood).
     const analyses=node('section','show-information-section');analyses.setAttribute('aria-label','Analyses');
     analyses.append(node('h3','show-information-subtitle','Analyses'));
@@ -35,7 +36,7 @@ export function createShowInformation(block,{show,data}){
     const tiles=node('dl','show-information-tiles');
     for(const [key,label] of [['low','Laag'],['medium','Midden'],['high','Hoog']]){const tile=node('div','show-information-tile show-risk-'+key);tile.append(node('dt','',label),node('dd','',numbers.format(info.risks[key])));tiles.append(tile);}
     risks.append(tiles);
-    body.append(analyses,facts,risks);
+    body.append(facts,analyses,risks);
   }
   const unsubscribe=data.subscribe(render);render();
   return()=>{disposed=true;unsubscribe();body.remove();};
