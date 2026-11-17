@@ -5,7 +5,9 @@ import './production-assessment.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
 import {barrierTypes} from '../shared/barrier-layout.js';
-import {floorDensity,parseVisitorCount,parseFloorArea,validateFloorData} from '../shared/floor-pressure.js';
+import {floorDensity,parseVisitorCount,parseFloorArea} from '../shared/floor-pressure.js';
+import {validateFloorData,productionMeasureRequired} from '../shared/production-measure.js';
+import './risk-review-card.css';
 import {assessmentNode as node,riskRadioGroup,createAssessmentQueue} from './production-assessment-ui.js';
 
 const numbers=new Intl.NumberFormat('nl-NL'),densityFormat=new Intl.NumberFormat('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -18,8 +20,8 @@ export function floorTicketText(tickets){
 }
 export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=()=>{},request=body=>access('floor-pressure',{method:'POST',body})}){
   const feedback=createPageFeedback(saveRequestInfo('floor-pressure',{concertId:show.key})),local=backgroundSaves.form('floor-edit:'+show.key);
-  let disposed=false,ready=false,reading=false,record=null,basis=null,tickets=null,type=null,rows=[],riskLevel=null,note='',queue=null;
-  const noteDrafts={};let rowControls=[];
+  let disposed=false,ready=false,reading=false,record=null,basis=null,tickets=null,type=null,rows=[],riskLevel=null,measureRequired=null,queue=null;
+  let rowControls=[];
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
   section.replaceChildren();const root=node('section','production-assessment'),back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=onBack;
   const title=node('h2','assessment-page-title','Vloerdruk');title.tabIndex=-1;
@@ -28,12 +30,16 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
   for(const text of ['Publieksvak / bezoekers','Aantal m²','Vloerdruk']){const th=node('th','',text);th.scope='col';headRow.append(th);}head.append(headRow);const body=node('tbody','');table.append(head,body);tableWrap.append(table);
   const seatedVisitors=node('input','floor-seated-count');seatedVisitors.type='text';seatedVisitors.readOnly=true;seatedVisitors.tabIndex=-1;seatedVisitors.id='floor-seated-visitors';seatedVisitors.setAttribute('aria-label','Bezoekers Zitplaatsen (automatisch)');
   const add=node('button','secondary-button floor-add','+ Publieksvak toevoegen');add.type='button';
-  const total=node('div','floor-total'),review=node('div','floor-review'),risk=riskRadioGroup('floor-risk',value=>{if(riskLevel)noteDrafts[riskLevel]=note;riskLevel=value;note=noteDrafts[value]||'';notes.value=note;remember();update();}),noteField=node('div','assessment-field'),noteLabel=node('label','','Toelichting'),notes=node('textarea','');notes.id='floor-notes';notes.rows=4;notes.maxLength=4000;noteLabel.htmlFor=notes.id;noteField.append(noteLabel,notes);review.append(risk.element,noteField);
+  const total=node('div','floor-total'),review=node('div','floor-review'),risk=riskRadioGroup('floor-risk',value=>{const previous=riskLevel;riskLevel=value;if(value==='none')measureRequired=false;else if(previous==='none')measureRequired=null;remember();update();});
+  // Beheersmaatregel noodzakelijk: Ja/Nee zonder standaardkeuze; bij Ja verschijnt de vloerdruk bij Maatregelen en wordt de maatregel daar uitgewerkt.
+  const measureField=node('fieldset','risk-review-measure'),measureLegend=node('legend','risk-review-measure-title','Beheersmaatregel noodzakelijk'),measureChoices=node('div','risk-review-choices'),measureInputs=[];
+  for(const [value,labelText]of [['no','Nee'],['yes','Ja']]){const option=node('label','risk-review-option risk-review-measure-option'),input=node('input','');input.type='radio';input.name='floor-measure';input.value=value;option.dataset.choice=value;option.append(input,node('span','',labelText));measureChoices.append(option);measureInputs.push(input);input.onchange=()=>{if(input.checked){measureRequired=value==='yes';remember();update();}};}
+  measureField.append(measureLegend,measureChoices);review.append(risk.element,measureField);
   const status=node('p','assessment-status'),error=node('p','profile-message');error.setAttribute('role','alert');const reload=node('button','secondary-button','Actuele beoordeling laden');reload.type='button';reload.hidden=true;
   const missing=node('div','assessment-fields'),missingText=node('p','assessment-note','Selecteer eerst een barrieropstelling.'),openBarrier=node('button','secondary-button','Barrieropstelling openen');openBarrier.type='button';openBarrier.onclick=onBarrier;missing.append(missingText,openBarrier);
   const actions=node('div','assessment-actions'),edit=node('button','secondary-button','Vloerdruk bewerken'),complete=node('button','analysis-complete','Vloerdruk afronden');edit.type='button';complete.type='submit';actions.append(edit,complete);
   block.append(source,ticketLine,ticketDetail,missing,tableWrap,add,total,review,status,error,reload,actions);const heading=node('div','analysis-editor-header');heading.append(back,title);root.append(heading,block);section.append(root);
-  const snapshot=()=>({rows:rows.map(({id,name,visitors,area})=>({id,name,visitors,area})),riskLevel,note:riskLevel==='low'?'':note});
+  const snapshot=()=>({rows:rows.map(({id,name,visitors,area})=>({id,name,visitors,area})),riskLevel,measureRequired:riskLevel===null?null:riskLevel==='none'?false:measureRequired});
   const remember=()=>{local.fields={data:structuredClone(snapshot()),basis:structuredClone(basis)};};
   const call=(operation,payload={})=>request({operation,concertId:show.key,...payload});
   function valid(){try{validateFloorData(snapshot(),type,true);return true;}catch{return false;}}
@@ -70,25 +76,24 @@ export function createFloorPressurePage(section,{show,onBack,onBarrier,onStored=
     source.textContent=type?'Barrieropstelling: '+barrierTypes.find(row=>row.value===type)?.label+(record?.invalidatedAt?' · Gewijzigde opstelling: controleer de behouden invoer en rond opnieuw af.':''):'';missing.hidden=Boolean(type)||!ready;
     for(const el of [tableWrap,total,review,ticketLine,ticketDetail])el.hidden=!available;add.hidden=!available||type!=='custom'||Boolean(record?.completed);add.disabled=locked;
     for(const control of rowControls)if(!control.output)control.disabled=locked;risk.update(riskLevel,locked);
-    noteField.hidden=!['none','medium','high'].includes(riskLevel);noteLabel.textContent=riskLevel==='none'?'Toelichting':'Beheersmaatregelen';notes.required=!noteField.hidden;notes.disabled=locked;
+    measureField.hidden=!['low','medium','high'].includes(riskLevel);for(const input of measureInputs){input.checked=measureRequired===(input.value==='yes');input.disabled=locked;input.required=!measureField.hidden;}
     complete.hidden=!available||Boolean(record?.completed);complete.disabled=locked||queue?.failed||!valid();edit.hidden=!available||!record?.completed;edit.disabled=reading||queue?.busy;back.disabled=false;
     status.textContent=seated?'✓ Vloerdruk niet van toepassing bij Seated — Geen risico':record?.completed?'✓ Vloerdruk afgerond':'';status.hidden=!status.textContent;status.classList.toggle('assessment-completed',Boolean(record?.completed));
   }
   function accept(data,replace,job){
     if(!data||!data.basis||!data.tickets)throw Error('Onvolledige opslagbevestiging.');record=data.record;if(job?.operation==='complete'&&record?.completed)local.fields=null;basis=data.basis;tickets=data.tickets;type=data.barrierType;
     if(disposed)return;
-    if(replace){rows=(record?.rows||[]).map(({id,name,visitors,area})=>({id,name,visitors,area}));riskLevel=record?.riskLevel||null;note=record?.note||'';notes.value=note;renderRows();}
+    if(replace){rows=(record?.rows||[]).map(({id,name,visitors,area})=>({id,name,visitors,area}));riskLevel=record?.riskLevel||null;measureRequired=record?.riskLevel?productionMeasureRequired(record,record.note):null;renderRows();}
     const text=floorTicketText(tickets);ticketValue.textContent=text.main;ticketDetail.textContent=text.detail;calculate();
     if(job)feedback.resolved();onStored(record,data);update();
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();
-    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);if(local.fields&&!record?.completed){rows=structuredClone(local.fields.data.rows);riskLevel=local.fields.data.riskLevel;note=local.fields.data.note;notes.value=note;renderRows();if(JSON.stringify(local.fields.basis)!==JSON.stringify(basis))feedback.show('De brongegevens zijn gewijzigd. Controleer je behouden invoer voordat je opslaat.');}queue=createAssessmentQueue({info:saveRequestInfo('floor-pressure',{concertId:show.key}),snapshot,send:(operation,payload)=>call(operation,{...payload,revision:record?.revision||0,basis}),stored:accept,changed:update,error:message=>{feedback.show('Opslag niet bevestigd. Je invoer is behouden.',async()=>{await load();return false;},'Actuele beoordeling laden');}});ready=true;}
+    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);if(local.fields&&!record?.completed){rows=structuredClone(local.fields.data.rows);riskLevel=local.fields.data.riskLevel;measureRequired=local.fields.data.measureRequired;renderRows();if(JSON.stringify(local.fields.basis)!==JSON.stringify(basis))feedback.show('De brongegevens zijn gewijzigd. Controleer je behouden invoer voordat je opslaat.');}queue=createAssessmentQueue({info:saveRequestInfo('floor-pressure',{concertId:show.key}),snapshot,send:(operation,payload)=>call(operation,{...payload,revision:record?.revision||0,basis}),stored:accept,changed:update,error:message=>{feedback.show('Opslag niet bevestigd. Je invoer is behouden.',async()=>{await load();return false;},'Actuele beoordeling laden');}});ready=true;}
     catch(failure){if(!disposed){feedback.show('De beoordeling kon niet worden geladen. Je invoer is behouden.',async()=>{await load();return ready&&!queue?.failed;},'Opnieuw laden');}}
     finally{reading=false;finish?.();update();}
   }
   add.onclick=()=>{rows.push({id:'custom_'+crypto.randomUUID().replaceAll('-',''),name:'',visitors:null,area:null});renderRows();remember();update();};
-  notes.oninput=()=>{note=notes.value;remember();update();};
   block.onsubmit=event=>{event.preventDefault();if(complete.disabled||!block.reportValidity())return;void queue.action('complete',{data:snapshot()});onBack();};edit.onclick=()=>queue.action('reopen');reload.onclick=load;
   update();void load();title.focus({preventScroll:true});
   return()=>{disposed=true;feedback.dispose();const pending=queue?.dispose();loading?.dispose();return pending;};

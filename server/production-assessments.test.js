@@ -100,7 +100,7 @@ test('Historische afgeronde barrierbeoordelingen blijven leesbaar; nieuwe afrond
 test('Alle vijf standaardopstellingen mogen als Geen risico zonder toelichting afronden; custom houdt verplichte toelichting',async()=>{
  for(const type of barrierTypes.filter(row=>row.value!=='custom').map(row=>row.value)){
   const h=harness();const input={operation:'complete',concertId:h.laterId,revision:0,data:{...data(type,'none'),riskNote:''}};
-  assert.doesNotThrow(()=>validateBarrierRequest(input));const {record}=await barrier(h,'complete',{revision:0,data:input.data});
+  assert.doesNotThrow(()=>validateBarrierRequest({...input,data:(({riskNote,...rest})=>({...rest,measureRequired:false}))(data(type,'none'))}));const {record}=await barrier(h,'complete',{revision:0,data:input.data});
   assert.equal(record.completed,true);assert.equal(record.riskLevel,'none');assert.equal(record.riskNote,'');assert.equal(record.completedBy,actor);assert.ok(Date.parse(record.completedAt));
   const writes=h.writes();await barrier(h,'complete',{revision:0,data:input.data});assert.equal(h.writes(),writes);await barrier(h,'read');assert.equal(h.writes(),writes);
   const view=await floor(h,'read');if(type==='seated'){assert.equal(view.record.completed,true);assert.equal(view.record.riskLevel,'none');}else assert.equal(view.record.completed,false);

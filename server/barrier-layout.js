@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
-import {assessmentKeys,assessmentConcert,assessmentRevision,validateBarrierData,validUploadId,barrierUploadLimit,attachmentSignatureValid} from '../shared/barrier-layout.js';
+import {assessmentKeys,assessmentConcert,assessmentRevision,validUploadId,barrierUploadLimit,attachmentSignatureValid} from '../shared/barrier-layout.js';
+import {validateBarrierData} from '../shared/production-measure.js';
 export function validateBarrierRequest(input){
   const fields={read:[],download:['uploadId'],draft:['revision','data'],complete:['revision','data'],reopen:['revision'],'remove-upload':['revision','uploadId'],upload:['revision','uploadId','fileName','mime','base64']}[input?.operation];
   if(!fields)throw Error('VALIDATION');assessmentKeys(input,['operation','concertId',...fields]);assessmentConcert(input.concertId);

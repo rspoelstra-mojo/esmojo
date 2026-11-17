@@ -474,10 +474,12 @@ function measureDefinitions(show,risks={}){
   if(item.id==='entrance_process'&&show.venue?.trim().toLocaleLowerCase('nl-NL')==='gashouder'||item.conditional&&risks.production?.choices[item.id]===false)continue;
   const key={barrier_layout:'barrier',floor_pressure:'floor'}[item.id]||item.id,record=risks.assessments?.[key];
   if(!record||!measureLevels.includes(record.riskLevel)){known=false;continue;}
-  if(!['medium','high'].includes(record.riskLevel))continue;
+  if(!['low','medium','high'].includes(record.riskLevel))continue;
   const text=key==='floor'?record.note:record.riskNote;
-  if(typeof text!=='string'||!text.trim()){known=false;continue;}
-  rows.push({id:'production:'+item.id,sourceType:'production',sourceId:item.id,title:item.title,text:text.trim(),description:typeof record.description==='string'?record.description:null,origin:group.title+' · '+item.title,originalRiskLevel:record.riskLevel});
+  // Historische Midden/Hoog zonder keuze en zonder maatregeltekst zijn onbekend en nooit stilzwijgend maatregelenvrij.
+  if(typeof record.measureRequired!=='boolean'&&['medium','high'].includes(record.riskLevel)&&!(typeof text==='string'&&text.trim())){known=false;continue;}
+  if(!productionMeasureRequired(record,text))continue;
+  rows.push({id:'production:'+item.id,sourceType:'production',sourceId:item.id,title:item.title,text:(typeof text==='string'?text:'').trim(),description:typeof record.description==='string'?record.description:null,origin:group.title+' · '+item.title,originalRiskLevel:record.riskLevel});
  }
  if(risks.state==='ready'&&risks.operational?.source)for(const risk of risks.risks||[]){
   const record=risks.operational.assessments?.[risk.id];
@@ -655,26 +657,23 @@ function assessmentRevision(value){if(!Number.isSafeInteger(value)||value<0)thro
 
 function validUploadId(value){return typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value);}
 
-function validateBarrierData(value,complete=false,requireRiskNote=true){
-  const keys=['barrierType','riskLevel','notes','uploadId'];
-  if(value&&Object.prototype.hasOwnProperty.call(value,'riskNote'))keys.push('riskNote');
-  assessmentKeys(value,keys);
-  const riskNote=keys.includes('riskNote')?value.riskNote:'';
-  if(typeof riskNote!=='string'||riskNote.length>4000||/\x00/.test(riskNote))throw Error('VALIDATION');
+function validateBarrierData(value,complete=false){
+  assessmentKeys(value,['barrierType','riskLevel','notes','uploadId','measureRequired']);
+  if(value.measureRequired!==null&&typeof value.measureRequired!=='boolean')throw Error('VALIDATION');
   if(value.barrierType!==null&&!barrierTypes.some(row=>row.value===value.barrierType))throw Error('VALIDATION');
   if(value.riskLevel!==null&&!productionRiskLevels.some(row=>row.value===value.riskLevel))throw Error('VALIDATION');
   if(value.barrierType==='custom'){
     if(typeof value.notes!=='string'||value.notes.length>4000||/\x00/.test(value.notes)||(value.uploadId!==null&&!validUploadId(value.uploadId)))throw Error('VALIDATION');
   }else if(value.notes!==null||value.uploadId!==null)throw Error('VALIDATION');
   if(complete&&(!value.barrierType||!value.riskLevel||(value.barrierType==='custom'&&(!value.notes.trim()||!value.uploadId))))throw Error('VALIDATION');
-  const standardNoRisk=value.riskLevel==='none'&&isStandardBarrierType(value.barrierType);
-  if(complete&&requireRiskNote&&['none','medium','high'].includes(value.riskLevel)&&!standardNoRisk&&!riskNote.trim())throw Error('VALIDATION');
-  return {barrierType:value.barrierType,riskLevel:value.riskLevel,notes:complete&&value.barrierType==='custom'?value.notes.trim():value.notes,uploadId:value.uploadId,riskNote:value.riskLevel==='low'||standardNoRisk?'':complete?riskNote.trim():riskNote};
+  if(value.riskLevel==='none'&&value.measureRequired===true)throw Error('VALIDATION');
+  if(complete&&['low','medium','high'].includes(value.riskLevel)&&typeof value.measureRequired!=='boolean')throw Error('VALIDATION');
+  return {barrierType:value.barrierType,riskLevel:value.riskLevel,notes:complete&&value.barrierType==='custom'?value.notes.trim():value.notes,uploadId:value.uploadId,measureRequired:value.riskLevel==='none'?false:value.measureRequired};
 }
 
-function emptyBarrier(){return {revision:0,barrierType:null,riskLevel:null,notes:null,attachment:null,riskNote:'',completed:false,completedBy:null,completedAt:null};}
+function emptyBarrier(){return {revision:0,barrierType:null,riskLevel:null,notes:null,attachment:null,riskNote:'',measureRequired:null,completed:false,completedBy:null,completedAt:null};}
 
-function barrierData(record){return {barrierType:record.barrierType,riskLevel:record.riskLevel,notes:record.barrierType==='custom'?record.notes||'':null,uploadId:record.barrierType==='custom'?record.attachment?.uploadId||null:null,riskNote:record.riskNote??''};}
+function barrierData(record){return {barrierType:record.barrierType,riskLevel:record.riskLevel,notes:record.barrierType==='custom'?record.notes||'':null,uploadId:record.barrierType==='custom'?record.attachment?.uploadId||null:null,measureRequired:record.riskLevel===null?null:productionMeasureRequired(record,record.riskNote)};}
 
 function barrierSignature(record){return JSON.stringify([record.barrierType,record.barrierType==='custom'?record.attachment?.sha256||null:null]);}
 
@@ -699,9 +698,10 @@ function floorDensity(visitors,area){
 }
 
 function validateFloorData(value,type,complete=false){
-  assessmentKeys(value,['rows','riskLevel','note']);
+  assessmentKeys(value,['rows','riskLevel','measureRequired']);
+  if(value.measureRequired!==null&&typeof value.measureRequired!=='boolean')throw Error('VALIDATION');
   if(!barrierTypes.some(row=>row.value===type)||type==='seated'||!Array.isArray(value.rows)||!value.rows.length||JSON.stringify(value).length>80000
-    ||(value.riskLevel!==null&&!productionRiskLevels.some(row=>row.value===value.riskLevel))||typeof value.note!=='string'||value.note.length>4000||/\x00/.test(value.note))throw Error('VALIDATION');
+    ||(value.riskLevel!==null&&!productionRiskLevels.some(row=>row.value===value.riskLevel)))throw Error('VALIDATION');
   const fixed=floorSectionDefinitions[type],names=new Set(),ids=new Set();
   value.rows.forEach((row,i)=>{
     assessmentKeys(row,['id','name','visitors','area']);
@@ -715,18 +715,19 @@ function validateFloorData(value,type,complete=false){
     if(complete&&floorDensity(row.visitors,row.area)===null)throw Error('VALIDATION');
   });
   if(type!=='custom'&&value.rows.length!==fixed.length)throw Error('VALIDATION');
-  if(complete&&(!value.riskLevel||(['none','medium','high'].includes(value.riskLevel)&&!value.note.trim())))throw Error('VALIDATION');
-  return value;
+  if(value.riskLevel==='none'&&value.measureRequired===true)throw Error('VALIDATION');
+  if(complete&&(!value.riskLevel||(['low','medium','high'].includes(value.riskLevel)&&typeof value.measureRequired!=='boolean')))throw Error('VALIDATION');
+  return {rows:value.rows,riskLevel:value.riskLevel,measureRequired:value.riskLevel==='none'?false:value.measureRequired};
 }
 
 // BarrierLayout business rules
 function esmojoBarrierRecord_(document){
-  const record=document.barrier||emptyBarrier();assessmentRevision(record.revision);validateBarrierData(barrierData(record),record.completed===true,Object.prototype.hasOwnProperty.call(record,'riskNote'));
+  const record=document.barrier||emptyBarrier();assessmentRevision(record.revision);validateBarrierData(barrierData(record),record.completed===true);
   if(typeof record.completed!=='boolean'||(record.completed&&(!record.completedBy||!Number.isFinite(Date.parse(record.completedAt)))))throw Error('CONFLICT');
   return record;
 }
 
-function esmojoBarrierSummary_(document){const r=esmojoBarrierRecord_(document);return {revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,riskNote:r.riskNote??null,active:r.completed&&r.riskLevel!=='none'};}
+function esmojoBarrierSummary_(document){const r=esmojoBarrierRecord_(document);return {revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,riskNote:r.riskNote??null,...(typeof r.measureRequired==='boolean'?{measureRequired:r.completed&&r.riskLevel!=='none'&&r.measureRequired===true}:{}),active:r.completed&&r.riskLevel!=='none'};}
 
 function esmojoBarrierFile_(target,attachment){
   if(!attachment||!validUploadId(attachment.uploadId)||!['image/png','application/pdf'].includes(attachment.mime)||typeof attachment.fileId!=='string'||!/^[a-f0-9]{64}$/.test(attachment.sha256||''))throw Error('ATTACHMENT_INVALID');
@@ -801,7 +802,7 @@ function esmojoBarrierLayout_(request,openTarget){
     try{if(!historical)file.setTrashed(true);}catch{/* Ontkoppeling is bevestigd; een achtergebleven privébestand geeft geen app-toegang. */}
     return result;
   }
-  const data=request.data;record.barrierType=data.barrierType;record.riskLevel=data.riskLevel;record.notes=data.barrierType==='custom'?data.notes:null;record.riskNote=data.riskNote;record.attachment=null;
+  const data=request.data;record.barrierType=data.barrierType;record.riskLevel=data.riskLevel;record.notes=data.barrierType==='custom'?data.notes:null;record.riskNote=data.measureRequired===true&&barrierData(current).measureRequired===true?(current.riskNote||''):'';record.measureRequired=data.measureRequired;record.attachment=null;
   if(data.barrierType==='custom'&&data.uploadId){
     const attachment=ledger[data.uploadId];if(!attachment||attachment.removedAt)throw Error('ATTACHMENT_INVALID');
     const {uploadId,fileId,fileName,mime,size,sha256}=attachment;record.attachment={uploadId,fileId,fileName,mime,size,sha256};esmojoBarrierFile_(target,record.attachment);
@@ -836,13 +837,13 @@ function esmojoSyncFloor_(document,barrier,actor){
   if(barrier.barrierType==='custom'&&old?.barrierType==='custom')rows=old.rows.map(({id,name,visitors,area})=>({id,name,visitors,area}));
   else rows=rows.map(row=>{const previous=old?.rows.find(r=>r.id===row.id);return previous?{...row,visitors:previous.visitors,area:previous.area}:row;});
   const seated=barrier.barrierType==='seated';
-  document.floorPressure={revision:(old?.revision||0)+1,barrierType:barrier.barrierType,barrierSignature:signature,rows,riskLevel:seated?'none':null,note:'',completed:seated,automated:seated,completedBy:seated?actor:null,completedAt:seated?new Date().toISOString():null,ticketReference:null,invalidatedAt:old?new Date().toISOString():null};
+  document.floorPressure={revision:(old?.revision||0)+1,barrierType:barrier.barrierType,barrierSignature:signature,rows,riskLevel:seated?'none':null,note:'',measureRequired:seated?false:null,completed:seated,automated:seated,completedBy:seated?actor:null,completedAt:seated?new Date().toISOString():null,ticketReference:null,invalidatedAt:old?new Date().toISOString():null};
   return true;
 }
 
-function esmojoFloorData_(record){return {rows:record.rows.map(({id,name,visitors,area})=>({id,name,visitors,area})),riskLevel:record.riskLevel,note:record.note};}
+function esmojoFloorData_(record){return {rows:record.rows.map(({id,name,visitors,area})=>({id,name,visitors,area})),riskLevel:record.riskLevel,measureRequired:record.riskLevel===null?null:productionMeasureRequired(record,record.note)};}
 
-function esmojoFloorSummary_(document){const r=document.floorPressure;return r?{revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,note:r.note,active:r.completed&&r.riskLevel!=='none'}:null;}
+function esmojoFloorSummary_(document){const r=document.floorPressure;return r?{revision:r.revision,completed:r.completed,riskLevel:r.riskLevel,note:r.note,...(typeof r.measureRequired==='boolean'?{measureRequired:r.completed&&r.riskLevel!=='none'&&r.measureRequired===true}:{}),active:r.completed&&r.riskLevel!=='none'}:null;}
 
 function esmojoFloorPressure_(request,openTarget){
   const op=request.operation.slice(6),fields={read:[],draft:['revision','basis','data'],complete:['revision','basis','data'],reopen:['revision','basis']}[op];
@@ -856,7 +857,7 @@ function esmojoFloorPressure_(request,openTarget){
   assessmentRevision(request.revision);assessmentKeys(request.basis,['barrierSignature','ticketVersion']);
   if(!record||request.basis.barrierSignature!==basis.barrierSignature||record.barrierSignature!==basis.barrierSignature)throw Error('ASSESSMENT_CONFLICT');
   if(record.barrierType==='seated')throw Error('ASSESSMENT_COMPLETED');
-  if(['draft','complete'].includes(op))validateFloorData(request.data,barrier.barrierType,op==='complete');
+  if(['draft','complete'].includes(op))request.data=validateFloorData(request.data,barrier.barrierType,op==='complete');
   if(record.completed){
     if(op==='complete'&&record.ticketReference?.ticketVersion===request.basis.ticketVersion&&JSON.stringify(esmojoFloorData_(record))===JSON.stringify(request.data))return response();
     if(op!=='reopen')throw Error('ASSESSMENT_COMPLETED');
@@ -866,7 +867,7 @@ function esmojoFloorPressure_(request,openTarget){
   const next=Object.assign({},record,{revision:record.revision+1});
   if(op==='reopen'){if(!record.completed)throw Error('VALIDATION');next.completed=false;next.completedAt=null;next.completedBy=null;}
   else{
-    next.rows=request.data.rows.map(row=>Object.assign({},row,{density:floorDensity(row.visitors,row.area)}));next.riskLevel=request.data.riskLevel;next.note=request.data.note;
+    next.rows=request.data.rows.map(row=>Object.assign({},row,{density:floorDensity(row.visitors,row.area)}));next.riskLevel=request.data.riskLevel;next.note=request.data.measureRequired===true&&esmojoFloorData_(record).measureRequired===true?(record.note||''):'';next.measureRequired=request.data.measureRequired;
     if(op==='draft'&&JSON.stringify(esmojoFloorData_(record))===JSON.stringify(request.data))return response();
     if(op==='complete'){next.completed=true;next.completedBy=request.actor;next.completedAt=new Date().toISOString();next.ticketReference=tickets;next.invalidatedAt=null;}
   }
@@ -890,6 +891,14 @@ function measureRequiredOf(record){
  if(!record)return false;
  if(typeof record.measureRequired==='boolean')return record.measureRequired;
  return ['medium','high'].includes(record.riskLevel)&&typeof record.riskNote==='string'&&record.riskNote.trim()!=='';
+}
+
+// Productionele beoordelingen (Barrieropstelling, Vloerdruk): keuze Beheersmaatregel noodzakelijk (zie shared/production-measure.js).
+const productionLevelsAll=['none','low','medium','high'];
+function productionMeasureRequired(record,text){
+ if(!record||!productionLevelsAll.includes(record.riskLevel)||record.riskLevel==='none')return false;
+ if(typeof record.measureRequired==='boolean')return record.measureRequired;
+ return ['medium','high'].includes(record.riskLevel)&&typeof text==='string'&&text.trim()!=='';
 }
 
 // OperationalRisks business rules

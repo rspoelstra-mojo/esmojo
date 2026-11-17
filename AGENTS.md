@@ -1,3 +1,13 @@
+## Beheersmaatregel noodzakelijk bij Barrieropstelling en Vloerdruk (17 november 2026)
+
+Gebruiker vraagt dat het beoordelingsblok overal gelijk werkt: Geen risico zonder toelichting, bij Laag/Midden/Hoog de verplichte Ja/Nee-keuze
+Beheersmaatregel noodzakelijk (zonder standaardkeuze) in plaats van de maatregeltekst, en een knop Beoordelen. Dit geldt nu ook voor
+Barrieropstelling (blok Risico beoordeling, knop Beoordelen) en Vloerdruk (eigen blok; de knop Vloerdruk afronden blijft). Bij Ja verschijnt
+de barrier of vloerdruk bij Maatregelen en wordt de maatregel daar uitgewerkt (ook bij Laag); de bestaande velden riskNote (barrier) en note
+(vloerdruk) bevatten die tekst, door de server beheerd: behouden bij opnieuw beoordelen met Ja, gewist bij Nee. Records van vóór deze keuze
+blijven kloppen (Midden/Hoog met tekst = Ja; Midden/Hoog zonder tekst blijft onbekend en telt niet als maatregelenvrij). Standaard-
+barrieropstellingen blijven automatisch Geen risico. Geen nieuw schema; zelfde Vertrouwelijke opslag. Validatie: shared/production-measure.js.
+
 ## Risico bewerken, Beheersmaatregel noodzakelijk en opgemaakte maatregel (17 november 2026)
 
 Gebruiker vraagt: (1) elk operationeel risico (ook uit de analyse) bewerken: titel, gedefinieerd risico en mogelijk gevolg, opgeslagen

@@ -70,3 +70,5 @@ Een operationeel risico verschijnt bij Maatregelen zodra de beoordeling Beheersm
 Hoog). De tekst is eerst leeg ("Nog uit te werken") en wordt op de maatregelpagina in de rich text editor uitgewerkt
 (src/rich-text-editor.js; opslag als gewone tekst met opmaaktekens, zie shared/rich-text.js). Het blok Beheersmaatregel staat op
 volle breedte onder Gedefinieerd risico; Document uploaden staat eronder. Productionele maatregelen volgen dit in een vervolgstap.
+
+Vanaf V1.185 geldt dezelfde keuze Beheersmaatregel noodzakelijk voor Barrieropstelling en Vloerdruk (shared/production-measure.js); de maatregel wordt ook daar bij Maatregelen uitgewerkt.

@@ -4,7 +4,8 @@ import {detailBackButton} from './detail-back.js';
 import './production-assessment.css';
 import {access} from './auth.js';
 import {createSubmenuLoading} from './lib/submenu-loading.js';
-import {barrierTypes,isStandardBarrierType,validateBarrierData,barrierUploadLimit} from '../shared/barrier-layout.js';
+import {barrierTypes,isStandardBarrierType,barrierUploadLimit} from '../shared/barrier-layout.js';
+import {validateBarrierData,productionMeasureRequired} from '../shared/production-measure.js';
 import {loadBarrierImage} from './barrier-images.js';
 import {createRiskReviewCard} from './risk-review-card.js';
 import {assessmentNode as node,createAssessmentQueue} from './production-assessment-ui.js';
@@ -13,7 +14,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   const feedback=createPageFeedback(saveRequestInfo('barrier-layout',{concertId:show.key}));
   let disposed=false,ready=false,record=null,queue=null,reading=false,preparing=false,previewUrl=null,previewSequence=0,awaitingPreview=false;
   const local=backgroundSaves.form('barrier-edit:'+show.key);const editSession=backgroundSaves.session;let stagedUpload=null;
-  let type=null,riskLevel=null,riskNote='',custom={notes:'',attachment:null};
+  let type=null,riskLevel=null,measureRequired=null,custom={notes:'',attachment:null};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
   section.replaceChildren();const root=node('section','production-assessment');
   const back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);
@@ -31,15 +32,17 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   const status=node('p','assessment-status'),error=node('p','profile-message');error.setAttribute('role','alert');
   const reload=node('button','secondary-button','Actuele beoordeling laden');reload.type='button';reload.hidden=true;
   const review=createRiskReviewCard({name:'barrier-risk',editLabel:'Barrieropstelling bewerken',
-    onChange:(value,note,field)=>{riskLevel=value;riskNote=value==='none'&&isStandardBarrierType(type)?'':note;remember();update();},
+    saveLabel:'Beoordelen',measureChoice:true,
+    onChange:(value)=>{const previous=riskLevel;riskLevel=value;if(value==='none')measureRequired=false;else if(previous==='none')measureRequired=null;remember();update();},
+    onMeasureChange:value=>{measureRequired=value;remember();update();},
     onSave:()=>{if(valid()&&block.reportValidity())save();},
     onEdit:()=>queue.action('reopen'),
   });
   const layout=node('div','barrier-assessment-layout');block.append(columns,status,error,reload);layout.append(block,review.element);const heading=node('div','analysis-editor-header');heading.append(back,title);root.append(heading,layout);section.append(root);
-  const snapshot=()=>({barrierType:type,riskLevel,notes:type==='custom'?custom.notes:null,uploadId:type==='custom'?custom.attachment?.uploadId||null:null,riskNote:riskLevel==='low'||(riskLevel==='none'&&isStandardBarrierType(type))?'':riskNote});
+  const snapshot=()=>({barrierType:type,riskLevel,notes:type==='custom'?custom.notes:null,uploadId:type==='custom'?custom.attachment?.uploadId||null:null,measureRequired:riskLevel===null?null:riskLevel==='none'?false:measureRequired});
   const call=(operation,payload={})=>request({operation,concertId:show.key,...payload});
   const valid=()=>{try{validateBarrierData(snapshot(),true);return true;}catch{return false;}};
-  const remember=()=>{local.fields={type,riskLevel,riskNote,custom:structuredClone(custom),stagedUpload,revision:record?.revision||0};};
+  const remember=()=>{local.fields={type,riskLevel,measureRequired,custom:structuredClone(custom),stagedUpload,revision:record?.revision||0};};
   function save(){
     const wanted=structuredClone(snapshot()),file=type==='custom'?stagedUpload:null;
     if(file){void queue.action('draft',{data:{...wanted,uploadId:record?.attachment?.uploadId||null}});void queue.action('upload',file);}
@@ -50,7 +53,7 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   function update(){
     if(disposed)return;const locked=!ready||reading||preparing||queue?.exclusive||record?.completed;
     select.disabled=locked||Boolean(queue?.failed);customFields.hidden=type!=='custom';notes.disabled=locked;notes.required=type==='custom';
-    review.update({noRiskNoteRequired:!isStandardBarrierType(type),riskLevel,riskNote:riskLevel==='low'||(riskLevel==='none'&&isStandardBarrierType(type))?'':riskNote,disabled:locked,busy:Boolean(queue?.exclusive),failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
+    review.update({riskLevel,measureRequired,disabled:locked,busy:Boolean(queue?.exclusive),failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
     upload.disabled=locked||queue?.busy;remove.hidden=!custom.attachment;remove.disabled=locked||queue?.busy;
     back.disabled=false;
     status.textContent=record?.completed?'✓ Barrieropstelling afgerond':'';status.hidden=!status.textContent;status.classList.toggle('assessment-completed',Boolean(record?.completed));
@@ -81,15 +84,15 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   }
   function accept(data,replace,job){
     if(!data?.record||!Number.isSafeInteger(data.record.revision))throw Error('Onvolledige opslagbevestiging.');record=data.record;if(job?.operation==='complete'&&record.completed){local.fields=null;stagedUpload=null;}
-    if(!disposed){if(replace&&job?.operation!=='upload'&&job?.operation!=='draft'){type=record.barrierType;riskLevel=record.riskLevel;riskNote=record.riskNote||'';select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();if(job)feedback.resolved();onStored(record,data);update();}
+    if(!disposed){if(replace&&job?.operation!=='upload'&&job?.operation!=='draft'){type=record.barrierType;riskLevel=record.riskLevel;measureRequired=record.riskLevel===null?null:productionMeasureRequired(record,record.riskNote);select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();if(job)feedback.resolved();onStored(record,data);update();}
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();
-    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);if(local.fields&&!record.completed){const saved=local.fields;type=saved.type;riskLevel=saved.riskLevel;riskNote=saved.riskNote;custom=structuredClone(saved.custom);stagedUpload=saved.stagedUpload;select.value=type||'';notes.value=custom.notes;void renderPreview();}queue=createAssessmentQueue({info:saveRequestInfo('barrier-layout',{concertId:show.key}),snapshot,send:sendAssessment,stored:accept,changed:update,error:message=>{feedback.show('Opslag niet bevestigd. Je invoer is behouden.',async()=>{await load();return false;},'Actuele beoordeling laden');}});ready=true;}
+    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);if(local.fields&&!record.completed){const saved=local.fields;type=saved.type;riskLevel=saved.riskLevel;measureRequired=saved.measureRequired;custom=structuredClone(saved.custom);stagedUpload=saved.stagedUpload;select.value=type||'';notes.value=custom.notes;void renderPreview();}queue=createAssessmentQueue({info:saveRequestInfo('barrier-layout',{concertId:show.key}),snapshot,send:sendAssessment,stored:accept,changed:update,error:message=>{feedback.show('Opslag niet bevestigd. Je invoer is behouden.',async()=>{await load();return false;},'Actuele beoordeling laden');}});ready=true;}
     catch(failure){if(!disposed){feedback.show('De beoordeling kon niet worden geladen. Je invoer is behouden.',async()=>{await load();return ready&&!queue?.failed;},'Opnieuw laden');}}
     finally{reading=false;finish?.();update();}
   }
-  select.onchange=()=>{type=select.value||null;riskLevel=isStandardBarrierType(type)?'none':null;riskNote='';if(type==='custom')notes.value=custom.notes;remember();update();void renderPreview();};
+  select.onchange=()=>{type=select.value||null;riskLevel=isStandardBarrierType(type)?'none':null;measureRequired=riskLevel==='none'?false:null;if(type==='custom')notes.value=custom.notes;remember();update();void renderPreview();};
   notes.oninput=()=>{custom.notes=notes.value;remember();update();};
   upload.onchange=async()=>{
     const file=upload.files?.[0];if(!file||!ready||queue.busy||queue.failed)return;
