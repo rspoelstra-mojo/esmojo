@@ -199,5 +199,12 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     finally{loadingNow=false;finish?.();panel.removeAttribute('aria-busy');if(!disposed&&view==='overview')overview();else if(!disposed&&view==='operational'&&loaded&&!error){const risk=risks.find(risk=>risk.id===activeRisk);if(risk)detail(risk);else overview();}}
   }
   overview();
-  return { prepare(){return load(true);}, activate(){if((!loaded||loadedVersion!==version())&&!loadingNow)void load();}, dispose(){disposed=true;for(const item of feedbacks.values())item.dispose();unsubscribeChoices();unsubscribeReviews();choiceControls.clear();closeDetail();if(ownsReviews&&!reviewMemory.busy)reviewMemory.clear();operational=null;risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
+  return { prepare(){return load(true);},
+    // Bestemming vanuit de actielijst: één operationeel risico, één productionele beoordeling of het overzicht.
+    open(target={}){
+      if(disposed||!loaded)return;
+      if(target.risk){const risk=risks.find(item=>item.id===target.risk);if(risk){detail(risk);return;}}
+      if(target.production)for(const group of productionRiskGroups){const entry=group.items.find(item=>item.id===target.production);if(entry){productionDetail(entry,group);return;}}
+      closeDetail();overview();
+    }, activate(){if((!loaded||loadedVersion!==version())&&!loadingNow)void load();}, dispose(){disposed=true;for(const item of feedbacks.values())item.dispose();unsubscribeChoices();unsubscribeReviews();choiceControls.clear();closeDetail();if(ownsReviews&&!reviewMemory.busy)reviewMemory.clear();operational=null;risks=[];production={revision:0,choices:{}};section.replaceChildren();loading?.dispose();panel.removeAttribute('aria-busy');} };
 }

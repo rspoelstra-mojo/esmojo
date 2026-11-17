@@ -10,13 +10,11 @@ import { createTicketDataPage } from './ticket-data-page.js';
 import { access } from './auth.js';
 import { researchView, renderResearch, researchSourceMarkdown, safeResearchUrl } from './lib/research-view.js';
 import { createSubmenuLoading } from './lib/submenu-loading.js';
+import { analysisCategories } from './lib/analysis-topics.js';
 
 // Alleen bevestigde Drive-opslag wordt als opgeslagen/afgerond getoond.
 export const analysisStatuses = Object.freeze({ pending: 'Nog niet begonnen', draft: 'Concept', completed: 'Afgerond' });
-export const analysisCategories = [
-  { title: 'Bezoekersanalyse', description: 'Analyse van het verwachte publiek.', icon: 'people', questions: ['Man/vrouw verhouding', 'Leeftijdsrange', 'Aankomstprofiel', 'Typische kenmerken'] },
-  { title: 'Artiestanalyse', description: 'Analyse van de artiest en show.', icon: 'music', questions: ['Artiest', 'Routing', 'Show karakter', 'Curfew', 'Populariteit', 'Maatschappelijke gevoeligheid', 'Bijzonderheden'] },
-];
+export { analysisCategories };
 const paths = {
   people: peopleIconPaths,
   music: '<path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/>',
@@ -60,6 +58,15 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     const basis=structuredClone(finalization.basis);
     finalOpen=true;disposeFinal=openAnalysisFinalization({category,draft:finalDrafts[category],submit:async values=>{const data=await requestAccess('analysis-finalization',{method:'POST',body:{operation:'complete',concertId:show.key,category,basis,...values}});if(disposed)return;firstPdfGeneration=Boolean(data.finalization?.categories.visitors.completedAt&&data.finalization?.categories.artist.completedAt);saves.sync(data,true);records=saves.server.analyses;revision=saves.server.revision;finalization=saves.server.finalization;if(!ticketOpen&&editorNumber===null)renderOverview();},onClose:settled=>{if(!settled){finalOpen=false;disposeFinal=()=>{};}if(!disposed&&!finalOpen&&editorNumber===null&&!ticketOpen){renderOverview();if(!finalDrafts[category].pending)void refreshFinalization();}}});
   }
+  // Aantallen en herkomst openen; ook gebruikt door de diepe link vanuit de actielijst.
+  function openTickets() { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,requestAccess,readOnly,state:ticketState,onStored:()=>{if(!disposed&&!ticketOpen)void refreshFinalization();},categoryIcon:icon('people'),onBack:()=>{renderOverview();if(ticketState.changed){ticketState.changed=false;void refreshFinalization();}}}); }
+  // Bestemming vanuit de actielijst: een analyse, Aantallen en herkomst of een categorie-afronding. Zonder bestemming het overzicht.
+  async function openTarget(target={}) {
+    await ready; if (disposed) return;
+    if (Number.isInteger(target.analysis)) { void openEditor(target.analysis); return; }
+    if (editorNumber !== null || ticketOpen) renderOverview();
+    if (target.tickets) openTickets(); else if (['visitors','artist'].includes(target.finalize)) completeCategory(target.finalize);
+  }
   function renderOverview(focusNumber) {
     disposePdf(); disposePdf = () => {}; disposeTickets(); disposeTickets = () => {}; ticketOpen = false; editorNumber = null; section.replaceChildren();
     if(loadError)readFeedback.show(loadError,async()=>{await load();return loaded;},'Opnieuw laden');else readFeedback.clear();
@@ -82,7 +89,7 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
         const arrow = node('span', 'analysis-chevron'); arrow.innerHTML = icon('chevron');
         const ticketBadge=node('span','analysis-status',finalization?.ticketsReady?'Afgerond':'Handmatig invoeren');ticketBadge.dataset.status=finalization?.ticketsReady?'completed':'pending';
         button.append(node('span', 'analysis-row-title', 'Aantallen en herkomst'),ticketBadge,arrow);
-        button.onclick = () => { disposePdf(); disposePdf=()=>{}; ticketOpen = true; disposeTickets = createTicketDataPage(section,{show,requestAccess,readOnly,state:ticketState,onStored:()=>{if(!disposed&&!ticketOpen)void refreshFinalization();},categoryIcon:icon('people'),onBack:()=>{renderOverview();if(ticketState.changed){ticketState.changed=false;void refreshFinalization();}}}); };
+        button.onclick = openTickets;
         row.append(button);card.append(row);
       }
       categories.append(card);
@@ -179,5 +186,5 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
   });
   const ready=load(true);
   const dispose=() => { disposed = true;for(const item of feedbacks.values())item.dispose(); offActivity();unsubscribe();if(readOnly)saves.cancel(); disposePdf(); disposeFinal(); disposeTickets(); loading?.dispose(); records = {}; researchByNumber = null; researchErrors = {}; };
-  dispose.ready=ready;return dispose;
+  dispose.ready=ready;dispose.open=openTarget;return dispose;
 }

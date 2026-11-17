@@ -17,6 +17,12 @@ export function dutchToday(now=new Date()){
   const value=type=>parts.find(part=>part.type===type).value;return `${value('year')}-${value('month')}-${value('day')}`;
 }
 export const planningDate=value=>new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z')).replace(/\.$/,'');
+// Een operationeel risico is beoordeeld met een geldige klasse en (behalve bij Laag) een beheersmaatregel. Zelfde criterium als
+// operationalComplete hieronder (dat letterlijk gelijk blijft aan de offline referentie), maar per risico, voor de actielijst.
+export function operationalReviewed(review,risk){
+ const row=review?.assessments?.[risk.id];
+ return /^R[0-9]{2}$/.test(risk.id)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&['none','low','medium','high'].includes(row.riskLevel)&&typeof row.riskNote==='string'&&(row.riskLevel==='low'||Boolean(row.riskNote.trim()))&&Number.isFinite(Date.parse(row.completedAt));
+}
 export function productionComplete(show,snapshot){
   const risk=snapshot.risks;if(!risk?.production)return false;
   return productionRiskGroups.every(group=>group.items.every(item=>{
