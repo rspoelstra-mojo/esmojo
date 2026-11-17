@@ -58,7 +58,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
   return async function handler(req, res) {
     const requestBegan=performance.now();let sessionReady=requestBegan,profileReady=requestBegan;
     let verifiedProfile=null;
-    const scopedShows=(operation,payload={})=>shows(operation,{...payload,...(['dataverse','managed'].includes(shows.provider)&&verifiedProfile?.role&&verifiedProfile?.email?{__actor:verifiedProfile}:{})});
+    // Bij een mislukte showbewerking alleen de bewerking en een vaste foutcode in de serverlog (nooit inhoud, gegevens of providerantwoord).
+    const scopedShows=async(operation,payload={})=>{
+      try{return await shows(operation,{...payload,...(['dataverse','managed'].includes(shows.provider)&&verifiedProfile?.role&&verifiedProfile?.email?{__actor:verifiedProfile}:{})});}
+      catch(error){const code=/^[A-Z][A-Z0-9_]{2,60}$/.test(error?.message||'')?error.message:'OTHER';if(code!=='VALIDATION')console.error('SHOWS_OPERATION_FAILED '+JSON.stringify({operation,code}));throw error;}
+    };
     res.setHeader('Cache-Control', 'no-store, private');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const reply = (status, data) => res.status(status).json(data);
