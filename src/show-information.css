@@ -1,5 +1,8 @@
 /* Show informatie in het overzicht: compact, zelfde rij-opmaak (label links, waarde rechts) als Tijdschema en Projectteam. */
-.show-information-body { margin-top:12px; min-width:0; display:grid; gap:16px; }
+/* Het blok vult zijn cel: de rijen staan bovenaan, Analyses en Risico's plakken tegen de onderkant. */
+.show-information { display:flex; flex-direction:column; }
+.show-information-body { margin-top:12px; min-width:0; flex:1 1 auto; display:flex; flex-direction:column; gap:16px; }
+.show-information-section:first-of-type { margin-top:auto; }
 .show-information-subtitle { margin:0 0 8px; font-size:12px; line-height:18px; font-weight:600; color:var(--muted); }
 .show-information-tiles { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .show-information-tiles-two { grid-template-columns:repeat(2,minmax(0,1fr)); }
