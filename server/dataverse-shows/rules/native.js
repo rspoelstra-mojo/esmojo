@@ -253,7 +253,7 @@ function esmojoAnalysisFinalState_(target,profile) {
   try{const ticketFile=esmojoShowFile_(target.folder,'bezoekersdata.json'),ticketData=esmojoReadTicketData_(ticketFile,target.primary.concertId);fields=JSON.parse(ticketData.workflow_json).visitors.fields;}catch{ticketVerified=false;}
   const shows=saleShows({shows:target.seriesShows}),ticketsReady=ticketVerified&&ticketFields.every(field=>fields[field]?.completed_at&&validTicketContent(field,fields[field].content,shows));
   const categories={};
-  for(const category of Object.keys(finalCategories)){const ready=categoryReady(category,profile.analyses,ticketsReady);categories[category]={ready,completedAt:ready?document.categories[category]?.completedAt||null:null};}
+  for(const category of Object.keys(finalCategories)){const ready=categoryReady(category,profile.analyses,ticketsReady);const stored=ready?document.categories[category]:null;categories[category]={ready,completedAt:stored?.completedAt||null,score:stored?.completedAt&&Number.isInteger(stored.score)?stored.score:null};}
   return {categories,ticketsReady,basis:{profileRevision:profile.revision,finalRevision:document.revision,ticketVersions:Object.fromEntries(ticketFields.map(field=>[field,fields[field]?.version||0]))}};
 }
 

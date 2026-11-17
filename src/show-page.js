@@ -15,6 +15,7 @@ import {showMemory} from './show-memory.js';
 import {createShowPlanning} from './show-planning.js';
 import {createSimilarArtists} from './similar-artists.js';
 import {createShowTeam} from './show-team.js';
+import {createShowInformation} from './show-information.js';
 import {createShowSchedule} from './show-schedule.js';
 
 export function formatShowDates(dates){return dates.map(date=>new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(`${date}T12:00:00Z`))).join(' · ');}
@@ -26,8 +27,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
   async function open(){
     if(disposed||opening)return;const began=firstOpen&&Number.isFinite(startedAt)?startedAt:globalThis.performance?.now?.()??Date.now();firstOpen=false;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
-    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
-    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
+    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeInformation=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
+    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeInformation();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
       const earlyPhoto=lease.view.photo||loadPhoto.peek?.(show.key)||null;
       if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
@@ -74,7 +75,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           const block=(className,heading)=>{const section=document.createElement('section');section.className='show-block '+className;const title=document.createElement('h2');title.textContent=heading;section.append(title);return section;};
           const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie'),actions=block('show-actions','Actielijst');
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          createShowTeam(team);layout.append(team,schedule,information,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,data,readOnly});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
+          createShowTeam(team);layout.append(team,schedule,information,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,data,readOnly});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});
           // Placeholder-artiesten; laadt pas bij zichtbaar tabblad, op de achtergrond en alleen met Artiesten-rechten.
           if(!readOnly){similar=createSimilarArtists(panel,{request});disposeSimilar=similar.dispose;}
           // Voorlopig MOJO-tijdschema (dagelijks vernieuwd); de server geeft altijd de meest recente versie.

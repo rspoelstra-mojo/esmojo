@@ -160,7 +160,7 @@ jobs:
           node server/show-page.test.js
           node src/lib/show-memory.test.js
           node src/lib/show-planning.test.js
-          node --test src/lib/similar-artists.test.js src/lib/show-schedule.test.js src/lib/show-team.test.js
+          node --test src/lib/similar-artists.test.js src/lib/show-schedule.test.js src/lib/show-team.test.js src/lib/show-information.test.js
           node --test src/lib/production-choice-saves.test.js
           node server/fluid-preview.test.js
           node server/fluid-preview-source.test.js
