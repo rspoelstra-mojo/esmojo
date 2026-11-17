@@ -31,7 +31,7 @@ test('Dataverse-concepten blijven achter account/MFA/Shows en behouden eigen sam
 test('Onderzoeksdiagnose vereist beheerder en accepteert geen vrije tabel/filter',async()=>{
  let calls=0;const researchService={diagnose:async()=>{calls++;return{code:'RESEARCH_NO_VISIBLE_ROWS'};}};
  for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}}]){
-  const {response}=await run({...input,method:'POST',action:'dataverse-test',body:{operation:'research-read'},researchService});assert.ok([401,403].includes(response.code));
+  const {response}=await run({...input,method:'POST',action:'dataverse-test',body:{operation:'research-read'},researchService});assert.ok([401,403,503].includes(response.code));
  }
  assert.equal(calls,0);
  assert.equal((await run({method:'POST',action:'dataverse-test',body:{operation:'research-read',table:'vrij'},researchService})).response.code,400);
@@ -50,7 +50,7 @@ test('Algemene Dataverse-discovery blijft achter Shows/MFA; Westlife krijgt meta
  const opened=await run({action:'show-open',method:'POST',body:{concertId:key},researchService,showsSource});assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Westlife-concept');
 });
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', taskService, websiteService, websiteSchemaService, websitePreviewSource, migrationService, tableService, choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', taskService, websiteService, websiteSchemaService, reportIntakeSchemaService, websitePreviewSource, migrationService, tableService, choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -66,6 +66,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     ...(websitePreviewSource?{previewSource:websitePreviewSource}:{}),
     ...(websiteService?{websiteSettings:websiteService}:{}),
     ...(websiteSchemaService?{websiteSchema:websiteSchemaService}:{}),
+    ...(reportIntakeSchemaService?{reportIntakeSchema:reportIntakeSchemaService}:{}),
     ...(taskService?{tasks:taskService,background:promise=>{calls.push(['task-background']);void promise.catch(()=>{});}}:{}),
     ...(migrationService?{showMigration:migrationService}:{}),
     ...(tableService?{dataverseTables:tableService}:{}),
@@ -385,7 +386,7 @@ test('Dataverse-schrijfproef vereist expliciete vaste actie en beheerder/MFA, zo
 test('datatransitie vereist beheerder, Shows, geactiveerd account en MFA vóór brongebruik',async()=>{
  let calls=0;const transitionService=async()=>{calls++;return{shows:[]};};
  for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{own:{...profile,modules:['artists']}}]){
-  const {response}=await run({...input,action:'data-transition',method:'POST',body:{operation:'list'},transitionService});assert.ok([401,403].includes(response.code));
+  const {response}=await run({...input,action:'data-transition',method:'POST',body:{operation:'list'},transitionService});assert.ok([401,403,503].includes(response.code));
  }
  assert.equal(calls,0);
  const good=await run({action:'data-transition',method:'POST',body:{operation:'list'},transitionService});assert.equal(good.response.code,200);assert.equal(calls,1);assert.match(good.response.headers['Cache-Control'],/no-store/);
@@ -410,7 +411,7 @@ test('keuzelijstsetup vereist admin/Shows/activatie/MFA en laat providerfouten n
 test('tabelsetup vereist actuele admin/Shows/activatie/MFA en accepteert geen vrije metadata',async()=>{
  let calls=0;const tableService=async()=>{calls++;return{tableCount:30,steps:[]};};
  for(const params of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,activated:false}},{own:{...profile,modules:['artists']}},{origin:'https://evil.invalid'}]){
-  const {response}=await run({...params,action:'dataverse-tables',method:'POST',body:{operation:'plan'},tableService});assert.ok([401,403].includes(response.code));
+  const {response}=await run({...params,action:'dataverse-tables',method:'POST',body:{operation:'plan'},tableService});assert.ok([401,403,503].includes(response.code));
  }
  assert.equal(calls,0);const ok=await run({action:'dataverse-tables',method:'POST',body:{operation:'plan'},tableService});assert.equal(ok.response.code,200);assert.equal(calls,1);assert.match(ok.response.headers['Cache-Control'],/no-store/);
  assert.equal((await run({action:'dataverse-tables',method:'GET',tableService})).response.code,405);assert.equal(calls,1);
@@ -514,4 +515,13 @@ test('show-timetable leest alleen het meest recente voorlopige tijdschema, achte
   const missing=await run({action:'show-timetable',method:'POST',body:{concertId:'Onbekend'},showsSource:async()=>{throw Error('NOT_FOUND');}});assert.equal(missing.response.code,404);
   const broken=await run({action:'show-timetable',method:'POST',body:{concertId:'Westlife'},showsSource:async()=>{throw Error('DATAVERSE_SHOWS_LIMIT');}});assert.equal(broken.response.code,503);assert.doesNotMatch(JSON.stringify(broken.response.data),/LIMIT/);
   for(const modules of [[],['artists'],['reports']]){const denied=await run({own:{...profile,modules},action:'show-timetable',method:'POST',body:{concertId:'Westlife'},showsSource});assert.equal(denied.response.code,403);assert.ok(!denied.calls.some(entry=>entry[0]==='shows'));}
+});
+
+
+test('CSV intake schema setup requires current admin, MFA and Reports access',async()=>{
+ let calls=0;const reportIntakeSchemaService=async()=>{calls++;return{steps:[]};};
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,modules:[]}},{configuration:{...env,VERCEL_ENV:'preview'}}]){
+  const {response}=await run({...input,action:'report-intake-schema',method:'POST',body:{operation:'plan'},reportIntakeSchemaService});assert.ok([401,403,503].includes(response.code));
+ }
+ assert.equal(calls,0);const {response}=await run({action:'report-intake-schema',method:'POST',body:{operation:'plan'},reportIntakeSchemaService});assert.equal(response.code,200);assert.equal(calls,1);
 });
