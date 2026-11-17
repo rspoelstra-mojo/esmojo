@@ -140,6 +140,7 @@ jobs:
           node server/legacy-storage-policy.test.js
           node server/showprofile-risks.test.js
           node server/operational-risks.test.js
+          node --test server/risk-pdf/risk-pdf.test.js
           node server/show-measures.test.js
           node server/measure-implementation.test.js
           node server/production-assessments.test.js

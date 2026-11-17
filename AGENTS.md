@@ -1,3 +1,13 @@
+## Risico-PDF per beheersmaatregel (17 november 2026)
+
+Gebruiker vraagt een PDF-export per risico met beheersmaatregel (Midden/Hoog; productioneel, operationeel en eigen risico's),
+in dezelfde vormgeving als het Showprofiel-PDF. Eén PDF per risico: kop met artiest/show, daaronder Risico, Mogelijk gevolg,
+Beheersmaatregel en de risicoklasse voor en na de maatregel. Alle zalen, op aanvraag gegenereerd uit de actuele bevestigde
+gegevens en niet opgeslagen (geen schema, geen File, geen versieregister). Kleine knop in een eigen blok Exporteren onder
+Meenemen in briefing op de maatregelpagina. Actie measure-pdf achter actuele Shows-module en MFA, strikte invoer (concert +
+maatregel-ID), alleen-lezen native operatie risk-measure-export. Eigen renderer server/risk-pdf/ hergebruikt de ongewijzigde
+assets uit server/report-original; opmaakversie risico-v1. Vertrouwelijke inhoud: geen logging, geen opslag. Zie docs/risk-pdf.md.
+
 ## Eigen operationele risico's (17 november 2026)
 
 Gebruiker vraagt onder Risicoanalyse bij Operationele risico's een knop (even breed als de rij, "Eigen risico toevoegen")

@@ -564,6 +564,24 @@ function esmojoMeasureTextEdit_(document,row,text,actor){
  return Object.assign({},row,{text,basis:JSON.stringify([row.id,row.originalRiskLevel,text])});
 }
 
+// Alleen-lezen gegevens voor de risico-PDF van één beheersmaatregel (Midden/Hoog); geen schrijfactie, geen opslag.
+function esmojoMeasureExport_(request){
+ const {actor,concertId,measureId}=request;
+ esmojoHomeActor_(actor);
+ if(typeof concertId!=='string'||!concertId.trim()||concertId.length>240||/[\x00-\x1f/\\]/.test(concertId)||!validMeasureId(measureId))throw Error('VALIDATION');
+ const target=esmojoResearchTarget_(concertId),document=esmojoReadProductionRisks_(target).document;
+ const risks=esmojoShowProfileRisks_({operation:'risk-view',concertId},target);
+ const row=measureDefinitions({venue:target.primary.venue},risks).rows.find(item=>item.id===measureId);
+ if(!row)throw Error('SOURCE_CHANGED');
+ const state=esmojoMeasureProjection_(document,row),analysisRisk=row.sourceType==='operational'?(risks.risks||[]).find(item=>item.id===row.sourceId):null,review=row.sourceType==='operational'?risks.operational?.assessments?.[row.sourceId]:null;
+ const shows=(target.seriesShows||[]).map(item=>item.date).filter(value=>typeof value==='string').sort();
+ return{
+  show:{artist:target.primary.artist,venue:target.primary.venue||'',city:target.primary.city||'',date:target.primary.date,dates:shows.length?shows:[target.primary.date]},
+  risk:{id:row.id,sourceType:row.sourceType,title:row.title,origin:row.origin,description:analysisRisk?.own?null:(row.description||null),consequence:analysisRisk?.consequence||null,own:Boolean(analysisRisk?.own),riskLevel:row.originalRiskLevel,assessedAt:review?.completedAt||null},
+  measure:{text:row.text,implemented:state.implemented,riskLevelAfter:state.riskLevelAfter,briefing:state.briefing,briefingChosen:state.briefingChosen,completedAt:state.completedAt,attachments:(state.attachments||[]).map(item=>item.fileName)}
+ };
+}
+
 function esmojoMeasureImplementation_(request){
  const {operation,actor,...payload}=request,input=validateMeasureRequest(Object.assign({operation:operation.slice(8)},payload));
  // De server controleert actuele accountactivatie en Shows-toegang.
@@ -994,6 +1012,7 @@ function esmojoRiskStatus_(concertId) {
 function esmojoShowProfileRisks_(request,openTarget) {
   if(request.operation==='risk-operational-save')return esmojoOperationalSave_(request);
   if(request.operation==='risk-own-add')return esmojoOwnRiskAdd_(request);
+  if(request.operation==='risk-measure-export')return esmojoMeasureExport_(request);
   const op=request.operation.slice(5),allowed={pending:['operation','after'],status:['operation','concertId'],view:['operation','concertId'],'production-save':['operation','concertId','field','value','revision','actor'],pdf:['operation','concertId','source'],read:['operation','concertId','source'],save:['operation','concertId','source','result']}[op];
   if(!allowed)throw Error('VALIDATION');riskKeys(request,allowed);
   if(op==='pending')throw Error('VALIDATION');

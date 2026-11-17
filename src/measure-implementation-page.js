@@ -7,9 +7,10 @@ import {assessmentNode as node,createAssessmentQueue} from './production-assessm
 import {operationalRiskLabels} from '../shared/operational-risk.js';
 import {measureLevels,measureUploadLimit,measureUploadTypes,measureFileSignature} from '../shared/measure-workflow.js';
 import {showMeasures} from './lib/show-planning.js';
+import {access} from './auth.js';
 const suggestions=[['Afstemming','Stem de voorgestelde maatregel af met de betrokken productie-, veiligheids- en locatieverantwoordelijken.'],['Verantwoordelijkheid','Spreek af wie de maatregel uitvoert, wie toezicht houdt en wanneer de uitvoering gereed moet zijn.'],['Controle en communicatie','Controleer de uitvoerbaarheid en bespreek hoe betrokken teams signalen, afwijkingen en vervolgacties doorgeven.']];
 const glyph=(operational)=>{const el=node('span','profile-category-icon');el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(operational?'<path d="m12 3 10 18H2L12 3ZM12 9v5m0 3h.01"/>':'<path d="m12 3 9 5-9 5-9-5 9-5ZM3 8v9l9 5 9-5V8M12 13v9"/>')+'</svg>';return el;};
-export function createMeasureImplementationPage(root,{show,data,row:initial,onBack,readOnly=false,request=body=>data.request('measure',{method:'POST',body})}){
+export function createMeasureImplementationPage(root,{show,data,row:initial,onBack,readOnly=false,request=body=>data.request('measure',{method:'POST',body}),exportPdf=body=>access('measure-pdf',{method:'POST',body})}){
  let row=initial,record=initial,disposed=false,reading=false,preparing=false,blocked=false;const urls=new Set(),drafts=data.measureDrafts||new Map();
  let draft=drafts.get(row.id);if(!draft||draft.basis!==row.basis){draft={basis:row.basis,riskLevelAfter:row.riskLevelAfter,briefing:row.briefing,text:row.text,editingText:false,error:''};drafts.set(row.id,draft);}
  const feedback=createPageFeedback(saveRequestInfo('measure',{concertId:show.key,measureId:row.id}));
@@ -25,10 +26,11 @@ export function createMeasureImplementationPage(root,{show,data,row:initial,onBa
  const briefingChoices=node('fieldset','risk-review-choices'),briefingLegend=node('legend','visually-hidden','Meenemen in briefing'),briefingInputs=[];briefingChoices.append(briefingLegend);
  for(const [value,labelText]of [['no','Nee'],['yes','Ja']]){const label=node('label','risk-review-option measure-briefing-option'),input=node('input','');input.type='radio';input.name='measure-briefing';input.value=value;input.required=true;label.dataset.choice=value;label.append(input,node('span','',labelText));briefingChoices.append(label);briefingInputs.push(input);input.onchange=()=>{if(input.checked){draft.briefing=value==='yes';queue.save();update();}};}
  briefing.append(briefingTitle,briefingChoices);
+ const exportCard=node('section','profile-pdf-card risk-review-card measure-export-card'),exportTitle=node('h3','','Exporteren'),exportButton=node('button','secondary-button measure-export-button');exportTitle.id='measure-export-title';exportCard.setAttribute('aria-labelledby',exportTitle.id);exportButton.type='button';exportButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>';exportButton.append(node('span','','PDF exporteren'));exportButton.setAttribute('aria-label','Beheersmaatregel exporteren als PDF');exportCard.append(exportTitle,node('p','measure-export-copy','Risico, mogelijk gevolg, beheersmaatregel en de classificatie voor en na de maatregel in één PDF.'),exportButton);
  const complete=node('button','analysis-complete measure-finish','Beheersmaatregel afronden');complete.type='button';const error=node('p','profile-message');error.setAttribute('role','alert');const reload=node('button','secondary-button','Actuele maatregel laden');reload.type='button';
  const snapshot=()=>({riskLevelAfter:draft.riskLevelAfter,briefing:draft.briefing});
  const review=createRiskReviewCard({name:'measure-after',title:'Risicobeoordeling na implementatie',withNote:false,showSave:false,onChange:value=>{draft.riskLevelAfter=value;queue.save();update();},onSave:()=>{},onEdit:()=>void queue.action('reopen'),editLabel:'Beoordeling wijzigen'});
- aside.append(review.element,briefing,complete);layout.append(content,aside);header.prepend(back);root.append(header,layout);
+ aside.append(review.element,briefing,exportCard,complete);layout.append(content,aside);header.prepend(back);root.append(header,layout);
  function update(){
   if(disposed)return;const locked=readOnly||reading||preparing||blocked||draft.finishing||[...(draft.work||[])].some(work=>work!==queue);
   original.textContent=operationalRiskLabels[row.originalRiskLevel];original.dataset.status=row.originalRiskLevel;original.setAttribute('aria-label','Oorspronkelijke risicobeoordeling: '+original.textContent);original.title='Oorspronkelijke risicobeoordeling';
@@ -70,6 +72,18 @@ export function createMeasureImplementationPage(root,{show,data,row:initial,onBa
   const file=upload.files?.[0];if(!file||choose.disabled)return;
   if(file.size>measureUploadLimit||!Object.hasOwn(measureUploadTypes,file.type)||!(file.type==='application/pdf'?/\.pdf$/i:file.type==='image/png'?/\.png$/i:/\.jpe?g$/i).test(file.name)){draft.error='Kies een PDF, PNG of JPG van maximaal 2 MB.';upload.value='';update();return;}
   preparing=true;const release=queue.hold();draft.error='';update();try{const bytes=new Uint8Array(await file.arrayBuffer());if(!measureFileSignature(bytes,file.type))throw Error('VALIDATION');const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),sha256=[...hash].map(value=>value.toString(16).padStart(2,'0')).join(''),chunks=[];for(let i=0;i<bytes.length;i+=32768)chunks.push(String.fromCharCode(...bytes.subarray(i,i+32768)));preparing=false;await queue.action('upload',{uploadId:crypto.randomUUID(),fileName:file.name,mime:file.type,base64:btoa(chunks.join('')),sha256});}catch{draft.error='Het document is niet opgeslagen. Kies een geldige PDF, PNG of JPG van maximaal 2 MB.';}finally{preparing=false;release();upload.value='';update();}
+ };
+
+ let exporting=false;
+ exportButton.onclick=async()=>{
+  if(exporting||disposed)return;exporting=true;exportButton.disabled=true;exportButton.setAttribute('aria-busy','true');
+  try{
+   const result=await exportPdf({concertId:show.key,measureId:row.id});if(disposed)return;
+   if(typeof result?.pdfBase64!=='string'||result.pdfBase64.length>2796204||!/^RISICO_[\w.-]+\.pdf$/.test(result.fileName||''))throw Error('INVALID');
+   const bytes=Uint8Array.from(atob(result.pdfBase64),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));urls.add(url);
+   const link=node('a','');link.href=url;link.download=result.fileName;document.body.append(link);link.click();link.remove();setTimeout(()=>{URL.revokeObjectURL(url);urls.delete(url);},5000);
+  }catch{if(!disposed){draft.error='De PDF kon niet worden gemaakt. Probeer opnieuw.';update();}}
+  finally{exporting=false;if(!disposed){exportButton.disabled=false;exportButton.removeAttribute('aria-busy');}}
  };
  async function downloadFile(attachment){
   try{const result=await request({operation:'download',concertId:show.key,measureId:row.id,uploadId:attachment.uploadId});if(disposed)return;if(result.attachment?.uploadId!==attachment.uploadId||result.attachment.mime!==attachment.mime||typeof result.base64!=='string'||result.base64.length>Math.ceil(measureUploadLimit/3)*4)throw Error('INVALID');const bytes=Uint8Array.from(atob(result.base64),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:attachment.mime}));urls.add(url);const link=node('a','');link.href=url;link.download=attachment.fileName;document.body.append(link);link.click();link.remove();setTimeout(()=>{URL.revokeObjectURL(url);urls.delete(url);},5000);}catch{if(!disposed){draft.error='Het document kon niet veilig worden gedownload. Probeer opnieuw.';update();}}
