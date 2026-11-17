@@ -1,0 +1,13 @@
+/* Tijdschema in het showoverzicht: compact, tekst links en tijd rechts. */
+.show-schedule-body { margin-top:12px; min-width:0; }
+.show-schedule-body[hidden] { display:none; }
+.show-schedule-day + .show-schedule-day { margin-top:14px; }
+.show-schedule-date { margin:0 0 6px; font-size:12px; line-height:18px; font-weight:600; color:var(--muted); }
+.show-schedule-list { margin:0; display:grid; }
+.show-schedule-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:6px 0; border-top:1px solid var(--line); }
+.show-schedule-row:first-child { border-top:0; padding-top:0; }
+.show-schedule-row dt { margin:0; min-width:0; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
+.show-schedule-row dd { margin:0; flex:none; font-size:13px; line-height:1.4; font-weight:600; font-variant-numeric:tabular-nums; }
+.show-schedule-row[data-kind="doors"] dt,.show-schedule-row[data-kind="end"] dt,.show-schedule-row[data-kind="pause"] dt { color:var(--muted); }
+.show-schedule-updated,.show-schedule-empty { margin:12px 0 0; font-size:12px; line-height:18px; color:var(--muted); }
+.show-schedule-empty { margin-top:0; font-size:13px; }

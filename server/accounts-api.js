@@ -162,7 +162,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-timetable','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management-stats'){if(req.method!=='GET')return reply(405,{error:'Niet toegestaan.'});if(!isAdministrator(own))return reply(403,{error:'Geen toegang.'});return reply(200,await showManagement.statistics());}
       if(action==='show-management'){
@@ -276,6 +276,13 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (action === 'ticket-data' && req.method === 'POST') {
         try { const input = validateTicketRequest(req.body); return reply(200, await scopedShows(input.operation, { ...input.payload, actor })); }
         catch (error) { const code = error.message; return reply(code === 'VALIDATION' ? 400 : code === 'TICKET_CONFLICT' ? 409 : 503, { error: code === 'TICKET_CONFLICT' ? 'Dit veld is gereserveerd of intussen gewijzigd. Je invoer is behouden. Ga terug en laad de laatste gegevens.' : code === 'VALIDATION' ? 'Controleer de ingevoerde waarden en showdagen.' : 'Laden of opslaan is niet gelukt. Je invoer is behouden.' }); }
+      }
+      if (action === 'show-timetable' && req.method === 'POST') {
+        // Alleen lezen: het meest recente voorlopige MOJO-tijdschema van de show (dagelijks vernieuwd door de 05:00-import).
+        const input = req.body;
+        if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });
+        try { return reply(200, await scopedShows('advance-timetable-read', { concertId: input.concertId, actor })); }
+        catch (error) { return reply(error.message === 'NOT_FOUND' ? 404 : 503, { error: 'Het tijdschema kon niet worden geladen.' }); }
       }
       if (action === 'show-photo' && req.method === 'POST') {
         const input = req.body;

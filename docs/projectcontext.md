@@ -49,7 +49,7 @@ uitsnede/blur in Dataverse; native Rapportages; stille rapportagelading op artie
 pagina's; afgeschermde voorbeeldafbeeldingen voor barrieropstelling/vloerdruk.
 
 De 05:00-agenda-import (Europe/Amsterdam) kijkt 45 dagen vooruit voor de tien
-vastgelegde MOJO-locaties. Tijdschema-opname om 12:00 op showdagen blijft behouden.
+vastgelegde MOJO-locaties. De 05:00-import controleert sinds 17 november ook dagelijks het MOJO-tijdschema (komende 45 dagen); de 12:00-opname is gestopt.
 Artiestfoto wordt bij de eerste relevante import vastgelegd, niet dagelijks vernieuwd.
 MCP in ESMOJO is verwijderd; geen routes/consent/publicatie daarvan herstellen.
 De korte artiesttekst is bewust [Description placeholder], geen migratiebacklog.

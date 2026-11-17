@@ -222,7 +222,7 @@ test('Rapportacties zijn beheerder/MFA-only en accepteren geen eigen showmetadat
 });
 
 test('Modules zijn onafhankelijk: ieder niet-toegekend onderdeel wordt vóór gegevensophaal/download en ongeacht beheerdersrol geweigerd',async()=>{
- const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['artists','artist-menu','GET'],['artists','artist-ranking','GET'],['artists','artist-view','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['shows','operational-risk','POST'],['shows','measure','POST'],['reports','report-menu','GET'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
+ const actions=[['artists','artists','GET'],['artists','artist-detail','POST'],['artists','artist-menu','GET'],['artists','artist-ranking','GET'],['artists','artist-view','POST'],['shows','shows','GET'],['shows','show-open','POST'],['shows','show-photo','POST'],['shows','show-timetable','POST'],['shows','show-profile','POST'],['shows','show-risks','POST'],['shows','show-profile-pdf','POST'],['shows','analysis-finalization','POST'],['shows','ticket-data','POST'],['shows','barrier-layout','POST'],['shows','floor-pressure','POST'],['shows','production-risks','POST'],['shows','operational-risk','POST'],['shows','measure','POST'],['reports','report-menu','GET'],['reports','report-web','POST'],['reports','ontrack','GET'],['reports','ontrack-report','POST'],['reports','report-download','POST']];
  for(const modules of [[],['shows'],['artists'],['reports']])for(const role of ['gebruiker','beheerder'])for(const [required,action,method]of actions){
   if(modules.includes(required))continue;
   const {response,calls}=await run({own:{...profile,role,modules},action,method,body:{operation:'download',reportId:'bekend-id',modules:['shows','artists','reports']}});
@@ -465,3 +465,15 @@ test('Website-setup stopt bij configuratie/rechtenfouten en herhaalt alleen beke
 
 
 test('anonymous Showbeheer totals require current MFA, administrator and Shows permission',async()=>{for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,modules:['reports']}}]){const result=await run({...input,action:'show-management-stats'});assert.ok([401,403].includes(result.response.code));assert(!result.calls.some(c=>c[0]==='management-statistics'));}const result=await run({action:'show-management-stats'});assert.equal(result.response.code,200);assert.deepEqual(result.response.data,{rows:[]});assert(result.calls.some(c=>c[0]==='management-statistics'));});
+
+test('show-timetable leest alleen het meest recente voorlopige tijdschema, achter Shows-rechten en met strikte invoer', async () => {
+  const timetable={days:[{date:'2026-11-23',capturedAt:'2026-11-17T04:00:00.000Z',entries:[{kind:'doors',label:'Deuren open',time:'18:30',localDate:'2026-11-23'}]}],checkedAt:'2026-11-17T04:00:00.000Z'};
+  const showsSource=async operation=>{if(operation==='advance-timetable-read')return timetable;throw Error('onverwacht '+operation);};
+  const ok=await run({action:'show-timetable',method:'POST',body:{concertId:'Westlife_Ziggo-Dome_23112026'},showsSource});
+  assert.equal(ok.response.code,200);assert.deepEqual(ok.response.data,timetable);
+  const call=ok.calls.find(entry=>entry[0]==='shows'&&entry[1]==='advance-timetable-read');assert.equal(call[2].concertId,'Westlife_Ziggo-Dome_23112026');
+  for(const body of [null,{},{concertId:5},{concertId:'a/b'},{concertId:'x'.repeat(241)},{concertId:'ok',extra:1}]){const bad=await run({action:'show-timetable',method:'POST',body,showsSource});assert.equal(bad.response.code,400);}
+  const missing=await run({action:'show-timetable',method:'POST',body:{concertId:'Onbekend'},showsSource:async()=>{throw Error('NOT_FOUND');}});assert.equal(missing.response.code,404);
+  const broken=await run({action:'show-timetable',method:'POST',body:{concertId:'Westlife'},showsSource:async()=>{throw Error('DATAVERSE_SHOWS_LIMIT');}});assert.equal(broken.response.code,503);assert.doesNotMatch(JSON.stringify(broken.response.data),/LIMIT/);
+  for(const modules of [[],['artists'],['reports']]){const denied=await run({own:{...profile,modules},action:'show-timetable',method:'POST',body:{concertId:'Westlife'},showsSource});assert.equal(denied.response.code,403);assert.ok(!denied.calls.some(entry=>entry[0]==='shows'));}
+});

@@ -26,3 +26,18 @@ test('Noon-Nederland met zomer/wintertijd en alleen geverifieerde bron/echte sho
  const result=parseMojoTimetable(html(panel(show.date,[['Fictief','21:00']])),show,{capturedAt});for(const changed of [{...result,sourceUrl:'https://evil.invalid/test'},{...result,capturedAt:'2026-11-05T10:00:00.000Z'},{...result,concertId:'ander'},{...result,date:'2026-11-04'}])assert.throws(()=>validateTimetable(changed,show),/INVALID/);
  let calls=0;await assert.rejects(fetchMojoTimetable({...show,sourceUrl:'https://evil.invalid/test'},{request:()=>{calls++;}}),/SOURCE/);assert.equal(calls,0);
 });
+test('Voorlopig tijdschema: dagelijks vóór de showdag buiten 12:00, maar nooit na de showdag; de showdagopname blijft strikt 12:00', async () => {
+  const rows=[['Deuren open','18:30'],['Special guest Ana Sky','18:55'],['Fictief','20:00'],['Verwacht einde','22:00']],page=html(panel(show.date,rows));
+  const morning='2026-11-04T04:00:00.000Z',showDayMorning='2026-11-05T04:00:00.000Z',late='2026-11-06T04:00:00.000Z';
+  for (const at of [morning,showDayMorning]) {
+    const result=parseMojoTimetable(page,show,{capturedAt:at,advance:true});assert.equal(result.status,'available');assert.equal(result.capturedAt,at);
+    assert.deepEqual(result.entries.map(row=>[row.publishedLabel,row.time]),[['Deuren open','18:30'],['Special guest Ana Sky','18:55'],['Fictief','20:00'],['Verwacht einde','22:00']]);
+    assert.throws(()=>parseMojoTimetable(page,show,{capturedAt:at}),/TIMETABLE_INVALID/,'zonder advance blijft alleen 12:00 op de showdag geldig');
+  }
+  assert.throws(()=>parseMojoTimetable(page,show,{capturedAt:late,advance:true}),/TIMETABLE_INVALID/);
+  assert.equal(parseMojoTimetable(html(panel(show.date,[])),show,{capturedAt:morning,advance:true}).status,'missing');
+  let requested=0;const request=async()=>{requested++;return new Response(page,{headers:{'Content-Type':'text/html'}});};
+  const fetched=await fetchMojoTimetable(show,{request,now:()=>new Date(morning),advance:true});assert.equal(fetched.status,'available');assert.equal(requested,1);
+  await assert.rejects(fetchMojoTimetable(show,{request,now:()=>new Date(morning)}),/TIMETABLE_INVALID/);
+  assert.equal(validateTimetable(fetched,show,{advance:true}).status,'available');assert.throws(()=>validateTimetable(fetched,show),/TIMETABLE_INVALID/);
+});

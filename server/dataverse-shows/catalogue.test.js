@@ -74,3 +74,38 @@ test('artist photo candidates cover every artist without a photo, ignore the 45-
  assert.equal((await service('artist-photo-save',{artistId:all[1].artistId,photo:null})).saved,false);assert.equal((await service('artist-photo-candidates')).artists.some(row=>row.artistId===all[1].artistId),false);
  assert.deepEqual((await service('artist-photo-candidates')).artists.map(row=>row.artistId),all.slice(2).map(row=>row.artistId));
 });
+test('voorlopig tijdschema: dagelijkse kandidaten, meest recente versie wint, een verdwenen bron wist niets en lezen volgt de reeks',async()=>{
+ const f=fixture(),{MOJO_VENUES}=await import('../mojo-venues.js'),{concertId}=await import('../mojo-agenda.js');
+ const venue=MOJO_VENUES[0],artist='Tijdschema synthetic artist',days=['2026-11-20','2026-11-21'],source='https://www.mojo.nl/concerten/tijdschema-synthetic';
+ const snapshot={pages:10,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts:MOJO_VENUES.flatMap(v=>days.map(date=>({concertId:concertId(artist,date,v.name),artist,venue:v.name,city:v.city,date,sourceUrl:source})))};
+ await f.service('sync',{snapshot});
+ const ids=days.map(date=>concertId(artist,date,venue.name)),candidates=(await f.service('advance-timetable-candidates')).shows;
+ assert.ok(candidates.length>=2&&candidates.every(row=>/^https:\/\/www\.mojo\.nl\/concerten\//.test(row.sourceUrl)&&row.date>='2026-11-13'&&row.date<'2026-12-28'));
+ assert.deepEqual(candidates.map(row=>row.concertId),[...candidates.map(row=>row.concertId)].sort());
+ assert.deepEqual((await f.service('advance-timetable-candidates',{after:candidates[0].concertId})).shows.map(row=>row.concertId),candidates.slice(1).map(row=>row.concertId));
+ for(const bad of [{after:''},{after:5},{after:'a/b'},{limit:1}])await assert.rejects(f.service('advance-timetable-candidates',bad),/VALIDATION/);
+ // Buiten de komende 45 dagen is niets kandidaat.
+ assert.deepEqual((await createNativeShowsService({state:f.state,catalogue:createNativeCatalogue({state:f.state,now:()=>new Date('2027-03-01T12:00:00Z')})})('advance-timetable-candidates')).shows,[]);
+ const entries=(rows,date)=>rows.map(([kind,publishedLabel,time])=>({kind,label:publishedLabel,publishedLabel,time,localDate:date}));
+ const make=(id,date,capturedAt,rows,extra={})=>({concertId:id,date,sourceUrl:source,capturedAt,sourceHash:'a'.repeat(64),status:rows.length?'available':'missing',reason:rows.length?null:'NOT_PUBLISHED',entries:entries(rows,date),unresolved:[],...extra});
+ const first=make(ids[0],days[0],'2026-11-13T04:00:00.000Z',[['doors','Deuren open','18:30'],['act','Westlife','20:00'],['end','Verwacht einde','22:00']]);
+ assert.deepEqual(await f.service('advance-timetable-read',{concertId:ids[0]}),{days:[],checkedAt:null});
+ assert.equal((await f.service('advance-timetable-save',{concertId:ids[0],snapshot:first})).state,'saved');
+ let read=await f.service('advance-timetable-read',{concertId:ids[0]});assert.equal(read.days.length,1);assert.deepEqual(read.days[0].entries.map(row=>[row.label,row.time]),[['Deuren open','18:30'],['Westlife','20:00'],['Verwacht einde','22:00']]);assert.equal(read.checkedAt,first.capturedAt);
+ // Het schema wijzigt: de meest recente versie vervangt de vorige; een oudere of gelijke versie doet dat niet.
+ const changed=make(ids[0],days[0],'2026-11-13T05:00:00.000Z',[['doors','Deuren open','18:00'],['act','Westlife','20:30'],['end','Verwacht einde','22:30']]);
+ assert.equal((await f.service('advance-timetable-save',{concertId:ids[0],snapshot:changed})).state,'saved');
+ assert.equal((await f.service('advance-timetable-save',{concertId:ids[0],snapshot:first})).state,'unchanged');assert.equal((await f.service('advance-timetable-save',{concertId:ids[0],snapshot:changed})).state,'unchanged');
+ read=await f.service('advance-timetable-read',{concertId:ids[0]});assert.deepEqual(read.days[0].entries.map(row=>row.time),['18:00','20:30','22:30']);assert.equal(read.checkedAt,changed.capturedAt);
+ // MOJO haalt het schema weg: de laatst bekende beschikbare versie blijft staan.
+ assert.equal((await f.service('advance-timetable-save',{concertId:ids[0],snapshot:make(ids[0],days[0],'2026-11-13T06:00:00.000Z',[])})).state,'missing');
+ assert.deepEqual((await f.service('advance-timetable-read',{concertId:ids[0]})).days[0].entries.map(row=>row.time),['18:00','20:30','22:30']);
+ // Een reeks: lezen via de algemene ID of een dag geeft alle dagen met een schema.
+ await f.service('advance-timetable-save',{concertId:ids[1],snapshot:make(ids[1],days[1],'2026-11-13T05:00:00.000Z',[['doors','Deuren open','19:00']])});
+ assert.deepEqual((await f.service('advance-timetable-read',{concertId:ids[1]})).days.map(day=>day.date),[days[1]]);
+ assert.deepEqual((await f.service('advance-timetable-read',{concertId:ids[0]})).days.map(day=>day.date),days,'de reeks toont alle dagen met een schema');
+ // Validatie: vreemde velden, andere bron, toekomstige opnametijd, onbekend concert.
+ for(const bad of [{...first,extra:1},{...first,sourceUrl:'https://www.mojo.nl/concerten/anders'},{...first,capturedAt:'2026-11-14T04:00:00.000Z'},{...first,date:days[1]},{...first,capturedAt:'2026-11-21T04:00:00.000Z'}])await assert.rejects(f.service('advance-timetable-save',{concertId:ids[0],snapshot:bad}),/VALIDATION/);
+ await assert.rejects(f.service('advance-timetable-save',{concertId:'Bestaat_niet',snapshot:first}),/NOT_FOUND/);await assert.rejects(f.service('advance-timetable-save',{concertId:ids[0]}),/VALIDATION/);
+ await assert.rejects(f.service('advance-timetable-read',{concertId:'Bestaat_niet'}),/NOT_FOUND/);await assert.rejects(f.service('advance-timetable-read',{concertId:'a/b'}),/VALIDATION/);
+});

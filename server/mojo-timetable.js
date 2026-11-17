@@ -23,7 +23,7 @@ function classify(label){
  if(/\b(?:verwacht\s+einde|eindtijd|einde(?:\s+show)?|expected\s+end|curfew)\b/i.test(label))return{kind:'end',label};
  const name=label.replace(/^(?:support(?:\s+act)?|voorprogramma|surprise(?:\s+act)?|special\s+guest|hoofdact|headliner|main\s+act)\b\s*(?:[:–—-]\s*)?/i,'').trim();return{kind:'act',label:name||label};
 }
-export function parseMojoTimetable(html,show,{capturedAt=new Date().toISOString()}={}){
+export function parseMojoTimetable(html,show,{capturedAt=new Date().toISOString(),advance=false}={}){
  if(typeof html!=='string'||html.length>2000000||!mojoConcertUrl(show.sourceUrl))throw Error('TIMETABLE_SOURCE');
  const document=parse(html),title=all(document,node=>node.tagName==='h1')[0];if(!title||!(' '+normalized(text(title))+' ').includes(' '+normalized(show.artist)+' '))throw Error('TIMETABLE_CONTEXT');
  const headings=all(document,node=>/^h[1-6]$/.test(node.tagName||'')&&/^(?:tijdschema|time\s*table|timetable|time\s*schedule)$/i.test(text(node)));
@@ -45,11 +45,11 @@ export function parseMojoTimetable(html,show,{capturedAt=new Date().toISOString(
   reason=rows.length?null:'TIME_NOT_PUBLISHED';break;
  }
  rows=rows.sort((a,b)=>(a.localDate+a.time).localeCompare(b.localDate+b.time));const unique=[...new Map(rows.map(row=>[JSON.stringify(row),row])).values()];
- return validateTimetable({concertId:show.concertId,date:show.date,sourceUrl:show.sourceUrl,capturedAt,sourceHash:createHash('sha256').update(html).digest('hex'),status:unique.length?'available':'missing',reason:unique.length?null:reason,entries:unique,unresolved:[...new Set(unresolved)]},show);
+ return validateTimetable({concertId:show.concertId,date:show.date,sourceUrl:show.sourceUrl,capturedAt,sourceHash:createHash('sha256').update(html).digest('hex'),status:unique.length?'available':'missing',reason:unique.length?null:reason,entries:unique,unresolved:[...new Set(unresolved)]},show,{advance});
 }
-export async function fetchMojoTimetable(show,{request=fetch,now=()=>new Date()}={}){
+export async function fetchMojoTimetable(show,{request=fetch,now=()=>new Date(),advance=false}={}){
  const source=mojoConcertUrl(show.sourceUrl);if(!source)throw Error('TIMETABLE_SOURCE');
  const response=await request(source,{headers:{'User-Agent':'Mozilla/5.0',Accept:'text/html','Cache-Control':'no-cache'},redirect:'error',signal:AbortSignal.timeout(12000)});
  if(!response.ok||!response.headers.get('content-type')?.includes('text/html')||Number(response.headers.get('content-length')||0)>2000000)throw Error('TIMETABLE_SOURCE');
- return parseMojoTimetable(await response.text(),show,{capturedAt:now().toISOString()});
+ return parseMojoTimetable(await response.text(),show,{capturedAt:now().toISOString(),advance});
 }

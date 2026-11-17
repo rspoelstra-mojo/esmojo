@@ -55,10 +55,6 @@
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
       "maxDuration": 300
     },
-    "api/timetables-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
-      "maxDuration": 300
-    },
     "api/shows-performance-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
       "maxDuration": 300

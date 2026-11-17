@@ -91,9 +91,9 @@ test('handmatige run buiten 05:00 vereist een bevestigde workflow_dispatch-claim
 });
 test('verificatie controleert ook de fotokandidaten (alleen lezen) en meldt het aantal', async () => {
   const calls=[];
-  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({runId:'1',event:'push'}),scrape:async()=>({concerts:[{}],checkedAt:'t',pages:1}),store:async operation=>{calls.push(operation);return operation==='concert-catalogue'?{concerts:[1,2]}:{artists:[{artistId:'a_'+'1'.repeat(64),name:'x'},{artistId:'a_'+'2'.repeat(64),name:'y'}]};}});
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({runId:'1',event:'push'}),scrape:async()=>({concerts:[{}],checkedAt:'t',pages:1}),store:async operation=>{calls.push(operation);return operation==='concert-catalogue'?{concerts:[1,2]}:operation==='advance-timetable-candidates'?{shows:[{},{},{}]}:{artists:[{artistId:'a_'+'1'.repeat(64),name:'x'},{artistId:'a_'+'2'.repeat(64),name:'y'}]};}});
   const res=response();await handler({method:'POST',headers:{authorization:'Bearer workflow'},body:{verifyOnly:true}},res);
-  assert.equal(res.code,200);assert.equal(res.data.photoCandidates,2);assert.deepEqual(calls,['concert-catalogue','artist-photo-candidates']);assert.ok(!calls.includes('artist-photo-save')&&!calls.includes('sync'));
+  assert.equal(res.code,200);assert.equal(res.data.photoCandidates,2);assert.equal(res.data.timetableCandidates,3);assert.deepEqual(calls,['concert-catalogue','artist-photo-candidates','advance-timetable-candidates']);assert.ok(!calls.includes('artist-photo-save')&&!calls.includes('sync')&&!calls.includes('advance-timetable-save'));
 });
 test('onbekende fouten geven alleen foutklasse en code-achtige foutcode; nooit berichttekst', async () => {
   const run=async error=>{const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>({}),scrape:async()=>({concerts:[],checkedAt:'t',pages:1}),store:async operation=>{if(operation==='artist-photo-candidates')throw error;return{createdConcerts:0};}});const res=response();await handler({method:'POST',headers:{authorization:'Bearer w'},body:{}},res);return res;};
@@ -101,4 +101,24 @@ test('onbekende fouten geven alleen foutklasse en code-achtige foutcode; nooit b
   const type=await run(new TypeError("Cannot read properties of undefined (reading 'geheim')"));assert.equal(type.data.code,'IMPORT_UNCONFIRMED');assert.equal(type.data.kind,'TypeError');assert.ok(!('detail' in type.data));assert.ok(!JSON.stringify(type.data).includes('geheim'));
   const known=await run(new Error('MOJO_UNAVAILABLE'));assert.equal(known.data.code,'MOJO_UNAVAILABLE');assert.ok(!('detail' in known.data)&&!('kind' in known.data));
   const odd=await run(Object.assign(new Error('Een zin met geheim'),{name:'Rare naam met spaties'}));assert.ok(!('detail' in odd.data)&&!('kind' in odd.data));
+});
+test('dagelijkse tijdschemacontrole: batches met cursor, meest recente versie, fouten per concert stoppen de rest niet en alleen veilige codes', async () => {
+  const shows=Array.from({length:15},(_,i)=>({concertId:'Show_'+String(i+1).padStart(2,'0'),date:'2026-11-20',sourceUrl:'https://www.mojo.nl/concerten/x',artist:'X',venue:'Gashouder',city:'Amsterdam'})),saves=[],queries=[],fetched=[];
+  const store=async(operation,data)=>{
+    if(operation==='advance-timetable-candidates'){queries.push(data);return{shows:shows.filter(show=>!data.after||show.concertId>data.after)};}
+    if(operation==='advance-timetable-save'){saves.push(data);return{state:data.concertId==='Show_02'?'missing':data.concertId==='Show_03'?'unchanged':'saved'};}
+    throw Error('onverwachte bewerking '+operation);
+  };
+  const timetable=async(show,options)=>{fetched.push([show.concertId,options.advance]);if(show.concertId==='Show_04')throw Error('TIMETABLE_CONTEXT');if(show.concertId==='Show_05')throw new TypeError('geheime tekst');if(show.concertId==='Show_06')throw Error('Een zin met geheim');return{concertId:show.concertId,status:show.concertId==='Show_02'?'missing':'available',entries:[],capturedAt:'t'};};
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>({}),store,timetable});
+  const call=async body=>{const res=response();await handler({method:'POST',headers:{authorization:'Bearer w'},body},res);return res;};
+  const first=await call({operation:'timetables'});
+  assert.equal(first.code,200);assert.deepEqual(first.data.timetables,{saved:7,unchanged:1,missing:1,failed:3});assert.deepEqual(first.data.timetableErrors,{TIMETABLE_CONTEXT:1,UNKNOWN:2});
+  assert.equal(first.data.timetablesPending,true);assert.equal(first.data.timetablesCursor,'Show_12');assert.ok(fetched.slice(0,12).every(([,advance])=>advance===true));
+  assert.ok(!JSON.stringify(first.data).includes('geheim'),'geen berichttekst in het antwoord');assert.equal(saves.length,9,'mislukte concerten worden niet opgeslagen');
+  const second=await call({operation:'timetables',timetablesAfter:first.data.timetablesCursor});
+  assert.equal(queries.at(-1).after,'Show_12');assert.equal(second.data.timetablesPending,false);assert.equal(second.data.timetablesCursor,'Show_15');assert.deepEqual(second.data.timetables,{saved:3,unchanged:0,missing:0,failed:0});
+  assert.equal((await call({operation:'timetables',timetablesAfter:'Show_15'})).data.timetablesCursor,null);
+  for(const timetablesAfter of ['',5,null,'a/b','x'.repeat(241)]){const bad=await call({operation:'timetables',timetablesAfter});assert.equal(bad.code,503);assert.equal(bad.data.code,'VALIDATION');}
+  const closed=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({}),store,timetable});const res=response();await closed({method:'POST',headers:{authorization:'Bearer w'},body:{operation:'timetables'}},res);assert.equal(res.data.code,'IMPORT_WINDOW_CLOSED');
 });

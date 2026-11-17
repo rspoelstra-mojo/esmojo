@@ -30,7 +30,7 @@ export function createSaveActivity(){
 }
 export const backgroundSaves=createSaveActivity();
 export function isSaveRequest(action,{method='GET',body={}}={}){
- if(!['POST','PATCH','PUT','DELETE'].includes(method)||['session','restore','login','remember','forget','complete','show-open','show-photo','show-risks','report-web','reports','home-metadata','fluid-preview','artist-open','artist-detail','artist-view','artist-show','artist-risk'].includes(action))return false;
+ if(!['POST','PATCH','PUT','DELETE'].includes(method)||['session','restore','login','remember','forget','complete','show-open','show-photo','show-timetable','show-risks','report-web','reports','home-metadata','fluid-preview','artist-open','artist-detail','artist-view','artist-show','artist-risk'].includes(action))return false;
  return !['read','status','download','reserve','renew','release'].includes(body?.operation);
 }
 export function saveRequestInfo(action,body={}){

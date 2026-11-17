@@ -27,10 +27,14 @@ run niet falen. Alleen een duidelijk MOJO-antwoord (foto, geen foto of pagina be
 vastgelegd. Een tijdelijke fout (netwerk, time-out, 429, 5xx) wordt niet vastgelegd: die artiest
 blijft kandidaat voor de volgende run.
 
-Om 12:00 Nederlandse tijd op de concertdag worden openbare tijdschema's gelezen
-en aan hetzelfde native concert gekoppeld. Een al vastgelegde dagsnapshot wordt
-niet opnieuw opgehaald. Andere MOJO-ophaalautomatiseringen en pagina-fallbacks
-zijn uitgezet. Registratie van agenda, foto en tijdschema schrijft niet naar Drive.
+Sinds 17 november 2026 controleert de 05:00-import dagelijks, voor alle shows in de
+komende 45 dagen, of MOJO een tijdschema publiceert (stap `timetables`, batches van 12 met
+cursor `timetablesAfter`). Een beschikbaar schema wordt per concert bewaard in de bestaande
+Integratiestatus (`show-timetable-advance-v1`, openbare gegevens, geen nieuw schema); de meest
+recente versie wint en een later verdwenen bron wist niets. Een fout bij één concert (alleen
+veilige foutcodes geteld) stopt de overige concerten niet, maar laat de run wel falen. De opname
+op de showdag om 12:00 en het eindpunt timetables-sync zijn gestopt. Andere MOJO-ophaalautomatiseringen
+en pagina-fallbacks zijn uitgezet. Registratie van agenda, foto en tijdschema schrijft niet naar Drive.
 
 MCP, OAuth/discovery voor MCP en het aparte OnTrack-concertregister zijn verwijderd.
 De korte artiesttekst toont op zijn bestaande plek [Description placeholder].
