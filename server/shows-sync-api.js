@@ -11,7 +11,7 @@ export async function scrapeConcertCatalogue({scrape=scrapeMojo,now=new Date()}=
  const results=[];for(let index=0;index<MOJO_VENUES.length;index+=2)results.push(...await Promise.all(MOJO_VENUES.slice(index,index+2).map(async venue=>{try{return await scrape({venue:venue.id,now,days:45});}catch(error){error.venue=venue.id;throw error;}})));
  const first=results[0];if(results.some(row=>row.from!==first.from||row.until!==first.until))throw Error('MOJO_DATE');return{from:first.from,until:first.until,checkedAt:now.toISOString(),pages:results.reduce((sum,row)=>sum+row.pages,0),concerts:results.flatMap(row=>row.concerts)};
 }
-export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape = scrapeConcertCatalogue, store = createShowsStore({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}), photo=getMojoArtistPhotoResult,timetable=fetchMojoTimetable,management=null,now=()=>new Date() } = {}) {
+export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape = scrapeConcertCatalogue, store = createShowsStore({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}), photo=getMojoArtistPhotoResult,timetable=fetchMojoTimetable,management=null,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),now=()=>new Date() } = {}) {
   let defaultManagement=null;
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');res.setHeader('X-ESMOJO-Agenda-Import','3');
@@ -39,9 +39,15 @@ export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape =
         const after=req.body?.managementAfter;if(after!==undefined&&(typeof after!=='string'||!after||after.length>240||/[\x00-\x1f/\\]/.test(after)))throw Error('VALIDATION');
         stage='management-candidates';const shows=(await store('management-candidates',after?{after}:{})).shows,batch=shows.slice(0,12);
         const service=management||(defaultManagement||=createShowManagementService({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}));
-        let next=0;const counts={created:0,existing:0,failed:0},codes={};
-        const work=async()=>{while(next<batch.length){const show=batch[next++];try{stage='management-create';const state=await service.ensure(show.concertId);counts[state==='created'?'created':'existing']++;}catch(error){counts.failed++;const code=/^[A-Z][A-Z0-9_]{2,59}$/.test(error?.message||'')?error.message:'UNKNOWN';codes[code]=(codes[code]||0)+1;}}};
-        await Promise.all(Array.from({length:Math.min(3,batch.length)},work));
+        // Eén concert tegelijk: het aanmaken leest en schrijft veel Dataverse-rijen, en parallelle aanvragen lopen tegen de 429-limiet aan.
+        // Bij een tijdelijke 429 wordt maximaal twee keer opnieuw geprobeerd na de Retry-After van Dataverse (begrensd op 30 seconden
+        // en op 120 seconden in totaal voor dit verzoek); daarna telt het concert als mislukt en blijft het kandidaat voor de volgende run.
+        let next=0;const counts={created:0,existing:0,failed:0},codes={},began=Date.now();
+        const work=async()=>{while(next<batch.length){const show=batch[next++];
+          for(let attempt=0;;attempt++){try{stage='management-create';const state=await service.ensure(show.concertId);counts[state==='created'?'created':'existing']++;break;}
+          catch(error){if(error?.message==='SETUP_THROTTLED'&&attempt<2&&Date.now()-began<120000){await sleep(Math.min(Math.max(Number(error.retryAfterSeconds)||5,1),30)*1000);continue;}
+            counts.failed++;const code=/^[A-Z][A-Z0-9_]{2,59}$/.test(error?.message||'')?error.message:'UNKNOWN';codes[code]=(codes[code]||0)+1;break;}}}};
+        await work();
         return res.status(200).json({ok:true,management:counts,...Object.keys(codes).length?{managementErrors:codes}:{},managementCursor:batch.at(-1)?.concertId||null,managementPending:shows.length>batch.length});
       }
       // Alleen de fotocursor van de lopende run is toegestaan; geen vrije velden naar de opslag.
