@@ -1,3 +1,4 @@
+import {createReportIntakeSchema} from './report-intake-schema.js';
 import {createConcertCatalogue} from './concert-catalogue.js';
 import {createWebsiteSettings} from './website-settings.js';
 import {createWebsiteSettingsSchema} from './website-settings-schema.js';
@@ -50,7 +51,7 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}), websiteSettings=createWebsiteSettings({env}), websiteSchema=createWebsiteSettingsSchema({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}), websiteSettings=createWebsiteSettings({env}), websiteSchema=createWebsiteSettingsSchema({env}), reportIntakeSchema=createReportIntakeSchema({env}) } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows,env});
@@ -365,18 +366,19 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
-      if(action==='website-settings'||action==='website-settings-schema'){
+      if(action==='website-settings'||action==='website-settings-schema'||action==='report-intake-schema'){
+        if(action==='report-intake-schema'&&!hasModule(own,'reports'))return reply(403,{error:'Geen toegang tot Rapportages.'});
         if(env.VERCEL_ENV==='preview'||previewReads)return reply(403,{error:'Wijzig instellingen uitsluitend in de productieomgeving.'});
         try{
-          if(action==='website-settings-schema'){
+          if(action==='website-settings-schema'||action==='report-intake-schema'){
             if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
-            return reply(200,await websiteSchema(req.body));
+            return reply(200,await (action==='report-intake-schema'?reportIntakeSchema:websiteSchema)(req.body));
           }
           if(req.method==='GET')return reply(200,await websiteSettings.read());
           if(req.method==='POST')return reply(200,await websiteSettings.save(req.body));
           res.setHeader('Allow','GET, POST');return reply(405,{error:'Niet toegestaan.'});
         }catch(error){
-          if(action==='website-settings-schema'){
+          if(action==='website-settings-schema'||action==='report-intake-schema'){
             const pending=metadataProcessing(error);if(pending)return reply(200,pending);
             if(error.message!=='VALIDATION')return reply(error.message==='CHOICE_FORBIDDEN'?403:409,{code:'WEBSITE_SCHEMA_UNCONFIRMED',error:'De Dataverse-inrichting is niet bevestigd. Controleer de bestaande verbinding, rechten en inrichting. Eerder bevestigde onderdelen blijven behouden.'});
           }
