@@ -81,3 +81,13 @@ test('opening floor during a barrier write waits for its confirmed dependent sna
 test('failed pending barrier write never makes a dependent floor read appear confirmed',async()=>{
  const wait=deferred(),base=bundle(),memory=createShowMemory({request:async action=>action==='show-open'?base:wait.promise,...timers}),lease=memory.acquire('A'),data=await lease.ready,write=data.request('barrier-layout',{body:{operation:'complete'}}),floor=read(data,'floor-pressure');const failedWrite=assert.rejects(write,/uncertain/),failedFloor=assert.rejects(floor,/uncertain/);wait.reject(Error('uncertain'));await Promise.all([failedWrite,failedFloor]);lease.release();memory.clear();
 });
+test('Een opgeslagen eigen risico werkt het gedeelde showgeheugen bij, zodat planning en maatregelen het zien',async()=>{
+ const base=bundle(),source={revision:'a'.repeat(64),sha256:'b'.repeat(64)};
+ const own={id:'R31',title:'Eigen risico',description:'Eigen risico',consequence:'Gevolg',own:true};
+ const view={state:'ready',production:base.risks?.production,assessments:base.risks?.assessments,risks:[own],operational:{source,assessments:{R31:{revision:1,riskLevel:'high',riskNote:'Maatregel',completedAt:'2026-11-17T10:00:00Z'}}}};
+ const memory=createShowMemory({request:async(action)=>{if(action==='show-open')return base;if(action==='operational-risk-own')return{riskId:'R31',record:view.operational.assessments.R31,overview:view};throw Error(action);},...timers});
+ const a=memory.acquire('A'),data=await a.ready;
+ await data.request('operational-risk-own',{method:'POST',body:{concertId:'A'}});
+ const snapshot=data.planningSnapshot();assert.deepEqual(snapshot.risks.risks.map(risk=>risk.id),['R31']);assert.equal(snapshot.risks.operational.assessments.R31.riskLevel,'high');
+ a.release();memory.clear();
+});
