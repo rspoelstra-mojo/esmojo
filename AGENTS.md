@@ -9,6 +9,10 @@ beschikbare versie niet. Openbare showtijden, opslag uitsluitend in Dataverse (b
 Integratiestatus, geen nieuw schema). Weergave beknopt in het blok Tijdschema op het
 showoverzicht: tekst links, tijd rechts. De 12:00-run en het eindpunt timetables-sync
 zijn gestopt; reeds opgeslagen showdagopnamen en rapportweergave blijven ongewijzigd.
+Aanvulling: de dag na het concert verdwijnt het schema van de MOJO-website altijd. Er
+wordt daarom na de showdag niets meer opgehaald (alleen tot en met 05:00 op de showdag) en
+de laatst opgeslagen versie blijft voor die show 'de waarheid'. Rapportages lezen ook uit
+dit schema: per concert geldt de meest recente versie (voorlopig schema of oudere showdagopname).
 Vervangt de oudere 12:00-instructies in dit bestand. Zie docs/report-timetables.md.
 
 ## Showbeheer PDF delen en anonieme gebruikstelling (17 november 2026)

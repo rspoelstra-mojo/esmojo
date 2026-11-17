@@ -4,8 +4,11 @@
 > dagelijks, voor alle shows in de komende 45 dagen, of MOJO een tijdschema publiceert en bewaart steeds de
 > meest recente beschikbare versie (operaties `advance-timetable-*`, Integratiestatus
 > `show-timetable-advance-v1` per concert, geen nieuw schema). Het showoverzicht toont die versie in het blok
-> Tijdschema. Reeds opgeslagen showdagopnamen en hun rapportweergave blijven ongewijzigd; nieuwe rapporten lezen
-> het voorlopige schema nog niet. De rest van dit document beschrijft de oorspronkelijke middagopname.
+> Tijdschema. Reeds opgeslagen showdagopnamen blijven bestaan. Rapportages (tussenkoppen en tijdlijngrenzen) en de
+> show lezen per concert de meest recente versie: het voorlopige schema of, als die recenter is, een oudere
+> showdagopname (`native-timetable-read`). De dag na het concert verdwijnt het schema van MOJO altijd; er wordt dan
+> niets meer opgehaald (een opname ná de showdag wordt geweigerd) en de laatst opgeslagen versie blijft de waarheid.
+> De rest van dit document beschrijft de oorspronkelijke middagopname.
 
 De gebruiker heeft de geplande showtijden op 5 november 2026 Openbaar verklaard.
 Alleen de canonieke MOJO-concertpagina uit de bestaande Productie-/OnTrack-

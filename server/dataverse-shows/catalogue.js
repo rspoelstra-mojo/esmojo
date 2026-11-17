@@ -99,7 +99,20 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
   for(let n=0;n<updates.length;n+=200)await repo.atomic(updates.slice(n,n+200));await persistClock(snapshot.checkedAt);return{createdConcerts:created,createdArtists:new Set((await all()).artists.map(row=>row.esmojo_bronartiestid).filter(id=>!current.artists.some(a=>a.esmojo_bronartiestid===id))).size};
  }
 
- async function readTimetable(concertId){const loaded=await state.load(concertId);return loaded.source.timetables.find(row=>row.concertId===concertId)?.snapshot||null;}
+ // De laatst bekende beschikbare voorlopige versie als snapshot (zelfde vorm als een showdagopname), of null.
+ async function advanceSnapshot(concertId){
+  const stored=await repo.byKey('esmojo_integratiestatus',recordKey('esmojo_integratiestatus',advanceKey(concertId)));if(!stored)return null;
+  const config=advanceConfig(stored);
+  if(stored.esmojo_integratiecode!==advanceCode||stored.esmojo_scopecode!==digest(concertId)||!config||config.concertId!==concertId||config.status!=='available'||!Array.isArray(config.entries))return null;
+  const {version,...snapshot}=config;return snapshot;
+ }
+ // Voor rapportages en de show: de meest recente versie wint. De dag na het concert verdwijnt het schema van MOJO; de
+ // laatst opgeslagen versie (tot en met de showdag, 05:00) blijft daarom de waarheid voor die show.
+ async function readTimetable(concertId){
+  const loaded=await state.load(concertId),showday=loaded.source.timetables.find(row=>row.concertId===concertId)?.snapshot||null,advance=await advanceSnapshot(concertId);
+  if(!advance)return showday;if(!showday)return advance;
+  return Date.parse(advance.capturedAt)>Date.parse(showday.capturedAt)?advance:showday;
+ }
  async function saveTimetable(payload){
   if(!sameKeys(payload,['concertId','snapshot']))throw Error('VALIDATION');const loaded=await state.load(payload.concertId),show=loaded.source.shows.find(row=>row.concertId===payload.concertId);if(!show)throw Error('NOT_FOUND');validateTimetable(payload.snapshot,{...show,key:show.concertId},{now:now()});
   await state.verifyPlan(mapShow(loaded.source,loaded.people),loaded.source.nativeGeneration||0);const existing=loaded.source.timetables.find(row=>row.concertId===payload.concertId);const result={state:payload.snapshot.status==='available'?'captured':'missing'};if(existing&&canonical(existing.snapshot)===canonical(payload.snapshot))return result;
