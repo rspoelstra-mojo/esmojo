@@ -2,7 +2,8 @@ import {loadBarrierImage} from './barrier-images.js';
 import {publicShowPhoto} from '../shared/public-show-photo.js';
 import {createShowManagement,createShowManagementPlaceholder} from './show-management.js';
 import './show-tabs.css';
-import {requestedShowTab} from '../shared/show-navigation.js';
+import {requestedShowTab,requestedShowTarget,showTabNames} from '../shared/show-navigation.js';
+import {createShowActions} from './show-actions.js';
 import './show-page.css';
 import {access} from './auth.js';
 import {loadShowPhoto} from './show-photo.js';
@@ -21,14 +22,14 @@ import {createShowSchedule} from './show-schedule.js';
 export function formatShowDates(dates){return dates.map(date=>new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Amsterdam'}).format(new Date(`${date}T12:00:00Z`))).join(' · ');}
 const tabs=['Overzicht','Showprofiel','Risicoanalyse','Maatregelen','Documenten'];
 const svg=paths=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
-export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,initialTab=requestedShowTab(globalThis.location?.search||''),memory=request===access?showMemory:createShowMemory({request}),startedAt=null}={}){
+export function createShowPage(content,show,{request=access,loadPhoto=loadShowPhoto,readOnly=false,initialTab=requestedShowTab(globalThis.location?.search||''),initialTarget=requestedShowTarget(globalThis.location?.search||''),memory=request===access?showMemory:createShowMemory({request}),startedAt=null}={}){
   let firstOpen=true,disposed=false,opening=false,releasePage=()=>{};
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]')||document.querySelector('#submenu-title'),loading=menu?createSubmenuLoading(menu,content):null;
   async function open(){
     if(disposed||opening)return;const began=firstOpen&&Number.isFinite(startedAt)?startedAt:globalThis.performance?.now?.()??Date.now();firstOpen=false;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
-    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeInformation=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
-    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeInformation();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
+    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeInformation=()=>{},disposeActions=()=>{},disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
+    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeInformation();disposeActions();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
       const earlyPhoto=lease.view.photo||loadPhoto.peek?.(show.key)||null;
       if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
@@ -65,6 +66,17 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       const panels=document.createElement('div');panels.className='show-panels';const buttons=[],views=[];let active=Number.isInteger(initialTab)&&initialTab>=0&&initialTab<tabs.length?initialTab:lease.view.tab;
       function position(){const button=buttons[active];indicator.style.width=`${button.offsetWidth}px`;indicator.style.transform=`translate(${button.offsetLeft}px, ${button.offsetTop+button.offsetHeight-3}px)`;}
       function select(index,focus=false){active=index;lease.view.tab=index;buttons.forEach((button,i)=>{button.setAttribute('aria-selected',String(i===index));button.tabIndex=i===index?0:-1;views[i].hidden=i!==index;});if(tabs[index]==='Overzicht'){similar?.start();scheduleView?.start();}position();if(focus)buttons[index].focus();if(tabs[index]==='Risicoanalyse')risks?.activate();}
+      // Bestemming vanuit de actielijst of een diepe link: kies het tabblad en open daarbinnen de juiste pagina.
+      let openTarget=()=>{};
+      openTarget=target=>{
+        const index=showTabNames.indexOf(target?.tab);if(index<0||index>=tabs.length)return;
+        select(index);
+        if(target.tab==='showprofiel')void disposeProfile.open?.(target);
+        else if(target.tab==='risicoanalyse')risks?.open?.(target);
+        else if(target.tab==='maatregelen')disposeMeasures.open?.(target.measure);
+        else if(target.send)views[index].querySelector('.show-management-access .show-management-action.is-primary')?.focus();
+        bar.scrollIntoView?.({block:'start'});
+      };
       tabs.forEach((label,index)=>{
         const button=document.createElement('button');button.type='button';button.className='show-tab';button.textContent=label;button.id=`show-tab-${index}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`show-panel-${index}`);
         const panel=document.createElement('section');panel.id=`show-panel-${index}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);panel.tabIndex=0;
@@ -75,7 +87,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           const block=(className,heading)=>{const section=document.createElement('section');section.className='show-block '+className;const title=document.createElement('h2');title.textContent=heading;section.append(title);return section;};
           const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie'),actions=block('show-actions','Actielijst');
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          createShowTeam(team);layout.append(team,schedule,information,planning);disposeManagement=show.venue==='Gashouder'?createShowManagement(layout,{show,request,data,readOnly}):createShowManagementPlaceholder(layout,{show});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});
+          createShowTeam(team);layout.append(team,schedule,information,planning);disposeManagement=show.venue==='Gashouder'?createShowManagement(layout,{show,request,data,readOnly}):createShowManagementPlaceholder(layout,{show});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});disposeActions=createShowActions(actions,{show,data,onOpen:target=>openTarget(target)});
           // Placeholder-artiesten; laadt pas bij zichtbaar tabblad, op de achtergrond en alleen met Artiesten-rechten.
           if(!readOnly){similar=createSimilarArtists(panel,{request});disposeSimilar=similar.dispose;}
           // Voorlopig MOJO-tijdschema (dagelijks vernieuwd); de server geeft altijd de meest recente versie.
@@ -90,7 +102,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
       const heading=document.createElement('div');heading.className='show-heading';const intro=document.createElement('div');intro.className='show-heading-intro';intro.append(title,meta);bar.append(indicator);heading.append(intro,photo,bar);page.append(heading,panels);
       // Bouw onzichtbaar; publiceer pas wanneer alle bestaande controllers gereed zijn.
       await Promise.all([disposeProfile.ready,risks.prepare()]);if(disposed)return;
-      select(active);content.replaceChildren(page);position();try{performance.measure('esmojo-show-ready',{start:began,end:performance.now()});}catch{/* Diagnostics must never block navigation. */}document.title=`${show.name} · Shows · ESMOJO`;
+      select(active);content.replaceChildren(page);position();if(initialTarget&&Object.keys(initialTarget).length>1)openTarget(initialTarget);try{performance.measure('esmojo-show-ready',{start:began,end:performance.now()});}catch{/* Diagnostics must never block navigation. */}document.title=`${show.name} · Shows · ESMOJO`;
       observer=new ResizeObserver(position);observer.observe(bar);frame=requestAnimationFrame(()=>bar.classList.add('show-tabs-ready'));
     }catch{
       cleanup();if(disposed)return;

@@ -1,3 +1,15 @@
+## Actielijst op het showoverzicht (17 november 2026)
+
+Gebruiker vult het blok Actielijst als to-do-lijst voor de event safety manager: status rechtsboven
+(Op schema = geen planningsdeadline gemist, Achter op schema = wel gemist, Afgerond = de drie
+planningsstappen af en alle beheersmaatregelen geïmplementeerd), en maximaal drie to-do's onder
+elkaar, gesorteerd op de deadline van de planning (showprofiel, risico's, maatregelen). Showprofiel
+en risico's: tot drie losse regels ("[onderdeel] nog te doen") met een diepe link naar de pagina
+waar de actie wordt afgerond, daarboven één regel "Nog meerdere openstaande analyses/risico's"
+naar het tabblad. Beheersmaatregelen: elke aangemaakte, nog niet afgeronde maatregel apart
+("[titel] nog niet afgerond"), zonder maximum per onderdeel. Alleen presentatie op bestaande
+showgegevens; geen nieuwe opslag, API of rechten. Zie docs/show-actions.md.
+
 ## Showbeheer automatisch aanmaken en nieuwe kaart (17 november 2026)
 
 Gebruiker vervangt de knop Showbeheer aanmaken door automatisch aanmaken: de 05:00-import

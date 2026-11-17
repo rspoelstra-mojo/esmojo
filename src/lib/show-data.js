@@ -86,7 +86,8 @@ export function createShowData(bundle,request,concertId){
     setProfileSent(value){const next=typeof value==='string'&&Number.isFinite(Date.parse(value))?value:null;if(next===profileSentAt)return;profileSentAt=next;notify();},
     planningSnapshot(){
       const risks=values.get('show-risks')||(context.busy?previousValues.get('show-risks'):null);
-      return structuredClone({profileSentAt,profile:{finalization:values.get('show-profile')?.finalization},pdf:values.get('show-profile-pdf'),risks:{
+      const analyses=values.get('show-profile')?.analyses;
+      return structuredClone({profileSentAt,profile:{finalization:values.get('show-profile')?.finalization,analyses:analyses?Object.fromEntries(Object.entries(analyses).map(([number,record])=>[number,{status:record?.status}])):undefined},pdf:values.get('show-profile-pdf'),risks:{
         state:risks?.state,risks:risks?.risks,operational:risks?.operational,measureImplementations:risks?.measureImplementations,
         production:risks?.production||productionChoices.server,
         assessments:risks?.assessments||{barrier:values.get('barrier-layout')?.record,floor:values.get('floor-pressure')?.record},

@@ -19,5 +19,9 @@ export function createShowMeasures(panel,{show,data,readOnly=false}){
   }
   root.append(card);
  }
- const unsubscribe=data.subscribe(render);render();return()=>{disposed=true;unsubscribe();detail?.dispose();detail=null;root.replaceChildren();};
+ const unsubscribe=data.subscribe(render);render();
+ const dispose=()=>{disposed=true;unsubscribe();detail?.dispose();detail=null;root.replaceChildren();};
+ // Bestemming vanuit de actielijst: direct de pagina van één beheersmaatregel (onbekend id: het overzicht).
+ dispose.open=id=>{if(disposed)return;selected=typeof id==='string'?id:null;render();};
+ return dispose;
 }

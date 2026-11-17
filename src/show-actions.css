@@ -1,0 +1,26 @@
+/* Actielijst in het overzicht: status rechtsboven en maximaal drie to-do's als blokjes onder elkaar. */
+.show-actions-header { display:flex; align-items:center; justify-content:space-between; gap:8px 12px; flex-wrap:wrap; }
+.show-actions-status { padding:3px 10px; border-radius:999px; font-size:12px; line-height:18px; font-weight:600; background:#edf2ff; color:#315bc5; white-space:nowrap; }
+.show-actions-status[hidden] { display:none; }
+.show-actions-status[data-status="done"] { background:#e6f4eb; color:#25744b; }
+.show-actions-status[data-status="behind"] { background:#fdecea; color:#b3261e; }
+:root[data-theme="dark"] .show-actions-status { background:#192b4a; color:#8eacff; }
+:root[data-theme="dark"] .show-actions-status[data-status="done"] { background:#163b2a; color:#9fd2b1; }
+:root[data-theme="dark"] .show-actions-status[data-status="behind"] { background:#3d1f1d; color:#ff8a80; }
+.show-actions-list { list-style:none; margin:14px 0 0; padding:0; display:grid; gap:8px; }
+.show-actions-list:empty { display:none; }
+.show-action { display:flex; align-items:center; gap:12px; min-width:0; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--fluid-card,#fff); color:var(--text); font-size:13px; line-height:1.4; text-decoration:none; transition:background-color .15s ease,border-color .15s ease; }
+.show-action:hover { background:var(--canvas); border-color:color-mix(in srgb,var(--text) 22%,var(--line)); }
+.show-action:focus-visible { outline:2px solid var(--blue,#002ff4); outline-offset:2px; }
+.show-action-dot { flex:none; width:8px; height:8px; border-radius:50%; background:var(--muted); }
+.show-action[data-overdue="true"] .show-action-dot { background:#b3261e; }
+:root[data-theme="dark"] .show-action[data-overdue="true"] .show-action-dot { background:#ff8a80; }
+.show-action-text { flex:1 1 auto; min-width:0; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; }
+.show-action-title { font-weight:600; }
+.show-action-suffix { color:var(--muted); }
+.show-action[data-overdue="true"] .show-action-suffix { color:#b3261e; }
+:root[data-theme="dark"] .show-action[data-overdue="true"] .show-action-suffix { color:#ff8a80; }
+.show-action-chevron { flex:none; display:inline-grid; width:16px; height:16px; color:var(--muted); }
+.show-action-chevron svg { width:16px; height:16px; }
+.show-actions-empty { margin:14px 0 0; font-size:13px; line-height:1.5; color:var(--muted); }
+.show-actions-empty[hidden] { display:none; }
