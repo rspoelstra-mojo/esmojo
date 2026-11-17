@@ -1,4 +1,6 @@
 import {createReportIntakeSchema} from './report-intake-schema.js';
+import {createReportIntakeCheck} from './report-intake/check.js';
+import {createReportIntakeRepository} from './report-intake/repository.js';
 import {createConcertCatalogue} from './concert-catalogue.js';
 import {createWebsiteSettings} from './website-settings.js';
 import {createWebsiteSettingsSchema} from './website-settings-schema.js';
@@ -51,8 +53,9 @@ import { sessionDeadline, readSessionCookie, writeSessionCookie, clearSessionCoo
 import { createShowsStore } from './shows-store.js';
 import { upcomingArtists, upcomingShows } from './mojo-agenda.js';
 
-export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}), websiteSettings=createWebsiteSettings({env}), websiteSchema=createWebsiteSettingsSchema({env}), reportIntakeSchema=createReportIntakeSchema({env}) } = {}) {
+export function makeAccountsHandler({ env = process.env, clientFactory = createClient, profiles = createProfiles({ env }), mail = sendEmail, ontrack = createOnTrackStore({env}), mailingConcerts = createMailingConcertsStore({env}), ontrackReportStore = createOnTrackReportStore({env}), shows = createShowsStore({ env }), pdfService = null, background = waitUntil, previewSource = null, photoService=createConcertCatalogue({env}).photo,referenceService=null, artistService=createArtistService({env,shows}), incidentService=createIncidentMetricsService({shows}), showManagement=null, dataverseTest=createDataverseTest({env}), dataverseResearch=createDataverseResearch({env}), dataTransition=createDataTransition({env}), dataverseChoices=createDataverseChoices({env}), dataverseTables=createDataverseTables({env}), showMigration=createShowMigration({env}), tasks=createApplicationTasks({env,profiles}), websiteSettings=createWebsiteSettings({env}), websiteSchema=createWebsiteSettingsSchema({env}), reportIntakeSchema=createReportIntakeSchema({env}), reportIntakeCheck=null } = {}) {
   shows=createDataverseShows({shows,research:dataverseResearch});
+  reportIntakeCheck ||=createReportIntakeCheck({repository:createReportIntakeRepository({env}),catalogue:createConcertCatalogue({env}),profiles});
   pdfService ||=createShowProfilePdfService({shows});
   referenceService ||=createBarrierReferenceService({shows,env});
   showManagement ||=createShowManagementService({env,shows});
@@ -371,6 +374,13 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { profile });
       }
       if (!isAdministrator(own)) return reply(403, { error: 'Alleen beheerders hebben toegang.' });
+      if(action==='report-intake-check'){
+        if(!hasModule(own,'reports'))return reply(403,{error:'Geen toegang tot Rapportages.'});
+        if(env.VERCEL_ENV==='preview'||previewReads)return reply(403,{error:'Controleer ontvangsten uitsluitend in de productieomgeving.'});
+        if(req.method!=='POST'){res.setHeader('Allow','POST');return reply(405,{error:'Niet toegestaan.'});}
+        try{return reply(200,await reportIntakeCheck(actor,{limit:10}));}
+        catch(error){console.error('REPORT_INTAKE_CHECK_FAILED',{code:/^[A-Z_]+$/.test(error.message)?error.message:'UNKNOWN'});return reply(error.message==='FORBIDDEN'?403:503,{error:'De ontvangstcontrole is niet gelukt. Er is niets gewijzigd.'});}
+      }
       if(action==='website-settings'||action==='website-settings-schema'||action==='report-intake-schema'){
         if(action==='report-intake-schema'&&!hasModule(own,'reports'))return reply(403,{error:'Geen toegang tot Rapportages.'});
         if(env.VERCEL_ENV==='preview'||previewReads)return reply(403,{error:'Wijzig instellingen uitsluitend in de productieomgeving.'});

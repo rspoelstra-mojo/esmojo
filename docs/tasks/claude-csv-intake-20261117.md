@@ -21,3 +21,11 @@ bytes kan ik niet rechtstreeks teruglezen. Dat gebeurt uitsluitend via de beveil
 5. Power Automate-stappen samen met de gebruiker (één stap tegelijk).
 
 Voortgang en concrete volgende stap staan in de PR-beschrijving.
+
+## Voortgang (V1.190)
+
+Fase 1a gebouwd: alleen-lezen ontvangstcontrole (server/report-intake/: repository, check, concertmatch
+uit PR #250 herzien en overgenomen). Beheerder → Datatransitie krijgt de kaart "Ontvangen CSV's
+controleren": leest de laatste 10 ontvangsten terug (File in 1 MiB-blokken, grootte, SHA-256 (eerste 16 tekens),
+CSV-validatie met bestaande parser, concertmatch). Geen schrijfacties, geen inhoud. Nog niet gebouwd:
+schema v2, status/koppeling schrijven, publicatie naar rapporttabellen, worker.
