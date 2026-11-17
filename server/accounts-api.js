@@ -162,7 +162,7 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         return reply(200, { ok: true });
       }
       if (!own.activated) return reply(403, { error: 'Stel eerst je account volledig in.', code: 'SETUP_REQUIRED' });
-      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-timetable','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
+      const requiredModule=action==='background-tasks'?backgroundTaskModule(req.body?.type):['show-management-stats','show-migration','dataverse-tables','dataverse-choices','data-transition','show-management','barrier-reference','show-storage-alerts','home-dashboard','home-metadata','shows','show-open','show-photo','show-timetable','show-team','show-profile','show-risks','show-profile-pdf','analysis-finalization','ticket-data','barrier-layout','floor-pressure','production-risks','operational-risk','measure','fluid-preview'].includes(action)?'shows':(action==='artists'||typeof action==='string'&&action.startsWith('artist-'))?'artists':(['ontrack','ontrack-report','reports'].includes(action)||typeof action==='string'&&action.startsWith('report-'))?'reports':null;
       if(requiredModule&&!hasModule(own,requiredModule))return reply(403,{error:'Je hebt geen toegang tot deze module.',code:'MODULE_FORBIDDEN',module:requiredModule});
       if(action==='show-management-stats'){if(req.method!=='GET')return reply(405,{error:'Niet toegestaan.'});if(!isAdministrator(own))return reply(403,{error:'Geen toegang.'});return reply(200,await showManagement.statistics());}
       if(action==='show-management'){
@@ -283,6 +283,28 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });
         try { return reply(200, await scopedShows('advance-timetable-read', { concertId: input.concertId, actor })); }
         catch (error) { return reply(error.message === 'NOT_FOUND' ? 404 : 503, { error: 'Het tijdschema kon niet worden geladen.' }); }
+      }
+      if (action === 'staff-planning' && req.method === 'POST') {
+        // Personeelsplanning (Vertrouwelijk): alleen actuele beheerders; lezen of één functienaam opslaan met revisiecontrole.
+        if (!isAdministrator(own)) return reply(403, { error: 'Geen toegang.' });
+        const input = req.body, keys = input && typeof input === 'object' && !Array.isArray(input) ? Object.keys(input).sort().join(',') : '';
+        try {
+          if (input?.operation === 'read' && keys === 'operation') return reply(200, await scopedShows('staff-planning-read', {}));
+          if (input?.operation === 'save' && keys === 'concertId,field,operation,revision,value') { const { operation, ...payload } = input; return reply(200, await scopedShows('staff-planning-save', payload)); }
+          return reply(400, { error: 'Ongeldig verzoek.' });
+        } catch (error) {
+          if (error.message === 'VALIDATION') return reply(400, { error: 'Ongeldige invoer.', code: 'VALIDATION' });
+          if (error.message === 'NOT_FOUND') return reply(404, { error: 'Dit concert staat niet meer in de planning.', code: 'NOT_FOUND' });
+          if (error.message === 'STAFF_CONFLICT') return reply(409, { error: 'Deze cel is intussen elders gewijzigd. Laad de planning opnieuw.', code: 'STAFF_CONFLICT' });
+          return reply(503, { error: 'De personeelsplanning kon niet worden opgeslagen of geladen.' });
+        }
+      }
+      if (action === 'show-team' && req.method === 'POST') {
+        // Alleen lezen, achter de Shows-module: de vier functies van het projectteam van de show uit de personeelsplanning.
+        const input = req.body;
+        if (!input || Object.keys(input).length !== 1 || typeof input.concertId !== 'string' || input.concertId.length > 240 || /[\x00-\x1f/\\]/.test(input.concertId)) return reply(400, { error: 'Ongeldige show.' });
+        try { return reply(200, await scopedShows('staff-planning-team', { concertId: input.concertId })); }
+        catch { return reply(503, { error: 'Het projectteam kon niet worden geladen.' }); }
       }
       if (action === 'show-photo' && req.method === 'POST') {
         const input = req.body;

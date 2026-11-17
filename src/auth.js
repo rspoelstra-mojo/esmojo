@@ -53,7 +53,7 @@ async function performAccess(action, { method = 'GET', body, signal } = {}) {
   if (!response.ok) {
     if(result.code==='MODULE_FORBIDDEN')window.dispatchEvent(new Event('esmojo-module-forbidden'));
     if (response.status === 401 || ['ACCOUNT_DISABLED', 'MFA_REQUIRED'].includes(result.code)) await logout('Je sessie is niet meer geldig. Log opnieuw in.');
-    throw Object.assign(new Error(result.error || 'Het verzoek is mislukt.'),{retryable:response.status>=500||response.status===429});
+    throw Object.assign(new Error(result.error || 'Het verzoek is mislukt.'),{retryable:response.status>=500||response.status===429,status:response.status,...typeof result.code==='string'?{code:result.code}:{}});
   }
   if(result.profile&&result.profile.id===data.session.user.id&&homeContext.ticket===homeDashboardCache.context().ticket&&['session','restore','login'].includes(action)){homeDashboardCache.bind(result.profile);if(result.homeDashboard)homeDashboardCache.accept(result.homeDashboard,{actor:result.profile.id});}
   if(action==='show-profile-pdf'&&body?.concertId&&result.state&&!result.storageStale)homeDashboardCache.confirmProfile(body.concertId,result.state,{...homeContext,actor:data.session.user.id});

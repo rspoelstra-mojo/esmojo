@@ -3,6 +3,7 @@ import {createWebsiteSettingsView} from './website-settings.js';
 import {createDataTransitionView} from './data-transition.js';
 import {createDataverseTestView} from './dataverse-test.js';
 import {createIncidentAdminView} from './incident-admin.js';
+import {createStaffPlanningView} from './staff-planning.js';
 import {artistCatalogueCache} from './lib/artist-catalogue-cache.js';
 import {createArtistsPage} from './artists-page.js';
 import {barrierReferenceCache} from './barrier-images.js';
@@ -153,6 +154,9 @@ function renderPage() {
     const incidentLink=document.createElement('a');incidentLink.href='/beheerder/incidenten';incidentLink.className='submenu-link';incidentLink.textContent='Incidenten';incidentLink.dataset.submenuTitle='Incidenten';
     if(route==='beheerder/incidenten')incidentLink.setAttribute('aria-current','page');submenu.append(incidentLink);
     if(route==='beheerder/incidenten')disposePage=createIncidentAdminView(content,incidentLink);
+    const staffLink=document.createElement('a');staffLink.href='/beheerder/personeelsplanning';staffLink.className='submenu-link';staffLink.textContent='Personeelsplanning';staffLink.dataset.submenuTitle='Personeelsplanning';
+    if(route==='beheerder/personeelsplanning')staffLink.setAttribute('aria-current','page');submenu.append(staffLink);
+    if(route==='beheerder/personeelsplanning')disposePage=createStaffPlanningView(content,staffLink);
     const emailLink=document.createElement('a');emailLink.href='/beheerder/email';emailLink.className='submenu-link';emailLink.textContent='Email';emailLink.dataset.submenuTitle='Email';
     if(route==='beheerder/email')emailLink.setAttribute('aria-current','page');submenu.append(emailLink);
     if(route==='beheerder/email')disposePage=createEmailAdminView(content,emailLink);

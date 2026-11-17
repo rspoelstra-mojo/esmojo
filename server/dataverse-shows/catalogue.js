@@ -10,6 +10,7 @@ import {homeCatalogue} from '../../shared/home-catalogue.js';
 import {researchKeyForConcert,researchKeyForId,parseResearchKey,researchSlug} from '../../shared/dataverse-shows.js';
 import {normalizeArtistName} from '../../shared/artist-catalogue.js';
 import {showPlanning} from './planning.js';
+import {createStaffPlanning} from './staff-planning.js';
 const day=value=>typeof value==='string'?value.slice(0,10):'';
 const sameKeys=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).sort().join(',')===[...keys].sort().join(',');
 const photoValid=p=>sameKeys(p,['imageUrl','sourceUrl'])&&/^https:\/\/www\.mojo\.nl\/media\/[\w/.-]+\.(?:jpe?g|png|webp)(?:\?[^#\s]*)?$/i.test(p.imageUrl)&&/^https:\/\/www\.mojo\.nl\/concerten\/[\w%/-]+$/.test(p.sourceUrl);
@@ -20,7 +21,7 @@ function validSourceIdentity(show){
  return source&&source.date===show.dates[0]&&researchSlug(source.artistToken)===researchSlug(show.name)&&venue&&[venue.name,venue.id,...venue.aliases].some(name=>researchSlug(name)===researchSlug(source.venueToken));
 }
 export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}={}){
- const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1');
+ const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1'),staff=createStaffPlanning({env,repo,now});
  async function writeRows(rows){const ops=await recordOperations(repo,rows);if(ops.length)await repo.atomic(ops);}
  async function all(){
   let [series,concerts,artists,locations,teams,employees,projection]=await Promise.all(['esmojo_concertreeks','esmojo_concert','esmojo_artiest','esmojo_locatie','esmojo_projectteam','esmojo_medewerker','esmojo_integratiestatus'].map(table=>repo.query(table,{filter:table==='esmojo_integratiestatus'?"esmojo_integratiecode eq 'shows-native-v1'":'statecode eq 0'})));
@@ -176,8 +177,9 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
   const operations=await recordOperations(repo,[marker]);if(photo){const meta=await repo.meta('esmojo_artiest');operations.push({table:'esmojo_artiest',id:artist[meta.PrimaryIdAttribute],method:'PATCH',etag:artist['@odata.etag'],payload:{esmojo_fotobronurl:photo.imageUrl}});}try{await repo.atomic(operations);}catch{/* Independent readback below decides whether the batch committed. */}
   const read=await repo.byKey('esmojo_integratiestatus',key),actual=await repo.byKey('esmojo_artiest',artist.esmojo_sleutel);if(!read||migrationDifferences(marker,read,marker.fields).length||photo&&actual?.esmojo_fotobronurl!==photo.imageUrl)throw Error('ARTIST_PHOTO_UNCONFIRMED');return{saved:!!photo};
  }
- const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','management-candidates','advance-timetable-candidates','advance-timetable-save','advance-timetable-read','native-timetable-read','native-timetable-save']);
+ const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','staff-planning-store','staff-planning-read','staff-planning-save','staff-planning-team','management-candidates','advance-timetable-candidates','advance-timetable-save','advance-timetable-read','native-timetable-read','native-timetable-save']);
  async function request(operation,payload={}){
+  if(staff.handles(operation))return staff.handle(operation,payload);
   if(operation==='concert-catalogue')return createConcertCatalogue({env,repository:repo}).all();
   if(operation==='management-candidates'){if(Object.keys(payload).some(key=>key!=='after'))throw Error('VALIDATION');return{shows:await managementCandidates(payload.after)};}
   if(operation==='advance-timetable-candidates'){if(Object.keys(payload).some(key=>key!=='after'))throw Error('VALIDATION');return{shows:await advanceCandidates(payload.after)};}
