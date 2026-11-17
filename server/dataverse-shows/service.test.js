@@ -113,6 +113,11 @@ test('native PDF lifecycle, source-bound risks and operational review retain the
   const kept=await own('risk-operational-save',{concertId,actor:'synthetic-esm',source,riskId:'R01',revision:rev,riskLevel:'high',riskNote:'',measureRequired:true});assert.equal(kept.record.riskNote,'**Toezicht** bij de ingang\n- hekken\n- stewards');
   const dropped=await own('risk-operational-save',{concertId,actor:'synthetic-esm',source,riskId:'R01',revision:kept.record.revision,riskLevel:'high',riskNote:'',measureRequired:false});assert.equal(dropped.record.riskNote,'');assert.equal(dropped.record.measureRequired,false);
   view=await own('risk-view',{concertId});assert.equal(measureDefinitions({venue:'Gashouder'},view).rows.some(item=>item.id==='operational:'+source.revision+':R01'),false,'bij Nee geen maatregel');}
+ // Een eigen risico van vóór V1.183 heeft geen aparte omschrijving: dan zet de opslag-afbeelding ook geen omschrijving (zo bleef die rij in productie consistent).
+ {const {mapShow}=await import('../show-migration-map.js'),loaded=await f.state.load(concertId),clone=structuredClone(loaded.source),doc=clone.documents['productionele-risicos.json'];
+  const withDescription=mapShow(clone,loaded.people).records.find(row=>row.table==='esmojo_operationeelrisico'&&row.fields.esmojo_risicocode==='R31');assert.equal(withDescription.fields.esmojo_omschrijving,'Nieuwe omschrijving');
+  for(const risk of doc.ownRisks)delete risk.description;
+  const legacy=mapShow(clone,loaded.people).records.find(row=>row.table==='esmojo_operationeelrisico'&&row.fields.esmojo_risicocode==='R31');assert.equal(legacy.fields.esmojo_omschrijving,undefined,'geen verzonnen omschrijving');}
  // De typed rijen blijven consistent met het document (verifyPlan loopt bij iedere volgende bewerking).
  view=await own('risk-view',{concertId});assert.deepEqual(view.risks.map(row=>row.id),['R01','R31','R32']);
 });
