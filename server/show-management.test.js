@@ -15,6 +15,15 @@ test('Aanmaak is idempotent en racebestendig; secrets alleen versleuteld/als has
  const [a,b]=await Promise.all([f.service.manage(request),f.service.manage(request)]);assert.deepEqual(a,b);assert.equal(f.rows.size,1);assert.match(a.pin,/^\d{6}$/);assert.match(a.url,/^https:\/\/esmojo.nl\/showbeheer\/#([a-f0-9]{64})$/);
  const row=[...f.rows.values()][0],text=JSON.stringify(row),link=new URL(a.url).hash.slice(1);assert.ok(!text.includes(a.pin));assert.ok(!text.includes(link));assert.deepEqual(await f.service.manage({...request,operation:'status'}),a);
 });
+test('ensure maakt Showbeheer create-only aan: één keer, daarna bestaand; andere zalen worden geweigerd',async()=>{
+ const f=fixture();
+ assert.equal(await f.service.ensure('Fixture_Gashouder_20112026'),'created');assert.equal(f.rows.size,1);
+ const row=[...f.rows.values()][0],before=JSON.stringify(row);
+ assert.equal(await f.service.ensure('Fixture_Gashouder_20112026'),'existing');assert.equal(JSON.stringify([...f.rows.values()][0]),before,'bestaande toegang blijft ongewijzigd');
+ const status=await f.service.manage({...request,operation:'status'});assert.equal(status.available,true);assert.match(status.pin,/^\d{6}$/);
+ assert.ok(!before.includes(status.pin)&&!before.includes(new URL(status.url).hash.slice(1)),'geheimen alleen versleuteld of als hash');
+ await assert.rejects(f.service.ensure('Other'),/FORBIDDEN/);await assert.rejects(f.service.ensure('unknown'),/FORBIDDEN/);assert.equal(f.rows.size,1);
+});
 test('Alleen Gashouder, alleen exacte velden; oude showgegevens worden niet aangepast',async()=>{
  const f=fixture();for(const body of [{...request,concertId:'Other'},{...request,concertId:'unknown'}])await assert.rejects(f.service.manage(body),/FORBIDDEN/);
  for(const body of [null,{...request,actor:'spoofed'},{...request,operation:'delete'},{...request,concertId:''}])await assert.rejects(f.service.manage(body),/VALIDATION/);

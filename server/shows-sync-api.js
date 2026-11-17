@@ -1,6 +1,7 @@
 import {timetableClock} from '../shared/show-timetable.js';
 import {getMojoArtistPhotoResult} from './mojo-photo.js';
 import {fetchMojoTimetable} from './mojo-timetable.js';
+import {createShowManagementService} from './show-management.js';
 import { verifyImportIdentity } from './github-identity.js';
 import {MOJO_VENUES} from './mojo-venues.js';
 import { scrapeMojo } from './mojo-agenda.js';
@@ -10,7 +11,8 @@ export async function scrapeConcertCatalogue({scrape=scrapeMojo,now=new Date()}=
  const results=[];for(let index=0;index<MOJO_VENUES.length;index+=2)results.push(...await Promise.all(MOJO_VENUES.slice(index,index+2).map(async venue=>{try{return await scrape({venue:venue.id,now,days:45});}catch(error){error.venue=venue.id;throw error;}})));
  const first=results[0];if(results.some(row=>row.from!==first.from||row.until!==first.until))throw Error('MOJO_DATE');return{from:first.from,until:first.until,checkedAt:now.toISOString(),pages:results.reduce((sum,row)=>sum+row.pages,0),concerts:results.flatMap(row=>row.concerts)};
 }
-export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape = scrapeConcertCatalogue, store = createShowsStore({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}), photo=getMojoArtistPhotoResult,timetable=fetchMojoTimetable,now=()=>new Date() } = {}) {
+export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape = scrapeConcertCatalogue, store = createShowsStore({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}), photo=getMojoArtistPhotoResult,timetable=fetchMojoTimetable,management=null,now=()=>new Date() } = {}) {
+  let defaultManagement=null;
   return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');res.setHeader('X-ESMOJO-Agenda-Import','3');
     if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Niet toegestaan.' }); }
@@ -20,7 +22,7 @@ export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape =
     const manual=req.body?.manualRun===true&&identity?.event==='workflow_dispatch';
     if(req.body?.verifyOnly!==true&&!manual&&timetableClock(now()).hour!==5)return res.status(req.body?.operation?409:200).json({ok:!req.body?.operation,skipped:true,code:'IMPORT_WINDOW_CLOSED'});
     let stage='fetch';try {
-      if(req.body?.verifyOnly===true){if(Object.keys(req.body).join(',')!=='verifyOnly')throw Error('VALIDATION');stage='verify-core';const existing=await store('concert-catalogue');stage='fetch';const snapshot=await scrape();stage='photo-candidates';const photoCandidates=(await store('artist-photo-candidates')).artists.length;stage='timetable-candidates';const timetableCandidates=(await store('advance-timetable-candidates')).shows.length;return res.status(200).json({ok:true,verified:true,venues:MOJO_VENUES.length,concerts:snapshot.concerts.length,existingConcerts:existing.concerts.length,photoCandidates,timetableCandidates,days:45});}
+      if(req.body?.verifyOnly===true){if(Object.keys(req.body).join(',')!=='verifyOnly')throw Error('VALIDATION');stage='verify-core';const existing=await store('concert-catalogue');stage='fetch';const snapshot=await scrape();stage='photo-candidates';const photoCandidates=(await store('artist-photo-candidates')).artists.length;stage='timetable-candidates';const timetableCandidates=(await store('advance-timetable-candidates')).shows.length;stage='management-candidates';const managementCandidates=(await store('management-candidates')).shows.length;return res.status(200).json({ok:true,verified:true,venues:MOJO_VENUES.length,concerts:snapshot.concerts.length,existingConcerts:existing.concerts.length,photoCandidates,timetableCandidates,managementCandidates,days:45});}
       // Dagelijkse controle vooraf van het MOJO-tijdschema voor alle shows in de komende 45 dagen. De meest recente versie wint;
       // een tijdelijke of structurele fout bij één concert (alleen veilige foutcodes geteld) stopt de overige concerten niet.
       if(req.body?.operation==='timetables'){
@@ -30,6 +32,17 @@ export function makeShowsSyncHandler({ identify = verifyImportIdentity, scrape =
         const work=async()=>{while(next<batch.length){const show=batch[next++];try{stage='timetable-source';const snapshot=await timetable(show,{now,advance:true});stage='timetable-save';const saved=await store('advance-timetable-save',{concertId:show.concertId,snapshot});counts[['saved','missing'].includes(saved.state)?saved.state:'unchanged']++;}catch(error){counts.failed++;const code=/^[A-Z][A-Z0-9_]{2,59}$/.test(error?.message||'')?error.message:'UNKNOWN';codes[code]=(codes[code]||0)+1;}}};
         await Promise.all(Array.from({length:Math.min(3,batch.length)},work));
         return res.status(200).json({ok:true,timetables:counts,...Object.keys(codes).length?{timetableErrors:codes}:{},timetablesCursor:batch.at(-1)?.concertId||null,timetablesPending:shows.length>batch.length});
+      }
+      // Showbeheer wordt automatisch aangemaakt zodra een Gashouder-show in het showmenu komt (komende 45 dagen). Create-only:
+      // bestaande toegang blijft ongemoeid. Per concert een fout (alleen veilige codes geteld) stopt de overige concerten niet.
+      if(req.body?.operation==='showbeheer'){
+        const after=req.body?.managementAfter;if(after!==undefined&&(typeof after!=='string'||!after||after.length>240||/[\x00-\x1f/\\]/.test(after)))throw Error('VALIDATION');
+        stage='management-candidates';const shows=(await store('management-candidates',after?{after}:{})).shows,batch=shows.slice(0,12);
+        const service=management||(defaultManagement||=createShowManagementService({env:{...process.env,SHOWS_STORAGE_PROVIDER:'dataverse'}}));
+        let next=0;const counts={created:0,existing:0,failed:0},codes={};
+        const work=async()=>{while(next<batch.length){const show=batch[next++];try{stage='management-create';const state=await service.ensure(show.concertId);counts[state==='created'?'created':'existing']++;}catch(error){counts.failed++;const code=/^[A-Z][A-Z0-9_]{2,59}$/.test(error?.message||'')?error.message:'UNKNOWN';codes[code]=(codes[code]||0)+1;}}};
+        await Promise.all(Array.from({length:Math.min(3,batch.length)},work));
+        return res.status(200).json({ok:true,management:counts,...Object.keys(codes).length?{managementErrors:codes}:{},managementCursor:batch.at(-1)?.concertId||null,managementPending:shows.length>batch.length});
       }
       // Alleen de fotocursor van de lopende run is toegestaan; geen vrije velden naar de opslag.
       const after=req.body?.photoAfter;if(after!==undefined&&!/^a_[a-f0-9]{64}$/.test(after))throw Error('VALIDATION');

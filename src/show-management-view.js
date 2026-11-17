@@ -22,14 +22,14 @@ export function createShowManagementView({logo}){
 
 export function createShowManagementCards(){
  const row=element('div','show-management-overview');
- const management=element('section','show-management-card');management.append(element('h2',null,'Showbeheer'));
- const body=element('div','show-management-card-body');
- const create=element('button','primary-button','Showbeheer aanmaken');create.type='button';body.append(create);management.append(body);
- const venue=element('section','show-management-card show-management-venue');venue.hidden=true;venue.append(element('h2',null,'Gashouder'));
+ const management=element('section','show-management-card show-management-access');management.append(element('h2',null,'Showbeheer'));
+ const body=element('div','show-management-card-body');management.append(body);
+ // De Gashouder-kaart staat altijd naast Showbeheer, zodat beide kaarten even hoog blijven.
+ const venue=element('section','show-management-card show-management-venue');venue.append(element('h2',null,'Gashouder'));
  const quadrants=element('div','show-management-quadrants');
  for(const label of ['Personele bezetting','Omgevingsbeeld','Veiligheidsbeleid','Rapportages']){const quadrant=element('div','show-management-quadrant');quadrant.append(element('h3',null,label),element('p',null,'Nog niet ingevuld'));quadrants.append(quadrant);}
  venue.append(quadrants);row.append(management,venue);
- return{row,management,body,create,venue};
+ return{row,management,body,venue};
 }
 
 export function renderManagementDownload(view,pdf,{download}={}){

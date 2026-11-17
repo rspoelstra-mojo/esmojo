@@ -8,35 +8,46 @@ test('de workflow draait alleen de agenda-import om 05:00 (zomer- en wintertijd)
 });
 test('publication verification is read-only even outside the ordinary schedule',async()=>{const calls=await run('2026-11-15T15:30:00Z',true);assert.equal(calls.filter(call=>call.method==='POST').length,1);assert.deepEqual(calls.find(call=>call.method==='POST').body,{verifyOnly:true});});
 const id=n=>'a_'+String(n).padStart(64,'0');
-const answer=(body,photos)=>body&&body.operation==='timetables'?{ok:true,timetablesPending:false,timetablesCursor:null}:photos(body);
-test('dagelijks: concerten, dan tijdschemacontrole met cursor, dan fotobacklog met cursor; een fotobacklog laat de import niet falen, openstaande concerten wel',async()=>{
- let tt=0,ph=0;
+const none={ok:true,management:{created:0,existing:0,failed:0},managementPending:false,managementCursor:null};
+const answer=(body,photos)=>body&&body.operation==='showbeheer'?none:body&&body.operation==='timetables'?{ok:true,timetablesPending:false,timetablesCursor:null}:photos(body);
+test('dagelijks: concerten, dan Showbeheer, dan tijdschemacontrole met cursor, dan fotobacklog met cursor; een fotobacklog laat de import niet falen, openstaande concerten wel',async()=>{
+ let tt=0,ph=0,sb=0;
  const calls=await run('2026-11-15T04:00:00Z',false,body=>{
+  if(body&&body.operation==='showbeheer'){sb++;return sb<2?{ok:true,management:{created:3,existing:0,failed:0},managementPending:true,managementCursor:'Gashouder_'+sb}:{ok:true,management:{created:0,existing:2,failed:0},managementPending:false,managementCursor:'Gashouder_'+sb};}
   if(body&&body.operation==='timetables'){tt++;return tt<3?{ok:true,timetablesPending:true,timetablesCursor:'Show_'+tt}:{ok:true,timetablesPending:false,timetablesCursor:'Show_'+tt};}
   ph++;return ph<3?{ok:true,photosPending:true,photosCursor:id(ph)}:{ok:true,photosPending:false,photosCursor:id(ph)};
  });
- assert.deepEqual(calls.filter(call=>call.method==='POST').map(call=>call.body),[{},{operation:'timetables'},{operation:'timetables',timetablesAfter:'Show_1'},{operation:'timetables',timetablesAfter:'Show_2'},{operation:'photos',photoAfter:id(1)},{operation:'photos',photoAfter:id(2)}]);
+ assert.deepEqual(calls.filter(call=>call.method==='POST').map(call=>call.body),[{},{operation:'showbeheer'},{operation:'showbeheer',managementAfter:'Gashouder_1'},{operation:'timetables'},{operation:'timetables',timetablesAfter:'Show_1'},{operation:'timetables',timetablesAfter:'Show_2'},{operation:'photos',photoAfter:id(1)},{operation:'photos',photoAfter:id(2)}]);
  // Zonder openstaande fotobacklog volgt na de tijdschemacontrole geen fotoverzoek.
- assert.deepEqual((await run('2026-11-15T04:00:00Z',false,body=>answer(body,()=>({ok:true,photosPending:false,photosCursor:null})))).filter(call=>call.method==='POST').map(call=>call.body),[{},{operation:'timetables'}]);
+ assert.deepEqual((await run('2026-11-15T04:00:00Z',false,body=>answer(body,()=>({ok:true,photosPending:false,photosCursor:null})))).filter(call=>call.method==='POST').map(call=>call.body),[{},{operation:'showbeheer'},{operation:'timetables'}]);
  // Een oneindige backlog stopt na honderd fotobatches; openstaande concerten blijven een fout.
  let endless=0;await run('2026-11-15T04:00:00Z',false,body=>answer(body,()=>({ok:true,photosPending:true,photosCursor:id(++endless)})));assert.equal(endless,101,'één start plus maximaal honderd vervolgbatches');
  await assert.rejects(run('2026-11-15T04:00:00Z',false,body=>answer(body,()=>({ok:true,concertsPending:true}))),/CONCERT_IMPORT_INCOMPLETE/);
  // Zonder cursor (geen kandidaten) volgt geen photoAfter.
  const last=await run('2026-11-15T04:00:00Z',false,body=>answer(body,b=>b&&b.operation==='photos'?{ok:true,photosPending:false,photosCursor:null}:{ok:true,photosPending:true,photosCursor:null}));
- assert.deepEqual(last.filter(call=>call.method==='POST').map(call=>call.body),[{},{operation:'timetables'},{operation:'photos'}]);
+ assert.deepEqual(last.filter(call=>call.method==='POST').map(call=>call.body),[{},{operation:'showbeheer'},{operation:'timetables'},{operation:'photos'}]);
 });
 test('een fout in de tijdschemacontrole laat de fotostap doorlopen en laat daarna de run falen',async()=>{
  const seen=[];
- await assert.rejects(run('2026-11-15T04:00:00Z',false,body=>{seen.push(body);if(body&&body.operation==='timetables')throw Error('mislukt');return body&&body.operation==='photos'?{ok:true,photosPending:false,photosCursor:null}:{ok:true,photosPending:true,photosCursor:id(1)};}),/./);
- assert.deepEqual(seen.map(body=>body.operation||'start'),['start','timetables','photos']);
+ await assert.rejects(run('2026-11-15T04:00:00Z',false,body=>{seen.push(body);if(body&&body.operation==='timetables')throw Error('mislukt');return body&&body.operation==='showbeheer'?none:body&&body.operation==='photos'?{ok:true,photosPending:false,photosCursor:null}:{ok:true,photosPending:true,photosCursor:id(1)};}),/./);
+ assert.deepEqual(seen.map(body=>body.operation||'start'),['start','showbeheer','timetables','photos']);
+});
+test('mislukt Showbeheer (per concert of het hele verzoek) laat tijdschema en foto’s doorlopen en laat daarna de run falen',async()=>{
+ const photos={ok:true,photosPending:false,photosCursor:null},timetables={ok:true,timetablesPending:false,timetablesCursor:null};
+ let seen=[];
+ await assert.rejects(run('2026-11-15T04:00:00Z',false,body=>{seen.push(body.operation||'start');return body&&body.operation==='showbeheer'?{ok:true,management:{created:1,existing:0,failed:2},managementErrors:{FORBIDDEN:2},managementPending:false,managementCursor:'Gashouder_1'}:body&&body.operation==='timetables'?timetables:body&&body.operation==='photos'?photos:{...photos,photosPending:true,photosCursor:id(1)};}),/SHOWBEHEER_INCOMPLETE/);
+ assert.deepEqual(seen,['start','showbeheer','timetables','photos']);
+ seen=[];
+ await assert.rejects(run('2026-11-15T04:00:00Z',false,body=>{seen.push(body.operation||'start');if(body&&body.operation==='showbeheer')throw Error('mislukt');return body&&body.operation==='timetables'?timetables:body&&body.operation==='photos'?photos:{...photos,photosPending:true,photosCursor:id(1)};}),/./);
+ assert.deepEqual(seen,['start','showbeheer','timetables','photos']);
 });
 test('handmatige run: alleen met run_now buiten het venster, altijd met manualRun, ook voor de tijdschemacontrole; verificatie blijft alleen lezen', async () => {
  const afternoon='2026-11-17T09:56:00Z';
  assert.deepEqual(await run(afternoon),[],'zonder run_now doet een run buiten 05:00 niets');
- const calls=await run(afternoon,false,body=>body&&body.operation==='photos'?{ok:true,photosPending:false,photosCursor:null}:body&&body.operation==='timetables'?{ok:true,timetablesPending:false,timetablesCursor:null}:{ok:true,photosPending:true,photosCursor:id(7)},true);
+ const calls=await run(afternoon,false,body=>body&&body.operation==='photos'?{ok:true,photosPending:false,photosCursor:null}:body&&body.operation==='showbeheer'?none:body&&body.operation==='timetables'?{ok:true,timetablesPending:false,timetablesCursor:null}:{ok:true,photosPending:true,photosCursor:id(7)},true);
  const posts=calls.filter(call=>call.method==='POST');
  assert.ok(posts.every(call=>call.url.endsWith('/api/shows-sync')&&call.body.manualRun===true),'elke aanvraag van de handmatige run draagt manualRun');
- assert.deepEqual(posts.map(call=>call.body),[{manualRun:true},{manualRun:true,operation:'timetables'},{manualRun:true,operation:'photos',photoAfter:id(7)}]);
+ assert.deepEqual(posts.map(call=>call.body),[{manualRun:true},{manualRun:true,operation:'showbeheer'},{manualRun:true,operation:'timetables'},{manualRun:true,operation:'photos',photoAfter:id(7)}]);
  const verify=await run(afternoon,true,null,true);assert.equal(verify.filter(call=>call.method==='POST').length,1);assert.deepEqual(verify.find(call=>call.method==='POST').body,{verifyOnly:true});
  assert.ok((await run('2026-11-15T04:00:00Z')).some(call=>call.method==='POST'&&call.body&&Object.keys(call.body).length===0),'de gewone 05:00-run stuurt geen manualRun');
 });

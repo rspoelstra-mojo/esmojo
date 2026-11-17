@@ -22,12 +22,17 @@ showpagina blijft werken. Geef nooit een service-role-key aan de browser of chat
 
 ## Gebruik
 
-1. Open een Gashouder-show en kies Showbeheer aanmaken.
-2. De UI toont eerst aanmaken en daarna de daadwerkelijke terugleescontrole.
-   Geen gefingeerde percentages. De unieke concertkoppeling maakt herhalen en
-   gelijktijdig aanmaken idempotent: bestaande link/pincode worden behouden.
-3. De kaart toont de link, Kopieer URL en de pincode. Showbeheer verzenden blijft
-   uitgeschakeld; er worden geen e-mails verstuurd.
+1. Showbeheer wordt sinds 17 november 2026 automatisch aangemaakt door de 05:00-import
+   (`showbeheer`-stap in `shows-sync`), zodra een Gashouder-show in het showmenu staat
+   (komende 45 dagen). Create-only: een bestaande link/pincode blijft ongewijzigd.
+   Een mislukte aanmaak (alleen veilige foutcodes geteld) laat de run falen zonder de
+   tijdschema- en fotostap te blokkeren. Er is geen aanmaakknop meer in de UI.
+2. De kaart Showbeheer toont de pincode in zes losse vakjes (achtergrond gelijk aan de
+   kaart) en twee knoppen: Link kopiëren en Verzenden. Zolang de toegang nog niet
+   bestaat staat er een korte tekst. De kaart is nooit hoger dan de Gashouder-kaart
+   (die bepaalt de rijhoogte); bij overloop scrolt de kaart.
+3. Verzenden is uitgeschakeld tot het showprofiel/de PDF gereed is; er worden geen
+   e-mails verstuurd.
 4. Na een juiste pincode verschijnen de vijf lege blokken. De foto vervaagt;
    gebruikers met verminderde beweging krijgen de overgang zonder animatie.
 5. De Gashouderkaart bevat vier lege statusvakken. In deze eerste versie bestaan
@@ -74,7 +79,7 @@ De oudere Supabase-installatiepassage hierboven is historisch: toegang, File en
 gebruikstelling staan uitsluitend in Dataverse. Bestaande tabellen volstaan;
 er worden geen tabellen, kolommen of schema-opties toegevoegd.
 
-Na aanmaken van de bestaande Showbeheer-toegang verschijnt Showbeheer verzenden
+Na aanmaken van de bestaande Showbeheer-toegang is Verzenden beschikbaar
 zodra de actuele showprofiel-PDF gereed is. Geen30-dagengrens. Mailto opent het
 standaard mailprogramma met alleen PIN en geheime fragmentlink op twee regels;
 geen ontvanger, onderwerp, overige tekst of automatische mail/verzendbevestiging.

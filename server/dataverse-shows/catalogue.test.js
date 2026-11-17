@@ -74,6 +74,20 @@ test('artist photo candidates cover every artist without a photo, ignore the 45-
  assert.equal((await service('artist-photo-save',{artistId:all[1].artistId,photo:null})).saved,false);assert.equal((await service('artist-photo-candidates')).artists.some(row=>row.artistId===all[1].artistId),false);
  assert.deepEqual((await service('artist-photo-candidates')).artists.map(row=>row.artistId),all.slice(2).map(row=>row.artistId));
 });
+test('Showbeheer-kandidaten: alleen Gashouder in de komende 45 dagen, op volgorde en met cursor',async()=>{
+ const f=fixture(),{MOJO_VENUES}=await import('../mojo-venues.js'),{concertId}=await import('../mojo-agenda.js');
+ const artist='Showbeheer synthetic artist',days=['2026-11-20','2026-11-21'],source='https://www.mojo.nl/concerten/showbeheer-synthetic';
+ const snapshot={pages:10,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts:MOJO_VENUES.flatMap(v=>days.map(date=>({concertId:concertId(artist,date,v.name),artist,venue:v.name,city:v.city,date,sourceUrl:source})))};
+ await f.service('sync',{snapshot});
+ const shows=(await f.service('management-candidates')).shows;
+ assert.ok(shows.length>=2&&shows.every(row=>row.date>='2026-11-13'&&row.date<'2026-12-28'&&/Gashouder/.test(row.concertId)));
+ assert.ok(shows.some(row=>row.concertId===concertId(artist,days[0],'Gashouder')),'het Gashouder-concert is kandidaat');
+ assert.ok(!shows.some(row=>/Ziggo|AFAS|Ahoy|ArenA|GelreDome/i.test(row.concertId)),'andere zalen krijgen geen Showbeheer');
+ assert.deepEqual(shows.map(row=>row.concertId),[...shows.map(row=>row.concertId)].sort());
+ assert.deepEqual((await f.service('management-candidates',{after:shows[0].concertId})).shows.map(row=>row.concertId),shows.slice(1).map(row=>row.concertId));
+ for(const bad of [{after:''},{after:5},{after:'a/b'},{limit:1}])await assert.rejects(f.service('management-candidates',bad),/VALIDATION/);
+ assert.deepEqual((await createNativeShowsService({state:f.state,catalogue:createNativeCatalogue({state:f.state,now:()=>new Date('2027-03-01T12:00:00Z')})})('management-candidates')).shows,[]);
+});
 test('voorlopig tijdschema: dagelijkse kandidaten, meest recente versie wint, een verdwenen bron wist niets en lezen volgt de reeks',async()=>{
  const f=fixture(),{MOJO_VENUES}=await import('../mojo-venues.js'),{concertId}=await import('../mojo-agenda.js');
  const venue=MOJO_VENUES[0],artist='Tijdschema synthetic artist',days=['2026-11-20','2026-11-21'],source='https://www.mojo.nl/concerten/tijdschema-synthetic';

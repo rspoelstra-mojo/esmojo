@@ -1,3 +1,14 @@
+## Showbeheer automatisch aanmaken en nieuwe kaart (17 november 2026)
+
+Gebruiker vervangt de knop Showbeheer aanmaken door automatisch aanmaken: de 05:00-import
+(Europe/Amsterdam) maakt voor Gashouder-shows die in het showmenu komen (komende 45 dagen)
+de bestaande Showbeheer-toegang aan, create-only en idempotent, met dezelfde link/pincode-
+opslag, versleuteling en autorisatiegrenzen als voorheen; geen nieuwe gegevens of schema.
+De kaart toont de pincode in zes losse vakjes plus de knoppen Link kopiëren en Verzenden
+(mailto, alleen PIN en link, geen ontvangers/onderwerp/automatische verzending) en is
+nooit hoger dan de Gashouder-kaart. Gebruiker vraagt extra aandacht voor een nette
+vormgeving. Andere zalen krijgen geen Showbeheer. Zie docs/showbeheer.md.
+
 ## Dagelijkse tijdschemacontrole vooraf (17 november 2026)
 
 Gebruiker vervangt de tijdschema-opname op de showdag (12:00) door een dagelijkse

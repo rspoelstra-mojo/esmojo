@@ -5,6 +5,30 @@
 .show-management-card h2 { margin:0 0 16px; font-size:16px; line-height:1.5; font-weight:600; }
 .show-management-card-body { display:grid; gap:16px; justify-items:start; }
 .show-management-card-body > * { max-width:100%; }
+.show-management-state { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+/* Showbeheer-kaart: pincode bovenaan, acties en verzendstatus tegen de onderkant (zoals Show informatie). */
+.show-management-access { display:flex; flex-direction:column; }
+.show-management-access .show-management-card-body { flex:1 1 auto; display:flex; flex-direction:column; gap:16px; justify-items:initial; align-items:stretch; }
+.show-management-pin-section { min-width:0; }
+.show-management-label { margin:0 0 8px; font-size:12px; line-height:18px; font-weight:600; color:var(--muted); }
+/* Zes losse vakjes met dezelfde achtergrond als de kaart; alleen de rand tekent ze. */
+.show-management-pin-digits { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
+.show-management-pin-digit { display:grid; place-items:center; height:48px; border:1px solid var(--line); border-color:color-mix(in srgb,var(--text) 20%,var(--line)); border-radius:10px; background:var(--fluid-card,#fff); color:var(--text); font-size:20px; line-height:1; font-weight:600; font-variant-numeric:tabular-nums; }
+.show-management-footer { margin-top:auto; display:grid; gap:10px; min-width:0; }
+.show-management-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.show-management-action { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-width:0; min-height:40px; padding:0 12px; border:1px solid var(--line); border-radius:10px; background:var(--fluid-card,#fff); color:var(--text); font:inherit; font-size:13px; line-height:1.2; font-weight:600; text-decoration:none; white-space:nowrap; cursor:pointer; transition:background-color .15s ease,border-color .15s ease,color .15s ease; }
+.show-management-action:hover { background:var(--canvas); border-color:color-mix(in srgb,var(--text) 25%,var(--line)); }
+.show-management-action:focus-visible { outline:2px solid var(--blue,#002ff4); outline-offset:2px; }
+.show-management-action-icon { flex:none; display:inline-grid; width:15px; height:15px; }
+.show-management-action-icon svg { width:15px; height:15px; }
+.show-management-action.is-primary { background:#002ff4; border-color:#002ff4; color:#fff; }
+.show-management-action.is-primary:hover { background:#0a3df0; border-color:#0a3df0; }
+.show-management-action:disabled,.show-management-action:disabled:hover { background:var(--canvas); border-color:var(--line); color:var(--muted); cursor:not-allowed; }
+:root[data-theme="dark"] .show-management-action.is-primary { background:#7296ff; border-color:#7296ff; color:#080f20; }
+:root[data-theme="dark"] .show-management-action.is-primary:hover { background:#86a6ff; border-color:#86a6ff; }
+:root[data-theme="dark"] .show-management-action:disabled,:root[data-theme="dark"] .show-management-action:disabled:hover { background:var(--canvas); border-color:var(--line); color:var(--muted); }
+.show-management-note { margin:0; font-size:12px; line-height:1.5; }
+.show-management-note[hidden] { display:none; }
 .show-management-quadrants { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:4px; }
 .show-management-quadrant { min-width:0; padding:16px 12px; border-top:1px solid var(--line); }
 .show-management-quadrant:nth-child(odd) { padding-left:0; border-right:1px solid var(--line); }
@@ -45,12 +69,4 @@
 @media(max-width:900px) { .show-management-grid { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:auto; } .show-management-block[data-block="E"] { grid-column:1 / -1; grid-row:3; min-height:220px; } }
 @media(max-width:560px) { .show-management-pin-card { padding:32px 20px; } .show-management-pin { gap:6px; } .show-management-grid { display:flex; flex-direction:column; gap:20px; } .show-management-block { min-height:200px; } }
 @media(prefers-reduced-motion:reduce) { .show-management-background,.show-management-page::before { transition:none; } }
-.show-management-link-row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; width:100%; }
-.show-management-url { min-width:0; flex:1 1 180px; overflow-wrap:anywhere; font-size:14px; line-height:1.5; color:var(--blue,#002ff4); }
-.show-management-code { margin:0; font-size:14px; }
-.show-management-code strong { margin-left:8px; letter-spacing:3px; font-variant-numeric:tabular-nums; }
-.show-management-state,.show-management-progress p { margin:0; color:var(--muted); font-size:14px; line-height:1.5; }
-.show-management-progress { width:100%; display:grid; gap:12px; }
-.show-management-progress progress { width:100%; height:6px; accent-color:#002ff4; }
-.show-management-step-pending { opacity:.6; }
 .show-management-sent { margin:0; font-size:12px; color:var(--muted); }
