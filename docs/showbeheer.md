@@ -111,3 +111,22 @@ niet het 45-dagenmenu. Een ver vooruit afgerond profiel kan dus direct gedeeld
 worden; verschillende showdatums van dezelfde reeks hergebruiken dezelfde link
 en PIN. Andere zalen en volledig afgelopen reeksen kunnen geen nieuwe toegang
 aanvragen. Er worden geen concerten of bedrijfsgegevens voor deze toets aangemaakt.
+
+## Showplanning en verzendregistratie (17 november 2026)
+
+De planning op de showpagina (Overzicht) heeft drie stappen vanaf de eerste
+concertdatum van de reeks (of het enige concert): 30 dagen ervoor Showprofiel
+verzonden, 7 dagen ervoor Risico's beoordeeld, 1 dag ervoor Beheersmaatregelen
+afgerond. Het model staat in `showPagePlanning` (src/lib/show-planning.js); de
+homepage gebruikt tot de verbouwing nog `showPlanning`.
+
+Showprofiel verzonden is een geregistreerde verzending (Vertrouwelijk, Dataverse).
+Een klik op Showbeheer verzenden legt, door een ingelogde gebruiker met actuele
+Shows-rechten, een TechnischeStatus-receipt `show-management-sent-v1` vast, per
+reeks en per huidige PDF-revisie (idempotent, CAS en volledige readback; geen
+nieuw schema). De mailto kan het echte verzenden niet bevestigen: de registratie
+betekent dat de verzendknop is gebruikt. Een nieuwe PDF-revisie telt weer als
+onverzonden. Alleen Gashouder heeft deze route; andere zalen blijven bij deze
+stap open totdat daar een verzendroute bestaat. Het verzendmoment staat niet in
+de openbare homepage-cache en niet in browseropslag; het staat uitsluitend in het
+sessiegeheugen van de showpagina.

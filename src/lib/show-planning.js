@@ -58,3 +58,28 @@ export function showPlanning(show,snapshot={},now=new Date()){
   else if(todayTime>points[0]){const i=points.findIndex(point=>point>=todayTime);position=10+20*(i-1+(todayTime-points[i-1])/(points[i]-points[i-1]));}
   return{today,steps,next,todayPosition:position};
 }
+// Planning op de showpagina: drie stappen vanaf de eerste concertdatum van de reeks.
+// Los van showPlanning, dat de homepage tot de verbouwing blijft gebruiken.
+const pageDefinitions=[
+  ['profile','Showprofiel verzonden',30],
+  ['risks','Risico’s beoordeeld',7],
+  ['measures','Beheersmaatregelen afgerond',1],
+];
+const relativeDays=days=>days===0?'Vandaag':days===1?'Morgen':days===-1?'1 dag te laat':days<0?`${-days} dagen te laat`:`Over ${days} dagen`;
+export function showPagePlanning(show,snapshot={},now=new Date()){
+  const dates=[...new Set(show.dates||[])].sort();if(!dates.length||dates.some(date=>calendarDay(date)===null))return null;
+  const start=calendarDay(dates[0]),today=dutchToday(now),todayTime=calendarDay(today);
+  const sentAt=Number.isFinite(Date.parse(snapshot.profileSentAt))?snapshot.profileSentAt:null;
+  const completed={profile:sentAt!==null,risks:productionComplete(show,snapshot)&&operationalComplete(snapshot),measures:showMeasures(show,snapshot).complete};
+  const steps=pageDefinitions.map(([id,label,offset])=>{
+    const date=new Date(start-offset*DAY).toISOString().slice(0,10),days=Math.round((calendarDay(date)-todayTime)/DAY),done=completed[id]===true;
+    const completedAt=id==='profile'&&done?dutchToday(new Date(sentAt)):null;
+    return{id,label,date,days,completed:done,completedAt,overdue:!done&&days<0,badge:done?(completedAt?'Verzonden · '+planningDate(completedAt):'Afgerond'):relativeDays(days)};
+  });
+  const next=steps.find(step=>!step.completed)||null;
+  for(const step of steps)step.state=step.completed?'completed':step.overdue?'overdue':step===next?'current':'pending';
+  const showDays=Math.round((start-todayTime)/DAY);
+  const done=steps.filter(step=>step.completed).length;
+  return{today,steps,next,done,total:steps.length,allDone:done===steps.length,
+    show:{date:dates[0],days:showDays,label:dates.length>1?'Eerste show':'Showdag',badge:showDays<0?'Gestart':relativeDays(showDays)}};
+}

@@ -29,3 +29,14 @@ test('native management uses the canonical series beyond the menu horizon and sh
 test('direct native management rejects other venues and unknown concerts without creating access',async()=>{
  const source=structuredClone(sampleSource);source.shows[0].venue='Ziggo Dome';const db=nativeFixture(source,structuredClone(samplePeople)),state=createNativeShowState({env,repository:db.repo,connection:db.connection}),repository=createNativeManagementRepository({env,state,now:()=>Date.parse('2026-09-01T12:00:00Z')});await assert.rejects(repository.target(source.concertId),/FORBIDDEN/);await assert.rejects(repository.target('Unknown_synthetic_show'),/NOT_FOUND/);assert.equal(db.tables.get('esmojo_showbeheer').size,0);
 });
+test('native sent receipts are idempotent per identity, survive lost acknowledgements, verify ownership and stay out of the visit statistics',async()=>{
+ const f=fixture(),own=await f.service.manage({concertId:sampleSource.concertId,operation:'create'}),row=await f.repository.get(sampleSource.concertId),identity='a'.repeat(64),other='b'.repeat(64);
+ assert.equal(await f.repository.sentAt(row,identity),null);
+ const atomic=f.repo.atomic;let lost=true;f.repo.atomic=async operations=>{await atomic(operations);if(lost&&operations.some(op=>op.table==='esmojo_technischestatus'&&op.payload.esmojo_doelsoort==='show-management-sent-v1')){lost=false;throw Error('LOST_ACK');}};
+ await Promise.all([f.repository.event(row,'sent',identity),f.repository.event(row,'sent',identity)]);await f.repository.event(row,'sent',identity);
+ const stored=[...f.tables.get('esmojo_technischestatus').values()].filter(r=>r.esmojo_doelsoort==='show-management-sent-v1');assert.equal(stored.length,1);
+ assert.equal(await f.repository.sentAt(row,identity),'2026-11-13T12:00:00.000Z');assert.equal(await f.repository.sentAt(row,other),null);
+ const stats=await f.service.statistics();assert.equal(stats.rows[0].visits,0);assert.equal(stats.rows[0].downloads,0);assert.ok(!JSON.stringify([...f.tables.get('esmojo_technischestatus').values()]).includes(own.pin));
+ await assert.rejects(f.repository.sentAt(row,'zzz'),/VALIDATION/);
+ stored[0]._esmojo_showbeheer_value='11111111-1111-4111-8111-111111111111';await assert.rejects(f.repository.sentAt(row,identity),/MANAGEMENT_UNAVAILABLE/);
+});
