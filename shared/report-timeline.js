@@ -1,8 +1,8 @@
-import {validateTimetable,validTimetableDate} from './show-timetable.js';
+import {validateSavedTimetable,validTimetableDate} from './show-timetable.js';
 const clockMinute=(date,time,base)=>Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(base+'T00:00:00Z'))/60000)+Number(time.slice(0,2))*60+Number(time.slice(3));
 export const timelineTime=minute=>String(Math.floor(((minute%1440)+1440)%1440/60)).padStart(2,'0')+':'+String(((minute%60)+60)%60).padStart(2,'0');
 export function savedTimelineBounds(snapshot,date){
- try{if(!validTimetableDate(date)||typeof snapshot?.concertId!=='string'||!snapshot.concertId)return null;validateTimetable(snapshot,{concertId:snapshot?.concertId,date});}catch{return null;}
+ try{if(!validTimetableDate(date)||typeof snapshot?.concertId!=='string'||!snapshot.concertId)return null;validateSavedTimetable(snapshot,{concertId:snapshot?.concertId,date});}catch{return null;}
  if(snapshot.status!=='available')return null;
  const find=kind=>[...new Set(snapshot.entries.filter(entry=>entry.kind===kind).map(entry=>clockMinute(entry.localDate,entry.time,date)))];
  const starts=find('doors'),ends=find('end');if(starts.length!==1||ends.length!==1||ends[0]<=starts[0])return null;
