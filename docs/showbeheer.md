@@ -105,3 +105,9 @@ conflicten mogen alleen na onafhankelijke ontbrekende-receiptcontrole herhalen.
 Het nieuwe Beheerder/Showbeheer-overzicht toont bezoeken, laatste opening en
 PDF-uitgiften per bestaande toegang met actuele Auth/MFA/admin/Shows-controles.
 Een uitgifte bewijst geen volledig ontvangen/opgeslagen bestand bij de ontvanger.
+
+De native toegangstoets gebruikt de bestaande canonieke Gashouder-reeks direct,
+niet het 45-dagenmenu. Een ver vooruit afgerond profiel kan dus direct gedeeld
+worden; verschillende showdatums van dezelfde reeks hergebruiken dezelfde link
+en PIN. Andere zalen en volledig afgelopen reeksen kunnen geen nieuwe toegang
+aanvragen. Er worden geen concerten of bedrijfsgegevens voor deze toets aangemaakt.

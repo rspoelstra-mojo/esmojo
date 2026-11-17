@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'server/dataverse-shows/management-sharing.js'
+      - 'server/show-management.js'
       - 'server/dataverse-shows/rules.js'
       - 'server/dataverse-shows/rules/**'
       - 'api/shows-runtime-sync.js'

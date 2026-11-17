@@ -30,6 +30,7 @@ export function createShowManagementService({env=process.env,shows,repository=cr
  function unseal(row){try{const bytes=Buffer.from(row.sealed_credentials,'base64url'),decipher=createDecipheriv('aes-256-gcm',key(),bytes.subarray(0,12));decipher.setAAD(Buffer.from(row.id));decipher.setAuthTag(bytes.subarray(12,28));const value=JSON.parse(Buffer.concat([decipher.update(bytes.subarray(28)),decipher.final()]).toString('utf8'));if(!validManagementLink(value.link)||!/^\d{6}$/.test(value.pin)||!same(digest(value.link),row.access_hash)||!same(pinHash(row.id,value.pin),row.pin_hash))fail();return value;}catch{fail('MANAGEMENT_UNAVAILABLE');}}
  async function target(body){
   if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).sort().join(',')!=='concertId,operation'||!['status','create'].includes(body.operation)||typeof body.concertId!=='string'||!body.concertId||body.concertId.length>240)fail('VALIDATION');
+  if(repository.target)return repository.target(body.concertId);
   const data=await shows('list'),rows=data.shows||upcomingShows(data.concerts||[],new Date(now())),show=rows.find(row=>row.key===body.concertId);
   if(!show||show.venue!=='Gashouder')fail('FORBIDDEN');return show.key;
  }
