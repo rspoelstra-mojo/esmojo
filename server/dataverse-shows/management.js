@@ -1,3 +1,4 @@
+import {createManagementSharing} from './management-sharing.js';
 import {createNativeShowState} from './state.js';
 import {record,reference,recordKey,choice,canonical,digest} from '../show-migration-writer.js';
 import {recordOperations} from './mutations.js';
@@ -11,6 +12,7 @@ export function createNativeManagementRepository({env=process.env,state=createNa
  }
  async function source(concertId){const scope=await state.resolve(concertId),identity='drive-series/'+scope.series.esmojo_oudalgemeenconcertid;return{...scope,identity,row:await repo.byKey('esmojo_showbeheer',recordKey('esmojo_showbeheer',identity+'/management'))};}
  return{
+  ...createManagementSharing({state,now}),
   async get(concertId){return view((await source(concertId)).row);},
   async create(value){
    if(!validId(value.id)||!validHash(value.access_hash)||!validHash(value.pin_hash)||typeof value.sealed_credentials!=='string')throw Error('VALIDATION');const scope=await source(value.concert_id);if(scope.row)return view(scope.row);

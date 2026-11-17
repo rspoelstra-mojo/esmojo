@@ -31,3 +31,9 @@ export function createShowManagementCards(){
  venue.append(quadrants);row.append(management,venue);
  return{row,management,body,create,venue};
 }
+
+export function renderManagementDownload(view,pdf,{download}={}){
+ const block=view.root.querySelector('[data-block="E"]');let disposed=false,timer=null;const content=element('div','show-management-download');block.append(content);
+ function render(){content.replaceChildren();if(disposed||!pdf?.available||!Number.isFinite(pdf.expiresAt)||Date.now()>=pdf.expiresAt)return;const button=element('button','show-management-primary','Showprofiel downloaden'),message=element('p','show-management-message');button.type='button';button.onclick=async()=>{if(button.disabled)return;button.disabled=true;message.textContent='';try{await download();}catch(error){message.textContent=error.message||'Download niet beschikbaar.';}finally{button.disabled=false;if(Date.now()>=pdf.expiresAt)render();}};content.append(button,message);timer=setTimeout(render,Math.min(2147483647,Math.max(1,pdf.expiresAt-Date.now())));}
+ render();return()=>{disposed=true;clearTimeout(timer);content.remove();};
+}

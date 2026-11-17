@@ -45,7 +45,7 @@ jobs:
           node --test server/show-migration*.test.js
           node --test server/website-settings.test.js
           node server/accounts-api.test.js
-          node --test server/show-management.test.js
+          node --test server/show-management.test.js server/show-management-sharing.test.js server/show-management-sharing.test.js
           node --test server/reports-schema.test.js
           node --test server/reports-migration/*.test.js
           node --test server/dataverse-reports/*.test.js

@@ -69,7 +69,7 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
           const team=document.createElement('section');team.className='show-team';
           const teamTitle=document.createElement('h2');teamTitle.textContent='Projectteam';team.append(teamTitle);
           const planning=document.createElement('div');planning.className='show-overview-planning';
-          layout.append(team,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,readOnly});panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
+          layout.append(team,planning);if(show.venue==='Gashouder')disposeManagement=createShowManagement(layout,{show,request,data,readOnly});panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});
         }
         if(label==='Showprofiel')disposeProfile=createShowProfile(panel,{show,requestAccess,readOnly});
         if(label==='Maatregelen')disposeMeasures=createShowMeasures(panel,{show,data,readOnly});

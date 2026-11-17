@@ -70,7 +70,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     ...(migrationService?{showMigration:migrationService}:{}),
     ...(tableService?{dataverseTables:tableService}:{}),
     ...(choiceService?{dataverseChoices:choiceService}:{}),
-    ...(transitionService?{dataTransition:transitionService}:{}), env: configuration, clientFactory, dataverseResearch:researchService, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
+    ...(transitionService?{dataTransition:transitionService}:{}), env: configuration, clientFactory, dataverseResearch:researchService, dataverseTest:async options=>{calls.push(['dataverseTest',options]);return dataverseResult;}, showManagement:{async statistics(){calls.push(['management-statistics']);return{rows:[]};},async manage(input){calls.push(['showManagement',input]);return managementResult;}}, photoService:async()=>null,
     ontrackReportStore:async(operation,actor,input)=>{calls.push(['ontrack-report',operation,actor,input]);return operation==='web-read'&&reportSource?reportSource:{ok:true};},
     mailingConcerts:async()=>({concerts:[],checkedAt:null}),
     ontrack:async(operation,actor,input)=>{calls.push(['ontrack',operation,actor,input]);return {revision:1,recipientIds:input?.recipientIds||[],received:2,converted:0,latest:[],accounts:[]};},
@@ -462,3 +462,6 @@ test('Website-setup stopt bij configuratie/rechtenfouten en herhaalt alleen beke
  }
  const pending=await run({action:'website-settings-schema',method:'POST',body:{operation:'apply'},websiteSchemaService:async()=>{throw Error('TABLE_CREATE_UNCONFIRMED');}});assert.equal(pending.response.code,200);assert.equal(pending.response.data.reason,'METADATA_PROCESSING');assert.equal(pending.response.data.verified,false);
 });
+
+
+test('anonymous Showbeheer totals require current MFA, administrator and Shows permission',async()=>{for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,modules:['reports']}}]){const result=await run({...input,action:'show-management-stats'});assert.ok([401,403].includes(result.response.code));assert(!result.calls.some(c=>c[0]==='management-statistics'));}const result=await run({action:'show-management-stats'});assert.equal(result.response.code,200);assert.deepEqual(result.response.data,{rows:[]});assert(result.calls.some(c=>c[0]==='management-statistics'));});

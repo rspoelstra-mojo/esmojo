@@ -67,3 +67,41 @@ ook bestaande externe sessies. Toekomstige inhoud vereist dezelfde sessiecontrol
 - Bestaande volledige Node-checkreeks, submenu- en artiestlandingcontrole, build
   en git diff --check. Productieschema en ingelogde liveflow blijven pas te
   bevestigen na uitvoering van de migratie door de eigenaar.
+
+## Actueel: native PDF-delen en gebruikstelling (17 november 2026)
+
+De oudere Supabase-installatiepassage hierboven is historisch: toegang, File en
+gebruikstelling staan uitsluitend in Dataverse. Bestaande tabellen volstaan;
+er worden geen tabellen, kolommen of schema-opties toegevoegd.
+
+Na aanmaken van de bestaande Showbeheer-toegang verschijnt Showbeheer verzenden
+zodra de actuele showprofiel-PDF gereed is. Geen30-dagengrens. Mailto opent het
+standaard mailprogramma met alleen PIN en geheime fragmentlink op twee regels;
+geen ontvanger, onderwerp, overige tekst of automatische mail/verzendbevestiging.
+Het tonen van de knop verleent geen extra serverrechten. PDF-wijzigingen maken
+de bestaande brongebonden readiness opnieuw leidend.
+
+Blok E toont Showprofiel downloaden achter dezelfde link+PIN. De HTTP-only,
+Secure/SameSite-sessie blijft beperkt tot die Showbeheer-toegang. Download is
+alleen een POST met link in body en geldige cookie: geen openbare File-URL,
+geen document-ID/query, geen extra geheim in de downloadknop. Alleen de huidige,
+ongewijzigde gereedstaande PDF uit de eigen reeks, met typed broncontrole,
+scoped native File-download en hashcontrole. Na aflopen/uitschakelen of bron-
+wijziging geen terugval naar een oude versie, andere documenten of Google.
+
+Verval is00:00 Europe/Amsterdam na de laatste datum uit de canonieke reeks,
+rekening houdend met zomer-/wintertijd. De browser verwijdert de knop met een
+timer; de server controleert dit onafhankelijk bij iedere uitgifte. Reeds
+ontvangen kopieën kunnen niet worden ingetrokken. De bestaande ingelogde
+PDF-route en andere Showbeheer-blokken blijven ongewijzigd.
+
+De browser meldt een bezoek pas na zichtbare frames na juiste PIN. Verversen
+herstelt dezelfde achtuurs-cookie en telt niet opnieuw. Domeingescheiden HMAC-
+receipts in TechnischeStatus dedupliceren per sessie en per downloadverzoek.
+Geen bezoeker-ID, naam, e-mail, IP of apparaatdata; alleen niet-herleidbare
+technische hashes, Showbeheer-lookup, telling en tijd. Volledige onafhankelijke
+veld-/lookupcontrole na write, ook bij verloren bevestiging; expliciete CAS-
+conflicten mogen alleen na onafhankelijke ontbrekende-receiptcontrole herhalen.
+Het nieuwe Beheerder/Showbeheer-overzicht toont bezoeken, laatste opening en
+PDF-uitgiften per bestaande toegang met actuele Auth/MFA/admin/Shows-controles.
+Een uitgifte bewijst geen volledig ontvangen/opgeslagen bestand bij de ontvanger.

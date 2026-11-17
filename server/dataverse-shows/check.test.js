@@ -15,7 +15,7 @@ test('Google-independent audit stays on fixed OIDC route and rejects free comman
  let calls=0;const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;return this;}}),audit=async stage=>{calls++;return{ok:true,stage};};
  const denied=makeShowsRuntimeSync({identify:async()=>{throw Error('denied');},audit}),res=response();await denied({method:'POST',headers:{},body:{stage:'shows'}},res);assert.equal(res.code,403);assert.equal(calls,0);
  const handler=makeShowsRuntimeSync({identify:async()=>({}),audit});for(const body of [{stage:'production-prepare'},{stage:'shows',actor:'free'},{stage:'delete'}]){const bad=response();await handler({method:'POST',headers:{},body},bad);assert.equal(bad.code,400);}assert.equal(calls,0);
- for(const stage of ['authority','accounts','shows','reports','files']){const ok=response();await handler({method:'POST',headers:{},body:{stage}},ok);assert.equal(ok.code,200);assert.equal(ok.value.stage,stage);}assert.equal(calls,5);
+ for(const stage of ['authority','accounts','shows','reports','files','sharing']){const ok=response();await handler({method:'POST',headers:{},body:{stage}},ok);assert.equal(ok.code,200);assert.equal(ok.value.stage,stage);}assert.equal(calls,6);
 });
 
 test('read-only audit audience can never invoke the old atomic-write probe or a free body',async()=>{

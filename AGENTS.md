@@ -1,3 +1,23 @@
+## Showbeheer PDF delen en anonieme gebruikstelling (17 november 2026)
+
+Gebruiker autoriseert nu uitsluitend de actuele gereedstaande Showprofiel-PDF
+extern via bestaande geheime Showbeheer-link+PIN/sessie in blok E. Dit vervangt
+de oude uitsluiting van showprofielen via Showbeheer; geen andere analyses,
+risicoresultaten, accounts of documenten ontsluiten. Behoud Gashouder-scope.
+Externe download vervalt op Nederlandse middernacht na de laatste canonieke
+reeksdag, ook voor bestaande sessies. Ingelogde bestaande PDF-toegang behouden.
+Mailto-knop zodra profiel volledig/PDF gereed, ook eerder dan30dagen; alleen PIN
+en geheime URL in body, geen ontvangers/onderwerp of automatische verzending.
+Andere Resend-stromen niet aanpassen. Eén bezoek per beveiligde sessie pas na
+juiste PIN en zichtbaar renderen; laatste opening en succesvolle PDF-uitgiften
+in Dataverse, uitsluitend beheerder met actuele Shows-rechten kan totals lezen.
+Geen IP/naam/e-mail/apparaatidentiteit of tokens in opslag/logs/analytics.
+Hergebruik generieke TechnischeStatus voor domeingescheiden technische receipts;
+volledige veld-/lookup-readback, CAS en geen dubbele telling bij verloren antwoord.
+Alles nieuw in Dataverse; nieuw schema zou een beveiligde Datatransitie-knop
+vereisen. Huidig schema volstaat zonder kolommen/tabellen/betekenis te wijzigen.
+Geen productie-testmails/fictieve concerten, authbypass of performancewerk.
+
 ## Google definitief loskoppelen (16 november 2026)
 
 Gebruiker autoriseert native Shows-regels en verwijdering van Google-publicatie,
