@@ -882,12 +882,60 @@ function esmojoOperationalState_(document,source){
  return{source,assessments};
 }
 
+// Eigen operationele risico's van de ESM (Vertrouwelijk, zelfde opslag als de overige risicobeoordelingen): gedefinieerd risico en mogelijk
+// gevolg staan op showniveau in productionele-risicos.json (ownRisks) en worden bij iedere nieuwe analyse opnieuw aangeboden; de beoordeling
+// staat, net als bij AI-risico's, per analyserevisie in operationalReviews. Id's R31 t/m R99; samen met de analyse maximaal 30 risico's.
+const OWN_RISK_TOTAL_MAX=30;
+function esmojoOwnRisks_(document){
+ const list=document.ownRisks;if(list===undefined)return[];
+ if(!Array.isArray(list)||list.length>69)throw Error('CONFLICT');
+ const seen=new Set();
+ for(const item of list){
+  if(!item||typeof item!=='object'||Array.isArray(item)||!/^R(?:3[1-9]|[4-9][0-9])$/.test(item.id||'')||seen.has(item.id)||typeof item.title!=='string'||!item.title.trim()||item.title.length>200||typeof item.consequence!=='string'||!item.consequence.trim()||item.consequence.length>600||!/^[a-f0-9-]{36}$/.test(item.requestId||'')||!Number.isFinite(Date.parse(item.createdAt))||typeof item.actor!=='string')throw Error('CONFLICT');
+  seen.add(item.id);
+ }
+ return list;
+}
+function validateOwnRiskInput(input){
+ const keys=['concertId','source','requestId','title','consequence','riskLevel','riskNote'];
+ if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).sort().join(',')!==keys.slice().sort().join(','))throw Error('VALIDATION');
+ const text=(value,max)=>typeof value==='string'&&value.trim().length>0&&value.length<=max&&!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value);
+ if(!/^[a-f0-9-]{36}$/.test(input.requestId||'')||!text(input.title,200)||!text(input.consequence,600))throw Error('VALIDATION');
+ // Dezelfde regels voor risicoklasse en toelichting/maatregel als bij iedere operationele beoordeling.
+ const review=validateOperationalReview({concertId:input.concertId,source:input.source,riskId:'R31',revision:0,riskLevel:input.riskLevel,riskNote:input.riskNote});
+ return{concertId:input.concertId,source:review.source,requestId:input.requestId,title:input.title.trim().replace(/\s+/g,' '),consequence:input.consequence.trim(),riskLevel:review.riskLevel,riskNote:review.riskNote};
+}
+function esmojoOwnRiskAdd_(request){
+ const {operation,actor,...payload}=request,input=validateOwnRiskInput(payload);
+ if(typeof actor!=='string'||!actor||actor.length>100)throw Error('VALIDATION');
+ const source=esmojoRiskSource_(input.concertId,input.source,true),analysis=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
+ if(!analysis)throw Error('SOURCE_CHANGED');
+ const {file,document}=esmojoReadProductionRisks_(source.target),own=esmojoOwnRisks_(document),state=esmojoOperationalState_(document,source.source),overview=()=>esmojoShowProfileRisks_({operation:'risk-view',concertId:input.concertId},source.target);
+ // Een herhaalde opdracht (verloren bevestiging) maakt geen tweede risico.
+ const known=own.find(item=>item.requestId===input.requestId);
+ if(known)return{riskId:known.id,record:state.assessments[known.id]||null,overview:overview()};
+ if(analysis.result.risks.length+own.length>=OWN_RISK_TOTAL_MAX)throw Error('OWN_RISK_LIMIT');
+ const id='R'+String(Math.max(30,...own.map(item=>Number(item.id.slice(1))))+1).padStart(2,'0'),now=new Date().toISOString();
+ const record={revision:1,riskLevel:input.riskLevel,riskNote:input.riskNote,completedAt:now};
+ if(document.operationalReviews!==undefined&&(!document.operationalReviews||Array.isArray(document.operationalReviews)||typeof document.operationalReviews!=='object'))throw Error('CONFLICT');
+ document.ownRisks=[...own,{id,title:input.title,consequence:input.consequence,requestId:input.requestId,createdAt:now,actor}];
+ document.operationalReviews=document.operationalReviews||{};
+ const stored=document.operationalReviews[source.source.revision]||{source:source.source,assessments:{},history:[]};
+ stored.history.push({at:now,actor,riskId:id,before:null,after:record});stored.assessments[id]=record;document.operationalReviews[source.source.revision]=stored;
+ const text=JSON.stringify(document,null,2),saved=file?(file.setContent(text),file):source.target.folder.createFile(codec.newBlob(text,'application/json','productionele-risicos.json'));
+ if(saved.getBlob().getDataAsString('UTF-8')!==text)throw Error('VERIFY');
+ return{riskId:id,record,overview:overview()};
+}
+
 function esmojoOperationalSave_(request){
  const {operation,actor,...payload}=request,input=validateOperationalReview(payload);
  if(typeof actor!=='string'||!actor||actor.length>100)throw Error('VALIDATION');
  const source=esmojoRiskSource_(input.concertId,input.source,true),analysis=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
- if(!analysis||!analysis.result.risks.some(risk=>risk.id===input.riskId))throw Error('SOURCE_CHANGED');
- const {file,document}=esmojoReadProductionRisks_(source.target),state=esmojoOperationalState_(document,source.source),previous=state.assessments[input.riskId];
+ if(!analysis)throw Error('SOURCE_CHANGED');
+ const {file,document}=esmojoReadProductionRisks_(source.target);
+ // Een beoordeling hoort bij een risico uit de actuele analyse of bij een eigen risico van de ESM.
+ if(!analysis.result.risks.some(risk=>risk.id===input.riskId)&&!esmojoOwnRisks_(document).some(own=>own.id===input.riskId))throw Error('SOURCE_CHANGED');
+ const state=esmojoOperationalState_(document,source.source),previous=state.assessments[input.riskId];
  if(input.revision!==(previous?.revision||0)){
   if(previous?.revision!==input.revision+1||previous.riskLevel!==input.riskLevel||previous.riskNote!==input.riskNote)throw Error('ASSESSMENT_CONFLICT');
   return{record:previous,overview:esmojoShowProfileRisks_({operation:'risk-view',concertId:input.concertId},source.target)};
@@ -945,6 +993,7 @@ function esmojoRiskStatus_(concertId) {
 
 function esmojoShowProfileRisks_(request,openTarget) {
   if(request.operation==='risk-operational-save')return esmojoOperationalSave_(request);
+  if(request.operation==='risk-own-add')return esmojoOwnRiskAdd_(request);
   const op=request.operation.slice(5),allowed={pending:['operation','after'],status:['operation','concertId'],view:['operation','concertId'],'production-save':['operation','concertId','field','value','revision','actor'],pdf:['operation','concertId','source'],read:['operation','concertId','source'],save:['operation','concertId','source','result']}[op];
   if(!allowed)throw Error('VALIDATION');riskKeys(request,allowed);
   if(op==='pending')throw Error('VALIDATION');
@@ -958,7 +1007,7 @@ function esmojoShowProfileRisks_(request,openTarget) {
     try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return Object.assign({state:'not-ready',risks:[],production,assessments},esmojoMeasuresOverview_(target,productionDocument,{state:'not-ready',risks:[],production,assessments}));throw error;}
     const document=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
     // Browser krijgt alleen de gevraagde definitie; geen PDF-bytes, ticketdata of interne bestandsidentificaties.
-    const result={state:document?'ready':'pending',risks:document?document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})):[],production,assessments,...(document?{operational:esmojoOperationalState_(productionDocument,source.source)}:{})};return Object.assign(result,esmojoMeasuresOverview_(target,productionDocument,result));
+    const result={state:document?'ready':'pending',risks:document?[...document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})),...esmojoOwnRisks_(productionDocument).map(own=>({id:own.id,title:own.title,description:own.title,consequence:own.consequence,own:true}))]:[],production,assessments,...(document?{operational:esmojoOperationalState_(productionDocument,source.source)}:{})};return Object.assign(result,esmojoMeasuresOverview_(target,productionDocument,result));
   }
   validateRiskReference(request.source);if(op==='save')validateRiskResult(request.result);
   // Nieuwe analyse uitsluitend voor de huidige definitieve PDF. Oude analyses blijven leesbaar.
