@@ -43,6 +43,6 @@ test('Showbeheer is een afzonderlijk document en wordt niet door de account-SPA 
  const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url)));
  assert.deepEqual(config.rewrites.find(row=>row.source==='/showbeheer/:path*'),{source:'/showbeheer/:path*',destination:'/showbeheer.html'});
  assert.deepEqual(config.rewrites.find(row=>row.source==='/showbeheer/'),{source:'/showbeheer/',destination:'/showbeheer.html'});assert.equal(isAppPath('/showbeheer/'),false);
- for(const source of ['/showbeheer/:path*','/showbeheer.html']){const headers=config.headers.find(row=>row.source===source).headers;assert.ok(headers.some(row=>row.key==='Referrer-Policy'&&row.value==='no-referrer'));assert.ok(headers.some(row=>row.key==='Cache-Control'&&row.value==='no-store'));assert.ok(headers.some(row=>row.key==='Content-Security-Policy'&&row.value.includes("frame-ancestors 'none'")));}
+ for(const source of ['/showbeheer/:path*','/showbeheer/','/showbeheer.html']){const headers=config.headers.find(row=>row.source===source).headers;assert.ok(headers.some(row=>row.key==='Referrer-Policy'&&row.value==='no-referrer'));assert.ok(headers.some(row=>row.key==='Cache-Control'&&row.value==='no-store'));assert.ok(headers.some(row=>row.key==='Content-Security-Policy'&&row.value.includes("frame-ancestors 'none'")));}
  const html=readFileSync(new URL('../../showbeheer.html',import.meta.url),'utf8');assert.ok(html.includes('/src/show-management-entry.js'));assert.ok(!html.includes('/src/main.js'));
 });
