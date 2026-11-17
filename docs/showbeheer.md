@@ -130,3 +130,15 @@ onverzonden. Alleen Gashouder heeft deze route; andere zalen blijven bij deze
 stap open totdat daar een verzendroute bestaat. Het verzendmoment staat niet in
 de openbare homepage-cache en niet in browseropslag; het staat uitsluitend in het
 sessiegeheugen van de showpagina.
+
+## Overzicht-indeling van de showpagina (17 november 2026)
+
+De Overzicht-tab heeft vijf kolommen (alleen boven 880px paginabreedte; daaronder staat alles onder elkaar):
+Projectteam en Tijdschema (1/5, samen zo hoog als Planning), Show informatie (2/5) en Planning (2/5); daaronder
+Showbeheer (1/5, alleen Gashouder), Gashouder (2/5, alleen Gashouder) en Actielijst (2/5). Tijdschema, Show
+informatie en Actielijst zijn voorlopig lege blokken. Daaronder staat Vergelijkbare artiesten: een kleine titel
+zonder blok met vier tegels van 1/8 paginabreedte (foto, naam, risicoscore x/100) die naar de artiestpagina
+verwijzen. De vier artiesten (Don Toliver, New Wave, Ken Carson, Skepta) zijn voorlopige placeholders; de
+logica voor echte vergelijkbare artiesten volgt later. De tegels gebruiken de bestaande Artiesten-routes, laden
+op de achtergrond zodra het Overzicht zichtbaar is en worden alleen getoond met actuele Artiesten-rechten (de
+risicoscore is Vertrouwelijk). Ze tellen niet mee voor de Meest bekeken-top 5.

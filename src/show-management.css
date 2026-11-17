@@ -1,5 +1,6 @@
 /* Showoverzicht: optionele kaarten, buiten de bestaande afrondingslogica. */
-.show-management-overview { grid-column:1 / -1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:stretch; }
+/* Kaarten staan als directe gridcellen in het Overzicht (zie show-planning.css). */
+.show-management-overview { display:contents; }
 .show-management-card { min-width:0; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,#fff); }
 .show-management-card h2 { margin:0 0 16px; font-size:16px; line-height:1.5; font-weight:600; }
 .show-management-card-body { display:grid; gap:16px; justify-items:start; }
@@ -9,7 +10,6 @@
 .show-management-quadrant:nth-child(odd) { padding-left:0; border-right:1px solid var(--line); }
 .show-management-quadrant h3 { margin:0 0 8px; font-size:14px; line-height:1.5; font-weight:600; overflow-wrap:anywhere; }
 .show-management-quadrant p { margin:0; font-size:12px; color:var(--muted); }
-@container (max-width:740px) { .show-management-overview { grid-template-columns:minmax(0,1fr); } }
 /* Zelfstandige zaalpagina: dezelfde instelbare foto als de login (Beheerder / Instellingen), met een rustige overgang. */
 .show-management-page { position:relative; isolation:isolate; padding:0; min-height:100dvh; color:var(--text,#242424); }
 .show-management-background { position:fixed; inset:0; z-index:-2; background-color:#080b12; background-image:var(--login-image,url('/login-background-initial.jpg')); background-size:var(--login-size,cover); background-position:var(--login-position,center); background-repeat:no-repeat; filter:blur(var(--login-blur,3px)); transform:scale(var(--login-overscan,1.02)); transition:filter 1.2s ease,transform 1.2s ease; }

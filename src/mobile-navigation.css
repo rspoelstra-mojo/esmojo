@@ -34,7 +34,7 @@
  body[data-mobile-navigation] .workspace { margin-left:0; width:100%; min-height:calc(100dvh - var(--mobile-bar-height)); }
  body[data-mobile-navigation] .workspace > main,body[data-mobile-navigation] .workspace[data-layout="fluid"] > main { margin-left:0; min-width:0; min-height:calc(100dvh - var(--mobile-bar-height)); padding:16px 12px max(24px,env(safe-area-inset-bottom,0px)); }
  body[data-mobile-navigation] .content-box { min-height:0; max-width:none; width:100%; padding:0; }
- body[data-mobile-navigation] .fluid-layout :is(.profile-layout,.profile-categories,.profile-insights,.analysis-editor-form,.report-summary-grid,.show-overview,.barrier-columns,.ticket-grid,.measure-proposal-row,.measure-suggestion-grid) { grid-template-columns:minmax(0,1fr); }
+ body[data-mobile-navigation] .fluid-layout :is(.profile-layout,.profile-categories,.profile-insights,.analysis-editor-form,.report-summary-grid,.barrier-columns,.ticket-grid,.measure-proposal-row,.measure-suggestion-grid) { grid-template-columns:minmax(0,1fr); }
  body[data-mobile-navigation] .fluid-layout :is(.show-artist-photo,.report-artist-photo) { width:100%; max-width:none; }
  body[data-mobile-navigation] .fluid-layout .home-layout { display:flex; flex-direction:column; gap:20px; }
  body[data-mobile-navigation] .fluid-layout .home-layout > * { width:100%; }
