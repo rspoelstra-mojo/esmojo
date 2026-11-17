@@ -1,3 +1,11 @@
+## Titel en omschrijving bij risico's en PDF-opmaak (17 november 2026)
+
+Gebruiker vraagt dat een eigen operationeel risico een aparte Titel (kort, max 120) en Omschrijving (gedefinieerd risico) krijgt,
+zoals de risico's uit de analyse die al hebben; bestaande eigen risico's zonder omschrijving blijven geldig (titel geldt ook als
+omschrijving). In de risico-PDF staat de risicotitel in de blauwe kop en daaronder `artiest - datum - zaal, stad`; de tekst bij
+Risico is gewone tekst (niet vet) en opsommingen in de beheersmaatregel worden als opsomming getoond. Zelfde Vertrouwelijke
+opslag en rechten als voorheen; geen nieuw schema. Zie docs/own-risks.md en docs/risk-pdf.md.
+
 ## Risico-PDF per beheersmaatregel (17 november 2026)
 
 Gebruiker vraagt een PDF-export per risico met beheersmaatregel (Midden/Hoog; productioneel, operationeel en eigen risico's),

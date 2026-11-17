@@ -7,7 +7,7 @@ export const RISK_PDF_LAYOUT='risk-v1-showprofile-style';
 const W=595.2,H=841.92,BLUE=rgb(0,71/255,186/255),NAVY=rgb(8/255,24/255,48/255),LIGHT=rgb(.96,.97,.98),BORDER=rgb(.85,.88,.91),WHITE=rgb(1,1,1),TEXT=rgb(.12,.16,.22),MUTED=rgb(.36,.41,.48);
 const levelColor={high:rgb(.74,.13,.13),medium:rgb(.72,.40,.04),low:rgb(.60,.45,.04),none:rgb(.12,.50,.28)};
 const levelLabel={none:'Geen risico',low:'Laag',medium:'Midden',high:'Hoog'};
-const SIZE=12,LEADING=SIZE*1.18,PAD=54,TITLE_TOP=24,TEXT_TOP=38,NEXT_TOP=86,NEXT_BOTTOM=746,GAP=18,FIRST_TOP=172;
+const SIZE=12,LEADING=SIZE*1.18,PAD=54,TITLE_TOP=24,TEXT_TOP=38,NEXT_TOP=86,NEXT_BOTTOM=746,GAP=18;
 export class RiskPdfError extends Error{}
 let assetsPromise;
 export function riskPdfAssets(){return assetsPromise??=(async()=>Object.fromEntries(await Promise.all(Object.entries({watermark:'watermark.png',body:'body-font.ttf',heading:'heading-font.otf'}).map(async([key,name])=>[key,(await readFile(new URL('../report-original/assets/'+name,import.meta.url))).toString('base64')]))))().catch(error=>{assetsPromise=null;throw error;});}
@@ -38,21 +38,33 @@ export async function createRiskPdf(data,assets,{now=new Date()}={}){
   page.drawRectangle({x:x+r,y,width:w-2*r,height,color:fill});page.drawRectangle({x,y:y+r,width:w,height:height-2*r,color:fill});
   for(const [cx,cy] of [[x+r,y+r],[x+w-r,y+r],[x+r,y+height-r],[x+w-r,y+height-r]])page.drawCircle({x:cx,y:cy,size:r,color:fill});
  }
- // Kaart met titel en regels; lange tekst mag over een paginagrens doorlopen (minimaal twee regels per deel).
- function card(title,lines,color=TEXT,font=body){
-  return{height:PAD+lines.length*LEADING,split(available){const take=Math.min(lines.length-2,Math.floor((available-PAD)/LEADING));if(take<2||lines.length-take<2)return null;return[card(title,lines.slice(0,take),color,font),card(title+' (vervolg)',lines.slice(take),color,font)];},
-   draw(page,top,height){panel(page,top,height);line(page,title,66,top+TITLE_TOP,12,head,NAVY);lines.forEach((value,i)=>line(page,value,66,top+TEXT_TOP+SIZE+i*LEADING,SIZE,font,color));}};
+ // Rijen met optionele opsommingstekens: regels die met •, -, * of – beginnen worden netjes ingesprongen.
+ const bulletPattern=/^\s*[•\-*–·]\s+(.*)$/;
+ function rowsOf(value,width){
+  const rows=[];
+  for(const paragraph of String(value).replace(/\r/g,'').split('\n')){
+   const match=bulletPattern.exec(paragraph);
+   if(match){wrap(match[1],width-14).forEach((text,i)=>rows.push({text,x:80,bullet:i===0}));}
+   else wrap(paragraph,width).forEach(text=>rows.push({text,x:66}));
+  }
+  return rows;
  }
- const full=(title,value,color,font)=>card(title,wrap(value,463),color,font);
+ function card(title,rows,color=TEXT,font=body){
+  return{height:PAD+rows.length*LEADING,split(available){const take=Math.min(rows.length-2,Math.floor((available-PAD)/LEADING));if(take<2||rows.length-take<2)return null;return[card(title,rows.slice(0,take),color,font),card(title+' (vervolg)',rows.slice(take),color,font)];},
+   draw(page,top,height){panel(page,top,height);line(page,title,66,top+TITLE_TOP,12,head,NAVY);rows.forEach((row,i)=>{const baseline=top+TEXT_TOP+SIZE+i*LEADING;if(row.bullet)line(page,'•',68,baseline,SIZE,body,BLUE);line(page,row.text,row.x,baseline,SIZE,font,color);});}};
+ }
+ const full=(title,value,color,font)=>card(title,rowsOf(value,463),color,font);
  function pair(leftTitle,left,rightTitle,right,colors=[TEXT,TEXT]){
   const a=wrap(left,215.5),b=wrap(right,215.5),count=Math.max(a.length,b.length);
   return{height:PAD+count*LEADING,draw(page,top,height){panel(page,top,height);page.drawLine({start:{x:297.5,y:H-top-16},end:{x:297.5,y:H-top-height+16},color:BORDER,thickness:.7});
    [[leftTitle,a,66,colors[0]],[rightTitle,b,313.5,colors[1]]].forEach(([title,lines,x,color])=>{line(page,title,x,top+TITLE_TOP,12,head,NAVY);lines.forEach((value,i)=>line(page,value,x,top+TEXT_TOP+SIZE+i*LEADING,SIZE,body,color));});}};
  }
+ const titleLines=wrap(risk.title,425,head,23.76);
+ if(titleLines.length>3)throw new RiskPdfError('De risiconaam is te lang voor de kop.');
+ const headerHeight=Math.max(150,76+(titleLines.length-1)*28+70),firstTop=headerHeight+22;
  // Inhoud: risico, mogelijk gevolg, beheersmaatregel en daarna de classificatie voor en na de maatregel.
  const blocks=[];
- const headingWrapped=risk.description&&risk.description!==risk.title?[...wrap(risk.title,463,head,13).map(text=>({text,heading:true})),...wrap(risk.description,463).map(text=>({text}))]:wrap(risk.title,463,head,13).map(text=>({text,heading:true}));
- blocks.push({height:PAD+headingWrapped.length*LEADING,draw(page,top,height){panel(page,top,height);line(page,'Risico',66,top+TITLE_TOP,12,head,NAVY);headingWrapped.forEach((row,i)=>line(page,row.text,66,top+TEXT_TOP+SIZE+i*LEADING,row.heading?13:SIZE,row.heading?head:body,row.heading?NAVY:TEXT));}});
+ blocks.push(full('Risico',risk.description||risk.title));
  if(risk.consequence)blocks.push(full('Mogelijk gevolg',risk.consequence));
  blocks.push(full('Beheersmaatregel',measure.text));
  // Classificatie voor en na de maatregel: twee gelijke kleurvakken.
@@ -60,7 +72,8 @@ export async function createRiskPdf(data,assets,{now=new Date()}={}){
  const classBox=(page,x,top,height,title,value,note,level)=>{
   panel(page,top,height,level?tint[level]:LIGHT,x,239.5);
   line(page,title,x+16,top+TITLE_TOP,11,head,NAVY);
-  line(page,value,x+16,top+TITLE_TOP+34,22,head,level?levelColor[level]:MUTED);
+  let size=22;while(size>13&&head.widthOfTextAtSize(value,size)>207.5)size--;
+  line(page,value,x+16,top+TITLE_TOP+34,size,head,level?levelColor[level]:MUTED);
   if(note)line(page,note,x+16,top+TITLE_TOP+54,9,body,MUTED);
  };
  const afterLevel=measure.implemented&&measure.riskLevelAfter?measure.riskLevelAfter:null;
@@ -69,7 +82,7 @@ export async function createRiskPdf(data,assets,{now=new Date()}={}){
   classBox(page,305.5,top,height,'Risicoklasse na beheersmaatregel',afterLevel?levelLabel[afterLevel]:'Nog niet beoordeeld',afterLevel?(measure.completedAt?'Geïmplementeerd op '+stamp(measure.completedAt):'Geïmplementeerd'):'Maatregel nog niet geïmplementeerd',afterLevel);
  }});
  // Paginering (vooraf, zodat de voet het totale aantal pagina's kent).
- const pages=[{items:[],top:FIRST_TOP,bottom:NEXT_BOTTOM}];
+ const pages=[{items:[],top:firstTop,bottom:NEXT_BOTTOM}];
  const pending=[...blocks];let used=0;
  while(pending.length){
   const item=pending.shift(),page=pages.at(-1),space=page.bottom-page.top-used-(page.items.length?GAP:0);
@@ -95,13 +108,11 @@ export async function createRiskPdf(data,assets,{now=new Date()}={}){
  pages.forEach((plan,index)=>{
   const page=pdf.addPage([W,H]);page.drawImage(mark,{x:0,y:0,width:W,height:91.92});footer(page,index+1,index===0?756:NEXT_BOTTOM+10);
   if(index===0){
-   page.drawRectangle({x:0,y:H-150,width:W,height:150,color:BLUE});
+   page.drawRectangle({x:0,y:H-headerHeight,width:W,height:headerHeight,color:BLUE});
    line(page,'Risico en beheersmaatregel',50,44,11,head,WHITE);
-   const titleLines=wrap(show.artist,425,head,23.76);
-   if(titleLines.length>2)throw new RiskPdfError('De artiestnaam is te lang voor de kop.');
    titleLines.forEach((value,i)=>line(page,value,50,76+i*28,23.76,head,WHITE));
    const base=76+(titleLines.length-1)*28;
-   line(page,`${show.dates.map(dutchDate).join(' · ')} - ${show.venue}${show.city?', '+show.city:''}`,50,base+26,10.5,body,WHITE);
+   line(page,`${show.artist} - ${show.dates.map(dutchDate).join(' · ')} - ${show.venue}${show.city?', '+show.city:''}`,50,base+26,10.5,body,WHITE);
    line(page,`Opgesteld op ${stamp(now)} · gebaseerd op de actuele bevestigde gegevens`,50,base+46,9,body,WHITE);
   }
   let top=plan.top;for(const item of plan.items){item.draw(page,top,item.height);top+=item.height+GAP;}

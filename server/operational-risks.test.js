@@ -55,8 +55,8 @@ test('Geen maatregelen na alle beoordelingen: planning/home direct afgerond; pro
 
 // Eigen risico: invoer wordt gevalideerd en genormaliseerd; Midden/Hoog vereisen een beheersmaatregel.
 {
- const base={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'  Eigen   risico ',consequence:' Gevolg ',riskLevel:'medium',riskNote:' Maatregel '};
- const ok=validateOwnRisk(base);assert.equal(ok.title,'Eigen risico');assert.equal(ok.consequence,'Gevolg');assert.equal(ok.riskNote,'Maatregel');
+ const base={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'  Eigen   risico ',description:' Omschrijving ',consequence:' Gevolg ',riskLevel:'medium',riskNote:' Maatregel '};
+ const ok=validateOwnRisk(base);assert.equal(ok.title,'Eigen risico');assert.equal(ok.description,'Omschrijving');assert.equal(ok.consequence,'Gevolg');assert.equal(ok.riskNote,'Maatregel');
  assert.equal(validateOwnRisk({...base,riskLevel:'low',riskNote:'weg'}).riskNote,'');
- for(const change of [{title:' '},{consequence:''},{title:'x'.repeat(201)},{consequence:'x'.repeat(601)},{riskNote:' '},{riskLevel:'high',riskNote:''},{requestId:'x'},{extra:1}])assert.throws(()=>validateOwnRisk({...base,...change}),/VALIDATION/);
+ for(const change of [{title:' '},{consequence:''},{title:'x'.repeat(121)},{description:' '},{description:'x'.repeat(601)},{consequence:'x'.repeat(601)},{riskNote:' '},{riskLevel:'high',riskNote:''},{requestId:'x'},{extra:1}])assert.throws(()=>validateOwnRisk({...base,...change}),/VALIDATION/);
 }
