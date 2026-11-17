@@ -91,9 +91,9 @@ test('handmatige run buiten 05:00 vereist een bevestigde workflow_dispatch-claim
 });
 test('verificatie controleert ook de fotokandidaten (alleen lezen) en meldt het aantal', async () => {
   const calls=[];
-  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({runId:'1',event:'push'}),scrape:async()=>({concerts:[{}],checkedAt:'t',pages:1}),store:async operation=>{calls.push(operation);return operation==='concert-catalogue'?{concerts:[1,2]}:operation==='advance-timetable-candidates'?{shows:[{},{},{}]}:{artists:[{artistId:'a_'+'1'.repeat(64),name:'x'},{artistId:'a_'+'2'.repeat(64),name:'y'}]};}});
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({runId:'1',event:'push'}),scrape:async()=>({concerts:[{}],checkedAt:'t',pages:1}),store:async operation=>{calls.push(operation);return operation==='concert-catalogue'?{concerts:[1,2]}:operation==='advance-timetable-candidates'?{shows:[{},{},{}]}:operation==='management-candidates'?{shows:[{},{}]}:{artists:[{artistId:'a_'+'1'.repeat(64),name:'x'},{artistId:'a_'+'2'.repeat(64),name:'y'}]};}});
   const res=response();await handler({method:'POST',headers:{authorization:'Bearer workflow'},body:{verifyOnly:true}},res);
-  assert.equal(res.code,200);assert.equal(res.data.photoCandidates,2);assert.equal(res.data.timetableCandidates,3);assert.deepEqual(calls,['concert-catalogue','artist-photo-candidates','advance-timetable-candidates']);assert.ok(!calls.includes('artist-photo-save')&&!calls.includes('sync')&&!calls.includes('advance-timetable-save'));
+  assert.equal(res.code,200);assert.equal(res.data.photoCandidates,2);assert.equal(res.data.timetableCandidates,3);assert.equal(res.data.managementCandidates,2);assert.deepEqual(calls,['concert-catalogue','artist-photo-candidates','advance-timetable-candidates','management-candidates']);assert.ok(!calls.includes('artist-photo-save')&&!calls.includes('sync')&&!calls.includes('advance-timetable-save'));
 });
 test('onbekende fouten geven alleen foutklasse en code-achtige foutcode; nooit berichttekst', async () => {
   const run=async error=>{const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>({}),scrape:async()=>({concerts:[],checkedAt:'t',pages:1}),store:async operation=>{if(operation==='artist-photo-candidates')throw error;return{createdConcerts:0};}});const res=response();await handler({method:'POST',headers:{authorization:'Bearer w'},body:{}},res);return res;};
@@ -101,6 +101,22 @@ test('onbekende fouten geven alleen foutklasse en code-achtige foutcode; nooit b
   const type=await run(new TypeError("Cannot read properties of undefined (reading 'geheim')"));assert.equal(type.data.code,'IMPORT_UNCONFIRMED');assert.equal(type.data.kind,'TypeError');assert.ok(!('detail' in type.data));assert.ok(!JSON.stringify(type.data).includes('geheim'));
   const known=await run(new Error('MOJO_UNAVAILABLE'));assert.equal(known.data.code,'MOJO_UNAVAILABLE');assert.ok(!('detail' in known.data)&&!('kind' in known.data));
   const odd=await run(Object.assign(new Error('Een zin met geheim'),{name:'Rare naam met spaties'}));assert.ok(!('detail' in odd.data)&&!('kind' in odd.data));
+});
+test('automatisch Showbeheer: batches met cursor, create-only, fouten per concert stoppen de rest niet en alleen veilige codes', async () => {
+  const shows=Array.from({length:15},(_,i)=>({concertId:'Gashouder_'+String(i+1).padStart(2,'0'),date:'2026-11-20'})),queries=[],ensured=[];
+  const store=async(operation,data)=>{if(operation==='management-candidates'){queries.push(data);return{shows:shows.filter(show=>!data.after||show.concertId>data.after)};}throw Error('onverwachte bewerking '+operation);};
+  const management={async ensure(concertId){ensured.push(concertId);if(concertId==='Gashouder_02')return'existing';if(concertId==='Gashouder_03')throw Error('FORBIDDEN');if(concertId==='Gashouder_04')throw new TypeError('geheime tekst');if(concertId==='Gashouder_05')throw Error('Een zin met geheim');return'created';}};
+  const handler=makeShowsSyncHandler({now:()=>new Date('2026-11-15T04:00:00Z'),identify:async()=>({}),store,management});
+  const call=async body=>{const res=response();await handler({method:'POST',headers:{authorization:'Bearer w'},body},res);return res;};
+  const first=await call({operation:'showbeheer'});
+  assert.equal(first.code,200);assert.deepEqual(first.data.management,{created:8,existing:1,failed:3});assert.deepEqual(first.data.managementErrors,{FORBIDDEN:1,UNKNOWN:2});
+  assert.equal(first.data.managementPending,true);assert.equal(first.data.managementCursor,'Gashouder_12');assert.equal(ensured.length,12);
+  assert.ok(!JSON.stringify(first.data).includes('geheim'),'geen berichttekst in het antwoord');
+  const second=await call({operation:'showbeheer',managementAfter:first.data.managementCursor});
+  assert.equal(queries.at(-1).after,'Gashouder_12');assert.equal(second.data.managementPending,false);assert.equal(second.data.managementCursor,'Gashouder_15');assert.deepEqual(second.data.management,{created:3,existing:0,failed:0});
+  assert.equal((await call({operation:'showbeheer',managementAfter:'Gashouder_15'})).data.managementCursor,null);
+  for(const managementAfter of ['',5,null,'a/b','x'.repeat(241)]){const bad=await call({operation:'showbeheer',managementAfter});assert.equal(bad.code,503);assert.equal(bad.data.code,'VALIDATION');}
+  const closed=makeShowsSyncHandler({now:()=>new Date('2026-11-17T09:56:00Z'),identify:async()=>({}),store,management});const res=response();await closed({method:'POST',headers:{authorization:'Bearer w'},body:{operation:'showbeheer'}},res);assert.equal(res.code,409);assert.equal(res.data.code,'IMPORT_WINDOW_CLOSED');
 });
 test('dagelijkse tijdschemacontrole: batches met cursor, meest recente versie, fouten per concert stoppen de rest niet en alleen veilige codes', async () => {
   const shows=Array.from({length:15},(_,i)=>({concertId:'Show_'+String(i+1).padStart(2,'0'),date:'2026-11-20',sourceUrl:'https://www.mojo.nl/concerten/x',artist:'X',venue:'Gashouder',city:'Amsterdam'})),saves=[],queries=[],fetched=[];

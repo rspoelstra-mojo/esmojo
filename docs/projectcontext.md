@@ -38,7 +38,7 @@ Showprofiel-PDF. Externe PDF-toegang stopt op Nederlandse middernacht na de laat
 canonieke showdag van de reeks; ingelogde toegang blijft. Reeksdatums delen één
 toegang, zonder het 45-dagenmenu als autorisatie te gebruiken.
 
-De ESM krijgt Showbeheer verzenden zodra PDF/profiel gereed is, ook ver voor de
+Showbeheer wordt sinds 17 november automatisch door de 05:00-import aangemaakt (Gashouder, komende 45 dagen). De ESM krijgt Verzenden zodra PDF/profiel gereed is, ook ver voor de
 show. Voorlopige mailto-body is uitsluitend PIN en link, geen onderwerp/ontvangers.
 Geen automatische verzending; andere Resend-stromen blijven actief zoals eerder.
 Beheerder/Showbeheer toont anonieme bezoeken per sessie, laatste opening en
