@@ -53,10 +53,10 @@ test('Geen maatregelen na alle beoordelingen: planning/home direct afgerond; pro
  const view=await h.view();assert.equal(view.assessments.barrier.riskNote,'');assert.equal(view.assessments.floor.note,'');assert.equal(view.operational.assessments.R03.riskNote,'Vertrouwelijke uitvoeringstaak.');
 });
 
-// Eigen risico: invoer wordt gevalideerd en genormaliseerd; Midden/Hoog vereisen een beheersmaatregel.
+// Eigen risico: invoer wordt gevalideerd en genormaliseerd; Geen risico kent geen maatregel, de keuze Beheersmaatregel noodzakelijk is verplicht.
 {
- const base={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'  Eigen   risico ',description:' Omschrijving ',consequence:' Gevolg ',riskLevel:'medium',riskNote:' Maatregel '};
- const ok=validateOwnRisk(base);assert.equal(ok.title,'Eigen risico');assert.equal(ok.description,'Omschrijving');assert.equal(ok.consequence,'Gevolg');assert.equal(ok.riskNote,'Maatregel');
- assert.equal(validateOwnRisk({...base,riskLevel:'low',riskNote:'weg'}).riskNote,'');
- for(const change of [{title:' '},{consequence:''},{title:'x'.repeat(121)},{description:' '},{description:'x'.repeat(601)},{consequence:'x'.repeat(601)},{riskNote:' '},{riskLevel:'high',riskNote:''},{requestId:'x'},{extra:1}])assert.throws(()=>validateOwnRisk({...base,...change}),/VALIDATION/);
+ const base={concertId:'Test',source:{revision:'a'.repeat(64),sha256:'b'.repeat(64)},requestId:'11111111-1111-4111-8111-111111111111',title:'  Eigen   risico ',description:' Omschrijving ',consequence:' Gevolg ',riskLevel:'medium',riskNote:'',measureRequired:true};
+ const ok=validateOwnRisk(base);assert.equal(ok.title,'Eigen risico');assert.equal(ok.description,'Omschrijving');assert.equal(ok.consequence,'Gevolg');assert.equal(ok.riskNote,'');assert.equal(ok.measureRequired,true);
+ assert.equal(validateOwnRisk({...base,riskLevel:'low',riskNote:'wordt genegeerd',measureRequired:false}).riskNote,'');assert.equal(validateOwnRisk({...base,riskLevel:'none',measureRequired:false}).measureRequired,false);
+ for(const change of [{title:' '},{consequence:''},{title:'x'.repeat(121)},{description:' '},{description:'x'.repeat(601)},{consequence:'x'.repeat(601)},{measureRequired:null},{measureRequired:'ja'},{riskLevel:'none',measureRequired:true},{requestId:'x'},{extra:1}])assert.throws(()=>validateOwnRisk({...base,...change}),/VALIDATION/);
 }

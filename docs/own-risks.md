@@ -13,3 +13,12 @@ Beheersmaatregelen via de gewone risicolijst. Bij eigen risico's is de omschrijv
 
 Vanaf V1.183 heeft een eigen risico een aparte titel en omschrijving (net als de risico's uit de analyse). Eigen risico's van vóór
 V1.183 hebben alleen een titel; daar geldt de titel ook als omschrijving.
+
+## Bewerken en beoordelen (V1.184)
+- **Bewerken:** knop Risico bewerken op de risicopagina (titel max 120, gedefinieerd risico max 600, mogelijk gevolg max 600). Actie
+  `operational-risk-edit` -> `risk-operational-edit`; compare-and-set op `editRevision`; risico's uit de analyse krijgen een
+  bewerking in `operationalEdits[bronrevisie][id]`, eigen risico's worden ter plekke bijgewerkt. Historie staat in het bestaande
+  historieregister.
+- **Beoordelen:** de knop heet Beoordelen. Geen risico: geen toelichting, geen maatregel. Laag/Midden/Hoog: verplichte keuze
+  Beheersmaatregel noodzakelijk (Ja/Nee). `measureRequired` staat in de beoordeling; `riskNote` is bij Ja de maatregeltekst
+  (leeg tot die bij Maatregelen is uitgewerkt). Validatie: shared/operational-review.js (client en API) en native regels.

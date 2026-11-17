@@ -7,7 +7,7 @@ const operations={
  measure:['draft','complete','reopen','upload','remove','edit-text'],
  'show-profile':['save'],'analysis-finalization':['complete'],'ticket-data':['review','reopen'],
 };
-export function canRetrySave(action,body={}){return ['report-email-open','production-risks','operational-risk','operational-risk-own'].includes(action)||operations[action]?.includes(body.operation)||false;}
+export function canRetrySave(action,body={}){return ['report-email-open','production-risks','operational-risk','operational-risk-own','operational-risk-edit'].includes(action)||operations[action]?.includes(body.operation)||false;}
 export async function retrySave(action,options,run,{active=()=>true}={}){
  // AbortSignal is een live browserobject en kan niet worden gekopieerd.
  // Houd hetzelfde signaal, maar snapshot de inhoud voor een eventuele herpoging.

@@ -481,7 +481,7 @@ function measureDefinitions(show,risks={}){
  }
  if(risks.state==='ready'&&risks.operational?.source)for(const risk of risks.risks||[]){
   const record=risks.operational.assessments?.[risk.id];
-  if(['medium','high'].includes(record?.riskLevel)&&typeof record.riskNote==='string'&&record.riskNote.trim())rows.push({id:'operational:'+risks.operational.source.revision+':'+risk.id,sourceType:'operational',sourceId:risk.id,sourceRevision:risks.operational.source.revision,title:risk.title,text:record.riskNote.trim(),description:risk.description||null,origin:'Operationele risico’s · '+risk.title,originalRiskLevel:record.riskLevel});
+  if(['low','medium','high'].includes(record?.riskLevel)&&measureRequiredOf(record))rows.push({id:'operational:'+risks.operational.source.revision+':'+risk.id,sourceType:'operational',sourceId:risk.id,sourceRevision:risks.operational.source.revision,title:risk.title,text:(typeof record.riskNote==='string'?record.riskNote:'').trim(),description:risk.description||null,origin:'Operationele risico’s · '+risk.title,originalRiskLevel:record.riskLevel});
  }
  return{known,rows:rows.map(row=>({...row,basis:JSON.stringify([row.id,row.originalRiskLevel,row.text])}))};
 }
@@ -524,7 +524,7 @@ function esmojoMeasureRecord_(document,row){
  if(records!==undefined&&(!records||typeof records!=='object'||Array.isArray(records)||Object.keys(records).some(id=>!validMeasureId(id))))throw Error('CONFLICT');
  const value=records?.[row.id];if(!value)return null;
  measureKeys(value,['revision','basis','originalRiskLevel','riskLevelAfter','briefing','completedAt','completedBy','attachments','lastMutation',...(Object.hasOwn(value,'briefingChosen')?['briefingChosen']:[])]);
- if(!Number.isSafeInteger(value.revision)||value.revision<1||typeof value.basis!=='string'||value.basis.length>25000||!['medium','high'].includes(value.originalRiskLevel)||value.riskLevelAfter!==null&&!measureLevels.includes(value.riskLevelAfter)||value.briefing!==null&&typeof value.briefing!=='boolean'||Object.hasOwn(value,'briefingChosen')&&(typeof value.briefingChosen!=='boolean'||value.briefingChosen!==(typeof value.briefing==='boolean'))||!Array.isArray(value.attachments)||value.attachments.length>20||new Set(value.attachments).size!==value.attachments.length||value.attachments.some(id=>!validMeasureUploadId(id))||!/^[a-f0-9]{64}$/.test(value.lastMutation||'')||value.completedAt!==null&&(typeof value.completedAt!=='string'||!Number.isFinite(Date.parse(value.completedAt))||typeof value.completedBy!=='string'||!value.completedBy||!measureLevels.includes(value.riskLevelAfter))||value.completedAt===null&&value.completedBy!==null)throw Error('CONFLICT');
+ if(!Number.isSafeInteger(value.revision)||value.revision<1||typeof value.basis!=='string'||value.basis.length>25000||!['low','medium','high'].includes(value.originalRiskLevel)||value.riskLevelAfter!==null&&!measureLevels.includes(value.riskLevelAfter)||value.briefing!==null&&typeof value.briefing!=='boolean'||Object.hasOwn(value,'briefingChosen')&&(typeof value.briefingChosen!=='boolean'||value.briefingChosen!==(typeof value.briefing==='boolean'))||!Array.isArray(value.attachments)||value.attachments.length>20||new Set(value.attachments).size!==value.attachments.length||value.attachments.some(id=>!validMeasureUploadId(id))||!/^[a-f0-9]{64}$/.test(value.lastMutation||'')||value.completedAt!==null&&(typeof value.completedAt!=='string'||!Number.isFinite(Date.parse(value.completedAt))||typeof value.completedBy!=='string'||!value.completedBy||!measureLevels.includes(value.riskLevelAfter))||value.completedAt===null&&value.completedBy!==null)throw Error('CONFLICT');
  return value;
 }
 
@@ -877,12 +877,19 @@ function esmojoFloorPressure_(request,openTarget){
 const operationalRiskLabels={none:'Geen risico',low:'Laag',medium:'Midden',high:'Hoog'};
 
 function validateOperationalReview(input){
- const keys=['concertId','source','riskId','revision','riskLevel','riskNote'];
- if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).sort().join(',')!==keys.sort().join(','))throw Error('VALIDATION');
+ const keys=['concertId','source','riskId','revision','riskLevel','riskNote','measureRequired'];
+ if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).sort().join(',')!==keys.slice().sort().join(','))throw Error('VALIDATION');
  if(typeof input.concertId!=='string'||!input.concertId.trim()||input.concertId.length>240||/[\x00-\x1f/\\]/.test(input.concertId)||!/^R[0-9]{2}$/.test(input.riskId||'')||!Number.isSafeInteger(input.revision)||input.revision<0)throw Error('VALIDATION');
  if(!input.source||Object.keys(input.source).sort().join(',')!=='revision,sha256'||!['revision','sha256'].every(key=>/^[a-f0-9]{64}$/.test(input.source[key]||'')))throw Error('VALIDATION');
- if(!Object.hasOwn(operationalRiskLabels,input.riskLevel)||typeof input.riskNote!=='string'||input.riskNote.length>4000||/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(input.riskNote)||input.riskLevel!=='low'&&!input.riskNote.trim())throw Error('VALIDATION');
- return {...input,source:{...input.source},riskNote:input.riskLevel==='low'?'':input.riskNote.trim()};
+ if(!Object.hasOwn(operationalRiskLabels,input.riskLevel)||typeof input.riskNote!=='string'||input.riskNote.length>4000||/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(input.riskNote)||typeof input.measureRequired!=='boolean')throw Error('VALIDATION');
+ if(input.riskLevel==='none'&&input.measureRequired)throw Error('VALIDATION');
+ return {...input,source:{...input.source},riskNote:''};
+}
+// Records van vóór de keuze 'Beheersmaatregel noodzakelijk' hebben geen measureRequired: Midden/Hoog met maatregeltekst gold als maatregel.
+function measureRequiredOf(record){
+ if(!record)return false;
+ if(typeof record.measureRequired==='boolean')return record.measureRequired;
+ return ['medium','high'].includes(record.riskLevel)&&typeof record.riskNote==='string'&&record.riskNote.trim()!=='';
 }
 
 // OperationalRisks business rules
@@ -893,9 +900,9 @@ function esmojoOperationalState_(document,source){
  if(!state.source||state.source.revision!==source.revision||state.source.sha256!==source.sha256||!state.assessments||Array.isArray(state.assessments)||!Array.isArray(state.history))throw Error('CONFLICT');
  const assessments={};
  for(const [riskId,row]of Object.entries(state.assessments)){
-  validateOperationalReview({concertId:document.concertId,source,riskId,revision:row.revision,riskLevel:row.riskLevel,riskNote:row.riskNote});
-  if(row.revision<1||typeof row.completedAt!=='string'||!Number.isFinite(Date.parse(row.completedAt)))throw Error('CONFLICT');
-  assessments[riskId]={revision:row.revision,riskLevel:row.riskLevel,riskNote:row.riskNote,completedAt:row.completedAt};
+  if(!/^R[0-9]{2}$/.test(riskId)||!Number.isSafeInteger(row.revision)||row.revision<1||!Object.hasOwn(operationalRiskLabels,row.riskLevel)||typeof row.riskNote!=='string'||row.riskNote.length>4000||/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(row.riskNote)||row.measureRequired!==undefined&&typeof row.measureRequired!=='boolean'||row.riskLevel==='none'&&row.measureRequired===true)throw Error('CONFLICT');
+  if(typeof row.completedAt!=='string'||!Number.isFinite(Date.parse(row.completedAt)))throw Error('CONFLICT');
+  assessments[riskId]={revision:row.revision,riskLevel:row.riskLevel,riskNote:row.riskNote,measureRequired:measureRequiredOf(row),completedAt:row.completedAt};
  }
  return{source,assessments};
 }
@@ -909,20 +916,61 @@ function esmojoOwnRisks_(document){
  if(!Array.isArray(list)||list.length>69)throw Error('CONFLICT');
  const seen=new Set();
  for(const item of list){
-  if(!item||typeof item!=='object'||Array.isArray(item)||!/^R(?:3[1-9]|[4-9][0-9])$/.test(item.id||'')||seen.has(item.id)||typeof item.title!=='string'||!item.title.trim()||item.title.length>200||item.description!==undefined&&(typeof item.description!=='string'||!item.description.trim()||item.description.length>600)||typeof item.consequence!=='string'||!item.consequence.trim()||item.consequence.length>600||!/^[a-f0-9-]{36}$/.test(item.requestId||'')||!Number.isFinite(Date.parse(item.createdAt))||typeof item.actor!=='string')throw Error('CONFLICT');
+  if(!item||typeof item!=='object'||Array.isArray(item)||!/^R(?:3[1-9]|[4-9][0-9])$/.test(item.id||'')||seen.has(item.id)||typeof item.title!=='string'||!item.title.trim()||item.title.length>200||item.description!==undefined&&(typeof item.description!=='string'||!item.description.trim()||item.description.length>2000)||item.editRevision!==undefined&&(!Number.isSafeInteger(item.editRevision)||item.editRevision<1)||typeof item.consequence!=='string'||!item.consequence.trim()||item.consequence.length>600||!/^[a-f0-9-]{36}$/.test(item.requestId||'')||!Number.isFinite(Date.parse(item.createdAt))||typeof item.actor!=='string')throw Error('CONFLICT');
   seen.add(item.id);
  }
  return list;
 }
 function validateOwnRiskInput(input){
- const keys=['concertId','source','requestId','title','description','consequence','riskLevel','riskNote'];
+ const keys=['concertId','source','requestId','title','description','consequence','riskLevel','riskNote','measureRequired'];
  if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).sort().join(',')!==keys.slice().sort().join(','))throw Error('VALIDATION');
  const text=(value,max)=>typeof value==='string'&&value.trim().length>0&&value.length<=max&&!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value);
  if(!/^[a-f0-9-]{36}$/.test(input.requestId||'')||!text(input.title,120)||!text(input.description,600)||!text(input.consequence,600))throw Error('VALIDATION');
  // Dezelfde regels voor risicoklasse en toelichting/maatregel als bij iedere operationele beoordeling.
- const review=validateOperationalReview({concertId:input.concertId,source:input.source,riskId:'R31',revision:0,riskLevel:input.riskLevel,riskNote:input.riskNote});
- return{concertId:input.concertId,source:review.source,requestId:input.requestId,title:input.title.trim().replace(/\s+/g,' '),description:input.description.trim(),consequence:input.consequence.trim(),riskLevel:review.riskLevel,riskNote:review.riskNote};
+ const review=validateOperationalReview({concertId:input.concertId,source:input.source,riskId:'R31',revision:0,riskLevel:input.riskLevel,riskNote:input.riskNote,measureRequired:input.measureRequired});
+ return{concertId:input.concertId,source:review.source,requestId:input.requestId,title:input.title.trim().replace(/\s+/g,' '),description:input.description.trim(),consequence:input.consequence.trim(),riskLevel:review.riskLevel,riskNote:review.riskNote,measureRequired:review.measureRequired};
 }
+// Bewerkte tekst van een risico uit de analyse (titel, gedefinieerd risico, mogelijk gevolg), per analyserevisie; de analyse zelf blijft ongewijzigd.
+function esmojoOperationalEdits_(document,revision){
+ const all=document.operationalEdits;if(all===undefined)return{};
+ if(!all||typeof all!=='object'||Array.isArray(all))throw Error('CONFLICT');
+ const group=all[revision];if(group===undefined)return{};
+ if(!group||typeof group!=='object'||Array.isArray(group))throw Error('CONFLICT');
+ for(const [id,edit]of Object.entries(group)){
+  const text=(value,max)=>typeof value==='string'&&value.trim()&&value.length<=max;
+  if(!/^R[0-9]{2}$/.test(id)||!edit||typeof edit!=='object'||Array.isArray(edit)||!Number.isSafeInteger(edit.revision)||edit.revision<1||!text(edit.title,300)||!text(edit.description,2000)||!text(edit.consequence,2000)||!Number.isFinite(Date.parse(edit.updatedAt))||typeof edit.actor!=='string')throw Error('CONFLICT');
+ }
+ return group;
+}
+function validateRiskEditInput(input){
+ const keys=['concertId','source','riskId','editRevision','title','description','consequence'];
+ if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).sort().join(',')!==keys.slice().sort().join(','))throw Error('VALIDATION');
+ const text=(value,max)=>typeof value==='string'&&value.trim().length>0&&value.length<=max&&!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value);
+ if(typeof input.concertId!=='string'||!input.concertId.trim()||input.concertId.length>240||/[\x00-\x1f/\\]/.test(input.concertId)||!/^R[0-9]{2}$/.test(input.riskId||'')||!Number.isSafeInteger(input.editRevision)||input.editRevision<0)throw Error('VALIDATION');
+ if(!input.source||Object.keys(input.source).sort().join(',')!=='revision,sha256'||!['revision','sha256'].every(key=>/^[a-f0-9]{64}$/.test(input.source[key]||'')))throw Error('VALIDATION');
+ if(!text(input.title,120)||!text(input.description,600)||!text(input.consequence,600))throw Error('VALIDATION');
+ return{concertId:input.concertId,source:{...input.source},riskId:input.riskId,editRevision:input.editRevision,title:input.title.trim().replace(/\s+/g,' '),description:input.description.trim(),consequence:input.consequence.trim()};
+}
+function esmojoOperationalEdit_(request){
+ const {operation,actor,...payload}=request,input=validateRiskEditInput(payload);
+ if(typeof actor!=='string'||!actor||actor.length>100)throw Error('VALIDATION');
+ const source=esmojoRiskSource_(input.concertId,input.source,true),analysis=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
+ if(!analysis)throw Error('SOURCE_CHANGED');
+ const {file,document}=esmojoReadProductionRisks_(source.target),own=esmojoOwnRisks_(document),overview=()=>esmojoShowProfileRisks_({operation:'risk-view',concertId:input.concertId},source.target);
+ const ownRisk=own.find(item=>item.id===input.riskId),analysisRisk=analysis.result.risks.find(item=>item.id===input.riskId);
+ if(!ownRisk&&!analysisRisk)throw Error('SOURCE_CHANGED');
+ const edits=esmojoOperationalEdits_(document,source.source.revision),current=ownRisk?{revision:ownRisk.editRevision||0,title:ownRisk.title,description:ownRisk.description||ownRisk.title,consequence:ownRisk.consequence}:edits[input.riskId]?{revision:edits[input.riskId].revision,title:edits[input.riskId].title,description:edits[input.riskId].description,consequence:edits[input.riskId].consequence}:{revision:0,title:analysisRisk.title,description:analysisRisk.description,consequence:analysisRisk.consequence};
+ const same=current.title===input.title&&current.description===input.description&&current.consequence===input.consequence;
+ if(input.editRevision!==current.revision){if(current.revision===input.editRevision+1&&same)return{riskId:input.riskId,overview:overview()};throw Error('ASSESSMENT_CONFLICT');}
+ const now=new Date().toISOString(),next=current.revision+1;
+ if(ownRisk){ownRisk.title=input.title;ownRisk.description=input.description;ownRisk.consequence=input.consequence;ownRisk.editRevision=next;}
+ else{if(document.operationalEdits!==undefined&&(!document.operationalEdits||Array.isArray(document.operationalEdits)||typeof document.operationalEdits!=='object'))throw Error('CONFLICT');document.operationalEdits=document.operationalEdits||{};document.operationalEdits[source.source.revision]=Object.assign(document.operationalEdits[source.source.revision]||{},{[input.riskId]:{revision:next,title:input.title,description:input.description,consequence:input.consequence,updatedAt:now,actor}});}
+ if(Array.isArray(document.history))document.history.push({at:now,actor,field:'risk_edit',riskId:input.riskId,before:{title:current.title,description:current.description,consequence:current.consequence},after:{title:input.title,description:input.description,consequence:input.consequence}});
+ const text=JSON.stringify(document,null,2),saved=file?(file.setContent(text),file):source.target.folder.createFile(codec.newBlob(text,'application/json','productionele-risicos.json'));
+ if(saved.getBlob().getDataAsString('UTF-8')!==text)throw Error('VERIFY');
+ return{riskId:input.riskId,overview:overview()};
+}
+
 function esmojoOwnRiskAdd_(request){
  const {operation,actor,...payload}=request,input=validateOwnRiskInput(payload);
  if(typeof actor!=='string'||!actor||actor.length>100)throw Error('VALIDATION');
@@ -934,7 +982,7 @@ function esmojoOwnRiskAdd_(request){
  if(known)return{riskId:known.id,record:state.assessments[known.id]||null,overview:overview()};
  if(analysis.result.risks.length+own.length>=OWN_RISK_TOTAL_MAX)throw Error('OWN_RISK_LIMIT');
  const id='R'+String(Math.max(30,...own.map(item=>Number(item.id.slice(1))))+1).padStart(2,'0'),now=new Date().toISOString();
- const record={revision:1,riskLevel:input.riskLevel,riskNote:input.riskNote,completedAt:now};
+ const record={revision:1,riskLevel:input.riskLevel,riskNote:input.riskNote,measureRequired:input.measureRequired,completedAt:now};
  if(document.operationalReviews!==undefined&&(!document.operationalReviews||Array.isArray(document.operationalReviews)||typeof document.operationalReviews!=='object'))throw Error('CONFLICT');
  document.ownRisks=[...own,{id,title:input.title,description:input.description,consequence:input.consequence,requestId:input.requestId,createdAt:now,actor}];
  document.operationalReviews=document.operationalReviews||{};
@@ -955,13 +1003,15 @@ function esmojoOperationalSave_(request){
  if(!analysis.result.risks.some(risk=>risk.id===input.riskId)&&!esmojoOwnRisks_(document).some(own=>own.id===input.riskId))throw Error('SOURCE_CHANGED');
  const state=esmojoOperationalState_(document,source.source),previous=state.assessments[input.riskId];
  if(input.revision!==(previous?.revision||0)){
-  if(previous?.revision!==input.revision+1||previous.riskLevel!==input.riskLevel||previous.riskNote!==input.riskNote)throw Error('ASSESSMENT_CONFLICT');
+  if(previous?.revision!==input.revision+1||previous.riskLevel!==input.riskLevel||previous.measureRequired!==input.measureRequired)throw Error('ASSESSMENT_CONFLICT');
   return{record:previous,overview:esmojoShowProfileRisks_({operation:'risk-view',concertId:input.concertId},source.target)};
  }
  if(document.operationalReviews!==undefined&&(!document.operationalReviews||Array.isArray(document.operationalReviews)||typeof document.operationalReviews!=='object'))throw Error('CONFLICT');
  document.operationalReviews = document.operationalReviews || {};
  const stored=document.operationalReviews[source.source.revision]||{source:source.source,assessments:{},history:[]};
- const record={revision:input.revision+1,riskLevel:input.riskLevel,riskNote:input.riskNote,completedAt:new Date().toISOString()};
+ // Bij Ja blijft een al uitgewerkte maatregeltekst behouden; bij Nee of Geen risico vervalt die.
+ const keptText=input.riskLevel!=='none'&&input.measureRequired&&previous?.measureRequired?previous.riskNote:'';
+ const record={revision:input.revision+1,riskLevel:input.riskLevel,riskNote:keptText,measureRequired:input.measureRequired,completedAt:new Date().toISOString()};
  stored.history.push({at:record.completedAt,actor,riskId:input.riskId,before:previous||null,after:record});stored.assessments[input.riskId]=record;document.operationalReviews[source.source.revision]=stored;
  const text=JSON.stringify(document,null,2),saved=file?(file.setContent(text),file):source.target.folder.createFile(codec.newBlob(text,'application/json','productionele-risicos.json'));
  if(saved.getBlob().getDataAsString('UTF-8')!==text)throw Error('VERIFY');
@@ -1012,6 +1062,7 @@ function esmojoRiskStatus_(concertId) {
 function esmojoShowProfileRisks_(request,openTarget) {
   if(request.operation==='risk-operational-save')return esmojoOperationalSave_(request);
   if(request.operation==='risk-own-add')return esmojoOwnRiskAdd_(request);
+  if(request.operation==='risk-operational-edit')return esmojoOperationalEdit_(request);
   if(request.operation==='risk-measure-export')return esmojoMeasureExport_(request);
   const op=request.operation.slice(5),allowed={pending:['operation','after'],status:['operation','concertId'],view:['operation','concertId'],'production-save':['operation','concertId','field','value','revision','actor'],pdf:['operation','concertId','source'],read:['operation','concertId','source'],save:['operation','concertId','source','result']}[op];
   if(!allowed)throw Error('VALIDATION');riskKeys(request,allowed);
@@ -1026,7 +1077,7 @@ function esmojoShowProfileRisks_(request,openTarget) {
     try{source=esmojoRiskSource_(request.concertId,null,true,target);}catch(error){if(error.message==='REPORT_NOT_READY')return Object.assign({state:'not-ready',risks:[],production,assessments},esmojoMeasuresOverview_(target,productionDocument,{state:'not-ready',risks:[],production,assessments}));throw error;}
     const document=esmojoRiskDocument_(esmojoShowFile_(source.target.folder,riskFilename(source.source)),source);
     // Browser krijgt alleen de gevraagde definitie; geen PDF-bytes, ticketdata of interne bestandsidentificaties.
-    const result={state:document?'ready':'pending',risks:document?[...document.result.risks.map(risk=>({id:risk.id,title:risk.title,description:risk.description,consequence:risk.consequence})),...esmojoOwnRisks_(productionDocument).map(own=>({id:own.id,title:own.title,description:own.description||own.title,consequence:own.consequence,own:true}))]:[],production,assessments,...(document?{operational:esmojoOperationalState_(productionDocument,source.source)}:{})};return Object.assign(result,esmojoMeasuresOverview_(target,productionDocument,result));
+    const result={state:document?'ready':'pending',risks:document?[...document.result.risks.map(risk=>{const edit=esmojoOperationalEdits_(productionDocument,source.source.revision)[risk.id];return{id:risk.id,title:edit?edit.title:risk.title,description:edit?edit.description:risk.description,consequence:edit?edit.consequence:risk.consequence,editRevision:edit?edit.revision:0};}),...esmojoOwnRisks_(productionDocument).map(own=>({id:own.id,title:own.title,description:own.description||own.title,consequence:own.consequence,own:true,editRevision:own.editRevision||0}))]:[],production,assessments,...(document?{operational:esmojoOperationalState_(productionDocument,source.source)}:{})};return Object.assign(result,esmojoMeasuresOverview_(target,productionDocument,result));
   }
   validateRiskReference(request.source);if(op==='save')validateRiskResult(request.result);
   // Nieuwe analyse uitsluitend voor de huidige definitieve PDF. Oude analyses blijven leesbaar.

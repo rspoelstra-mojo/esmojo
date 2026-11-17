@@ -1,4 +1,5 @@
-import {measureDefinitions,measureState} from '../../shared/measure-workflow.js';
+import {measureState} from '../../shared/measure-workflow.js';
+import {measureDefinitions} from '../../shared/measure-definitions.js';
 import {productionRiskGroups} from '../../shared/production-risks.js';
 const DAY=86400000;
 const definitions=[
@@ -21,7 +22,7 @@ export const planningDate=value=>new Intl.DateTimeFormat('nl-NL',{day:'numeric',
 // operationalComplete hieronder (dat letterlijk gelijk blijft aan de offline referentie), maar per risico, voor de actielijst.
 export function operationalReviewed(review,risk){
  const row=review?.assessments?.[risk.id];
- return /^R[0-9]{2}$/.test(risk.id)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&['none','low','medium','high'].includes(row.riskLevel)&&typeof row.riskNote==='string'&&(row.riskLevel==='low'||Boolean(row.riskNote.trim()))&&Number.isFinite(Date.parse(row.completedAt));
+ return /^R[0-9]{2}$/.test(risk.id)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&['none','low','medium','high'].includes(row.riskLevel)&&typeof row.riskNote==='string'&&(row.riskLevel==='low'||Boolean(row.riskNote.trim())||typeof row.measureRequired==='boolean')&&Number.isFinite(Date.parse(row.completedAt));
 }
 export function productionComplete(show,snapshot){
   const risk=snapshot.risks;if(!risk?.production)return false;
@@ -38,7 +39,7 @@ export function operationalComplete(snapshot){
  const risks=snapshot.risks,review=risks?.operational;
  return risks?.state==='ready'&&Array.isArray(risks.risks)&&risks.risks.length<=30&&Boolean(review?.source&&['revision','sha256'].every(key=>/^[a-f0-9]{64}$/.test(review.source[key]||'')))&&risks.risks.every(risk=>{
   const row=review.assessments?.[risk.id];
-  return /^R[0-9]{2}$/.test(risk.id)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&['none','low','medium','high'].includes(row.riskLevel)&&typeof row.riskNote==='string'&&(row.riskLevel==='low'||Boolean(row.riskNote.trim()))&&Number.isFinite(Date.parse(row.completedAt));
+  return /^R[0-9]{2}$/.test(risk.id)&&Number.isSafeInteger(row?.revision)&&row.revision>0&&['none','low','medium','high'].includes(row.riskLevel)&&typeof row.riskNote==='string'&&(row.riskLevel==='low'||Boolean(row.riskNote.trim())||typeof row.measureRequired==='boolean')&&Number.isFinite(Date.parse(row.completedAt));
  });
 }
 export function showMeasures(show,snapshot={}){

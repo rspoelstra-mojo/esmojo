@@ -27,6 +27,7 @@
 .measure-document { display: grid; gap: 8px; margin-top: 14px; min-width: 0; }
 .measure-document > span { overflow-wrap: anywhere; font-size: 13px; }
 .measure-finish { width: 100%; padding: 12px; font-size: 13px; }
+.measure-original-risk[data-status="low"] { background: #fff4dc; color: #805b10; }
 .measure-original-risk[data-status="medium"] { background: #ffead5; color: #99500d; }
 .measure-original-risk[data-status="high"] { background: #fde8e8; color: #a22929; }
 @container fluid (max-width: 1100px) { .measure-suggestion-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }

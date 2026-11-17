@@ -31,3 +31,6 @@
 .risk-analysis .analysis-status[data-status="medium"] { background: #ffead5; color: #99500d; }
 .risk-analysis .analysis-status[data-status="high"] { background: #fde8e8; color: #a22929; }
 .operational-save-error { margin: 0; padding: 0 14px 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.risk-analysis .risk-edit-button, .risk-edit-button { margin-left: 12px; padding: 6px 12px; border: 1px solid var(--line,#dfe4ea); border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.risk-edit-button:hover { border-color: var(--profile-blue,#0046f2); color: var(--profile-blue,#0046f2); }
+.risk-edit-button:focus-visible { outline: 2px solid var(--profile-blue,#0046f2); outline-offset: 2px; }

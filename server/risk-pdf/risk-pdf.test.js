@@ -39,3 +39,17 @@ test('Service haalt de gegevens server-side op, bindt de actor en levert alleen 
  await assert.rejects(createRiskPdfService({shows:async()=>data(),render:async()=>Buffer.alloc(3*1024*1024)}).create({concertId:'Test',measureId:id},'a'),/PDF_TOO_LARGE/);
  await assert.rejects(createRiskPdfService({shows:async()=>data(),render:async()=>{throw Error('x');}}).create({concertId:'Test',measureId:id},'a'),/LAYOUT_ERROR/);
 });
+test('Opgemaakte maatregel: vet, onderstreept, opsomming en nummering komen in de PDF',async()=>{
+ const drawn=[],lines=[],{PDFPage}=await import('pdf-lib'),text=PDFPage.prototype.drawText,line=PDFPage.prototype.drawLine;
+ PDFPage.prototype.drawText=function(value,options){drawn.push([value,options?.font]);return text.call(this,value,options);};PDFPage.prototype.drawLine=function(options){lines.push(options);return line.call(this,options);};
+ try{await createRiskPdf(data({measure:{...data().measure,text:'Normale tekst met **vette woorden** en ++onderstreepte woorden++.\n- eerste punt\n- tweede punt\n1. stap een\n2. stap twee'}}),await riskPdfAssets());}finally{PDFPage.prototype.drawText=text;PDFPage.prototype.drawLine=line;}
+ const heading=drawn.find(item=>item[0]==='Beheersmaatregel')[1],bold=drawn.find(item=>item[0]==='vette woorden'),under=drawn.find(item=>item[0]==='onderstreepte woorden');
+ assert.ok(bold&&bold[1]===heading,'vette tekst gebruikt het kopfont');assert.ok(under&&under[1]!==heading);
+ assert.ok(lines.some(item=>item.thickness===.7&&Math.abs(item.start.y-item.end.y)<.001),'onderstreping is getekend');
+ assert.equal(drawn.filter(item=>item[0]==='•').length,2);assert.ok(drawn.some(item=>item[0]==='1.')&&drawn.some(item=>item[0]==='2.'),'nummering');assert.ok(drawn.some(item=>item[0]==='eerste punt')&&drawn.some(item=>item[0]==='stap twee'));
+});
+test('Een risico zonder uitgewerkte maatregel toont dat in de PDF',async()=>{
+ const drawn=[],{PDFPage}=await import('pdf-lib'),text=PDFPage.prototype.drawText;PDFPage.prototype.drawText=function(value,options){drawn.push(value);return text.call(this,value,options);};
+ try{await createRiskPdf(data({measure:{...data().measure,text:'',implemented:false,riskLevelAfter:null,completedAt:null}}),await riskPdfAssets());}finally{PDFPage.prototype.drawText=text;}
+ assert.ok(drawn.includes('Nog niet uitgewerkt.'));
+});

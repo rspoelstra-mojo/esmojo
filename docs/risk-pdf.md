@@ -15,3 +15,5 @@ tijdelijke blob-download. Niets wordt opgeslagen. Maximaal 2 MiB. Opmaakversie `
 bevestigde gegevens op het moment van exporteren.
 
 Opsommingen in de beheersmaatregel (regels die met •, -, * of – beginnen) worden als opsomming met ingesprongen regels getoond.
+
+Opgemaakte tekst (vet, onderstreept, opsomming, nummering) uit de rich text editor wordt in de PDF getoond: vet in het kopfont, onderstreping als lijn, opsommingen met blauwe punten en genummerde stappen met ingesprongen vervolgregels. Een maatregel zonder uitgewerkte tekst toont Nog niet uitgewerkt.

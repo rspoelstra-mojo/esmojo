@@ -3,7 +3,7 @@ import {productionRiskLevels} from '../shared/barrier-layout.js';
 import {assessmentNode as node} from './production-assessment-ui.js';
 
 // Herbruikbare presentatie; de aanroepende pagina verzorgt opslag en autorisatie.
-export function createRiskReviewCard({name,onChange,onSave,onEdit,editLabel='Bewerken',title:heading='Risico beoordeling',withNote=true,showSave=true}){
+export function createRiskReviewCard({name,onChange,onSave,onEdit,editLabel='Bewerken',title:heading='Risico beoordeling',withNote=true,showSave=true,saveLabel='Opslaan',measureChoice=false,onMeasureChange}){
   let level=null;const drafts={};
   const card=node('form','profile-pdf-card risk-review-card'),title=node('h3','',heading);title.id=name+'-title';
   card.setAttribute('aria-labelledby',title.id);
@@ -14,20 +14,25 @@ export function createRiskReviewCard({name,onChange,onSave,onEdit,editLabel='Bew
     label.dataset.level=option.value;input.type='radio';input.name=name;input.value=option.value;input.required=true;label.append(input,text);choices.append(label);inputs.push(input);
     input.onchange=()=>{if(!input.checked)return;if(level)drafts[level]=note.value;onChange(option.value,drafts[option.value]||'','level');};
   }
+  // Beheersmaatregel noodzakelijk: Ja/Nee zonder standaardkeuze; bij Ja verschijnt het risico bij Maatregelen en wordt de maatregel daar uitgewerkt.
+  const measure=node('fieldset','risk-review-measure'),measureLegend=node('legend','risk-review-measure-title','Beheersmaatregel noodzakelijk'),measureChoices=node('div','risk-review-choices'),measureInputs=[];measure.hidden=true;
+  for(const [value,labelText]of [['no','Nee'],['yes','Ja']]){const option=node('label','risk-review-option risk-review-measure-option'),input=node('input','');input.type='radio';input.name=name+'-measure';input.value=value;option.dataset.choice=value;option.append(input,node('span','',labelText));measureChoices.append(option);measureInputs.push(input);input.onchange=()=>{if(input.checked)onMeasureChange?.(value==='yes');};}
+  measure.append(measureLegend,measureChoices);
   const field=node('div','assessment-field risk-review-note'),label=node('label','','Toelichting'),note=node('textarea','');note.id=name+'-note';note.rows=4;note.maxLength=4000;label.htmlFor=note.id;field.append(label,note);
   note.oninput=()=>onChange(level,note.value,'note');
-  const save=node('button','analysis-complete','Opslaan');save.type='submit';
+  const save=node('button','analysis-complete',saveLabel);save.type='submit';
   const status=node('p','risk-review-status');status.setAttribute('aria-live','polite');
   const edit=node('button','secondary-button',editLabel);edit.type='button';edit.onclick=()=>onEdit?.();
-  card.append(title,choices,field,save,status,edit);
+  card.append(title,choices,...(measureChoice?[measure]:[]),field,save,status,edit);
   card.onsubmit=event=>{event.preventDefault();if(!save.disabled&&card.reportValidity())onSave();};
   const view={
     element:card,
-    update({riskLevel=null,riskNote='',disabled=false,busy=false,canSave=false,completed=false,failed=false,canEdit=true,noRiskNoteRequired=true}={}){
+    update({riskLevel=null,riskNote='',disabled=false,busy=false,canSave=false,completed=false,failed=false,canEdit=true,noRiskNoteRequired=true,measureRequired=null}={}){
       level=riskLevel;if(!level)for(const key of Object.keys(drafts))delete drafts[key];
       for(const input of inputs){input.checked=input.value===level;input.disabled=disabled;}
       if(note.value!==riskNote)note.value=riskNote;
-      field.hidden=!withNote||!['none','medium','high'].includes(level)||(level==='none'&&!noRiskNoteRequired);label.textContent=level==='none'?'Toelichting':'Beheersmaatregel';note.required=!field.hidden;note.disabled=disabled;
+      measure.hidden=!measureChoice||!['low','medium','high'].includes(level);for(const input of measureInputs){input.checked=measureRequired===(input.value==='yes');input.disabled=disabled;input.required=!measure.hidden;}
+      field.hidden=!withNote||measureChoice||!['none','medium','high'].includes(level)||(level==='none'&&!noRiskNoteRequired);label.textContent=level==='none'?'Toelichting':'Beheersmaatregel';note.required=!field.hidden;note.disabled=disabled;
       save.hidden=!showSave||!level||completed;save.disabled=disabled||busy||failed||!canSave;
       edit.hidden=!completed||!onEdit;edit.disabled=busy||!canEdit;
       status.textContent='';status.hidden=true;

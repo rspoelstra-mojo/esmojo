@@ -3,7 +3,9 @@ function snapshot(){return{risks:{state:'ready',risks:[{id:'R01',title:'Syntheti
 function fixture(){
  class Element{constructor(tag){this.tag=tag;this.children=[];this.dataset={};this.attributes={};this._text='';this.classList={toggle(){}};}append(...items){this.children.push(...items);}prepend(...items){this.children.unshift(...items);}setCustomValidity(){}replaceChildren(...items){this.children=[];this.append(...items);}set textContent(value){this._text=value;this.children=[];}get textContent(){return this._text+this.children.map(el=>el.textContent).join(' ');}setAttribute(k,v){this.attributes[k]=v;}focus(){}querySelector(tag){return this.all().find(el=>el.tag===tag);}all(){return this.children.flatMap(el=>[el,...el.all()]);}}
  const panel=new Element('section'),ctx=vm.createContext({document:{createElement:tag=>new Element(tag)},Intl,Date,setTimeout,clearTimeout,structuredClone});let state=snapshot(),update,unsubscribed=false;
- for(const name of ['src/lib/background-saves.js','src/lib/page-feedback.js','src/detail-back.js','shared/production-risks.js','shared/barrier-layout.js','shared/operational-risk.js','shared/measure-workflow.js','src/lib/show-planning.js','src/production-assessment-ui.js','src/risk-review-card.js','src/measure-implementation-page.js','src/show-measures.js'])vm.runInContext(readFileSync(name,'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),ctx);
+ // De echte editor gebruikt contenteditable/execCommand; in deze lichte DOM-nabootsing vervangt een tekstvak hem.
+ ctx.createRichTextEditor=({value=''}={})=>{const area=new Element('textarea');area.className='';area.value=value;return{element:area,get value(){return area.value;},set value(next){area.value=next;},set readOnly(flag){area.readOnly=flag;},get readOnly(){return area.readOnly;},focus(){},setCustomValidity(){},onchange:null,onblur:null};};
+ for(const name of ['src/lib/background-saves.js','src/lib/page-feedback.js','src/detail-back.js','shared/production-risks.js','shared/barrier-layout.js','shared/operational-risk.js','shared/measure-workflow.js','shared/operational-review.js','shared/measure-definitions.js','shared/rich-text.js','src/lib/show-planning.js','src/production-assessment-ui.js','src/risk-review-card.js','src/measure-implementation-page.js','src/show-measures.js'])vm.runInContext(readFileSync(name,'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),ctx);
  const dispose=ctx.createShowMeasures(panel,{show:{venue:'Gashouder'},data:{planningSnapshot:()=>state,subscribe:callback=>{update=callback;return()=>{unsubscribed=true;};}}});
  return{panel,dispose,get unsubscribed(){return unsubscribed;},change:next=>{state=next;update();},rows:()=>panel.all().filter(el=>el.dataset.measureId),text:()=>panel.textContent};
 }
@@ -16,8 +18,9 @@ test('Lege kaart en planning vereisen alle beoordelingen; bronwijziging ververst
  complete.risks.state='pending';h.change(complete);assert.doesNotMatch(h.text(),/Geen beheersmaatregelen voor deze show/);assert.match(h.text(),/nog niet volledig afgerond/);h.dispose();
 });
 
-test('Documentkaart staat naast de maatregel buiten Suggesties; briefing heeft Ja/Nee en begint zonder keuze',()=>{
- const h=fixture();h.rows()[2].onclick();const all=h.panel.all(),row=all.find(el=>el.className==='measure-proposal-row');assert.equal(row.children.length,2);assert.match(row.children[0].textContent,/Beheersmaatregel/);assert.match(row.children[1].textContent,/Document uploaden/);
+test('Maatregel staat op volle breedte met Document uploaden eronder, buiten Suggesties; briefing heeft Ja/Nee en begint zonder keuze',()=>{
+ const h=fixture();h.rows()[2].onclick();const all=h.panel.all(),content=all.find(el=>el.className==='measure-implementation-content');assert.equal(all.some(el=>el.className==='measure-proposal-row'),false);
+ assert.deepEqual(content.children.map(el=>/^(Gedefinieerd risico|Beheersmaatregel|Document uploaden|Suggesties)/.exec(el.textContent)?.[1]),['Gedefinieerd risico','Beheersmaatregel','Document uploaden','Suggesties']);
  const grid=all.find(el=>el.className==='measure-suggestion-grid');assert.equal(grid.children.length,3);assert.doesNotMatch(grid.textContent,/Document uploaden/);
  const card=all.find(el=>el.className.includes('measure-briefing-card')),inputs=card.all().filter(el=>el.tag==='input');assert.deepEqual(inputs.map(el=>el.value),['no','yes']);assert.equal(inputs.every(input=>input.checked===false),true);assert.equal(all.find(el=>el.tag==='button'&&el.textContent==='Beheersmaatregel afronden').disabled,true);h.dispose();
 });
