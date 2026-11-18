@@ -72,3 +72,10 @@ Hoog). De tekst is eerst leeg ("Nog uit te werken") en wordt op de maatregelpagi
 volle breedte onder Gedefinieerd risico; Document uploaden staat eronder. Productionele maatregelen volgen dit in een vervolgstap.
 
 Vanaf V1.185 geldt dezelfde keuze Beheersmaatregel noodzakelijk voor Barrieropstelling en Vloerdruk (shared/production-measure.js); de maatregel wordt ook daar bij Maatregelen uitgewerkt.
+
+## Bewerkmodus (V1.209)
+
+De maatregelpagina gebruikt de gedeelde bewerkknop (src/edit-mode.js): leesmodus standaard; Bewerken -> Annuleren + Opslaan; label rechtsboven is de oorspronkelijke risicoklasse.
+Opslaan voert als één bevestigde reeks uit: zo nodig `reopen`, `edit-text` (bij gewijzigde tekst), `upload`/`remove` voor gekozen documenten en `complete` (risicoklasse na implementatie
++ briefingkeuze). Opslaan is pas mogelijk als tekst, klasse na implementatie en briefingkeuze zijn ingevuld. Er is geen autosave en geen aparte afrondknop meer. Gekozen documenten
+worden pas bij Opslaan geüpload of verwijderd; Annuleren verwerpt ze. Pas na bevestiging terug naar de leesmodus; bij een fout blijft de bewerkmodus met de invoer.
