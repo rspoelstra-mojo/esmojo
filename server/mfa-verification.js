@@ -65,7 +65,7 @@ export function createMfaVerification({env = process.env, clientFactory = create
     try { upgraded = JSON.parse(Buffer.from(session.access_token.split('.')[1], 'base64url')); }
     catch { throw fail(503, 'MFA_UNAVAILABLE'); }
     if (upgraded.sub !== claims.sub || upgraded.iss !== claims.iss || upgraded.aud !== 'authenticated'
-      || upgraded.role !== 'authenticated' || upgraded.aal !== 'aal2' || !uuid(upgraded.session_id)
+      || upgraded.role !== 'authenticated' || upgraded.aal !== 'aal2' || upgraded.session_id !== claims.session_id
       || !upgraded.amr?.some(item => item.method === 'totp') || typeof session.refresh_token !== 'string') throw fail(503, 'MFA_UNAVAILABLE');
 
     // Geen tokens of app-cookie vrijgeven voordat de gedeelde replaymarker vaststaat.
