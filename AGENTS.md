@@ -2,8 +2,8 @@
 
 Gebruiker wil alle artiesten altijd in Artiesten zien (de grote artiestendatabase) en dat elke artiest uit de concertagenda (komende 365 dagen) alvast een
 pagina en submenu-item krijgt, met toekomstige concerten onder Concert historie (niet klikbaar), ook bij bestaande artiesten. Afgeleid uit de openbare agenda,
-geen nieuwe opslag. Daarnaast (volgende stap, nog niet gebouwd): het Rapportages-menu toont per reeks alleen de rapportages van die reeks; historische
-rapportages blijven via de artiestenpagina bereikbaar. Zie docs/personeelsplanning.md en docs/tasks/claude-agenda-artists-20261118.md.
+geen nieuwe opslag. Daarnaast (V1.203): het Rapportages-menu toont per reeks alleen de rapportages van die reeks (ook een in de Concertagenda gedefinieerde reeks staat samen
+onder één artiestnaam); historische rapportages van andere reeksen blijven via de artiestenpagina bereikbaar. Zie docs/personeelsplanning.md en docs/tasks/claude-agenda-artists-20261118.md.
 
 ## Handmatige concertreeksen (18 november 2026)
 

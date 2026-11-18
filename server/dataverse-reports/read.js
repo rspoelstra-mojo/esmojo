@@ -46,7 +46,10 @@ export function createNativeReportReader({repository=createNativeReportsReposito
   return shows;
  }
  async function catalogue(){
-  const shows=(await current()).map(({concertId,name,venue,date,performance,revision})=>({concertId,name,venue,date,...performance?{performance}:{},revision}));
+  // Reeksidentiteit per concert (Core: Concert -> Concertreeks), zodat een in de Concertagenda gedefinieerde reeks samen in het menu staat.
+  const [list,concerts]=await Promise.all([current(),repo.query('esmojo_concert',{select:['esmojo_oudconcertid','_esmojo_concertreeks_value']})]);
+  const seriesOf=new Map(concerts.map(row=>[row.esmojo_oudconcertid,row._esmojo_concertreeks_value||null]));
+  const shows=list.map(({concertId,name,venue,date,performance,revision})=>({concertId,name,venue,date,...performance?{performance}:{},revision,seriesId:seriesOf.get(concertId)||null}));
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
   return reportCatalogue(shows,today);
  }
