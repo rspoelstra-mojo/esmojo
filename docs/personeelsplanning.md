@@ -66,3 +66,10 @@ staan de toekomstige agenda-concerten (ook voorbij 45 dagen, ook voor artiesten 
 **Artiestfoto in de 05:00-run:** de bestaande eenmalige fotostap (`artist-photo-candidates`/`artist-photo-save`, 24 per run, daarna volgende run) neemt ook agenda-artiesten
 mee die nog geen Artiest-rij hebben. Bij een gevonden MOJO-foto wordt de Artiest-rij create-only samen met de eenmalige fotomarker aangemaakt (zelfde ID als de import);
 zonder foto alleen de marker (de pagina blijft afgeleid). Bestaande artiesten, markers en foto's blijven ongewijzigd.
+
+## Rapportages per reeks (V1.203)
+
+Het Rapportages-menu en de datumtabs van een rapportage gebruiken de reeks (Core: Concert → Concertreeks, dus ook een handmatige reeks uit de Concertagenda met tussendagen)
+als eenheid in plaats van alle datums van een artiestnaam (shared/report-catalogue.js, server/dataverse-reports/read.js). Een reeks staat samen onder één artiestnaam;
+andere reeksen of zalen van dezelfde artiest zijn een eigen menu-item en historische rapportages van andere reeksen staan niet bij de tabs. Zonder reeksidentiteit geldt:
+dezelfde zaal binnen 31 dagen na de eerste show. De artiestenpagina (Concert historie) blijft alle historische rapportages tonen. Alleen presentatie van bestaande gegevens.
