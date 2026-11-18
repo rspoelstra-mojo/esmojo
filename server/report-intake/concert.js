@@ -2,7 +2,7 @@ import {canonicalVenueName} from '../mojo-venues.js';
 
 // A lossy filename slug may identify multiple catalog entries. Never select
 // one by ordering; the caller must handle ambiguous and missing matches.
-const slug=value=>typeof value==='string'?value.normalize('NFKC').toLocaleLowerCase('nl-NL').replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-+|-+$/g,''):'';
+export const slug=value=>typeof value==='string'?value.normalize('NFKC').toLocaleLowerCase('nl-NL').replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-+|-+$/g,''):'';
 export function matchReportIntakeConcert(filename,concerts){
  if(typeof filename!=='string'||!Array.isArray(concerts))throw Error('VALIDATION');
  const m=/^incidents_([^_]+)_([^_]+)_(\d{2})(\d{2})(\d{4})(?:_s([12]))?\.csv$/i.exec(filename);

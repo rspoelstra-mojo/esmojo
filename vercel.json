@@ -40,6 +40,10 @@
     "api/web-reports-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}"
     },
+    "api/report-intake-sync.js": {
+      "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
+      "maxDuration": 300
+    },
     "api/shows-runtime-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
       "maxDuration": 300

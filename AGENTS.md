@@ -1,3 +1,11 @@
+## CSV-rapportageaanlevering (18 november 2026)
+
+Gebruiker draagt de CSV-aanlevering over: SharePoint-map -> Power Automate -> Dataverse-tabel Rapportageontvangsten ->
+ESMOJO-verwerking naar de bestaande Rapportages-tabellen. Bestandsnaam incidents_<artiest>_<locatie>_DDMMYYYY[_s1|_s2].csv.
+Staat het concert nog niet in ESMOJO, dan koppelt de verwerking de rapportage aan de bestaande artiest of maakt die aan
+binnen de huidige tabellen zoals de 05:00-run (rapport-only concert, niet in Shows). Dubbelzinnig/onbekend: status handmatig,
+nooit gokken. Alleen-lezen controle bij Datatransitie; worker report-intake.yml (GitHub OIDC main). Zie docs/report-intake.md.
+
 ## Beheersmaatregel noodzakelijk bij Barrieropstelling en Vloerdruk (17 november 2026)
 
 Gebruiker vraagt dat het beoordelingsblok overal gelijk werkt: Geen risico zonder toelichting, bij Laag/Midden/Hoog de verplichte Ja/Nee-keuze

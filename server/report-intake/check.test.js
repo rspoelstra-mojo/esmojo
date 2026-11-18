@@ -44,3 +44,8 @@ test('Bestandsfout of gewijzigde bron geeft nooit een geslaagde controle',async(
  const admin={id:'a',activated:true,role:'beheerder',modules:['reports']},mk=error=>createReportIntakeCheck({repository:{list:async()=>[row('x.csv')],file:async()=>{throw Error(error);}},catalogue:{all:async()=>{throw Error('down');}},profiles:async()=>admin})('a');
  assert.equal((await mk('INTAKE_SOURCE_CHANGED')).receipts[0].file.error,'changed');assert.equal((await mk('INTAKE_UNAVAILABLE')).receipts[0].file.error,'unavailable');
 });
+
+test('Opgegeven bronbytes uit de flow moeten gelijk zijn aan het teruggelezen bestand',()=>{
+ const ok=describeReceipt({...row('x.csv'),esmojo_bronbytes:bytes.length},file(bytes),concerts);assert.equal(ok.file.complete,true);assert.equal(ok.file.sourceBytes,bytes.length);
+ assert.equal(describeReceipt({...row('x.csv'),esmojo_bronbytes:bytes.length+5},file(bytes),concerts).file.complete,false);
+});
