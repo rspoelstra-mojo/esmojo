@@ -272,3 +272,16 @@ test('artiesten uit de concertagenda krijgen alvast een pagina met toekomstige c
  const unknown=await f.service.related('artist-profile',{actor:'x',artistIds:[id('Onbekend')]},async()=>{throw Error('NOT_FOUND');}).catch(error=>error.message);assert.equal(unknown,'NOT_FOUND');
  const only=await f.service.related('artist-profile',{actor:'x',artistIds:[id('Numidia')]},async()=>{throw Error('NOT_FOUND');});assert.deepEqual(only.concerts,[{venue:'Gashouder',dates:['2027-03-05']}]);
 });
+test('de 05:00-run vindt ook de foto voor agenda-artiesten zonder Artiest-rij en legt rij en foto samen vast',async()=>{
+ const f=fixture(),{digest}=await import('../show-migration-writer.js'),{normalizeArtistName}=await import('../../shared/artist-catalogue.js'),id=name=>'a_'+digest(normalizeArtistName(name));
+ await agenda(f,[{concertId:'Beth-Hart_Gashouder_01032027',artist:'Beth Hart',date:'2027-03-01',sourceUrl:'https://www.mojo.nl/a'},{concertId:'Zonder-Foto_Gashouder_02032027',artist:'Zonder Foto',date:'2027-03-02',sourceUrl:'https://www.mojo.nl/b'}]);
+ const before=f.tables.get('esmojo_artiest').size,list=(await f.catalogue.request('artist-photo-candidates',{})).artists;
+ assert.ok(list.some(row=>row.artistId===id('Beth Hart')&&row.name==='Beth Hart')&&list.some(row=>row.artistId===id('Zonder Foto')));
+ const photo={imageUrl:'https://www.mojo.nl/media/beth.jpg',sourceUrl:'https://www.mojo.nl/beth-hart'};
+ assert.equal((await f.catalogue.request('artist-photo-save',{artistId:id('Beth Hart'),photo})).saved,true);
+ assert.equal(f.tables.get('esmojo_artiest').size,before+1);
+ assert.equal((await f.catalogue.request('artist-photo-save',{artistId:id('Zonder Foto'),photo:null})).saved,false);assert.equal(f.tables.get('esmojo_artiest').size,before+1);
+ assert.equal((await f.catalogue.request('artist-photo-save',{artistId:id('Beth Hart'),photo})).saved,false);assert.equal(f.tables.get('esmojo_artiest').size,before+1);
+ const after=(await f.catalogue.request('artist-photo-candidates',{})).artists;assert.ok(!after.some(row=>[id('Beth Hart'),id('Zonder Foto')].includes(row.artistId)));
+ await assert.rejects(f.catalogue.request('artist-photo-save',{artistId:id('Niet In Agenda'),photo}),/NOT_FOUND/);
+});
