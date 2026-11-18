@@ -44,3 +44,9 @@ test('Bestandsfout of gewijzigde bron geeft nooit een geslaagde controle',async(
  const admin={id:'a',activated:true,role:'beheerder',modules:['reports']},mk=error=>createReportIntakeCheck({repository:{list:async()=>[row('x.csv')],file:async()=>{throw Error(error);}},catalogue:{all:async()=>{throw Error('down');}},profiles:async()=>admin})('a');
  assert.equal((await mk('INTAKE_SOURCE_CHANGED')).receipts[0].file.error,'changed');assert.equal((await mk('INTAKE_UNAVAILABLE')).receipts[0].file.error,'unavailable');
 });
+
+test('Bij ontbrekende match tonen openbare hints de concerten van die dag',()=>{
+ const out=describeReceipt(row('incidents_onbekend_AFAS-Live_16112026.csv'),file(bytes),concerts);
+ assert.equal(out.match.status,'not-found');assert.equal(out.hints.sameDay,3);assert.ok(out.hints.sameDayVenue.includes('Fictief Artiest @ AFAS Live'));
+ assert.equal(describeReceipt(row('incidents_fictief-artiest_AFAS-Live_16112026.csv'),file(bytes),concerts).hints,undefined);
+});
