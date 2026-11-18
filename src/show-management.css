@@ -1,5 +1,5 @@
 /* Showoverzicht: optionele kaarten, buiten de bestaande afrondingslogica. */
-/* Kaarten staan als directe gridcellen in het Overzicht (zie show-planning.css). */
+/* Showbeheer-kaarten staan onder het Planning-blok in het Overzicht (zie show-planning.css). */
 .show-management-overview { display:contents; }
 .show-management-card { min-width:0; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--fluid-card,#fff); }
 .show-management-card h2 { margin:0 0 16px; font-size:16px; line-height:1.5; font-weight:600; }

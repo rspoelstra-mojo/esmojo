@@ -1,3 +1,10 @@
+## Showoverzicht rustiger (18 november 2026)
+
+Gebruiker vindt het overzicht te druk en kiest: rood alleen voor "te laat" (subtiele tekst, geen rode balken/iconen/pills), neutrale
+Risico's-tegels bij 0, en Planning plus Actielijst in één breed blok met de acties onder hun planningsstap. Rechts staat een compacte
+kolom: Projectteam, Tijdschema (pas zichtbaar zodra er een tijdschema is) en Show informatie. Showbeheer staat onder het Planning-blok,
+Vergelijkbare artiesten blijft onderaan de pagina. Alleen presentatie; geen nieuwe opslag, API of rechten. Zie docs/show-actions.md.
+
 ## CSV-rapportageaanlevering (18 november 2026)
 
 Gebruiker draagt de CSV-aanlevering over: SharePoint-map -> Power Automate -> Dataverse-tabel Rapportageontvangsten ->

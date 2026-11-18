@@ -11,3 +11,5 @@
 .show-schedule-row[data-kind="doors"] dt,.show-schedule-row[data-kind="end"] dt,.show-schedule-row[data-kind="pause"] dt { color:var(--muted); }
 .show-schedule-updated,.show-schedule-empty { margin:12px 0 0; font-size:12px; line-height:18px; color:var(--muted); }
 .show-schedule-empty { margin-top:0; font-size:13px; }
+
+.show-schedule[hidden] { display:none; }

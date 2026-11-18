@@ -3,7 +3,6 @@ import {publicShowPhoto} from '../shared/public-show-photo.js';
 import {createShowManagement,createShowManagementPlaceholder} from './show-management.js';
 import './show-tabs.css';
 import {requestedShowTab,requestedShowTarget,showTabNames} from '../shared/show-navigation.js';
-import {createShowActions} from './show-actions.js';
 import './show-page.css';
 import {access} from './auth.js';
 import {loadShowPhoto} from './show-photo.js';
@@ -28,8 +27,8 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
   async function open(){
     if(disposed||opening)return;const began=firstOpen&&Number.isFinite(startedAt)?startedAt:globalThis.performance?.now?.()??Date.now();firstOpen=false;opening=true;content.replaceChildren();const finish=loading?.start();content.setAttribute('aria-busy','true');
     const lease=memory.acquire(show.key);
-    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeInformation=()=>{},disposeActions=()=>{},disposeTeam=()=>{},teamView=null,disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
-    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeInformation();disposeActions();disposeTeam();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
+    let data=null,disposeProfile=()=>{},disposePlanning=()=>{},disposeInformation=()=>{},disposeTeam=()=>{},teamView=null,disposeManagement=()=>{},disposeMeasures=()=>{},disposeSimilar=()=>{},similar=null,disposeSchedule=()=>{},scheduleView=null,risks=null,observer=null,frame=null;
+    const cleanup=()=>{disposeSchedule();disposeSimilar();disposeManagement();disposePlanning();disposeInformation();disposeTeam();disposeMeasures();disposeProfile();risks?.dispose();lease.release();observer?.disconnect();if(frame!==null)cancelAnimationFrame(frame);};releasePage=cleanup;
     try{
       const earlyPhoto=lease.view.photo||loadPhoto.peek?.(show.key)||null;
       if(earlyPhoto)void loadPhoto(show.key).catch(()=>{});
@@ -81,13 +80,14 @@ export function createShowPage(content,show,{request=access,loadPhoto=loadShowPh
         const button=document.createElement('button');button.type='button';button.className='show-tab';button.textContent=label;button.id=`show-tab-${index}`;button.setAttribute('role','tab');button.setAttribute('aria-controls',`show-panel-${index}`);
         const panel=document.createElement('section');panel.id=`show-panel-${index}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);panel.tabIndex=0;
         if(label==='Overzicht'){
-          // Tien kolommen (zie show-planning.css): Projectteam, Tijdschema en Showbeheer (3/10), Show informatie en Gashouder (3/10), Planning en Actielijst (4/10);
-          // De blokken zonder inhoud blijven voorlopig leeg.
+          // Twee kolommen (zie show-planning.css): links het brede Planning-blok (planning en acties in één) met Showbeheer,
+          // rechts de compacte feiten: Projectteam, Tijdschema (pas zichtbaar zodra beschikbaar) en Show informatie.
           const layout=document.createElement('div');layout.className='show-overview';
           const block=(className,heading)=>{const section=document.createElement('section');section.className='show-block '+className;const title=document.createElement('h2');title.textContent=heading;section.append(title);return section;};
-          const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie'),actions=block('show-actions','Actielijst');
-          const planning=document.createElement('div');planning.className='show-overview-planning';
-          teamView=createShowTeam(team,{show,request:readOnly?null:request});disposeTeam=teamView.dispose;layout.append(team,schedule,information,planning);disposeManagement=show.venue==='Gashouder'?createShowManagement(layout,{show,request,data,readOnly}):createShowManagementPlaceholder(layout,{show});layout.append(actions);panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data});disposeInformation=createShowInformation(information,{show,data});disposeActions=createShowActions(actions,{show,data,onOpen:target=>openTarget(target)});
+          const team=block('show-team','Projectteam'),schedule=block('show-schedule','Tijdschema'),information=block('show-information','Show informatie');
+          const main=document.createElement('div');main.className='show-overview-main';const aside=document.createElement('div');aside.className='show-overview-aside';
+          const planning=document.createElement('div');planning.className='show-overview-planning';main.append(planning);aside.append(team,schedule,information);layout.append(main,aside);
+          teamView=createShowTeam(team,{show,request:readOnly?null:request});disposeTeam=teamView.dispose;disposeManagement=show.venue==='Gashouder'?createShowManagement(main,{show,request,data,readOnly}):createShowManagementPlaceholder(main,{show});panel.append(layout);disposePlanning=createShowPlanning(planning,{show,data,onOpen:target=>openTarget(target)});disposeInformation=createShowInformation(information,{show,data});
           // Placeholder-artiesten; laadt pas bij zichtbaar tabblad, op de achtergrond en alleen met Artiesten-rechten.
           if(!readOnly){similar=createSimilarArtists(panel,{request});disposeSimilar=similar.dispose;}
           // Voorlopig MOJO-tijdschema (dagelijks vernieuwd); de server geeft altijd de meest recente versie.

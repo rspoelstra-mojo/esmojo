@@ -34,7 +34,7 @@ export function createShowInformation(block,{show,data}){
     const risks=node('section','show-information-section');risks.setAttribute('aria-label','Risico’s volgens de ESM');
     risks.append(node('h3','show-information-subtitle','Risico’s'));
     const tiles=node('dl','show-information-tiles');
-    for(const [key,label] of [['low','Laag'],['medium','Midden'],['high','Hoog']]){const tile=node('div','show-information-tile show-risk-'+key);tile.append(node('dt','',label),node('dd','',numbers.format(info.risks[key])));tiles.append(tile);}
+    for(const [key,label] of [['low','Laag'],['medium','Midden'],['high','Hoog']]){const tile=node('div','show-information-tile show-risk-'+key);if(!info.risks[key])tile.dataset.zero='true';tile.append(node('dt','',label),node('dd','',numbers.format(info.risks[key])));tiles.append(tile);}
     risks.append(tiles);
     body.append(facts,analyses,risks);
   }

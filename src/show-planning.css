@@ -1,67 +1,71 @@
-/* Overzicht: tien kolommen. Links Projectteam, Tijdschema en Showbeheer (3/10), midden Show informatie en Gashouder (3/10),
-   rechts Planning en Actielijst (4/10). Onder 880px paginabreedte staat alles onder elkaar. */
-.show-overview { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-items:stretch; }
+/* Overzicht: links het brede Planning-blok (planning en acties in één) met Showbeheer, rechts de compacte feiten.
+   Onder 880px paginabreedte staat alles onder elkaar, eerst de planning. */
+.show-overview { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-items:start; }
+.show-overview-main,.show-overview-aside { min-width:0; display:grid; gap:20px; align-content:start; }
 .show-block { min-width:0; padding:20px; background:var(--fluid-card,#fff); border:1px solid var(--line); border-radius:12px; }
+.show-block[hidden] { display:none; }
 .show-block h2 { margin:0; color:var(--text); font-size:16px; line-height:1.5; font-weight:600; }
-.show-overview-planning { min-width:0; container-type:inline-size; }
+.show-overview-planning { min-width:0; }
 .show-management-overview { display:contents; }
-/* De Planning-kaart vult de hoogte van zijn cel (ook als het tijdschema de eerste twee rijen hoger maakt). */
-.show-overview-planning > .show-planning { height:100%; box-sizing:border-box; }
 @container (min-width: 881px) {
-  /* De eerste twee rijen zijn even hoog: Projectteam en Tijdschema blijven gelijk, ook als het tijdschema groeit. */
-  .show-overview { grid-template-columns:repeat(10,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); grid-auto-rows:auto; }
-  .show-team { grid-column:1 / span 3; grid-row:1; }
-  .show-schedule { grid-column:1 / span 3; grid-row:2; }
-  .show-information { grid-column:4 / span 3; grid-row:1 / span 2; }
-  .show-overview-planning { grid-column:7 / span 4; grid-row:1 / span 2; }
-  .show-management-overview > .show-management-card:not(.show-management-venue) { grid-column:1 / span 3; grid-row:3; }
-  .show-management-overview > .show-management-venue { grid-column:4 / span 3; grid-row:3; }
-  .show-actions { grid-column:7 / span 4; grid-row:3; }
-  /* Show informatie bepaalt nooit de hoogte van de rijen: Planning blijft leidend, bij overloop scrolt het blok. */
-  .show-information { contain:size; overflow:auto; }
-  /* Showbeheer is nooit hoger dan wat de Gashouder-kaart nodig heeft: die bepaalt de rijhoogte; bij overloop scrolt de kaart. */
-  .show-management-overview > .show-management-access { contain:size; overflow:auto; }
+  .show-overview { grid-template-columns:minmax(0,3fr) minmax(0,2fr); }
+  /* Showbeheer: twee kaarten naast elkaar onder de planning; de pincodekaart is nooit hoger dan de Gashouder-kaart. */
+  .show-overview-main > .show-management-overview { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:stretch; }
+  .show-overview-main > .show-management-overview > .show-management-access { contain:size; overflow:auto; }
 }
 .show-planning { --planning-surface:var(--fluid-card,#fff); --planning-footer:var(--canvas); --planning-text:var(--text); --planning-muted:var(--muted); --planning-line:var(--line); --planning-blue:var(--blue,#002ff4); --planning-blue-soft:#edf2ff; --planning-blue-text:#315bc5; --planning-green:#25744b; --planning-green-soft:#e6f4eb; --planning-red:#b3261e; --planning-red-soft:#fdecea; color:var(--planning-text); background:var(--planning-surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 :root[data-theme="dark"] .show-planning { --planning-blue:#7092ff; --planning-blue-soft:#192b4a; --planning-blue-text:#8eacff; --planning-green:#9fd2b1; --planning-green-soft:#163b2a; --planning-red:#ff8a80; --planning-red-soft:#3d1f1d; }
 
-.show-planning { padding:20px; }
-.planning-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; }
+.show-planning { padding:24px; }
+.planning-header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px 12px; }
 .planning-title { margin:0; font-size:16px; line-height:1.5; font-weight:600; }
-.planning-summary { padding:3px 10px; border-radius:999px; font-size:12px; line-height:18px; font-weight:600; background:var(--planning-blue-soft); color:var(--planning-blue-text); }
-.planning-summary[data-complete="true"] { background:var(--planning-green-soft); color:var(--planning-green); }
-.planning-progress { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:22px; }
-.planning-progress-part { height:6px; border-radius:3px; background:var(--planning-line); }
+/* Eén rustige status in tekst; alleen "Achter op schema" kleurt (subtiel rood). */
+.planning-status { font-size:13px; line-height:20px; font-weight:600; color:var(--planning-muted); }
+.planning-status[data-status="done"] { color:var(--planning-green); }
+.planning-status[data-status="behind"] { color:var(--planning-red); }
+.planning-summary { margin:2px 0 0; font-size:12px; line-height:18px; color:var(--planning-muted); }
+.planning-progress { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:16px; }
+.planning-progress-part { height:4px; border-radius:2px; background:var(--planning-line); }
 .planning-progress-part[data-state="completed"] { background:var(--planning-green); }
 .planning-progress-part[data-state="current"] { background:var(--planning-blue); }
-.planning-progress-part[data-state="overdue"] { background:var(--planning-red); }
-.planning-steps { list-style:none; margin:28px 0 0; padding:0; display:grid; }
+.planning-steps { list-style:none; margin:26px 0 0; padding:0; display:grid; }
 .planning-step,.planning-today-row { position:relative; }
-.planning-step { display:grid; grid-template-columns:28px minmax(0,1fr) auto; column-gap:12px; align-items:center; padding:0 0 30px; }
+.planning-step { display:grid; grid-template-columns:28px minmax(0,1fr) auto; column-gap:14px; align-items:center; padding:0 0 28px; }
 .planning-step:not(:last-child)::before,.planning-today-row::before { content:''; position:absolute; left:13px; top:28px; bottom:0; width:2px; background:var(--planning-line); }
 .planning-step[data-state="completed"]:not(:last-child)::before { background:var(--planning-green); }
 .planning-step:last-child { padding-bottom:0; }
-.planning-today-row { padding:0 0 30px 40px; min-height:22px; display:flex; align-items:center; }
+.planning-today-row { padding:0 0 24px 42px; min-height:20px; display:flex; align-items:center; }
 .planning-today-row::before { top:0; bottom:0; left:13px; border-left:2px dashed var(--planning-blue); width:0; background:none; }
-.planning-today-label { padding:3px 10px; border-radius:999px; font-size:11px; line-height:16px; font-weight:600; background:var(--planning-blue); color:#fff; }
-:root[data-theme="dark"] .planning-today-label { color:#0b1530; }
+.planning-today-label { font-size:12px; line-height:18px; font-weight:600; color:var(--planning-blue-text); }
 .planning-point { z-index:1; width:28px; height:28px; border:2px solid var(--planning-line); border-radius:50%; display:flex; justify-content:center; align-items:center; color:var(--planning-muted); background:var(--planning-surface); font-size:12px; font-weight:600; }
 .planning-icon { width:16px; height:16px; display:inline-flex; flex:none; }
 .planning-icon svg { width:100%; height:100%; }
 .planning-step[data-state="completed"] .planning-point { border-color:var(--planning-green); background:var(--planning-green); color:var(--planning-surface); }
-.planning-step[data-state="current"] .planning-point { border-color:var(--planning-blue); background:var(--planning-blue); color:#fff; box-shadow:0 0 0 4px var(--planning-blue-soft); }
+.planning-step[data-state="current"] .planning-point { border-color:var(--planning-blue); background:var(--planning-blue); color:#fff; }
 :root[data-theme="dark"] .planning-step[data-state="current"] .planning-point { color:#0b1530; }
-.planning-step[data-state="overdue"] .planning-point { border-color:var(--planning-red); background:var(--planning-red-soft); color:var(--planning-red); }
 .planning-step-body { min-width:0; display:grid; gap:2px; }
 .planning-step-title { font-size:14px; font-weight:600; line-height:1.45; overflow-wrap:anywhere; }
 .planning-step[data-kind="show"] .planning-step-title { color:var(--planning-muted); font-weight:500; }
 .planning-date { font-size:12px; line-height:18px; color:var(--planning-muted); }
-.planning-badge { justify-self:end; font-size:11px; line-height:18px; padding:3px 8px; background:var(--planning-footer); color:var(--planning-muted); border-radius:7px; white-space:nowrap; }
-.planning-step[data-state="completed"] .planning-badge { background:var(--planning-green-soft); color:var(--planning-green); }
-.planning-step[data-state="current"] .planning-badge { background:var(--planning-blue-soft); color:var(--planning-blue-text); }
-.planning-badge[data-overdue="true"] { background:var(--planning-red-soft); color:var(--planning-red); font-weight:600; }
+/* De relatieve tijd is gewone tekst, geen label: grijs, groen bij afgerond en subtiel rood alleen bij te laat. */
+.planning-badge { justify-self:end; font-size:12px; line-height:18px; color:var(--planning-muted); white-space:nowrap; }
+.planning-step[data-state="completed"] .planning-badge { color:var(--planning-green); }
+.planning-badge[data-overdue="true"] { color:var(--planning-red); font-weight:600; }
+/* To-do's onder hun planningsstap, op de tekstlijn van de stap. */
+.planning-actions { grid-column:2 / -1; list-style:none; margin:12px 0 0; padding:0; display:grid; gap:2px; }
+.planning-action-link { display:flex; align-items:center; gap:10px; min-width:0; padding:8px 10px; margin:0 -10px; border-radius:8px; color:var(--planning-text); font-size:13px; line-height:1.4; text-decoration:none; transition:background-color .15s ease; }
+.planning-action-link:hover { background:var(--planning-footer); }
+.planning-action-link:focus-visible,.planning-actions-toggle:focus-visible { outline:2px solid var(--planning-blue); outline-offset:2px; }
+.planning-action-text { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+.planning-action-title { font-weight:500; }
+.planning-action-suffix { color:var(--planning-muted); }
+.planning-action-chevron { flex:none; display:inline-grid; width:16px; height:16px; color:var(--planning-muted); }
+.planning-action-chevron svg { width:16px; height:16px; }
+.planning-actions-more { margin-top:2px; }
+.planning-actions-toggle { padding:6px 0; border:0; background:none; font:inherit; font-size:12px; line-height:18px; font-weight:600; color:var(--planning-blue-text); cursor:pointer; }
+.planning-actions-toggle:hover { text-decoration:underline; }
 .planning-unavailable { margin:16px 0 0; color:var(--planning-muted); }
-@container (max-width: 340px) {
+@container (max-width: 520px) {
   .planning-step { grid-template-columns:28px minmax(0,1fr); }
-  .planning-badge { grid-column:2; justify-self:start; margin-top:4px; }
+  .planning-badge { grid-column:2; justify-self:start; margin-top:2px; }
 }

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {showActions} from './show-actions.js';
+import {showActions,showPlanActions} from './show-actions.js';
 import {requestedShowTarget,showTargetHref} from '../../shared/show-navigation.js';
 const show={key:'Artiest_Gashouder_27112026',venue:'Gashouder',dates:['2026-11-27']},other={...show,venue:'Ziggo Dome'};
 const now=new Date('2026-11-10T12:00:00Z');
@@ -82,4 +82,16 @@ test('Diepe links: veilige parsing en één bestemming per link',()=>{
  assert.equal(requestedShowTarget('?analysis=3'),null);
  assert.equal(showTargetHref('A B/1',{tab:'showprofiel',analysis:3}),'/shows/A%20B%2F1?tab=showprofiel&analysis=3');
  assert.equal(showTargetHref('X',{tab:'maatregelen',measure:'production:floor_pressure'}),'/shows/X?tab=maatregelen&measure=production%3Afloor_pressure');
+});
+
+test('Planning-acties: per planningsstap gegroepeerd met status; geen acties geeft lege groepen',()=>{
+ const analyses={...done(11)};delete analyses[2];delete analyses[7];
+ const plan=showPlanActions(other,base({profile:{analyses,finalization:{ticketsReady:true,categories:{visitors:{ready:false},artist:{ready:false}}}}}),now);
+ assert.equal(plan.status,'behind');assert.equal(plan.label,'Achter op schema');
+ assert.deepEqual(plan.groups.profile.map(item=>item.title),['Leeftijdsrange','Show karakter']);assert.ok(plan.groups.profile.every(item=>item.group==='profile'&&item.overdue===true));
+ assert.deepEqual(Object.keys(plan.groups),['profile','risks','measures']);
+ // Zelfde bestemmingen als de losse actielijst; niets valt weg.
+ const flat=showActions(other,base({profile:{analyses,finalization:{ticketsReady:true,categories:{visitors:{ready:false},artist:{ready:false}}}}}),now);
+ for(const item of flat.items)assert.ok(Object.values(plan.groups).flat().some(entry=>entry.id===item.id&&JSON.stringify(entry.target)===JSON.stringify(item.target)));
+ assert.equal(showPlanActions({...show,dates:[]},base(),now),null);
 });
