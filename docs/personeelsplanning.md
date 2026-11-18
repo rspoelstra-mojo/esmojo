@@ -23,3 +23,11 @@ Een herhaalde opdracht na een verloren bevestiging (zelfde waarde al opgeslagen)
 
 **Projectteam op de showpagina:** Productiemanager = Productie manager, Event Safety manager, Projectleider TSC = Projectleider beveiliging,
 CMT leider = CMT leider MOJO; bij een reeks de namen van de eerste datum. Leeg = Nog niet ingevuld.
+
+## Artiestnaam aanpassen (V1.197, tab Algemeen)
+In tab Algemeen is de artiestnaam een invoerveld (met suggesties van bestaande artiesten). Een aanpassing geldt voor alle concerten met dezelfde
+MOJO-bronnaam en wordt automatisch opgeslagen (revisiecontrole). De oorspronkelijke MOJO-naam blijft klein zichtbaar; leeg of gelijk aan de bronnaam zet
+de alias terug. Opslag: Integratiestatus `artist-alias-v1` (Openbaar, geen nieuw schema; `server/dataverse-shows/artist-alias.js`, `shared/artist-alias.js`).
+De alias wordt toegepast in de agenda, in de 05:00-import (een nieuw concert onder een afwijkende titel valt onder de gekozen artiest; bestaande concerten
+met hetzelfde concert-ID blijven ongewijzigd) en bij het koppelen van CSV-ontvangsten (bestandsnaam met bron- of gekozen naam). Bestaande concerten
+verplaatsen en handmatige reeksen volgen in fase 2 en 3 (docs/tasks/claude-concert-agenda-20261118.md).

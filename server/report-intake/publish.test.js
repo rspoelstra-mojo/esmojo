@@ -107,3 +107,17 @@ test('Direct na publicatie één foto-poging voor een nieuwe artiest; mislukking
  calls.length=0;const e=fake();e.row.esmojo_bestandsnaam='incidents_bekend_AFAS-Live_16112026.csv';e.catalogue={all:async()=>({concerts:[],artists:[{...artists[0],photo:'https://www.mojo.nl/media/x.jpg'}]})};
  const pe=createReportIntakePublisher({...e,photo:{capture:async()=>{throw Error('moet niet');},save:async()=>({})}});assert.equal((await pe.publish(e.row)).status,intakeStatus.done);assert.match(e.updates.at(-1).fields.esmojo_resultaat,/"photo":"present"/);
 });
+
+test('Alias: een CSV-naam met de bronnaam of de gekozen naam valt onder dezelfde artiest en hetzelfde concert',()=>{
+ const aliases=new Map([['bouke en the bevers','Bouke']]),cs=[{id:'1',concertId:'Bouke_AFAS-Live_16112026',artist:'Bouke',venue:'AFAS Live',date:'2026-11-16'},{id:'2',concertId:'Bouke-en-the-bevers_Ziggo-Dome_20112026',artist:'Bouke en the bevers',venue:'Ziggo Dome',date:'2026-11-20'}];
+ const as=[{id:'a',artistId:'a_'+digest('bouke'),name:'Bouke'}];
+ // Bestandsnaam met de bronnaam vindt het concert onder de gekozen naam, en andersom (bestaand concert onder de oude naam).
+ assert.equal(planIntakeShow('incidents_bouke-en-the-bevers_AFAS-Live_16112026.csv',{concerts:cs,artists:as,aliases}).show.key,'Bouke_AFAS-Live_16112026');
+ assert.equal(planIntakeShow('incidents_bouke_Ziggo-Dome_20112026.csv',{concerts:cs,artists:as,aliases}).show.key,'Bouke-en-the-bevers_Ziggo-Dome_20112026');
+ // Nieuw concert: de bronnaam in de bestandsnaam koppelt aan de bestaande artiest (geen tweede artiest), met de gekozen naam.
+ const fresh=planIntakeShow('incidents_bouke-en-the-bevers_AFAS-Live_25112026.csv',{concerts:cs,artists:as,aliases});assert.equal(fresh.created,true);assert.equal(fresh.newArtist,false);assert.equal(fresh.show.name,'Bouke');
+ // Zonder bestaande artiest maar mét alias wordt de gekozen naam gebruikt, niet de bronnaam uit de bestandsnaam.
+ const solo=planIntakeShow('incidents_bouke-en-the-bevers_AFAS-Live_25112026.csv',{concerts:[],artists:[],aliases});assert.equal(solo.show.name,'Bouke');assert.equal(solo.newArtist,true);
+ // Zonder alias blijft het oude gedrag.
+ assert.equal(planIntakeShow('incidents_bouke-en-the-bevers_AFAS-Live_25112026.csv',{concerts:[],artists:[]}).show.name,'Bouke En The Bevers');
+});

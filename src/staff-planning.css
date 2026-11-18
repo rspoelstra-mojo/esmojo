@@ -37,3 +37,8 @@
 
 .staff-table[data-tab="mojo"],.staff-table[data-tab="venue"] { min-width:980px; }
 .staff-table[data-tab="security"] { min-width:760px; }
+
+/* Tab Algemeen: artiestnaam aanpassen; de oorspronkelijke MOJO-naam blijft klein zichtbaar. */
+.staff-table tbody th.staff-artist:has(.staff-artist-input) { min-width:260px; padding:0; }
+.staff-artist-input { font-weight:600; }
+.staff-source-name { display:block; padding:0 12px 8px; font-size:11px; line-height:16px; font-weight:400; color:var(--muted); }

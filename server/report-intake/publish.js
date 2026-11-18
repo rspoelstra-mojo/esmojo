@@ -1,7 +1,8 @@
 import {createHash} from 'node:crypto';
 import {calculateReport} from '../ontrack-report/data.js';
 import {validateReportDay} from '../web-report-catalogue.js';
-import {matchReportIntakeConcert,slug} from './concert.js';
+import {matchReportIntakeConcert,slug,artistKeys} from './concert.js';
+import {resolveArtistAlias} from '../../shared/artist-alias.js';
 import {MOJO_VENUES,canonicalVenueName} from '../mojo-venues.js';
 import {concertId as makeConcertId} from '../mojo-agenda.js';
 import {normalizeArtistName} from '../../shared/artist-catalogue.js';
@@ -22,17 +23,17 @@ const titleCase=value=>value.split('-').filter(Boolean).map(word=>word[0].toLoca
 const result=(status,code,extra={})=>({status,code,...extra});
 
 // Pure decision: which concert/artist does this filename belong to? Never guesses.
-export function planIntakeShow(filename,{concerts,artists}){
+export function planIntakeShow(filename,{concerts,artists,aliases=new Map()}){
  const parts=nameFile.exec(filename);if(!parts)return result(intakeStatus.manual,'FILENAME');
  const [,artistPart,venuePart,dd,mm,yyyy,suffix]=parts,date=`${yyyy}-${mm}-${dd}`,venue=MOJO_VENUES.find(row=>row.name===canonicalVenueName(venuePart.replace(/-/g,' ')));
  if(!venue)return result(intakeStatus.manual,'VENUE');
- const match=matchReportIntakeConcert(filename,concerts);
+ const match=matchReportIntakeConcert(filename,concerts,aliases);
  if(match.status==='matched'){const c=concerts.find(row=>row.id===match.recordId);return{status:'plan',created:false,show:{key:c.concertId,name:c.artist,venue:c.venue,city:c.city,date:c.date,...(c.performance?{performance:c.performance}:{}),sourceUrl:c.sourceUrl||null,origin:'catalogue',available:true}};}
  if(match.status!=='not-found')return result(intakeStatus.manual,match.status==='ambiguous'?'AMBIGUOUS':match.status==='performance-required'?'PERFORMANCE':'FILENAME');
  // The concert is not in the catalogue yet: link an existing artist or create it
  // like the 05:00 import does, with a reports-only concert (not shown in Shows).
- const known=artists.filter(row=>slug(row.name)===slug(artistPart));if(known.length>1)return result(intakeStatus.manual,'ARTIST_AMBIGUOUS');
- const name=known[0]?.name||titleCase(slug(artistPart));if(!name)return result(intakeStatus.manual,'FILENAME');
+ const keys=artistKeys(artistPart,aliases),known=artists.filter(row=>keys.has(slug(row.name)));if(known.length>1)return result(intakeStatus.manual,'ARTIST_AMBIGUOUS');
+ const aliased=[...aliases].find(([source])=>slug(source)===slug(artistPart))?.[1],name=known[0]?.name||aliased||titleCase(slug(artistPart));if(!name)return result(intakeStatus.manual,'FILENAME');
  if(known[0]&&known[0].artistId!=='a_'+digest(normalizeArtistName(name)))return result(intakeStatus.manual,'ARTIST_IDENTITY');
  const performance=suffix?suffix==='1'?'middag':'avond':undefined;
  return{status:'plan',created:true,newArtist:!known.length,show:{key:makeConcertId(name,date,venue.name)+(suffix?'_S'+suffix:''),name,venue:venue.name,city:venue.city,date,...(performance?{performance}:{}),sourceUrl:null,origin:'catalogue',available:true}};
@@ -74,7 +75,7 @@ export async function repairLegacySource(writer,baseRows){
 const legacyDone=row=>row.esmojo_status===intakeStatus.done&&(()=>{try{return JSON.parse(row.esmojo_resultaat||'{}').v===1;}catch{return false;}})();
 const memoryFile=(bytes,hash)=>offset=>({size:bytes.length,sha256:hash,offset,base64:bytes.subarray(offset,offset+1048576).toString('base64')});
 
-export function createReportIntakePublisher({repository,catalogue,writer,now=()=>new Date(),photo=null}){
+export function createReportIntakePublisher({repository,catalogue,writer,now=()=>new Date(),photo=null,aliases=async()=>new Map()}){
  if(!repository||!catalogue||!writer)throw Error('VALIDATION');
  const finish=async(row,status,summary,hash,concertRecordId)=>repository.update(row.id,row['@odata.etag'],{fields:{esmojo_status:status,esmojo_resultaat:JSON.stringify({v:2,at:now().toISOString(),...summary}).slice(0,2000),...(hash?{esmojo_bestandshash:hash}:{})},...(concertRecordId?{concertRecordId}:{})});
  // One immediate attempt at the public MOJO artist photo, using the same capture and
@@ -103,7 +104,7 @@ export function createReportIntakePublisher({repository,catalogue,writer,now=()=
    if(!file.present||file.tooLarge||!file.bytes?.length||file.size!==file.declaredSize)throw Object.assign(Error('INTAKE_FILE'),{retry:true});
    const bronbytes=row.esmojo_bronbytes;if(Number.isSafeInteger(bronbytes)&&bronbytes!==file.size)throw Object.assign(Error('INTAKE_FILE'),{retry:true});
    const bytes=file.bytes,hash=file.sha256,name=row.esmojo_bestandsnaam,dateMatch=nameFile.exec(name);
-   const data=await catalogue.all(),plan=planIntakeShow(name,{concerts:data.concerts,artists:data.artists});
+   const data=await catalogue.all(),aliasMap=await aliases(),plan=planIntakeShow(name,{concerts:data.concerts,artists:data.artists,aliases:aliasMap});
    if(plan.status!=='plan'){await finish(row,plan.status,{code:plan.code,attempts},hash);return plan;}
    try{validateReportDay(calculateReport(bytes,{generatedAt:row.createdon}),plan.show.date);}
    catch(error){const code=/^CSV_/.test(error.code||error.message)?(error.code||error.message):null;if(!code)throw error;await finish(row,intakeStatus.invalid,{code,attempts},hash);return result(intakeStatus.invalid,code);}

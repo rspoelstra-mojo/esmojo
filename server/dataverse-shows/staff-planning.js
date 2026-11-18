@@ -3,6 +3,8 @@ import {record,recordKey,canonical,digest,migrationDifferences} from '../show-mi
 import {recordOperations} from './mutations.js';
 import {MOJO_VENUES} from '../mojo-venues.js';
 import {calendarDate,addDays} from '../mojo-agenda.js';
+import {createArtistAliases} from './artist-alias.js';
+import {resolveArtistAlias} from '../../shared/artist-alias.js';
 import {staffFieldIds,validStaffName,normalizedStaffName,emptyStaffRoles,showTeamRoles} from '../../shared/staff-planning.js';
 // Personeelsplanning: de MOJO-concertlijst van de komende 365 dagen (openbare gegevens, per zaal en maand) en de ingevoerde
 // functienamen per concert (Vertrouwelijk: versleuteld). Beide staan in de bestaande generieke Integratiestatus; geen nieuw schema.
@@ -14,6 +16,7 @@ const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value
 const loose=value=>String(value).toLowerCase().replace(/[\s_-]+/g,'-');
 export function createStaffPlanning({env=process.env,repo,now=()=>new Date()}){
   const secret=()=>{if(typeof env.GOOGLE_DRIVE_SHARED_SECRET!=='string'||env.GOOGLE_DRIVE_SHARED_SECRET.length<32)throw Error('SHOWS_CONFIG');return createHash('sha256').update('esmojo/staff-planning/v1\n'+env.GOOGLE_DRIVE_SHARED_SECRET).digest();};
+  const aliases=createArtistAliases({repo,now});
   const aad=concertId=>Buffer.from('staff-planning/names/'+concertId);
   function seal(concertId,value){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',secret(),iv);cipher.setAAD(aad(concertId));return Buffer.concat([iv,cipher.update(JSON.stringify(value),'utf8'),cipher.final(),cipher.getAuthTag()]).toString('base64url');}
   function open(concertId,text){try{const bytes=Buffer.from(text,'base64url'),decipher=createDecipheriv('aes-256-gcm',secret(),bytes.subarray(0,12));decipher.setAAD(aad(concertId));decipher.setAuthTag(bytes.subarray(-16));return JSON.parse(Buffer.concat([decipher.update(bytes.subarray(12,-16)),decipher.final()]).toString('utf8'));}catch{return null;}}
@@ -60,10 +63,15 @@ export function createStaffPlanning({env=process.env,repo,now=()=>new Date()}){
     if(saved){const read=await listRows();for(const month of months){const want=concerts.filter(row=>row.date.slice(0,7)===month).length,got=read.find(item=>item.config.venue===venue.id&&item.config.month===month);if(!got||got.config.concerts.length!==want)throw Error('STAFF_UNCONFIRMED');}}
     return{venue:venue.id,concerts:concerts.length,saved,unchanged};
   }
+  // Namen van bestaande artiesten (alleen de naam), als suggestie bij het aanpassen van een artiestnaam. Faalt stil: suggesties zijn optioneel.
+  async function artistNames(){try{return(await repo.query('esmojo_artiest',{filter:'statecode eq 0',select:['esmojo_naam']})).map(row=>row.esmojo_naam).filter(name=>typeof name==='string'&&name.trim());}catch{return[];}}
   async function read(){
-    const items=await listRows(),concerts=concertsFrom(items),names=new Map();
+    const items=await listRows(),concerts=concertsFrom(items),names=new Map(),aliasMap=await aliases.map(),aliasList=await aliases.list();
     for(const row of await namesRows()){const cfg=config(row);if(!cfg||typeof cfg.sealed!=='string'||typeof cfg.concertId!=='string')continue;const value=open(cfg.concertId,cfg.sealed);names.set(cfg.concertId,value?{roles:rolesFrom(value),revision:Number.isSafeInteger(value.revision)?value.revision:0}:{roles:emptyStaffRoles(),revision:0,unreadable:true});}
-    return{concerts:concerts.map(row=>({...row,...(names.get(row.concertId)||{roles:emptyStaffRoles(),revision:0})})),window:horizonWindow()};
+    // sourceArtist = de naam uit de MOJO-agenda; artist = de gekozen naam (alias), zodat afwijkende titels onder één artiest vallen.
+    const rows=concerts.map(row=>({...row,sourceArtist:row.artist,artist:resolveArtistAlias(row.artist,aliasMap),...(names.get(row.concertId)||{roles:emptyStaffRoles(),revision:0})}));
+    const suggestions=[...new Map([...rows.map(row=>row.artist),...await artistNames()].map(name=>[name.trim().toLocaleLowerCase('nl-NL'),name.trim()])).values()].sort((a,b)=>a.localeCompare(b,'nl')).slice(0,3000);
+    return{concerts:rows,aliases:aliasList.filter(item=>item.name!==null||item.revision>0),suggestions,window:horizonWindow()};
   }
   async function save(payload){
     if(!sameKeys(payload,['concertId','field','value','revision'])||!validId(payload.concertId)||!staffFieldIds.includes(payload.field)||!validStaffName(payload.value)||!Number.isSafeInteger(payload.revision)||payload.revision<0)throw Error('VALIDATION');
@@ -91,6 +99,6 @@ export function createStaffPlanning({env=process.env,repo,now=()=>new Date()}){
     if(match){const actual=await repo.byKey('esmojo_integratiestatus',recordKey('esmojo_integratiestatus',namesKey(match.concertId))),cfg=actual?config(actual):null,value=cfg&&typeof cfg.sealed==='string'?open(match.concertId,cfg.sealed):null;if(value){const all=rolesFrom(value);for(const item of showTeamRoles)roles[item.field]=all[item.field];}}
     return{roles};
   }
-  const handlers={'staff-planning-store':store,'staff-planning-read':read,'staff-planning-save':save,'staff-planning-team':team};
+  const handlers={'staff-planning-alias':payload=>aliases.save(payload),'staff-planning-store':store,'staff-planning-read':read,'staff-planning-save':save,'staff-planning-team':team};
   return{handles:operation=>Object.hasOwn(handlers,operation),handle:(operation,payload={})=>handlers[operation](payload),operations:Object.keys(handlers)};
 }

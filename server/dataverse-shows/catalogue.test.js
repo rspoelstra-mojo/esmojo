@@ -152,3 +152,20 @@ test('rapportages en show lezen de meest recente versie: voorlopig schema, showd
  assert.deepEqual(await read(),evening);
  assert.deepEqual((await at('2026-11-16T05:00:00Z').request('advance-timetable-candidates')).shows,[],'na de showdag is het concert geen kandidaat meer');
 });
+
+test('artiestnaam-alias: een nieuw concert onder een afwijkende MOJO-titel valt onder de gekozen artiest; bestaande concerten blijven ongewijzigd',async()=>{
+ const f=fixture(),{concertId}=await import('../mojo-agenda.js');
+ const show=(artist,date)=>({concertId:concertId(artist,date),artist,venue:'Gashouder',city:'Amsterdam',date,sourceUrl:'https://www.mojo.nl/concerten/x'}),snapshot=concerts=>({pages:1,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts});
+ // Eerste import onder de nette naam; daarna komt een afwijkende titel binnen op een andere dag.
+ await f.service('sync',{snapshot:snapshot([show('Bouke','2026-11-20')])});const artistsBefore=f.tables.get('esmojo_artiest').size;
+ await f.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0});
+ const odd=show('Bouke en the bevers','2026-11-24');
+ const result=await f.service('sync',{snapshot:snapshot([show('Bouke','2026-11-20'),odd])});assert.equal(result.createdConcerts,1);
+ assert.equal(f.tables.get('esmojo_artiest').size,artistsBefore,'geen nieuwe artiest voor de afwijkende titel');
+ const names=[...f.tables.get('esmojo_artiest').values()].map(row=>row.esmojo_naam);assert.ok(!names.includes('Bouke en the bevers'));
+ // Zonder alias zou dezelfde titel een tweede artiest hebben aangemaakt.
+ const g=fixture();await g.service('sync',{snapshot:snapshot([show('Bouke','2026-11-20'),odd])});assert.ok([...g.tables.get('esmojo_artiest').values()].some(row=>row.esmojo_naam==='Bouke en the bevers'));
+ // Een al bestaand concert (zelfde concert-ID) wordt door een latere alias niet aangeraakt of verplaatst.
+ const h=fixture();await h.service('sync',{snapshot:snapshot([odd])});await h.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0});
+ assert.equal((await h.service('sync',{snapshot:snapshot([odd])})).createdConcerts,0);assert.ok([...h.tables.get('esmojo_artiest').values()].some(row=>row.esmojo_naam==='Bouke en the bevers'));
+});
