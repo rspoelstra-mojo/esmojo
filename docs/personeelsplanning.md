@@ -55,3 +55,14 @@ admin + MFA, actie `staff-planning` operatie `series` (shared/concert-series.js 
 Bestaande losse ESMOJO-series worden samengevoegd (server/dataverse-shows/catalogue.js `mergeSeries`) als hooguit één ervan showgegevens heeft
 (die blijft primair); twee met showgegevens, een rapportage of een mislukte controle worden niet samengevoegd en gemeld. Opheffen splitst eerder
 samengevoegde showgegevens niet meer. De 05:00-import groepeert opeenvolgende dagen óf een handmatige reeks.
+
+## Artiestenpagina's uit de concertagenda (V1.202)
+
+Elke artiest in de concertagenda (komende 365 dagen, met de gekozen alias-naam) staat alvast in het Artiesten-submenu en heeft een pagina. Er wordt niets
+aangemaakt of opgeslagen: de artiestencatalogus (`artist-catalogue`) en het profiel (`artist-profile`) in server/dataverse-shows/related.js voegen de
+agenda-artiesten af (ID = `a_` + digest van de genormaliseerde naam, gelijk aan wat de 45-dagenimport later als Artiest-rij aanmaakt). Onder Concert historie
+staan de toekomstige agenda-concerten (ook voorbij 45 dagen, ook voor artiesten met bestaande pagina) uitgeschakeld tot na de concertdag. Alleen openbare agendagegevens.
+
+**Artiestfoto in de 05:00-run:** de bestaande eenmalige fotostap (`artist-photo-candidates`/`artist-photo-save`, 24 per run, daarna volgende run) neemt ook agenda-artiesten
+mee die nog geen Artiest-rij hebben. Bij een gevonden MOJO-foto wordt de Artiest-rij create-only samen met de eenmalige fotomarker aangemaakt (zelfde ID als de import);
+zonder foto alleen de marker (de pagina blijft afgeleid). Bestaande artiesten, markers en foto's blijven ongewijzigd.

@@ -259,3 +259,29 @@ test('handmatige reeks: bestaande aparte reeksen worden samengevoegd; één met 
  const r=moveFixture(true);await r.service('sync',{snapshot:snap([a,b])});await agenda(r,[a,b]);const reported=await r.catalogue.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]});assert.equal(reported.merge.merged.length,0);assert.equal(reported.merge.blocked[0].reason,'showgegevens');
  const down=moveFixture();await down.service('sync',{snapshot:snap([a,b])});await agenda(down,[a,b]);const failing=createNativeCatalogue({state:down.state,now,reports:{query:async()=>{throw Error('down');}}});const failed=await failing.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]});assert.equal(failed.merge.merged.length,0);assert.equal(failed.merge.blocked.length,1);
 });
+test('artiesten uit de concertagenda krijgen alvast een pagina met toekomstige concerten, ook voorbij de 45 dagen',async()=>{
+ const f=fixture(),{digest}=await import('../show-migration-writer.js'),{normalizeArtistName}=await import('../../shared/artist-catalogue.js'),id=name=>'a_'+digest(normalizeArtistName(name));
+ await agenda(f,[{concertId:'Beth-Hart_Gashouder_01032027',artist:'Beth Hart',date:'2027-03-01',sourceUrl:'https://www.mojo.nl/a'},{concertId:'Beth-Hart_Gashouder_02032027',artist:'Beth Hart',date:'2027-03-02',sourceUrl:'https://www.mojo.nl/b'},{concertId:'Numidia-Muziekfeest_Gashouder_05032027',artist:'Numidia muziekfeest van het jaar',date:'2027-03-05',sourceUrl:'https://www.mojo.nl/c'}]);
+ await f.catalogue.request('staff-planning-alias',{source:'Numidia muziekfeest van het jaar',name:'Numidia',revision:0});
+ const legacy=async()=>({artists:[{id:'a_bestaand',name:'Bestaand'}]});
+ const catalogue=await f.service.related('artist-catalogue',{actor:'x'},legacy);
+ assert.deepEqual(catalogue.artists.map(row=>row.name).sort(),['Beth Hart','Bestaand','Numidia','Test'].sort());
+ assert.ok(catalogue.artists.some(row=>row.id===id('Beth Hart')&&row.name==='Beth Hart'));
+ const profile=await f.service.related('artist-profile',{actor:'x',artistIds:[id('Beth Hart')]},async()=>({concerts:[],audience:{},photo:null,biography:null,latestDate:null}));
+ assert.deepEqual(profile.concerts,[{venue:'Gashouder',dates:['2027-03-01','2027-03-02']}]);
+ const unknown=await f.service.related('artist-profile',{actor:'x',artistIds:[id('Onbekend')]},async()=>{throw Error('NOT_FOUND');}).catch(error=>error.message);assert.equal(unknown,'NOT_FOUND');
+ const only=await f.service.related('artist-profile',{actor:'x',artistIds:[id('Numidia')]},async()=>{throw Error('NOT_FOUND');});assert.deepEqual(only.concerts,[{venue:'Gashouder',dates:['2027-03-05']}]);
+});
+test('de 05:00-run vindt ook de foto voor agenda-artiesten zonder Artiest-rij en legt rij en foto samen vast',async()=>{
+ const f=fixture(),{digest}=await import('../show-migration-writer.js'),{normalizeArtistName}=await import('../../shared/artist-catalogue.js'),id=name=>'a_'+digest(normalizeArtistName(name));
+ await agenda(f,[{concertId:'Beth-Hart_Gashouder_01032027',artist:'Beth Hart',date:'2027-03-01',sourceUrl:'https://www.mojo.nl/a'},{concertId:'Zonder-Foto_Gashouder_02032027',artist:'Zonder Foto',date:'2027-03-02',sourceUrl:'https://www.mojo.nl/b'}]);
+ const before=f.tables.get('esmojo_artiest').size,list=(await f.catalogue.request('artist-photo-candidates',{})).artists;
+ assert.ok(list.some(row=>row.artistId===id('Beth Hart')&&row.name==='Beth Hart')&&list.some(row=>row.artistId===id('Zonder Foto')));
+ const photo={imageUrl:'https://www.mojo.nl/media/beth.jpg',sourceUrl:'https://www.mojo.nl/beth-hart'};
+ assert.equal((await f.catalogue.request('artist-photo-save',{artistId:id('Beth Hart'),photo})).saved,true);
+ assert.equal(f.tables.get('esmojo_artiest').size,before+1);
+ assert.equal((await f.catalogue.request('artist-photo-save',{artistId:id('Zonder Foto'),photo:null})).saved,false);assert.equal(f.tables.get('esmojo_artiest').size,before+1);
+ assert.equal((await f.catalogue.request('artist-photo-save',{artistId:id('Beth Hart'),photo})).saved,false);assert.equal(f.tables.get('esmojo_artiest').size,before+1);
+ const after=(await f.catalogue.request('artist-photo-candidates',{})).artists;assert.ok(!after.some(row=>[id('Beth Hart'),id('Zonder Foto')].includes(row.artistId)));
+ await assert.rejects(f.catalogue.request('artist-photo-save',{artistId:id('Niet In Agenda'),photo}),/NOT_FOUND/);
+});

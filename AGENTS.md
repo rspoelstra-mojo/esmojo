@@ -1,3 +1,10 @@
+## Artiestenpagina's uit de concertagenda (18 november 2026)
+
+Gebruiker wil alle artiesten altijd in Artiesten zien (de grote artiestendatabase) en dat elke artiest uit de concertagenda (komende 365 dagen) alvast een
+pagina en submenu-item krijgt, met toekomstige concerten onder Concert historie (niet klikbaar), ook bij bestaande artiesten. Afgeleid uit de openbare agenda,
+geen nieuwe opslag. Daarnaast (volgende stap, nog niet gebouwd): het Rapportages-menu toont per reeks alleen de rapportages van die reeks; historische
+rapportages blijven via de artiestenpagina bereikbaar. Zie docs/personeelsplanning.md en docs/tasks/claude-agenda-artists-20261118.md.
+
 ## Handmatige concertreeksen (18 november 2026)
 
 Gebruiker vraagt in Concertagenda tab Algemeen een manier om losse shows (bv. Beth Hart, twee shows) als reeks te laten gelden: zelfde zaal, ook met
