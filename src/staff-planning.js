@@ -13,7 +13,7 @@ const dateLabel=date=>dateFormat.format(new Date(date+'T12:00:00Z')).replace(/\.
 // Beheerder / Concertagenda (voorheen Personeelsplanning): alle MOJO-concerten van de komende 365 dagen met per concert de functies als tekstveld.
 // Een getypte naam wordt na een korte typpauze (of bij verlaten van het veld) automatisch en serieel per concert opgeslagen met de
 // laatst bevestigde revisie. Namen zijn Vertrouwelijk: alleen sessiegeheugen, nooit localStorage of logs.
-export function createStaffPlanningView(content,link,{request=access,debounce=600}={}){
+export function createStaffPlanningView(content,link,{request=access,debounce=600,onCatalogueChange=()=>{}}={}){
   let disposed=false;const controller=new AbortController(),loading=createSubmenuLoading(link,content);
   const feedback=createPageFeedback({key:'staff-planning',label:'Concertagenda',route:'/beheerder/concertagenda'});
   const page=node('section','staff-planning-page'),header=node('section','staff-card staff-header'),tabs=node('div','show-tabs'),indicator=node('span','show-tab-indicator'),body=node('section','staff-card staff-table-card');
@@ -89,6 +89,7 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
     try{
       const result=await request('staff-planning',{method:'POST',body:{operation:'series',mode,concertIds},signal:controller.signal});
       seriesNote=seriesSummary(result,mode);selected.clear();
+      try{onCatalogueChange();}catch{/* Het menu ververst anders vanzelf binnen een minuut. */}
       try{await reload();}catch{/* De volgende laadronde haalt de reeksen opnieuw op. */}
       if(!disposed)feedback.resolved();
     }catch(error){
@@ -112,6 +113,7 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
         }
       }
       aliasRevisions.set(key,result.revision);const shown=result.name??source;moveNote=moveSummary(result.move,shown);
+      try{onCatalogueChange();}catch{/* Het menu ververst anders vanzelf binnen een minuut. */}
       for(const concert of concertsData)if(aliasSourceKey(concert.sourceArtist||concert.artist)===key)concert.artist=shown;
       if(aliasDrafts.get(key)===draft&&draft.value===value)aliasDrafts.delete(key);
       if(!disposed){if(![...aliasDrafts.values()].length)feedback.resolved();if(active===0){if(document.activeElement?.classList?.contains('staff-artist-input'))updateArtistCells(key,source,shown);else render(concertsData);}}

@@ -158,7 +158,7 @@ function renderPage() {
     if(route==='beheerder/personeelsplanning'){route='beheerder/concertagenda';history.replaceState(null,'','/beheerder/concertagenda'+location.search);}
     const staffLink=document.createElement('a');staffLink.href='/beheerder/concertagenda';staffLink.className='submenu-link';staffLink.textContent='Concertagenda';staffLink.dataset.submenuTitle='Concertagenda';
     if(route==='beheerder/concertagenda')staffLink.setAttribute('aria-current','page');submenu.append(staffLink);
-    if(route==='beheerder/concertagenda')disposePage=createStaffPlanningView(content,staffLink);
+    if(route==='beheerder/concertagenda')disposePage=createStaffPlanningView(content,staffLink,{onCatalogueChange:()=>{if(hasModule(profile,'shows'))void refreshShowsMenu();}});
     const emailLink=document.createElement('a');emailLink.href='/beheerder/email';emailLink.className='submenu-link';emailLink.textContent='Email';emailLink.dataset.submenuTitle='Email';
     if(route==='beheerder/email')emailLink.setAttribute('aria-current','page');submenu.append(emailLink);
     if(route==='beheerder/email')disposePage=createEmailAdminView(content,emailLink);
