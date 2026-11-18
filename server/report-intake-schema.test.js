@@ -8,4 +8,6 @@ test('CSV intake setup is isolated and provides private file storage and a uniqu
  assert.equal(reportIntakeTable.columns.find(c=>c.logical_name==='esmojo_bestand').type,'Bestand (File)');
  assert.deepEqual(reportIntakeTable.keys[0].columns,['esmojo_sleutel']);
  assert.ok(reportIntakeSchemaContract.tableSetupSteps.length>reportIntakeTable.columns.length);
+ for(const name of ['esmojo_bronbytes','esmojo_bestandshash','esmojo_concert'])assert.ok(reportIntakeTable.columns.some(c=>c.logical_name===name),name);
+ assert.equal(reportIntakeTable.columns.find(c=>c.logical_name==='esmojo_concert').target,'esmojo_concert');
 });

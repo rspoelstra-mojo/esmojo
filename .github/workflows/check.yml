@@ -50,7 +50,7 @@ jobs:
           node --test server/reports-migration/*.test.js
           node --test server/dataverse-reports/*.test.js
           node --test server/report-intake/*.test.js server/report-intake-schema.test.js
-          node --test src/lib/intake-receipt.test.js
+          node --test src/lib/intake-receipt.test.js api/report-intake-sync.test.js
           node --test server/dataverse-tables.test.js
           node --test server/dataverse-choices.test.js
           node --test server/dataverse-test.test.js

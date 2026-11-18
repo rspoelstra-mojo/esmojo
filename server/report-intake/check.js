@@ -7,7 +7,7 @@ import {hasModule,isAdministrator} from '../../shared/account-modules.js';
 // no CSV content, incident text, SharePoint identifiers or file bytes.
 export function describeReceipt(row,file,concerts){
  const out={filename:typeof row.esmojo_bestandsnaam==='string'?row.esmojo_bestandsnaam.slice(0,255):null,status:typeof row.esmojo_status==='string'?row.esmojo_status.slice(0,40):null,receivedAt:row.createdon||null,file:{present:Boolean(file.present)}};
- if(file.present&&!file.tooLarge){Object.assign(out.file,{bytes:file.size,complete:file.size===file.declaredSize&&file.size>0,sha256:file.sha256.slice(0,16)});}
+ if(file.present&&!file.tooLarge){Object.assign(out.file,{bytes:file.size,complete:file.size===file.declaredSize&&file.size>0&&(!Number.isSafeInteger(row.esmojo_bronbytes)||row.esmojo_bronbytes===file.size),sourceBytes:Number.isSafeInteger(row.esmojo_bronbytes)?row.esmojo_bronbytes:null,sha256:file.sha256.slice(0,16)});}
  else if(file.tooLarge)out.file.tooLarge=true;
  out.match=concerts?matchReportIntakeConcert(out.filename||'',concerts):{status:'not-checked'};
  // Public catalogue facts only, to explain a missing or ambiguous match.
