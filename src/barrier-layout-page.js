@@ -9,14 +9,15 @@ import {validateBarrierData,productionMeasureRequired} from '../shared/productio
 import {loadBarrierImage} from './barrier-images.js';
 import {createRiskReviewCard} from './risk-review-card.js';
 import {assessmentNode as node,createAssessmentQueue} from './production-assessment-ui.js';
+import {createEditActions,editHeaderRight,setEditMode,playEditTransition} from './edit-mode.js';
 
 export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},request=body=>access('barrier-layout',{method:'POST',body})}){
   const feedback=createPageFeedback(saveRequestInfo('barrier-layout',{concertId:show.key}));
   let disposed=false,ready=false,record=null,queue=null,reading=false,preparing=false,previewUrl=null,previewSequence=0,awaitingPreview=false;
   const local=backgroundSaves.form('barrier-edit:'+show.key);const editSession=backgroundSaves.session;let stagedUpload=null;
-  let type=null,riskLevel=null,measureRequired=null,custom={notes:'',attachment:null};
+  let type=null,riskLevel=null,measureRequired=null,custom={notes:'',attachment:null},editing=false,saving=false,keepFields=false;
   const menu=document.querySelector('#submenu-navigation [aria-current="page"]'),loading=menu?createSubmenuLoading(menu,section):null;
-  section.replaceChildren();const root=node('section','production-assessment');
+  section.replaceChildren();const root=node('section','production-assessment edit-page');setEditMode(root,'read');
   const back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);
   const title=node('h2','assessment-page-title','Barrieropstelling');title.tabIndex=-1;
   const block=node('form','assessment-block'),columns=node('div','barrier-columns'),fields=node('div','assessment-fields'),preview=node('aside','assessment-preview');
@@ -31,32 +32,54 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   const previewLabel=node('p','assessment-preview-label','Schematische weergave'),previewBox=node('div','assessment-preview-box');preview.append(previewLabel,previewBox);columns.append(fields,preview);
   const status=node('p','assessment-status'),error=node('p','profile-message');error.setAttribute('role','alert');
   const reload=node('button','secondary-button','Actuele beoordeling laden');reload.type='button';reload.hidden=true;
-  const review=createRiskReviewCard({name:'barrier-risk',editLabel:'Barrieropstelling bewerken',
-    saveLabel:'Beoordelen',measureChoice:true,
+  const review=createRiskReviewCard({name:'barrier-risk',showSave:false,measureChoice:true,
     onChange:(value)=>{const previous=riskLevel;riskLevel=value;if(value==='none')measureRequired=false;else if(previous==='none')measureRequired=null;remember();update();},
     onMeasureChange:value=>{measureRequired=value;remember();update();},
-    onSave:()=>{if(valid()&&block.reportValidity())save();},
-    onEdit:()=>queue.action('reopen'),
+    onSave:()=>{},
   });
-  const layout=node('div','barrier-assessment-layout');block.append(columns,status,error,reload);layout.append(block,review.element);const heading=node('div','analysis-editor-header');heading.append(back,title);root.append(heading,layout);section.append(root);
+  const stateBadge=node('span','analysis-status','Niet afgerond'),actions=createEditActions({onEdit:()=>enter(),onCancel:()=>leave(),onSave:()=>void saveAll()});
+  const layout=node('div','barrier-assessment-layout');block.append(columns,status,error,reload);layout.append(block,review.element);const heading=node('div','analysis-editor-header');heading.append(back,title,editHeaderRight(actions,stateBadge));root.append(heading,layout);section.append(root);
   const snapshot=()=>({barrierType:type,riskLevel,notes:type==='custom'?custom.notes:null,uploadId:type==='custom'?custom.attachment?.uploadId||null:null,measureRequired:riskLevel===null?null:riskLevel==='none'?false:measureRequired});
   const call=(operation,payload={})=>request({operation,concertId:show.key,...payload});
   const valid=()=>{try{validateBarrierData(snapshot(),true);return true;}catch{return false;}};
   const remember=()=>{local.fields={type,riskLevel,measureRequired,custom:structuredClone(custom),stagedUpload,revision:record?.revision||0};};
-  function save(){
-    const wanted=structuredClone(snapshot()),file=type==='custom'?stagedUpload:null;
-    if(file){void queue.action('draft',{data:{...wanted,uploadId:record?.attachment?.uploadId||null}});void queue.action('upload',file);}
-    else if(type==='custom'&&record?.attachment&&!custom.attachment)void queue.action('remove-upload',{uploadId:record.attachment.uploadId});
-    void queue.action('complete',{data:wanted});onBack();
+  // Eén bevestigde reeks: zo nodig heropenen, upload vastleggen en afronden. Pas na bevestiging terug naar de leesmodus; bij een fout blijft de invoer staan.
+  async function saveAll(){
+    if(!editing||saving||!ready||queue?.failed||!valid()||!block.reportValidity())return;
+    saving=true;keepFields=true;update();
+    const wanted=structuredClone(snapshot()),file=type==='custom'?stagedUpload:null;let ok=true;
+    try{
+      if(record?.completed)ok=Boolean(await queue.action('reopen'));
+      if(ok&&file){ok=Boolean(await queue.action('draft',{data:{...wanted,uploadId:record?.attachment?.uploadId||null}}));if(ok)ok=Boolean(await queue.action('upload',file));}
+      else if(ok&&type==='custom'&&record?.attachment&&!custom.attachment)ok=Boolean(await queue.action('remove-upload',{uploadId:record.attachment.uploadId}));
+      if(ok)ok=Boolean(await queue.action('complete',{data:wanted}));
+    }finally{saving=false;keepFields=false;}
+    if(disposed)return;
+    if(ok&&record?.completed){editing=false;local.fields=null;setEditMode(root,'read');playEditTransition(layout);actions.edit.focus({preventScroll:true});}
+    update();
+  }
+  function enter(){
+    if(editing||!ready||reading||preparing||saving||queue?.failed)return;
+    editing=true;setEditMode(root,'edit');playEditTransition(layout);update();requestAnimationFrame(()=>{if(editing)select.focus({preventScroll:true});});
+  }
+  function resetFromRecord(){
+    stagedUpload=null;local.fields=null;if(!record)return;
+    type=record.barrierType;riskLevel=record.riskLevel;measureRequired=record.riskLevel===null?null:productionMeasureRequired(record,record.riskNote);custom={notes:record.notes||'',attachment:record.attachment||null};
+    select.value=type||'';notes.value=custom.notes;upload.value='';void renderPreview();
+  }
+  function leave(){
+    if(!editing||saving)return;editing=false;resetFromRecord();setEditMode(root,'read');playEditTransition(layout);update();actions.edit.focus({preventScroll:true});
   }
   const sendAssessment=(operation,payload)=>call(operation,{...payload,revision:record.revision});
   function update(){
-    if(disposed)return;const locked=!ready||reading||preparing||queue?.exclusive||record?.completed;
+    if(disposed)return;const locked=!ready||reading||preparing||queue?.exclusive||!editing||saving;
     select.disabled=locked||Boolean(queue?.failed);customFields.hidden=type!=='custom';notes.disabled=locked;notes.required=type==='custom';
-    review.update({riskLevel,measureRequired,disabled:locked,busy:Boolean(queue?.exclusive),failed:queue?.failed,canSave:valid(),canEdit:ready&&!reading&&!preparing&&!queue?.failed,completed:Boolean(record?.completed)});
+    review.update({riskLevel,measureRequired,disabled:locked,busy:Boolean(queue?.exclusive),failed:queue?.failed,canSave:false,canEdit:false,completed:false});
+    actions.update({busy:saving||Boolean(queue?.exclusive),canSave:ready&&!queue?.failed&&valid(),editable:ready&&!reading&&!preparing&&!queue?.failed||editing});
+    stateBadge.textContent=record?.completed?'Afgerond':'Niet afgerond';stateBadge.dataset.status=record?.completed?'completed':'draft';
     upload.disabled=locked||queue?.busy;remove.hidden=!custom.attachment;remove.disabled=locked||queue?.busy;
     back.disabled=false;
-    status.textContent=record?.completed?'✓ Barrieropstelling afgerond':'';status.hidden=!status.textContent;status.classList.toggle('assessment-completed',Boolean(record?.completed));
+    status.textContent='';status.hidden=true;
     if(custom.attachment)uploadStatus.textContent=custom.attachment.fileName;else if(!preparing)uploadStatus.textContent='PNG of PDF, maximaal 2 MB.';
   }
   function resetPreview(){previewSequence++;if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}previewBox.replaceChildren();}
@@ -84,11 +107,11 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   }
   function accept(data,replace,job){
     if(!data?.record||!Number.isSafeInteger(data.record.revision))throw Error('Onvolledige opslagbevestiging.');record=data.record;if(job?.operation==='complete'&&record.completed){local.fields=null;stagedUpload=null;}
-    if(!disposed){if(replace&&job?.operation!=='upload'&&job?.operation!=='draft'){type=record.barrierType;riskLevel=record.riskLevel;measureRequired=record.riskLevel===null?null:productionMeasureRequired(record,record.riskNote);select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();if(job)feedback.resolved();onStored(record,data);update();}
+    if(!disposed){if(replace&&job?.operation!=='upload'&&job?.operation!=='draft'&&!(keepFields&&job?.operation==='reopen')){type=record.barrierType;riskLevel=record.riskLevel;measureRequired=record.riskLevel===null?null:productionMeasureRequired(record,record.riskNote);select.value=type||'';if(type==='custom'){custom={notes:record.notes||'',attachment:record.attachment};notes.value=custom.notes;}void renderPreview();}else if(awaitingPreview&&record.attachment?.uploadId===custom.attachment?.uploadId)void renderPreview();if(job)feedback.resolved();onStored(record,data);update();}
   }
   async function load(){
     if(reading)return;reading=true;ready=false;error.textContent='';reload.hidden=true;const finish=loading?.start();update();
-    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);if(local.fields&&!record.completed){const saved=local.fields;type=saved.type;riskLevel=saved.riskLevel;measureRequired=saved.measureRequired;custom=structuredClone(saved.custom);stagedUpload=saved.stagedUpload;select.value=type||'';notes.value=custom.notes;void renderPreview();}queue=createAssessmentQueue({info:saveRequestInfo('barrier-layout',{concertId:show.key}),snapshot,send:sendAssessment,stored:accept,changed:update,error:message=>{feedback.show('Opslag niet bevestigd. Je invoer is behouden.',async()=>{await load();return false;},'Actuele beoordeling laden');}});ready=true;}
+    try{const data=await call('read');if(disposed)return;queue?.dispose();accept(data,true);if(local.fields&&editing){const saved=local.fields;type=saved.type;riskLevel=saved.riskLevel;measureRequired=saved.measureRequired;custom=structuredClone(saved.custom);stagedUpload=saved.stagedUpload;select.value=type||'';notes.value=custom.notes;void renderPreview();}queue=createAssessmentQueue({info:saveRequestInfo('barrier-layout',{concertId:show.key}),snapshot,send:sendAssessment,stored:accept,changed:update,error:message=>{feedback.show('Opslag niet bevestigd. Je invoer is behouden.',async()=>{await load();return false;},'Actuele beoordeling laden');}});ready=true;}
     catch(failure){if(!disposed){feedback.show('De beoordeling kon niet worden geladen. Je invoer is behouden.',async()=>{await load();return ready&&!queue?.failed;},'Opnieuw laden');}}
     finally{reading=false;finish?.();update();}
   }
@@ -106,5 +129,5 @@ export function createBarrierLayoutPage(section,{show,onBack,onStored=()=>{},req
   reload.onclick=load;
   block.onsubmit=event=>event.preventDefault();
   back.onclick=()=>{if(!back.disabled)onBack();};placeholderPreview('Schematische afbeelding nog niet beschikbaar');update();void load();title.focus({preventScroll:true});
-  return()=>{disposed=true;feedback.dispose();const pending=queue?.dispose();loading?.dispose();resetPreview();return pending;};
+  return()=>{disposed=true;if(!saving&&!queue?.failed)local.fields=null;feedback.dispose();const pending=queue?.dispose();loading?.dispose();resetPreview();return pending;};
 }
