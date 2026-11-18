@@ -32,6 +32,8 @@ export function createArtistOpening({env=process.env,repo=createNativeShowsRepos
   for(const name of [...reportTables,...extraTables,'esmojo_onderzoeksresultaat'])result.push({table:name,filter:'',select:[]});
   const roots=['native-authority/v1','reports-native-authority/v1','native-incident-daily/v1'].map(name=>recordKey(table,name));
   for(const keys of groups([...roots,...scope.controls]))result.push({table,filter:keys.map(key=>"esmojo_sleutel eq '"+key+"'").join(' or '),select:[]});
+  // De concertagenda (365 dagen) en de artiestnaam-aliassen bepalen de toekomstige concerten en de naam op de artiestenpagina: een wijziging maakt een bewaarde opening ongeldig.
+  result.push({table,filter:"esmojo_integratiecode eq 'staff-planning-list-v1' or esmojo_integratiecode eq 'artist-alias-v1'",select:[]});
   result.push({table:'esmojo_opdracht',filter:['shows-validation-v1','reports-validation-v1','reports-final-validation-v1','reports-cutover-v1'].map(type=>"esmojo_resourcecode eq '"+type+"'").join(' or '),select:[]});
   for(const ids of groups(scope.series)){
    result.push({table:'esmojo_concertreeks',filter:ids.map(id=>'esmojo_concertreeksid eq '+id).join(' or '),select:[]});

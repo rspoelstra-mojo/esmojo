@@ -73,3 +73,7 @@ Het Rapportages-menu en de datumtabs van een rapportage gebruiken de reeks (Core
 als eenheid in plaats van alle datums van een artiestnaam (shared/report-catalogue.js, server/dataverse-reports/read.js). Een reeks staat samen onder één artiestnaam;
 andere reeksen of zalen van dezelfde artiest zijn een eigen menu-item en historische rapportages van andere reeksen staan niet bij de tabs. Zonder reeksidentiteit geldt:
 dezelfde zaal binnen 31 dagen na de eerste show. De artiestenpagina (Concert historie) blijft alle historische rapportages tonen. Alleen presentatie van bestaande gegevens.
+
+**Bewaarde artiestopening (V1.204):** de versleutelde, bewaarde artiestenpagina (`artist-opening-v1`) controleert bij elke read een vingerafdruk van de bronrijen. Die omvat nu ook
+de agendarijen (`staff-planning-list-v1`) en de aliassen (`artist-alias-v1`), zodat een artiest die eerder op een dag was bewaard (bijvoorbeeld New Wave met alleen historische
+shows) na een agenda- of aliaswijziging opnieuw wordt opgebouwd en de toekomstige concerten toont. De bestaande bewaarde openingen vervallen daarmee eenmalig.
