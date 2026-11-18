@@ -5,8 +5,11 @@ export const reportArtistKey=name=>name.normalize('NFC').trim().replace(/\s+/g,'
 // reeksen staan niet in dit menu; die blijven via de artiestenpagina bereikbaar.
 const dayNumber=date=>Math.round(Date.parse(date+'T12:00:00Z')/86400000);
 export function reportCatalogue(shows,today){
- const artists=new Map(),loose=new Map();
- for(const show of shows){if(show.date>today)continue;if(show.seriesId){const key='series|'+show.seriesId;if(!artists.has(key))artists.set(key,[]);artists.get(key).push(show);}else{const key=reportArtistKey(show.name)+'|'+show.venue;if(!loose.has(key))loose.set(key,[]);loose.get(key).push(show);}}
+ const artists=new Map(),loose=new Map(),perDay=new Map();
+ // Dezelfde artiest met meerdere concerten op één dag (ook in verschillende zalen) blijft verborgen, behalve een expliciet middag/avond-paar in dezelfde zaal.
+ for(const show of shows){if(show.date>today)continue;const key=reportArtistKey(show.name)+'|'+show.date;if(!perDay.has(key))perDay.set(key,[]);perDay.get(key).push(show);}
+ const ambiguous=group=>group.length>1&&!(group.length===2&&group[0].venue===group[1].venue&&new Set(group.map(show=>show.performance)).size===2&&group.every(show=>['middag','avond'].includes(show.performance)&&show.concertId.endsWith(show.performance==='middag'?'_S1':'_S2')));
+ for(const show of shows){if(show.date>today||ambiguous(perDay.get(reportArtistKey(show.name)+'|'+show.date)))continue;if(show.seriesId){const key='series|'+show.seriesId;if(!artists.has(key))artists.set(key,[]);artists.get(key).push(show);}else{const key=reportArtistKey(show.name)+'|'+show.venue;if(!loose.has(key))loose.set(key,[]);loose.get(key).push(show);}}
  for(const [key,items] of loose){let group=null;for(const show of items.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.concertId.localeCompare(b.concertId))){if(!group||dayNumber(show.date)-dayNumber(group.first)>31){group={first:show.date,items:[]};artists.set('loose|'+key+'|'+show.date+'|'+show.concertId,group.items);}group.items.push(show);}}
  return [...artists.values()].map(items=>{
   const sorted=items.slice().sort((a,b)=>b.date.localeCompare(a.date)||a.concertId.localeCompare(b.concertId)),dates=new Map();for(const show of sorted){if(!dates.has(show.date))dates.set(show.date,[]);dates.get(show.date).push(show);}

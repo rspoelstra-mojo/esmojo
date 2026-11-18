@@ -15,7 +15,7 @@ test('Een gedefinieerde reeks (seriesId) staat samen onder één artiestnaam, oo
  // Zonder reeksidentiteit: dezelfde zaal binnen 31 dagen vormt één reeks, een andere zaal of latere periode niet.
  const loose=reportCatalogue([item('x','Zonder','2026-11-01'),item('y','Zonder','2026-11-04'),item('z','Zonder','2026-11-03','AFAS Live'),item('w','Zonder','2026-06-01')],'2026-11-05');assert.equal(loose.length,3);
 });
-test('Twee concerten op dezelfde datum in dezelfde zaal zonder reeks worden niet stilzwijgend samengevoegd',()=>{assert.equal(reportCatalogue([item('a','Synthetisch','2026-11-03'),item('b','Synthetisch','2026-11-03')],'2026-11-05').length,0);assert.equal(reportCatalogue([item('a','Synthetisch','2026-11-03'),item('b','Synthetisch','2026-11-03','AFAS Live')],'2026-11-05').length,2);});
+test('Twee concerten van dezelfde artiest op dezelfde datum worden niet stilzwijgend samengevoegd',()=>{assert.equal(reportCatalogue([item('a','Synthetisch','2026-11-03'),item('b','Synthetisch','2026-11-03')],'2026-11-05').length,0);assert.equal(reportCatalogue([item('a','Synthetisch','2026-11-03'),item('b','Synthetisch','2026-11-03','AFAS Live')],'2026-11-05').length,0,'ook in twee zalen op dezelfde dag blijft de dag verborgen');});
 test('Expliciete middag/avond-voorstellingen houden eigen concert-ID, revisie en tab',()=>{
  const slots=[{...item('Show_Ziggo-Dome_03112026_S1','Show','2026-11-03'),performance:'middag'},{...item('Show_Ziggo-Dome_03112026_S2','Show','2026-11-03'),performance:'avond'}];
  const [result]=reportCatalogue(slots,'2026-11-05');assert.equal(result.shows.length,2);assert.deepEqual(result.dates,['2026-11-03']);assert.deepEqual(result.shows.map(row=>row.performance),['middag','avond']);
