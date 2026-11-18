@@ -45,3 +45,13 @@ volgen de gekozen naam nog niet; dat is een vervolgstap.
 De dagelijkse 05:00-import past aliassen opnieuw toe op bestaande concerten (idempotent, per reeks, een fout stopt de import niet), voor aliassen die zijn
 opgeslagen voordat het koppelen bestond of waarvan een concert tijdelijk niet te controleren was. De Concertagenda meldt ook wanneer er geen bestaand
 ESMOJO-concert onder de naam staat, of dat het koppelen niet kon worden uitgevoerd; de server logt dan alleen aantallen en vaste redencodes (geen namen).
+
+## Handmatige concertreeksen (V1.200)
+
+In tab Algemeen kies je concerten via het keuzevakje en klik je **Als reeks beschouwen** (of **Reeks opheffen** voor een handmatige reeks). Een reeks is:
+dezelfde artiest (na alias) in dezelfde zaal, ook met tussendagen, binnen 31 dagen. Bij de rij staat "Reeks · N shows" (automatisch = opeenvolgende
+dagen, handmatig = zelf gekozen). Gegevens zijn Openbaar en staan als `concert-series-v1` in de bestaande Integratiestatus (geen nieuw schema);
+admin + MFA, actie `staff-planning` operatie `series` (shared/concert-series.js valideert in browser en server).
+Bestaande losse ESMOJO-series worden samengevoegd (server/dataverse-shows/catalogue.js `mergeSeries`) als hooguit één ervan showgegevens heeft
+(die blijft primair); twee met showgegevens, een rapportage of een mislukte controle worden niet samengevoegd en gemeld. Opheffen splitst eerder
+samengevoegde showgegevens niet meer. De 05:00-import groepeert opeenvolgende dagen óf een handmatige reeks.

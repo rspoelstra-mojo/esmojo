@@ -4,6 +4,7 @@ import {createPageFeedback} from './lib/page-feedback.js';
 import {backgroundSaves} from './lib/background-saves.js';
 import {staffTabs,staffNameMax} from '../shared/staff-planning.js';
 import {aliasSourceKey,aliasNameMax,validAliasName,cleanAliasName} from '../shared/artist-alias.js';
+import {checkSeriesSelection,seriesLabels} from '../shared/concert-series.js';
 import './show-tabs.css';
 import './staff-planning.css';
 const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;};
@@ -22,7 +23,7 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
   body.id='staff-panel';body.setAttribute('role','tabpanel');page.append(header,body);content.replaceChildren(page);
   const position=()=>{const tab=tabButtons[active];indicator.style.width=tab.offsetWidth+'px';indicator.style.transform=`translate(${tab.offsetLeft}px, ${tab.offsetTop+tab.offsetHeight-3}px)`;};
   const frame=requestAnimationFrame(()=>{position();tabs.classList.add('show-tabs-ready');});
-  const rows=new Map(),timers=new Map(),aliasDrafts=new Map(),aliasTimers=new Map(),aliasRevisions=new Map();let inflight=0,suggestions=[],moveNote='';
+  const rows=new Map(),timers=new Map(),aliasDrafts=new Map(),aliasTimers=new Map(),aliasRevisions=new Map();let seriesBusy=false,inflight=0,suggestions=[],moveNote='',seriesData=[],seriesNote='';const selected=new Set();
   // Wachtende of lopende opslag telt mee voor de centrale afsluitwaarschuwing.
   const dirty=()=>[...rows.values()].some(row=>row.drafts.size>0)||aliasDrafts.size>0||inflight>0;
   const stopWatching=backgroundSaves.watch(dirty);
@@ -30,6 +31,7 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
     const data=await request('staff-planning',{method:'POST',body:{operation:'read'},signal:controller.signal});
     if(!Array.isArray(data?.concerts))throw Error('Ongeldig antwoord');
     for(const item of Array.isArray(data.aliases)?data.aliases:[]){const key=aliasSourceKey(item.source);if(key!==null&&Number.isSafeInteger(item.revision))aliasRevisions.set(key,item.revision);}
+    seriesData=Array.isArray(data.series)?data.series.filter(item=>item&&Array.isArray(item.members)):[];
     suggestions=Array.isArray(data.suggestions)?data.suggestions.filter(name=>typeof name==='string').slice(0,3000):[];return data.concerts;
   }
   const retrySave=()=>{for(const row of rows.values())if(row.drafts.size)void flush(row);return true;};
@@ -70,6 +72,30 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
     if(move.moved?.length)parts.push(`${count(move.moved)} bestaand ${count(move.moved)===1?'concert is':'concerten zijn'} in ESMOJO aan ${shown} gekoppeld.`);
     if(move.blocked?.length)parts.push(`${count(move.blocked)} ${count(move.blocked)===1?'concert staat':'concerten staan'} al in ESMOJO met showgegevens (of kon niet worden gecontroleerd) en ${count(move.blocked)===1?'is':'zijn'} niet verplaatst.`);
     return parts.join(' ');
+  }
+  // Handmatige concertreeks (tab Algemeen): gekozen rijen als reeks beschouwen of een handmatige reeks opheffen. De server valideert opnieuw.
+  const seriesProblems={COUNT:'Kies minimaal twee concerten.',VENUE:'Een reeks bestaat uit shows in dezelfde zaal.',ARTIST:'Een reeks bestaat uit shows van dezelfde artiest.',SPAN:'Een reeks past binnen 31 dagen.',DUPLICATE:'Kies elk concert één keer.'};
+  function seriesSummary(result,mode){
+    if(mode==='dissolve')return 'De reeks is opgeheven. Eerder samengevoegde showgegevens blijven bij elkaar staan.';
+    const merge=result?.merge,count=list=>list.reduce((sum,item)=>sum+(item.dates?.length||0),0);
+    if(merge?.failed)return 'De reeks is opgeslagen, maar het samenvoegen van bestaande shows kon niet worden uitgevoerd. Dat wordt bij de volgende import opnieuw geprobeerd.';
+    const parts=['De reeks is opgeslagen.'];
+    if(merge?.merged?.length)parts.push(`Bestaande shows zijn samengevoegd tot één reeks (${count(merge.merged)} ${count(merge.merged)===1?'datum':'datums'}).`);
+    if(merge?.blocked?.length)parts.push(`${count(merge.blocked)} ${count(merge.blocked)===1?'datum heeft':'datums hebben'} al eigen showgegevens in meerdere shows (of kon niet worden gecontroleerd) en ${count(merge.blocked)===1?'is':'zijn'} niet samengevoegd.`);
+    return parts.join(' ');
+  }
+  async function applySeries(mode){
+    const concertIds=[...selected];if(!concertIds.length||seriesBusy)return;seriesBusy=true;inflight++;backgroundSaves.changed();render(concertsData);
+    try{
+      const result=await request('staff-planning',{method:'POST',body:{operation:'series',mode,concertIds},signal:controller.signal});
+      seriesNote=seriesSummary(result,mode);selected.clear();
+      try{await reload();}catch{/* De volgende laadronde haalt de reeksen opnieuw op. */}
+      if(!disposed)feedback.resolved();
+    }catch(error){
+      if(disposed||error?.name==='AbortError')return;
+      seriesNote=seriesProblems[error?.code?.replace?.('SERIES_','')]||(error?.code==='SERIES_CONFLICT'?'De reeksen zijn intussen elders gewijzigd. Laad de agenda opnieuw.':'Opslaan is niet bevestigd. Je keuze is behouden.');
+      feedback.show('De reeks is niet opgeslagen.',()=>{void applySeries(mode);return true;},'Opnieuw proberen');
+    }finally{seriesBusy=false;inflight--;backgroundSaves.changed();if(!disposed)render(concertsData);}
   }
   // Artiestnaam aanpassen (tab Algemeen): geldt voor alle concerten met dezelfde MOJO-bronnaam. Leeg of gelijk aan de bronnaam zet de alias terug.
   async function flushAlias(source){
@@ -117,13 +143,25 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
     body.setAttribute('aria-labelledby',tabButtons[index].id);position();if(focus)tabButtons[index].focus();if(concertsData.length||loaded)render(concertsData);
   }
   let loaded=false;
+  function seriesControls(concerts){
+    const bar=node('div','staff-series-bar'),chosen=concerts.filter(item=>selected.has(item.concertId)),check=checkSeriesSelection(chosen),manualIds=new Set(seriesData.flatMap(item=>item.members));
+    const group=node('button','staff-series-button','Als reeks beschouwen'),dissolve=node('button','staff-series-button','Reeks opheffen');group.type=dissolve.type='button';
+    group.disabled=seriesBusy||!check.ok;dissolve.disabled=seriesBusy||!chosen.some(item=>manualIds.has(item.concertId));
+    group.addEventListener('click',()=>void applySeries('group'));dissolve.addEventListener('click',()=>void applySeries('dissolve'));
+    const hint=chosen.length&&!check.ok&&chosen.length>=2?seriesProblems[check.code]:chosen.length?`${chosen.length} gekozen`:'Kies concerten van dezelfde artiest en zaal om ze als reeks te beschouwen.';
+    bar.append(group,dissolve,Object.assign(node('span','staff-muted staff-series-hint',hint),{role:'status'}));
+    if(seriesNote)bar.append(Object.assign(node('p','staff-muted staff-move-note',seriesNote),{role:'status'}));
+    return bar;
+  }
   function render(concerts){
     concertsData=concerts;body.replaceChildren();const tabDefinition=staffTabs[active];
-    const intro=node('div','staff-table-intro');intro.append(node('h2','',tabDefinition.label),node('p','staff-muted',`${concerts.length} ${concerts.length===1?'concert':'concerten'} · komende 365 dagen · wordt dagelijks om 05:00 bijgewerkt`));if(moveNote&&tabDefinition.id==='general')intro.append(Object.assign(node('p','staff-muted staff-move-note',moveNote),{role:'status'}));body.append(intro);
+    const intro=node('div','staff-table-intro');intro.append(node('h2','',tabDefinition.label),node('p','staff-muted',`${concerts.length} ${concerts.length===1?'concert':'concerten'} · komende 365 dagen · wordt dagelijks om 05:00 bijgewerkt`));if(moveNote&&tabDefinition.id==='general')intro.append(Object.assign(node('p','staff-muted staff-move-note',moveNote),{role:'status'}));if(tabDefinition.id==='general')intro.append(seriesControls(concerts));body.append(intro);
     if(!concerts.length){body.append(node('p','staff-empty','Er staan nog geen concerten in de agenda. De lijst wordt dagelijks om 05:00 uit de MOJO-agenda gevuld.'));return;}
     const wrap=node('div','staff-table-wrap'),table=node('table','staff-table'),head=node('thead',''),headRow=node('tr','');
     wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Concertagenda, scrolbaar');table.dataset.tab=tabDefinition.id;
     const groups=[{id:'concert',label:'Concert',fields:[{id:'artist',label:'Artiestnaam'},{id:'venue',label:'Locatie'},{id:'date',label:'Datum'}]},...(tabDefinition.fields.length?[{id:tabDefinition.color,label:tabDefinition.label,fields:tabDefinition.fields}]:[])];
+    const general=tabDefinition.id==='general',labels=general?seriesLabels(concerts,seriesData):new Map();
+    if(general){const th=node('th','staff-group-concert staff-select');th.scope='col';th.append(Object.assign(node('span','staff-visually-hidden','Kies concert'),{}));headRow.append(th);}
     for(const group of groups)group.fields.forEach((field,index)=>{const th=node('th','staff-group-'+group.id,field.label);th.scope='col';if(index===0)th.dataset.groupStart='true';headRow.append(th);});
     head.append(headRow);const tbody=node('tbody','');
     for(const concert of concerts){
@@ -131,6 +169,10 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
       if(!row){row={concertId:concert.concertId,roles:{...concert.roles},revision:concert.revision,drafts:new Map(),inputs:new Map(),busy:false};rows.set(concert.concertId,row);}
       row.inputs=new Map();
       const tr=node('tr','');
+      if(general){
+        const cell=node('td','staff-group-concert staff-select'),box=node('input','');box.type='checkbox';box.checked=selected.has(concert.concertId);box.disabled=seriesBusy;box.setAttribute('aria-label',`Kies ${concert.artist}, ${dateLabel(concert.date)}`);
+        box.addEventListener('change',()=>{if(box.checked)selected.add(concert.concertId);else selected.delete(concert.concertId);const bar=body.querySelector('.staff-series-bar');if(bar)bar.replaceWith(seriesControls(concertsData));});cell.append(box);tr.append(cell);
+      }
       const artist=node('th','staff-group-concert staff-artist');artist.scope='row';artist.dataset.source=aliasSourceKey(concert.sourceArtist||concert.artist)||'';
       if(tabDefinition.id==='general'){
         const source=concert.sourceArtist||concert.artist,key=aliasSourceKey(source),draft=aliasDrafts.get(key),input=node('input','staff-input staff-artist-input');
@@ -140,7 +182,9 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
         artist.append(input);
         if(concert.artist!==source)artist.append(node('span','staff-source-name','MOJO: '+source));
       }else artist.textContent=concert.artist;
-      tr.append(artist,node('td','staff-group-concert',concert.venue),node('td','staff-group-concert staff-date',dateLabel(concert.date)));
+      const dateCell=node('td','staff-group-concert staff-date',dateLabel(concert.date)),label=labels.get(concert.concertId);
+      if(label)dateCell.append(Object.assign(node('span','staff-series-chip',`Reeks · ${label.size} shows`),{title:label.kind==='manual'?'Handmatig als reeks beschouwd':'Opeenvolgende dagen in dezelfde zaal'}));
+      tr.append(artist,node('td','staff-group-concert',concert.venue),dateCell);
       for(const group of groups.slice(1))group.fields.forEach((field,index)=>{
         const td=node('td','staff-group-'+group.id+' staff-input-cell'),input=node('input','staff-input');if(index===0)td.dataset.groupStart='true';
         input.type='text';input.maxLength=staffNameMax;input.value=row.drafts.get(field.id)??row.roles[field.id]??'';input.autocomplete='off';input.spellcheck=false;input.setAttribute('aria-label',`${field.label} – ${concert.artist}, ${dateLabel(concert.date)}`);

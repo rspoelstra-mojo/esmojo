@@ -1,3 +1,9 @@
+## Handmatige concertreeksen (18 november 2026)
+
+Gebruiker vraagt in Concertagenda tab Algemeen een manier om losse shows (bv. Beth Hart, twee shows) als reeks te laten gelden: zelfde zaal, ook met
+tussendagen, maximaal 31 dagen, Openbaar, opslag in bestaande Integratiestatus (`concert-series-v1`), geen nieuw schema. Bestaande losse series worden
+samengevoegd als hooguit één showgegevens heeft; anders geblokkeerd en gemeld. Opheffen splitst eerdere samenvoeging niet. Zie docs/personeelsplanning.md.
+
 ## Concertagenda met vier tabs (18 november 2026)
 
 Gebruiker hernoemt Beheerder / Personeelsplanning naar Concertagenda (route /beheerder/concertagenda, oude route verwijst door) en vraagt vier tabs:

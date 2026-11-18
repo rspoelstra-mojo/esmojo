@@ -97,3 +97,27 @@ test('alias-keten wordt gevolgd zonder lus',async()=>{
  const map=new Map([['a','B'],['b','C'],['c','A']]);assert.ok(['A','B','C'].includes(resolveArtistAlias('A',map)));
  assert.equal(resolveArtistAlias('Onbekend',new Map([['a','B']])),'Onbekend');assert.equal(resolveArtistAlias('A',new Map([['a','B'],['b','C']])),'C');
 });
+
+test('handmatige reeks: groeperen, uitbreiden, opheffen en strikte validatie',async()=>{
+ const f=fixture(),mk=(id,date,artist='Beth Hart')=>({concertId:id,artist,date,sourceUrl:'https://www.mojo.nl/concerten/'+id});
+ await f.staff.handle('staff-planning-store',body('ziggo-dome',[mk('A_Ziggo-Dome_01122026','2026-12-01'),mk('B_Ziggo-Dome_03122026','2026-12-03'),mk('C_Ziggo-Dome_05122026','2026-12-05'),mk('Z_Ziggo-Dome_06122026','2026-12-06','Anders'),mk('F_Ziggo-Dome_20270301','2027-03-01')]));
+ const ids=['A_Ziggo-Dome_01122026','B_Ziggo-Dome_03122026'];
+ let out=await f.staff.handle('staff-planning-series',{mode:'group',concertIds:ids});assert.deepEqual(out.series.map(item=>item.members),[ids]);assert.equal(out.series[0].venue,'Ziggo Dome');
+ assert.deepEqual((await f.staff.handle('staff-planning-read')).series.map(item=>item.members),[ids]);
+ // Uitbreiden: de bestaande reeks gaat erin op (zelfde id), geen tweede reeks.
+ const first=out.series[0].id;out=await f.staff.handle('staff-planning-series',{mode:'group',concertIds:['B_Ziggo-Dome_03122026','C_Ziggo-Dome_05122026']});
+ assert.equal(out.series.length,1);assert.equal(out.series[0].id,first);assert.deepEqual(out.series[0].members,['A_Ziggo-Dome_01122026','B_Ziggo-Dome_03122026','C_Ziggo-Dome_05122026']);
+ // Een deel opheffen laat de rest staan; blijven er minder dan twee over, dan vervalt de reeks.
+ out=await f.staff.handle('staff-planning-series',{mode:'dissolve',concertIds:['C_Ziggo-Dome_05122026']});assert.equal(out.series[0].members.length,2);
+ out=await f.staff.handle('staff-planning-series',{mode:'dissolve',concertIds:['A_Ziggo-Dome_01122026']});assert.deepEqual(out.series,[]);
+ // Validatie: andere artiest, te lange spanne, onbekend concert, strikte invoer.
+ await assert.rejects(f.staff.handle('staff-planning-series',{mode:'group',concertIds:['A_Ziggo-Dome_01122026','Z_Ziggo-Dome_06122026']}),/SERIES_(ARTIST|SPAN|VENUE|COUNT)/);
+ await assert.rejects(f.staff.handle('staff-planning-series',{mode:'group',concertIds:['A_Ziggo-Dome_01122026','F_Ziggo-Dome_20270301']}),/SERIES_(ARTIST|SPAN|VENUE|COUNT)/);
+ await assert.rejects(f.staff.handle('staff-planning-series',{mode:'group',concertIds:['A_Ziggo-Dome_01122026','Onbekend']}),/NOT_FOUND/);
+ for(const bad of [{mode:'x',concertIds:['a']},{mode:'group'},{mode:'group',concertIds:[]},{mode:'group',concertIds:['a','a']},{mode:'group',concertIds:['a','b'],extra:1}])await assert.rejects(f.staff.handle('staff-planning-series',bad),/VALIDATION/);
+ // Alias: twee verschillende titels die op dezelfde artiest uitkomen mogen samen een reeks vormen.
+ await f.staff.handle('staff-planning-store',body('ziggo-dome',[mk('A_Ziggo-Dome_01122026','2026-12-01'),mk('B2_Ziggo-Dome_03122026','2026-12-03','Beth Hart live')]));
+ await assert.rejects(f.staff.handle('staff-planning-series',{mode:'group',concertIds:['A_Ziggo-Dome_01122026','B2_Ziggo-Dome_03122026']}),/SERIES_(ARTIST|SPAN|VENUE|COUNT)/);
+ await f.staff.handle('staff-planning-alias',{source:'Beth Hart live',name:'Beth Hart',revision:0});
+ assert.equal((await f.staff.handle('staff-planning-series',{mode:'group',concertIds:['A_Ziggo-Dome_01122026','B2_Ziggo-Dome_03122026']})).series.length,1);
+});

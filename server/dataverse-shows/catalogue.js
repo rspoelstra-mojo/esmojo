@@ -12,6 +12,7 @@ import {normalizeArtistName} from '../../shared/artist-catalogue.js';
 import {showPlanning} from './planning.js';
 import {createStaffPlanning} from './staff-planning.js';
 import {createArtistAliases} from './artist-alias.js';
+import {createConcertSeries} from './concert-series.js';
 import {createNativeReportsRepository} from '../dataverse-reports/repository.js';
 import {resolveArtistAlias,aliasSourceKey} from '../../shared/artist-alias.js';
 const day=value=>typeof value==='string'?value.slice(0,10):'';
@@ -24,7 +25,7 @@ function validSourceIdentity(show){
  return source&&source.date===show.dates[0]&&researchSlug(source.artistToken)===researchSlug(show.name)&&venue&&[venue.name,venue.id,...venue.aliases].some(name=>researchSlug(name)===researchSlug(source.venueToken));
 }
 export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),reports=null}={}){
- const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1'),staff=createStaffPlanning({env,repo,now}),artistAliases=createArtistAliases({repo,now});
+ const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1'),staff=createStaffPlanning({env,repo,now}),artistAliases=createArtistAliases({repo,now}),concertSeries=createConcertSeries({repo,now});
  async function writeRows(rows){const ops=await recordOperations(repo,rows);if(ops.length)await repo.atomic(ops);}
  async function all(){
   let [series,concerts,artists,locations,teams,employees,projection]=await Promise.all(['esmojo_concertreeks','esmojo_concert','esmojo_artiest','esmojo_locatie','esmojo_projectteam','esmojo_medewerker','esmojo_integratiestatus'].map(table=>repo.query(table,{filter:table==='esmojo_integratiestatus'?"esmojo_integratiecode eq 'shows-native-v1'":'statecode eq 0'})));
@@ -87,11 +88,13 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
   if(admins.length>1)throw Error('DATAVERSE_SHOWS_CONFLICT');
   const administrator=people.profiles.find(p=>p.id===admins[0]&&!p.disabled&&p.activated&&p.modules.includes('shows'));
   const combined=new Map(current.rows.map(row=>[row.concertId,row]));for(const row of snapshot.concerts)combined.set(row.concertId,{...combined.get(row.concertId),...row});
-  const groups=[];
-  for(const row of [...combined.values()].filter(row=>MOJO_VENUES.some(venue=>venue.name===row.venue)).sort((a,b)=>a.venue.localeCompare(b.venue)||normalizeArtistName(a.artist).localeCompare(normalizeArtistName(b.artist))||a.date.localeCompare(b.date))){const previous=groups.at(-1);if(previous&&previous[0].venue===row.venue&&normalizeArtistName(previous[0].artist)===normalizeArtistName(row.artist)&&(previous.at(-1).date===row.date||addDays(previous.at(-1).date,1)===row.date))previous.push(row);else groups.push([row]);}
+  const groups=[],manualSeries=await concertSeries.map(),together=(a,b)=>manualSeries.has(a.concertId)&&manualSeries.get(a.concertId)===manualSeries.get(b.concertId);
+  for(const row of [...combined.values()].filter(row=>MOJO_VENUES.some(venue=>venue.name===row.venue)).sort((a,b)=>a.venue.localeCompare(b.venue)||normalizeArtistName(a.artist).localeCompare(normalizeArtistName(b.artist))||a.date.localeCompare(b.date))){const previous=groups.at(-1);if(previous&&previous[0].venue===row.venue&&normalizeArtistName(previous[0].artist)===normalizeArtistName(row.artist)&&(previous.at(-1).date===row.date||addDays(previous.at(-1).date,1)===row.date||together(previous.at(-1),row)))previous.push(row);else groups.push([row]);}
   let created=0,batches=0,concertsPending=false;
   for(const group of groups){const additions=group.filter(row=>seen.has(row.concertId)&&!current.rows.some(old=>old.concertId===row.concertId));if(!additions.length)continue;if(batches>=25){concertsPending=true;continue;}batches++;
-   const existing=[...new Set(group.filter(row=>current.rows.some(old=>old.concertId===row.concertId)).map(row=>row.generalConcertId))];if(existing.length>1)throw Error('DATAVERSE_SHOWS_CONFLICT');
+   let existing=[...new Set(group.filter(row=>current.rows.some(old=>old.concertId===row.concertId)).map(row=>row.generalConcertId))];
+   // Een handmatige reeks kan meerdere bestaande reeksen overspannen: nieuwe concerten krijgen dan een eigen reeks en het samenvoegen volgt apart.
+   if(existing.length>1)existing=[];
    const assignments=administrator?additions.map(row=>({concertId:row.concertId,userId:administrator.id,role:'event-safety-manager',createdAt:now().toISOString()})):[];
    if(existing.length){const loaded=await state.load(existing[0]),next={...loaded.source,shows:[...loaded.source.shows,...additions.map(row=>({...row,time:row.time||'Niet vermeld',active:true}))]};loaded.people.assignments.push(...assignments);await state.commit(loaded,next,{created:additions.length},digest('native-sync/'+snapshot.checkedAt+'/'+existing[0]));}
    else{const first=additions[0];await create({version:1,concertId:first.concertId,shows:additions.map(row=>({...row,time:row.time||'Niet vermeld',active:true})),documents:{},files:[],timetables:[]},{...people,assignments});}created+=additions.length;
@@ -180,15 +183,49 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
   const operations=await recordOperations(repo,[marker]);if(photo){const meta=await repo.meta('esmojo_artiest');operations.push({table:'esmojo_artiest',id:artist[meta.PrimaryIdAttribute],method:'PATCH',etag:artist['@odata.etag'],payload:{esmojo_fotobronurl:photo.imageUrl}});}try{await repo.atomic(operations);}catch{/* Independent readback below decides whether the batch committed. */}
   const read=await repo.byKey('esmojo_integratiestatus',key),actual=await repo.byKey('esmojo_artiest',artist.esmojo_sleutel);if(!read||migrationDifferences(marker,read,marker.fields).length||photo&&actual?.esmojo_fotobronurl!==photo.imageUrl)throw Error('ARTIST_PHOTO_UNCONFIRMED');return{saved:!!photo};
  }
- const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','staff-planning-store','staff-planning-read','staff-planning-alias','staff-planning-save','staff-planning-team','management-candidates','advance-timetable-candidates','advance-timetable-save','advance-timetable-read','native-timetable-read','native-timetable-save']);
+ const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','staff-planning-store','staff-planning-read','staff-planning-alias','staff-planning-series','staff-planning-save','staff-planning-team','management-candidates','advance-timetable-candidates','advance-timetable-save','advance-timetable-read','native-timetable-read','native-timetable-save']);
 
  // Fase 2 van de artiestnaam-aliassen: bestaande concerten onder de bronnaam worden aan de gekozen artiest gekoppeld, alleen als er nog geen
  // showgegevens aan hangen (geen documenten, bestanden of bevestigde voorbereidingsstand). Elke reeks apart, met ETags, en daarna onafhankelijk
  // teruggelezen met dezelfde controle als elke Shows-bewerking. Zo niet verplaatsbaar: melding, niets gewijzigd.
-// Dagelijkse inhaalronde: aliassen die zijn opgeslagen voordat het koppelen bestond, of waarvan een concert tijdelijk niet te controleren was,
+
+ // Showgegevens: documenten, bestanden of een bevestigde voorbereidingsstand, of een gepubliceerde/ontvangen rapportage. Een mislukte controle gooit en telt daarmee als aanwezig.
+ async function hasShowData(loaded,concerts){
+  const source=loaded.source;if(Object.keys(source.documents||{}).length||(source.files||[]).length||source.nativeGeneration>0||loaded.control)return true;
+  const reportsRepo=reports||(reports=createNativeReportsRepository({env})),cm=await repo.meta('esmojo_concert');
+  for(const row of concerts)if((await reportsRepo.query('esmojo_rapportage',{filter:'_esmojo_concert_value eq '+row.native[cm.PrimaryIdAttribute],select:['esmojo_bronidentiteit']})).length)return true;
+  return false;
+ }
+ // Handmatige reeks: bestaande aparte reeksen van de leden worden één reeks. Alleen als hooguit één van de reeksen showgegevens heeft (die blijft de hoofdreeks);
+ // anders ongewijzigd en een melding. Alleen de koppelingen van concerten, route-aliassen en projectteam-rijen worden bijgewerkt (ETag-changeset) en daarna met
+ // dezelfde Shows-verificatie teruggelezen. De lege oude reeks blijft zonder concerten achter; er wordt niets verwijderd.
+ async function mergeSeries(memberIds){
+  const result={merged:[],blocked:[]};if(!Array.isArray(memberIds)||memberIds.length<2)return result;
+  const data=await all(),bySeries=new Map();
+  for(const row of data.rows)if(memberIds.includes(row.concertId)){const list=bySeries.get(row.generalConcertId)||[];list.push(row);bySeries.set(row.generalConcertId,list);}
+  if(bySeries.size<2)return result;
+  const label={dates:[...bySeries.values()].flat().map(row=>row.date).sort(),venue:[...bySeries.values()][0][0].venue};
+  try{
+   const infos=[];for(const [generalId,concerts] of bySeries){const loaded=await state.load(concerts[0].concertId);infos.push({generalId,concerts,loaded,hasData:await hasShowData(loaded,concerts)});}
+   const dataful=infos.filter(info=>info.hasData);if(dataful.length>1){result.blocked.push({...label,reason:'showgegevens'});return result;}
+   const primary=dataful[0]||[...infos].sort((a,b)=>a.loaded.source.shows[0].date.localeCompare(b.loaded.source.shows[0].date))[0],others=infos.filter(info=>info!==primary),artistName=primary.loaded.source.shows[0].artist;
+   const shows=[...primary.loaded.source.shows,...others.flatMap(info=>info.loaded.source.shows.map(show=>({...show,artist:artistName})))].sort((a,b)=>a.date.localeCompare(b.date)||a.concertId.localeCompare(b.concertId));
+   const people={...primary.loaded.people,assignments:[...primary.loaded.people.assignments,...others.flatMap(info=>info.loaded.people.assignments)]};
+   const rows=internalRows(mapShow({...primary.loaded.source,shows},people)).filter(row=>['esmojo_concertreeks','esmojo_concert','esmojo_routealias','esmojo_projectteam'].includes(row.table));
+   // De reeksrij behoudt de bevestigde revisie van de hoofdreeks (de standaardwaarde 0 zou een bestaande voorbereidingsstand losmaken).
+   for(const row of rows)if(row.table==='esmojo_concertreeks')row.fields.esmojo_revisie=primary.loaded.source.nativeGeneration||0;
+   const operations=await recordOperations(repo,rows);if(operations.length)await repo.atomic(operations);
+   const after=await state.load(primary.concerts[0].concertId);await state.verifyPlan(mapShow(after.source,after.people),primary.loaded.source.nativeGeneration||0);
+   if(after.source.shows.length!==shows.length)throw Error('DATAVERSE_SHOWS_CONFLICT');
+   result.merged.push(label);
+  }catch{result.blocked.push({...label,reason:'niet bevestigd'});}
+  return result;
+ }
+ // Dagelijkse inhaalronde: aliassen die zijn opgeslagen voordat het koppelen bestond, of waarvan een concert tijdelijk niet te controleren was,
  // worden opnieuw aangebracht. Idempotent en per reeks begrensd; een fout stopt de import nooit.
  async function catchUpAliasMoves(){
   try{for(const item of (await artistAliases.list()).filter(row=>row.name).slice(0,25))await moveToAlias({source:item.source,name:item.name}).catch(()=>null);}catch{/* De import blijft geldig. */}
+  try{for(const series of (await concertSeries.list()).slice(0,25))await mergeSeries(series.members).catch(()=>null);}catch{/* De import blijft geldig. */}
  }
  async function moveToAlias(saved){
   const result={moved:[],blocked:[],orphaned:[],matched:0};if(!saved?.name)return result;
@@ -201,11 +238,7 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
    const label={venue:concerts[0].venue,dates:concerts.map(row=>row.date).sort()};
    try{
     const loaded=await state.load(concerts[0].concertId),source=loaded.source;
-    if(Object.keys(source.documents||{}).length||(source.files||[]).length||source.nativeGeneration>0||loaded.control){result.blocked.push({...label,reason:'showgegevens'});continue;}
-    // Ook een gepubliceerde of ontvangen rapportage is een showgegeven; een mislukte controle telt als aanwezig (faalt gesloten).
-    const reportsRepo=reports||(reports=createNativeReportsRepository({env})),cm=await repo.meta('esmojo_concert');
-    let reported=false;for(const row of concerts)if((await reportsRepo.query('esmojo_rapportage',{filter:'_esmojo_concert_value eq '+row.native[cm.PrimaryIdAttribute],select:['esmojo_bronidentiteit']})).length)reported=true;
-    if(reported){result.blocked.push({...label,reason:'showgegevens'});continue;}
+    if(await hasShowData(loaded,concerts)){result.blocked.push({...label,reason:'showgegevens'});continue;}
     const next={...source,artistId:targetId,shows:source.shows.map(show=>({...show,artist:shownName}))};delete next.biography;delete next.photo;
     if(target?.esmojo_biografie)next.biography={text:target.esmojo_biografie,sourceUrl:target.esmojo_biografiebron||null,capturedAt:target.esmojo_biografieopgehaaldop};
     if(target?.esmojo_fotobronurl)next.photo={imageUrl:target.esmojo_fotobronurl};
@@ -221,6 +254,12 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
   return result;
  }
  async function request(operation,payload={}){
+  if(operation==='staff-planning-series'){
+   const saved=await staff.handle(operation,payload);let merge={merged:[],blocked:[]};
+   if(payload.mode==='group'){const members=saved.series.find(item=>payload.concertIds.some(id=>item.members.includes(id)))?.members||payload.concertIds;merge=await mergeSeries(members).catch(()=>({merged:[],blocked:[],failed:true}));}
+   if(merge.failed||merge.blocked.length)console.error('SERIES_MERGE',JSON.stringify({blocked:merge.blocked.map(item=>item.reason),failed:Boolean(merge.failed)}));
+   return{...saved,merge};
+  }
   if(operation==='staff-planning-alias'){
    const saved=await staff.handle(operation,payload),move=await moveToAlias(saved).catch(()=>({moved:[],blocked:[],orphaned:[],failed:true}));
    // Alleen aantallen en vaste redencodes (geen namen) zodat een niet-verplaatst concert achteraf te verklaren is.

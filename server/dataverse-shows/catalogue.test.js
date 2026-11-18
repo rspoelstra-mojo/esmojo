@@ -223,3 +223,39 @@ test('inhaalronde: een alias die vóór het koppelen is opgeslagen wordt bij de 
  await createArtistAliases({repo:g.state.repo,now}).save({source:'UB40 ft. Ali Campbell',name:'UB40',revision:0});await g.service('sync',{snapshot:snapshot([odd])});
  assert.equal((await g.state.load(odd.concertId)).source.shows[0].artist,'UB40 ft. Ali Campbell');
 });
+
+const showOf=(concertId,artist,date,venue='Gashouder')=>({concertId:concertId(artist,date,venue),artist,venue,city:'Amsterdam',date,sourceUrl:'https://www.mojo.nl/concerten/x'});
+const snap=concerts=>({pages:1,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts});
+const agenda=(f,concerts)=>f.catalogue.request('staff-planning-store',{venue:'gashouder',from:'2026-11-13',until:'2027-11-13',concerts:concerts.map(row=>({concertId:row.concertId,artist:row.artist,date:row.date,sourceUrl:row.sourceUrl}))});
+test('handmatige reeks: de import groepeert concerten met tussendagen in één reeks en voegt een later concert aan de bestaande reeks toe',async()=>{
+ const {concertId}=await import('../mojo-agenda.js'),f=moveFixture(),a=showOf(concertId,'Beth Hart','2026-12-01'),b=showOf(concertId,'Beth Hart','2026-12-03'),c=showOf(concertId,'Beth Hart','2026-12-05');
+ // Zonder handmatige reeks zijn 1 en 3 december twee reeksen.
+ const plain=moveFixture();await plain.service('sync',{snapshot:snap([a,b])});assert.equal([...plain.tables.get('esmojo_concertreeks').values()].filter(row=>row.esmojo_oudalgemeenconcertid===a.concertId||row.esmojo_oudalgemeenconcertid===b.concertId).length,2);
+ // Met een handmatige reeks vormen ze er één, en 5 december sluit er later bij aan.
+ const {createConcertSeries}=await import('./concert-series.js');await createConcertSeries({repo:f.state.repo,now}).apply('group',[a.concertId,b.concertId,c.concertId],'Gashouder');
+ await f.service('sync',{snapshot:snap([a,b])});const loaded=await f.state.load(a.concertId);assert.deepEqual(loaded.source.shows.map(show=>show.date),['2026-12-01','2026-12-03']);
+ await f.service('sync',{snapshot:snap([a,b,c])});assert.deepEqual((await f.state.load(a.concertId)).source.shows.map(show=>show.date),['2026-12-01','2026-12-03','2026-12-05']);
+});
+test('handmatige reeks: bestaande aparte reeksen worden samengevoegd; één met showgegevens blijft hoofdreeks; twee met showgegevens blokkeren',async()=>{
+ const {concertId}=await import('../mojo-agenda.js'),{mapShow}=await import('../show-migration-map.js'),a=showOf(concertId,'Beth Hart','2026-12-01'),b=showOf(concertId,'Beth Hart','2026-12-03');
+ const f=moveFixture();await f.service('sync',{snapshot:snap([a,b])});await agenda(f,[a,b]);
+ const result=await f.catalogue.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]});
+ assert.deepEqual(result.series.map(item=>item.members.sort()),[[a.concertId,b.concertId].sort()]);assert.equal(result.merge.merged.length,1);assert.deepEqual(result.merge.blocked,[]);
+ const after=await f.state.load(b.concertId);assert.deepEqual(after.source.shows.map(show=>show.date),['2026-12-01','2026-12-03']);await f.state.verifyPlan(mapShow(after.source,after.people),0);
+ assert.equal((await f.state.load(a.concertId)).seriesId,after.seriesId,'beide concerten horen bij dezelfde reeks');
+ // Herhaling is idempotent.
+ assert.equal((await f.catalogue.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]})).merge.merged.length,0);
+ // De import kent de concert-ID's en maakt geen duplicaten.
+ assert.equal((await f.service('sync',{snapshot:snap([a,b])})).createdConcerts,0);
+ // Eén reeks met showgegevens blijft de hoofdreeks; de gegevens blijven bij hun reeks.
+ const g=moveFixture();await g.service('sync',{snapshot:snap([a,b])});await agenda(g,[a,b]);await g.service('profile-save',{concertId:b.concertId,questionNumber:1,status:'draft',summary:'Bewaren',revision:0});
+ const merged=await g.catalogue.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]});assert.equal(merged.merge.merged.length,1);
+ assert.equal((await g.service('profile-read',{concertId:a.concertId})).analyses[1].summary,'Bewaren','de gedeelde voorbereiding geldt nu ook voor de eerste datum');
+ // Twee reeksen met showgegevens: niets samenvoegen.
+ const h=moveFixture();await h.service('sync',{snapshot:snap([a,b])});await agenda(h,[a,b]);for(const [id,rev] of [[a.concertId,0],[b.concertId,0]])await h.service('profile-save',{concertId:id,questionNumber:1,status:'draft',summary:'Bewaren '+id.slice(0,4),revision:rev});
+ const blocked=await h.catalogue.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]});assert.equal(blocked.merge.merged.length,0);assert.equal(blocked.merge.blocked[0].reason,'showgegevens');
+ assert.notEqual((await h.state.load(a.concertId)).seriesId,(await h.state.load(b.concertId)).seriesId);
+ // Een rapportage blokkeert ook (faalt gesloten bij een mislukte controle).
+ const r=moveFixture(true);await r.service('sync',{snapshot:snap([a,b])});await agenda(r,[a,b]);const reported=await r.catalogue.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]});assert.equal(reported.merge.merged.length,0);assert.equal(reported.merge.blocked[0].reason,'showgegevens');
+ const down=moveFixture();await down.service('sync',{snapshot:snap([a,b])});await agenda(down,[a,b]);const failing=createNativeCatalogue({state:down.state,now,reports:{query:async()=>{throw Error('down');}}});const failed=await failing.request('staff-planning-series',{mode:'group',concertIds:[a.concertId,b.concertId]});assert.equal(failed.merge.merged.length,0);assert.equal(failed.merge.blocked.length,1);
+});

@@ -323,6 +323,17 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         try {
           if (input?.operation === 'read' && keys === 'operation') return reply(200, await scopedShows('staff-planning-read', {}));
           if (input?.operation === 'save' && keys === 'concertId,field,operation,revision,value') { const { operation, ...payload } = input; return reply(200, await scopedShows('staff-planning-save', payload)); }
+          // Handmatige concertreeks (Openbaar): groeperen of opheffen van gekozen concerten; de server valideert zaal, artiest en spanne.
+          if (input?.operation === 'series' && keys === 'concertIds,mode,operation') {
+            const { operation, ...payload } = input;
+            try { return reply(200, await scopedShows('staff-planning-series', payload)); }
+            catch (error) {
+              const messages = { SERIES_COUNT: 'Kies minimaal twee concerten.', SERIES_DUPLICATE: 'Kies elk concert één keer.', SERIES_VENUE: 'Een reeks bestaat uit shows in dezelfde zaal.', SERIES_ARTIST: 'Een reeks bestaat uit shows van dezelfde artiest.', SERIES_SPAN: 'Een reeks past binnen 31 dagen.' };
+              if (messages[error.message]) return reply(400, { error: messages[error.message], code: error.message });
+              if (error.message === 'DATAVERSE_SHOWS_CONFLICT') return reply(409, { error: 'De reeksen zijn intussen elders gewijzigd. Laad de agenda opnieuw.', code: 'SERIES_CONFLICT' });
+              throw error;
+            }
+          }
           // Artiestnaam-alias (Openbaar): de gekozen naam voor een bronnaam uit de MOJO-agenda, met revisiecontrole.
           if (input?.operation === 'alias' && keys === 'name,operation,revision,source') { const { operation, ...payload } = input; return reply(200, await scopedShows('staff-planning-alias', payload)); }
           return reply(400, { error: 'Ongeldig verzoek.' });
