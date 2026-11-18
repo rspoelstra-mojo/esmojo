@@ -100,7 +100,7 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
   // Refresh only technical catalogue fields. Each patch compares its real ETag.
   const latest=await all(),cm=await repo.meta('esmojo_concert');
   const updates=latest.rows.filter(row=>MOJO_VENUES.some(venue=>venue.name===row.venue)).flatMap(row=>{const fresh=snapshot.concerts.find(v=>v.concertId===row.concertId),active=Boolean(fresh);if(active===row.active&&(!fresh||fresh.sourceUrl===row.sourceUrl))return[];return[{table:'esmojo_concert',id:row.native[cm.PrimaryIdAttribute],method:'PATCH',etag:row.native['@odata.etag'],payload:{esmojo_tooninshows:active,...(fresh?{esmojo_bronurl:fresh.sourceUrl}:{})}}];});
-  for(let n=0;n<updates.length;n+=200)await repo.atomic(updates.slice(n,n+200));await persistClock(snapshot.checkedAt);return{createdConcerts:created,createdArtists:new Set((await all()).artists.map(row=>row.esmojo_bronartiestid).filter(id=>!current.artists.some(a=>a.esmojo_bronartiestid===id))).size};
+  for(let n=0;n<updates.length;n+=200)await repo.atomic(updates.slice(n,n+200));await persistClock(snapshot.checkedAt);await catchUpAliasMoves();return{createdConcerts:created,createdArtists:new Set((await all()).artists.map(row=>row.esmojo_bronartiestid).filter(id=>!current.artists.some(a=>a.esmojo_bronartiestid===id))).size};
  }
 
  // De laatst bekende beschikbare voorlopige versie als snapshot (zelfde vorm als een showdagopname), of null.
@@ -185,12 +185,18 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
  // Fase 2 van de artiestnaam-aliassen: bestaande concerten onder de bronnaam worden aan de gekozen artiest gekoppeld, alleen als er nog geen
  // showgegevens aan hangen (geen documenten, bestanden of bevestigde voorbereidingsstand). Elke reeks apart, met ETags, en daarna onafhankelijk
  // teruggelezen met dezelfde controle als elke Shows-bewerking. Zo niet verplaatsbaar: melding, niets gewijzigd.
+// Dagelijkse inhaalronde: aliassen die zijn opgeslagen voordat het koppelen bestond, of waarvan een concert tijdelijk niet te controleren was,
+ // worden opnieuw aangebracht. Idempotent en per reeks begrensd; een fout stopt de import nooit.
+ async function catchUpAliasMoves(){
+  try{for(const item of (await artistAliases.list()).filter(row=>row.name).slice(0,25))await moveToAlias({source:item.source,name:item.name}).catch(()=>null);}catch{/* De import blijft geldig. */}
+ }
  async function moveToAlias(saved){
-  const result={moved:[],blocked:[],orphaned:[]};if(!saved?.name)return result;
+  const result={moved:[],blocked:[],orphaned:[],matched:0};if(!saved?.name)return result;
   const aliasMap=await artistAliases.map(),canonicalName=resolveArtistAlias(saved.name,aliasMap),sourceKey=aliasSourceKey(saved.source),data=await all();
   if(sourceKey===null||aliasSourceKey(canonicalName)===sourceKey)return result;
   const targetKey=aliasSourceKey(canonicalName),target=data.artists.find(row=>aliasSourceKey(row.esmojo_naam)===targetKey)||null,targetId=target?.esmojo_bronartiestid||'a_'+digest(normalizeArtistName(canonicalName)),shownName=target?.esmojo_naam||canonicalName;
   const bySeries=new Map();for(const row of data.rows)if(aliasSourceKey(row.artist)===sourceKey){const list=bySeries.get(row.generalConcertId)||[];list.push(row);bySeries.set(row.generalConcertId,list);}
+  result.matched=bySeries.size;
   for(const [generalId,concerts] of bySeries){
    const label={venue:concerts[0].venue,dates:concerts.map(row=>row.date).sort()};
    try{
@@ -215,7 +221,12 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
   return result;
  }
  async function request(operation,payload={}){
-  if(operation==='staff-planning-alias'){const saved=await staff.handle(operation,payload),move=await moveToAlias(saved).catch(()=>({moved:[],blocked:[],orphaned:[],failed:true}));return{...saved,move};}
+  if(operation==='staff-planning-alias'){
+   const saved=await staff.handle(operation,payload),move=await moveToAlias(saved).catch(()=>({moved:[],blocked:[],orphaned:[],failed:true}));
+   // Alleen aantallen en vaste redencodes (geen namen) zodat een niet-verplaatst concert achteraf te verklaren is.
+   if(saved.name&&(move.failed||move.blocked.length||move.matched===0))console.error('ALIAS_MOVE',JSON.stringify({matched:move.matched??0,moved:move.moved.length,blocked:move.blocked.map(item=>item.reason),failed:Boolean(move.failed)}));
+   return{...saved,move};
+  }
   if(staff.handles(operation))return staff.handle(operation,payload);
   if(operation==='concert-catalogue')return createConcertCatalogue({env,repository:repo}).all();
   if(operation==='management-candidates'){if(Object.keys(payload).some(key=>key!=='after'))throw Error('VALIDATION');return{shows:await managementCandidates(payload.after)};}

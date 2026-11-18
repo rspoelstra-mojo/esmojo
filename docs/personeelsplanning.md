@@ -40,3 +40,8 @@ en geen gepubliceerde/ontvangen rapportage (een mislukte controle telt als aanwe
 bevestigt. Anders blijft alles zoals het was en meldt de Concertagenda dat. Een artiest zonder reeksen blijft bestaan (alleen gemeld); concert-ID's,
 foto's en eerdere gegevens worden niet verwijderd. Rapportage-alleen-concerten (historisch of via CSV aangemaakt) en de groepering in het Rapportages-menu
 volgen de gekozen naam nog niet; dat is een vervolgstap.
+
+## Inhaalronde en melding (V1.199)
+De dagelijkse 05:00-import past aliassen opnieuw toe op bestaande concerten (idempotent, per reeks, een fout stopt de import niet), voor aliassen die zijn
+opgeslagen voordat het koppelen bestond of waarvan een concert tijdelijk niet te controleren was. De Concertagenda meldt ook wanneer er geen bestaand
+ESMOJO-concert onder de naam staat, of dat het koppelen niet kon worden uitgevoerd; de server logt dan alleen aantallen en vaste redencodes (geen namen).
