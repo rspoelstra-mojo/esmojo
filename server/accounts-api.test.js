@@ -50,7 +50,7 @@ test('Algemene Dataverse-discovery blijft achter Shows/MFA; Westlife krijgt meta
  const opened=await run({action:'show-open',method:'POST',body:{concertId:key},researchService,showsSource});assert.equal(opened.response.code,200);assert.equal(opened.response.data.profile.researchByNumber[1].answer,'Westlife-concept');
 });
 
-async function run({ aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', taskService, websiteService, websiteSchemaService, reportIntakeSchemaService, websitePreviewSource, migrationService, tableService, choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
+async function run({ reportIntakeCheckService, aal, sub, valid = true, own = profile, body, method = 'GET', action = 'accounts', auth = true, origin, configuration = env, failOperation, failDelete = false, failMail = false, targetProfile, reportSource, confirmedAt = '2026-10-31', taskService, websiteService, websiteSchemaService, reportIntakeSchemaService, websitePreviewSource, migrationService, tableService, choiceService, transitionService, managementResult={available:false}, researchService, showResult, showsSource, dataverseResult={configuration:true,token:true,dataverse:false,code:'DATAVERSE_FORBIDDEN'} } = {}) {
   const calls = [];
   const clientFactory = () => ({ auth: {
     getUser: async () => valid ? { data: { user: { id, factors: [{ factor_type: 'totp', status: 'verified' }] } } } : { error: new Error('invalid') },
@@ -67,6 +67,7 @@ async function run({ aal, sub, valid = true, own = profile, body, method = 'GET'
     ...(websiteService?{websiteSettings:websiteService}:{}),
     ...(websiteSchemaService?{websiteSchema:websiteSchemaService}:{}),
     ...(reportIntakeSchemaService?{reportIntakeSchema:reportIntakeSchemaService}:{}),
+    ...(reportIntakeCheckService?{reportIntakeCheck:reportIntakeCheckService}:{}),
     ...(taskService?{tasks:taskService,background:promise=>{calls.push(['task-background']);void promise.catch(()=>{});}}:{}),
     ...(migrationService?{showMigration:migrationService}:{}),
     ...(tableService?{dataverseTables:tableService}:{}),
@@ -524,4 +525,14 @@ test('CSV intake schema setup requires current admin, MFA and Reports access',as
   const {response}=await run({...input,action:'report-intake-schema',method:'POST',body:{operation:'plan'},reportIntakeSchemaService});assert.ok([401,403,503].includes(response.code));
  }
  assert.equal(calls,0);const {response}=await run({action:'report-intake-schema',method:'POST',body:{operation:'plan'},reportIntakeSchemaService});assert.equal(response.code,200);assert.equal(calls,1);
+});
+
+test('CSV-ontvangstcontrole vereist actuele beheerder, MFA en Rapportages en leest alleen',async()=>{
+ let calls=0;const reportIntakeCheckService=async()=>{calls++;return{count:0,receipts:[]};};
+ for(const input of [{auth:false},{aal:'aal1'},{own:{...profile,role:'gebruiker'}},{own:{...profile,modules:[]}},{configuration:{...env,VERCEL_ENV:'preview'}}]){
+  const {response}=await run({...input,action:'report-intake-check',method:'POST',body:{},reportIntakeCheckService});assert.ok([401,403,503].includes(response.code));
+ }
+ assert.equal(calls,0);assert.equal((await run({action:'report-intake-check',method:'GET',reportIntakeCheckService})).response.code,405);assert.equal(calls,0);
+ const {response}=await run({action:'report-intake-check',method:'POST',body:{},reportIntakeCheckService});assert.equal(response.code,200);assert.equal(calls,1);
+ const failed=await run({action:'report-intake-check',method:'POST',body:{},reportIntakeCheckService:async()=>{throw Error('INTAKE_UNAVAILABLE');}});assert.equal(failed.response.code,503);assert.doesNotMatch(JSON.stringify(failed.response.data),/INTAKE/);
 });
