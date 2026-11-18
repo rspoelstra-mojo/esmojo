@@ -19,15 +19,16 @@ const verified=reportChoice('bronstatus','verified');
 
 // Pure native reader; authorization belongs to the server provider wrapper.
 // The only source bytes are the scoped Dataverse File, never a Drive fallback.
-export function createNativeReportReader({repository=createNativeReportsRepository(),now=()=>new Date()}={}){
- const repo=repository;
- function sourceMetadata(source){
+function checkSourceMetadata(source){
   const provenance=parse(source.esmojo_herkomst_json),original=provenance.source,validation=provenance.validation,show=original?.show;
   if(!show||typeof show.key!=='string'||typeof show.name!=='string'||!show.name||typeof show.venue!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(show.date)||original.id!==source.esmojo_externebronid||original.context!==source.esmojo_contexthash||validation?.state!=='valid'||validation.context!==original.context||validation.sourceHash!==source.esmojo_inhoudsha256)fail();
   if(source.esmojo_brontype!==reportChoice('rapportbron',reportSourceType(show))||migrationDifferences({table:'esmojo_rapportbron'},source,{esmojo_brongewijzigdop:original.modifiedAt},reportsRecordContract).length)fail();
   if(reportSourceType(show)==='tsc-historical'&&!validTscShowData(show.showData))fail();
   return{provenance,show};
  }
+export const sourceMetadata=checkSourceMetadata;
+export function createNativeReportReader({repository=createNativeReportsRepository(),now=()=>new Date()}={}){
+ const repo=repository;
  async function current(){
   const [headers,versions,sources]=await Promise.all([
    repo.query('esmojo_rapportage',{select:['esmojo_bronidentiteit','esmojo_beschikbaar','_esmojo_actueleversie_value','esmojo_publicatiegeneratie']}),
