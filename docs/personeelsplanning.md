@@ -31,3 +31,12 @@ de alias terug. Opslag: Integratiestatus `artist-alias-v1` (Openbaar, geen nieuw
 De alias wordt toegepast in de agenda, in de 05:00-import (een nieuw concert onder een afwijkende titel valt onder de gekozen artiest; bestaande concerten
 met hetzelfde concert-ID blijven ongewijzigd) en bij het koppelen van CSV-ontvangsten (bestandsnaam met bron- of gekozen naam). Bestaande concerten
 verplaatsen en handmatige reeksen volgen in fase 2 en 3 (docs/tasks/claude-concert-agenda-20261118.md).
+
+## Bestaande concerten koppelen aan de gekozen artiest (V1.198)
+Na het opslaan van een alias koppelt de server bestaande Shows-concerten onder de bronnaam aan de gekozen artiest (bestaande artiest of, zo nodig,
+aangemaakt zoals de 05:00-run). Per reeks, alleen als er geen showgegevens aan hangen: geen documenten, bestanden of bevestigde voorbereidingsstand
+en geen gepubliceerde/ontvangen rapportage (een mislukte controle telt als aanwezig). Er worden uitsluitend de bestaande rijen bijgewerkt via ETag-changesets
+(artiestkoppeling en naam van reeks en concerten, plus de bijbehorende route-alias), waarna dezelfde Shows-controle als bij elke bewerking de nieuwe stand
+bevestigt. Anders blijft alles zoals het was en meldt de Concertagenda dat. Een artiest zonder reeksen blijft bestaan (alleen gemeld); concert-ID's,
+foto's en eerdere gegevens worden niet verwijderd. Rapportage-alleen-concerten (historisch of via CSV aangemaakt) en de groepering in het Rapportages-menu
+volgen de gekozen naam nog niet; dat is een vervolgstap.

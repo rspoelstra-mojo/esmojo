@@ -169,3 +169,43 @@ test('artiestnaam-alias: een nieuw concert onder een afwijkende MOJO-titel valt 
  const h=fixture();await h.service('sync',{snapshot:snapshot([odd])});await h.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0});
  assert.equal((await h.service('sync',{snapshot:snapshot([odd])})).createdConcerts,0);assert.ok([...h.tables.get('esmojo_artiest').values()].some(row=>row.esmojo_naam==='Bouke en the bevers'));
 });
+
+function moveFixture(reported=false){
+ const db=nativeFixture(structuredClone(sampleSource),structuredClone(samplePeople)),state=createNativeShowState({env,repository:db.repo,connection:db.connection}),calls=[],reports={query:async(table,input)=>{calls.push(input.filter);return reported?[{esmojo_bronidentiteit:'x'}]:[];}},catalogue=createNativeCatalogue({state,now,reports}),service=createNativeShowsService({state,catalogue});
+ return{...db,state,catalogue,service,calls};
+}
+test('artiestnaam-alias verplaatsen: een bestaand concert zonder showgegevens gaat naar een (nieuwe) gekozen artiest en blijft consistent',async()=>{
+ const f=moveFixture(),{concertId}=await import('../mojo-agenda.js'),{mapShow}=await import('../show-migration-map.js');
+ const show=(artist,date)=>({concertId:concertId(artist,date),artist,venue:'Gashouder',city:'Amsterdam',date,sourceUrl:'https://www.mojo.nl/concerten/x'}),snapshot=concerts=>({pages:1,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts});
+ const odd=show('Bouke en the bevers','2026-11-24');await f.service('sync',{snapshot:snapshot([odd])});
+ const result=await f.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0});
+ assert.deepEqual(result.move.moved.map(row=>row.dates),[['2026-11-24']]);assert.deepEqual(result.move.blocked,[]);assert.deepEqual(result.move.orphaned,['Bouke en the bevers']);
+ const names=[...f.tables.get('esmojo_artiest').values()].map(row=>row.esmojo_naam);assert.ok(names.includes('Bouke'));
+ const after=await f.state.load(odd.concertId);assert.equal(after.source.shows[0].artist,'Bouke');await f.state.verifyPlan(mapShow(after.source,after.people),0);
+ const [series]=[...f.tables.get('esmojo_concertreeks').values()].filter(row=>row.esmojo_oudalgemeenconcertid===odd.concertId);assert.equal(series.esmojo_naam,'Bouke · Gashouder');
+ // Herhaling is idempotent: er is niets meer te verplaatsen.
+ assert.deepEqual((await f.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:1})).move.moved,[]);
+ // De import kent de concert-ID nog en maakt geen duplicaat.
+ assert.equal((await f.service('sync',{snapshot:snapshot([odd])})).createdConcerts,0);
+});
+test('artiestnaam-alias verplaatsen: koppelt aan een bestaande artiest zonder nieuwe aan te maken',async()=>{
+ const f=moveFixture(),{concertId}=await import('../mojo-agenda.js');
+ const show=(artist,date)=>({concertId:concertId(artist,date),artist,venue:'Gashouder',city:'Amsterdam',date,sourceUrl:'https://www.mojo.nl/concerten/x'}),snapshot=concerts=>({pages:1,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts});
+ await f.service('sync',{snapshot:snapshot([show('Bouke','2026-11-20'),show('Bouke en the bevers','2026-12-10')])});const before=f.tables.get('esmojo_artiest').size;
+ const result=await f.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0});
+ assert.equal(result.move.moved.length,1);assert.equal(f.tables.get('esmojo_artiest').size,before,'geen nieuwe artiest');
+ const loaded=await f.state.load(concertId('Bouke en the bevers','2026-12-10'));assert.equal(loaded.source.shows[0].artist,'Bouke');
+});
+test('artiestnaam-alias verplaatsen: showgegevens of een rapportage houden de concerten waar ze zijn; een mislukte controle faalt gesloten',async()=>{
+ const {concertId}=await import('../mojo-agenda.js');
+ const show=(artist,date)=>({concertId:concertId(artist,date),artist,venue:'Gashouder',city:'Amsterdam',date,sourceUrl:'https://www.mojo.nl/concerten/x'}),snapshot=concerts=>({pages:1,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts});
+ const odd=show('Bouke en the bevers','2026-11-24');
+ const a=moveFixture();await a.service('sync',{snapshot:snapshot([odd])});await a.service('profile-save',{concertId:odd.concertId,questionNumber:1,status:'draft',summary:'Bewaren',revision:0});
+ let result=(await a.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0})).move;assert.deepEqual(result.moved,[]);assert.equal(result.blocked[0].reason,'showgegevens');
+ assert.equal((await a.state.load(odd.concertId)).source.shows[0].artist,'Bouke en the bevers');
+ const b=moveFixture(true);await b.service('sync',{snapshot:snapshot([odd])});
+ result=(await b.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0})).move;assert.deepEqual(result.moved,[]);assert.equal(result.blocked[0].reason,'showgegevens');assert.ok(b.calls.length>0);
+ const c=moveFixture();await c.service('sync',{snapshot:snapshot([odd])});const failing=createNativeCatalogue({state:c.state,now,reports:{query:async()=>{throw Error('down');}}});
+ result=(await failing.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0})).move;assert.deepEqual(result.moved,[]);assert.equal(result.blocked.length,1);
+ const d=moveFixture();await d.service('sync',{snapshot:snapshot([odd])});assert.deepEqual((await d.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:null,revision:0})).move.moved,[]);
+});
