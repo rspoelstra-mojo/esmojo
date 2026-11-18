@@ -15,7 +15,7 @@ Vanaf V1.183 heeft een eigen risico een aparte titel en omschrijving (net als de
 V1.183 hebben alleen een titel; daar geldt de titel ook als omschrijving.
 
 ## Bewerken en beoordelen (V1.184)
-- **Bewerken:** knop Risico bewerken op de risicopagina (titel max 120, gedefinieerd risico max 600, mogelijk gevolg max 600). Actie
+- **Bewerken (vanaf V1.205):** de gedeelde knop Bewerken rechtsboven op de risicopagina (src/edit-mode.js; Bewerken -> Annuleren + Opslaan) (titel max 120, gedefinieerd risico max 600, mogelijk gevolg max 600). Actie
   `operational-risk-edit` -> `risk-operational-edit`; compare-and-set op `editRevision`; risico's uit de analyse krijgen een
   bewerking in `operationalEdits[bronrevisie][id]`, eigen risico's worden ter plekke bijgewerkt. Historie staat in het bestaande
   historieregister.
