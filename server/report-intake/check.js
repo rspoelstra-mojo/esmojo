@@ -10,6 +10,9 @@ export function describeReceipt(row,file,concerts){
  if(file.present&&!file.tooLarge){Object.assign(out.file,{bytes:file.size,complete:file.size===file.declaredSize&&file.size>0&&(!Number.isSafeInteger(row.esmojo_bronbytes)||row.esmojo_bronbytes===file.size),sourceBytes:Number.isSafeInteger(row.esmojo_bronbytes)?row.esmojo_bronbytes:null,sha256:file.sha256.slice(0,16)});}
  else if(file.tooLarge)out.file.tooLarge=true;
  out.match=concerts?matchReportIntakeConcert(out.filename||'',concerts):{status:'not-checked'};
+ // Public catalogue facts only, to explain a missing or ambiguous match.
+ const named=/^incidents_[^_]+_[^_]+_(\d{2})(\d{2})(\d{4})/i.exec(out.filename||'');
+ if(concerts&&named&&['not-found','ambiguous','performance-required'].includes(out.match.status)){const date=`${named[3]}-${named[2]}-${named[1]}`;out.hints={catalogue:concerts.length,sameDay:concerts.filter(c=>c.date===date).length,sameDayVenue:concerts.filter(c=>c.date===date).slice(0,8).map(c=>`${c.artist} @ ${c.venue}${c.performance?' ('+c.performance+')':''}`)};}
  if(file.bytes?.length){
   try{const report=calculateReport(file.bytes,{generatedAt:row.modifiedon||row.createdon||new Date().toISOString()});out.csv={valid:true,incidents:report.incidents.length};
    const date=/_(\d{2})(\d{2})(\d{4})(?:_s[12])?\.csv$/i.exec(out.filename||'');if(date){try{validateReportDay(report,`${date[3]}-${date[2]}-${date[1]}`);out.csv.showDay=true;}catch{out.csv.showDay=false;}}}

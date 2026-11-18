@@ -48,4 +48,8 @@ test('Bestandsfout of gewijzigde bron geeft nooit een geslaagde controle',async(
 test('Opgegeven bronbytes uit de flow moeten gelijk zijn aan het teruggelezen bestand',()=>{
  const ok=describeReceipt({...row('x.csv'),esmojo_bronbytes:bytes.length},file(bytes),concerts);assert.equal(ok.file.complete,true);assert.equal(ok.file.sourceBytes,bytes.length);
  assert.equal(describeReceipt({...row('x.csv'),esmojo_bronbytes:bytes.length+5},file(bytes),concerts).file.complete,false);
+test('Bij ontbrekende match tonen openbare hints de concerten van die dag',()=>{
+ const out=describeReceipt(row('incidents_onbekend_AFAS-Live_16112026.csv'),file(bytes),concerts);
+ assert.equal(out.match.status,'not-found');assert.equal(out.hints.sameDay,3);assert.ok(out.hints.sameDayVenue.includes('Fictief Artiest @ AFAS Live'));
+ assert.equal(describeReceipt(row('incidents_fictief-artiest_AFAS-Live_16112026.csv'),file(bytes),concerts).hints,undefined);
 });
