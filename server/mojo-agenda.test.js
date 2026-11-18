@@ -67,3 +67,13 @@ test('showpagina’s groeperen dagelijkse reeksen, scheiden losse shows en behou
   const nextDay = upcomingShows([row('A', '2026-10-31'), row('A', '2026-11-01'), row('A', '2026-11-02')], new Date('2026-11-02T12:00:00Z'));
   assert.equal(nextDay[0].key, result[0].key);
 });
+
+test('menu: reeksen met dezelfde reeksidentiteit blijven één item, ook met tussendagen', async () => {
+  const { upcomingShows } = await import('./mojo-agenda.js');
+  const row = (concertId, date, generalConcertId) => ({ concertId, artist: 'Beth Hart', venue: 'AFAS Live', city: 'Amsterdam', date, generalConcertId });
+  const now = new Date('2026-11-18T12:00:00Z');
+  assert.equal(upcomingShows([row('A', '2026-12-01', 'G1'), row('B', '2026-12-04', 'G1')], now).length, 1);
+  assert.deepEqual(upcomingShows([row('A', '2026-12-01', 'G1'), row('B', '2026-12-04', 'G1')], now)[0].dates, ['2026-12-01', '2026-12-04']);
+  assert.equal(upcomingShows([row('A', '2026-12-01', 'G1'), row('B', '2026-12-04', 'G2')], now).length, 2);
+  assert.equal(upcomingShows([row('A', '2026-12-01'), row('B', '2026-12-04')], now).length, 2);
+});
