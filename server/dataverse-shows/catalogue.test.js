@@ -209,3 +209,17 @@ test('artiestnaam-alias verplaatsen: showgegevens of een rapportage houden de co
  result=(await failing.request('staff-planning-alias',{source:'Bouke en the bevers',name:'Bouke',revision:0})).move;assert.deepEqual(result.moved,[]);assert.equal(result.blocked.length,1);
  const d=moveFixture();await d.service('sync',{snapshot:snapshot([odd])});assert.deepEqual((await d.catalogue.request('staff-planning-alias',{source:'Bouke en the bevers',name:null,revision:0})).move.moved,[]);
 });
+
+test('inhaalronde: een alias die vóór het koppelen is opgeslagen wordt bij de volgende import op bestaande concerten toegepast; blokkades blijven blokkeren',async()=>{
+ const {concertId}=await import('../mojo-agenda.js'),{createArtistAliases}=await import('./artist-alias.js');
+ const show=(artist,date)=>({concertId:concertId(artist,date),artist,venue:'Gashouder',city:'Amsterdam',date,sourceUrl:'https://www.mojo.nl/concerten/x'}),snapshot=concerts=>({pages:1,from:'2026-11-13',until:'2026-12-28',checkedAt:now().toISOString(),concerts});
+ const odd=show('UB40 ft. Ali Campbell','2026-12-15');
+ const f=moveFixture();await f.service('sync',{snapshot:snapshot([odd])});await createArtistAliases({repo:f.state.repo,now}).save({source:'UB40 ft. Ali Campbell',name:'UB40',revision:0});
+ assert.equal((await f.state.load(odd.concertId)).source.shows[0].artist,'UB40 ft. Ali Campbell','nog niet gekoppeld');
+ assert.equal((await f.service('sync',{snapshot:snapshot([odd])})).createdConcerts,0);
+ assert.equal((await f.state.load(odd.concertId)).source.shows[0].artist,'UB40');
+ // Met showgegevens blijft het concert staan, ook na de inhaalronde.
+ const g=moveFixture();await g.service('sync',{snapshot:snapshot([odd])});await g.service('profile-save',{concertId:odd.concertId,questionNumber:1,status:'draft',summary:'Bewaren',revision:0});
+ await createArtistAliases({repo:g.state.repo,now}).save({source:'UB40 ft. Ali Campbell',name:'UB40',revision:0});await g.service('sync',{snapshot:snapshot([odd])});
+ assert.equal((await g.state.load(odd.concertId)).source.shows[0].artist,'UB40 ft. Ali Campbell');
+});

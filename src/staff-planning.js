@@ -64,6 +64,8 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
   // Korte melding na het koppelen van bestaande concerten aan de gekozen artiest (alleen bij een gewijzigde naam).
   function moveSummary(move,shown){
     if(!move)return '';const parts=[];
+    if(move.failed)return 'Het koppelen van bestaande concerten kon niet worden uitgevoerd. De nieuwe naam geldt wel voor nieuwe concerten.';
+    if(move.matched===0)return 'Er staat geen bestaand ESMOJO-concert onder deze naam; de nieuwe naam geldt voor nieuwe concerten.';
     const count=list=>list.reduce((sum,item)=>sum+(item.dates?.length||0),0);
     if(move.moved?.length)parts.push(`${count(move.moved)} bestaand ${count(move.moved)===1?'concert is':'concerten zijn'} in ESMOJO aan ${shown} gekoppeld.`);
     if(move.blocked?.length)parts.push(`${count(move.blocked)} ${count(move.blocked)===1?'concert staat':'concerten staan'} al in ESMOJO met showgegevens (of kon niet worden gecontroleerd) en ${count(move.blocked)===1?'is':'zijn'} niet verplaatst.`);
@@ -135,7 +137,8 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
         input.type='text';input.maxLength=aliasNameMax;input.value=draft?draft.value:concert.artist;input.autocomplete='off';input.spellcheck=false;input.setAttribute('list','staff-artist-suggestions');input.setAttribute('aria-label',`Artiestnaam – ${source}, ${dateLabel(concert.date)}`);
         input.addEventListener('input',()=>scheduleAlias(concert,input));input.addEventListener('blur',()=>{const k=aliasSourceKey(source);if(aliasDrafts.has(k)){clearTimeout(aliasTimers.get(k));aliasTimers.delete(k);void flushAlias(source);}});
         input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();input.blur();}});
-        artist.append(input);if(concert.artist!==source)artist.append(node('span','staff-source-name','MOJO: '+source));
+        artist.append(input);
+        if(concert.artist!==source)artist.append(node('span','staff-source-name','MOJO: '+source));
       }else artist.textContent=concert.artist;
       tr.append(artist,node('td','staff-group-concert',concert.venue),node('td','staff-group-concert staff-date',dateLabel(concert.date)));
       for(const group of groups.slice(1))group.fields.forEach((field,index)=>{
