@@ -323,8 +323,11 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         try {
           if (input?.operation === 'read' && keys === 'operation') return reply(200, await scopedShows('staff-planning-read', {}));
           if (input?.operation === 'save' && keys === 'concertId,field,operation,revision,value') { const { operation, ...payload } = input; return reply(200, await scopedShows('staff-planning-save', payload)); }
+          // Artiestnaam-alias (Openbaar): de gekozen naam voor een bronnaam uit de MOJO-agenda, met revisiecontrole.
+          if (input?.operation === 'alias' && keys === 'name,operation,revision,source') { const { operation, ...payload } = input; return reply(200, await scopedShows('staff-planning-alias', payload)); }
           return reply(400, { error: 'Ongeldig verzoek.' });
         } catch (error) {
+          if (error.message === 'ALIAS_CONFLICT') return reply(409, { error: 'Deze artiestnaam is intussen elders gewijzigd. Laad de agenda opnieuw.', code: 'ALIAS_CONFLICT' });
           if (error.message === 'VALIDATION') return reply(400, { error: 'Ongeldige invoer.', code: 'VALIDATION' });
           if (error.message === 'NOT_FOUND') return reply(404, { error: 'Dit concert staat niet meer in de planning.', code: 'NOT_FOUND' });
           if (error.message === 'STAFF_CONFLICT') return reply(409, { error: 'Deze cel is intussen elders gewijzigd. Laad de planning opnieuw.', code: 'STAFF_CONFLICT' });

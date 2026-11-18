@@ -74,3 +74,26 @@ test('de showpagina krijgt alleen de vier functies van het projectteam, ook via 
  assert.deepEqual(await f.staff.handle('staff-planning-team',{concertId:'Onbekend'}),{roles:{productionManager:'',eventSafetyManager:'',securityProjectLead:'',cmtLeadMojo:''}});
  await assert.rejects(f.staff.handle('staff-planning-team',{concertId:item.concertId,extra:1}),/VALIDATION/);
 });
+
+test('artiestnaam-alias: opslaan met revisie, toepassen in de agenda, wissen en veilige foutcodes',async()=>{
+ const f=fixture(),list=[{concertId:'Numidia-muziekfeest_Gashouder_05122026',artist:'Numidia muziekfeest van het jaar',date:'2026-12-05',sourceUrl:'https://www.mojo.nl/concerten/n'},{concertId:'Numidia_Gashouder_06122026',artist:'Numidia',date:'2026-12-06',sourceUrl:'https://www.mojo.nl/concerten/n2'}];
+ await f.staff.handle('staff-planning-store',body('gashouder',list));
+ let read=await f.staff.handle('staff-planning-read');assert.deepEqual(read.concerts.map(row=>row.artist),['Numidia muziekfeest van het jaar','Numidia']);assert.deepEqual(read.aliases,[]);
+ const saved=await f.staff.handle('staff-planning-alias',{source:'Numidia muziekfeest van het jaar',name:'  Numidia ',revision:0});assert.deepEqual(saved,{source:'Numidia muziekfeest van het jaar',name:'Numidia',revision:1});
+ read=await f.staff.handle('staff-planning-read');assert.deepEqual(read.concerts.map(row=>[row.artist,row.sourceArtist]),[['Numidia','Numidia muziekfeest van het jaar'],['Numidia','Numidia']]);
+ assert.deepEqual(read.aliases,[{source:'Numidia muziekfeest van het jaar',name:'Numidia',revision:1}]);assert.ok(read.suggestions.includes('Numidia'));
+ // Herhaling na een verloren bevestiging is geslaagd; een verouderde revisie is een conflict.
+ assert.deepEqual(await f.staff.handle('staff-planning-alias',{source:'Numidia muziekfeest van het jaar',name:'Numidia',revision:0}),saved);
+ await assert.rejects(f.staff.handle('staff-planning-alias',{source:'Numidia muziekfeest van het jaar',name:'Anders',revision:0}),/ALIAS_CONFLICT/);
+ // Bronnaam met andere hoofdletters/spaties is dezelfde alias; wissen zet de alias terug (de rij blijft, name=null).
+ const cleared=await f.staff.handle('staff-planning-alias',{source:'numidia  muziekfeest van het jaar',name:null,revision:1});assert.equal(cleared.name,null);assert.equal(cleared.revision,2);
+ read=await f.staff.handle('staff-planning-read');assert.equal(read.concerts[0].artist,'Numidia muziekfeest van het jaar');
+ // Een naam gelijk aan de bronnaam telt als geen alias; ongeldige invoer wordt geweigerd.
+ assert.equal((await f.staff.handle('staff-planning-alias',{source:'Test Artiest',name:'test artiest',revision:0})).name,null);
+ for(const bad of [{source:'',name:'X',revision:0},{source:'A',name:'',revision:0},{source:'A',name:'x'.repeat(161),revision:0},{source:'A',name:'a\nb',revision:0},{source:'A',name:'B',revision:-1},{source:'A',name:'B',revision:0,extra:1},{source:'A',name:5,revision:0}])await assert.rejects(f.staff.handle('staff-planning-alias',bad),/VALIDATION/);
+});
+test('alias-keten wordt gevolgd zonder lus',async()=>{
+ const {resolveArtistAlias}=await import('../../shared/artist-alias.js');
+ const map=new Map([['a','B'],['b','C'],['c','A']]);assert.ok(['A','B','C'].includes(resolveArtistAlias('A',map)));
+ assert.equal(resolveArtistAlias('Onbekend',new Map([['a','B']])),'Onbekend');assert.equal(resolveArtistAlias('A',new Map([['a','B'],['b','C']])),'C');
+});

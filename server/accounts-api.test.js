@@ -536,3 +536,12 @@ test('CSV-ontvangstcontrole vereist actuele beheerder, MFA en Rapportages en lee
  const {response}=await run({action:'report-intake-check',method:'POST',body:{},reportIntakeCheckService});assert.equal(response.code,200);assert.equal(calls,1);
  const failed=await run({action:'report-intake-check',method:'POST',body:{},reportIntakeCheckService:async()=>{throw Error('INTAKE_UNAVAILABLE');}});assert.equal(failed.response.code,503);assert.doesNotMatch(JSON.stringify(failed.response.data),/INTAKE/);
 });
+
+test('concertagenda: artiestnaam-alias alleen voor beheerders, strikte invoer en veilige foutcodes', async () => {
+  const showsSource=async(operation,payload)=>{if(operation==='staff-planning-alias')return{source:payload.source,name:payload.name,revision:payload.revision+1};throw Error('onverwacht '+operation);};
+  const ok=await run({action:'staff-planning',method:'POST',body:{operation:'alias',source:'Bouke en the bevers',name:'Bouke',revision:0},showsSource});assert.equal(ok.response.code,200);assert.equal(ok.response.data.revision,1);
+  const call=ok.calls.find(entry=>entry[0]==='shows'&&entry[1]==='staff-planning-alias');assert.deepEqual(Object.keys(call[2]).sort(),['name','revision','source'],'de bewerkingsnaam gaat niet mee');
+  for(const body of [{operation:'alias'},{operation:'alias',source:'a',name:'b',revision:0,extra:1},{operation:'alias',source:'a',name:'b'}]){const bad=await run({action:'staff-planning',method:'POST',body,showsSource});assert.equal(bad.response.code,400);}
+  for(const [error,code]of [['VALIDATION',400],['ALIAS_CONFLICT',409],['DATAVERSE_SHOWS_LIMIT',503]]){const failed=await run({action:'staff-planning',method:'POST',body:{operation:'alias',source:'a',name:'b',revision:0},showsSource:async()=>{throw Error(error);}});assert.equal(failed.response.code,code);assert.doesNotMatch(JSON.stringify(failed.response.data),/LIMIT/);}
+  for(const input of [{own:{...profile,role:'gebruiker'}},{auth:false},{aal:'aal1'}]){const denied=await run({...input,action:'staff-planning',method:'POST',body:{operation:'alias',source:'a',name:'b',revision:0},showsSource});assert.ok([401,403].includes(denied.response.code));assert.ok(!denied.calls.some(entry=>entry[0]==='shows'));}
+});
