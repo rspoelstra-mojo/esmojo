@@ -13,7 +13,8 @@ import { createSubmenuLoading } from './lib/submenu-loading.js';
 import { analysisCategories } from './lib/analysis-topics.js';
 
 // Alleen bevestigde Drive-opslag wordt als opgeslagen/afgerond getoond.
-export const analysisStatuses = Object.freeze({ pending: 'Nog niet begonnen', draft: 'Concept', completed: 'Afgerond' });
+import {createEditActions,editHeaderRight,setEditMode,playEditTransition} from './edit-mode.js';
+export const analysisStatuses = Object.freeze({ pending: 'Nog niet begonnen', draft: 'Niet afgerond', completed: 'Afgerond' });
 export { analysisCategories };
 const paths = {
   people: peopleIconPaths,
@@ -111,13 +112,15 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     const back = node('button', 'profile-back', '← Terug naar overzicht'); detailBackButton(back);
     const header = node('div', 'analysis-editor-header'), glyph = node('span', 'profile-category-icon'); glyph.innerHTML = icon(entry.category.icon);
     const intro = node('div', 'analysis-editor-intro'), title = node('h2', '', entry.question); title.tabIndex = -1; intro.append(title, node('p', '', entry.category.title));
-    header.append(glyph, intro, badgeFor(number));
+    const editActions = createEditActions({ onEdit: () => enter(), onCancel: () => leave(), onSave: () => void save() });
+    section.classList.add('edit-page'); setEditMode(section, 'read');
+    header.append(glyph, intro, editHeaderRight(editActions, badgeFor(number)));
     if (records[number]?.updatedAt) header.append(node('p', 'analysis-updated', `Laatst bijgewerkt ${new Intl.DateTimeFormat('nl-NL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam' }).format(new Date(records[number].updatedAt))}`));
     const form = node('form', 'analysis-editor-form'), summaryCard = node('section', 'analysis-editor-card');
     const label = node('label', 'analysis-editor-label', 'Jouw samenvatting'); label.htmlFor = 'analysis-summary';
     const text = node('textarea', 'analysis-summary'); text.id = 'analysis-summary'; text.maxLength = 400; text.rows = 4; text.value = drafts.get(number) ?? records[number]?.summary ?? '';
     const counter = node('span', 'analysis-character-count', `${text.value.length} / 400`); text.setAttribute('aria-describedby', 'analysis-character-count'); counter.id = 'analysis-character-count';
-    text.oninput = () => { drafts.set(number, text.value); counter.textContent = `${text.value.length} / 400`; text.setCustomValidity(''); };
+    text.oninput = () => { if (!editing) return; drafts.set(number, text.value); counter.textContent = `${text.value.length} / 400`; text.setCustomValidity(''); };
     summaryCard.append(label, text, counter);
     const aiCard = node('section', 'analysis-editor-card'); aiCard.append(node('h3', '', 'AI-analyse'));
     const aiSummary = node('div', 'analysis-ai-summary');
@@ -134,22 +137,29 @@ export function createShowProfile(panel, { show,requestAccess=access,readOnly=fa
     const full = node('details', 'analysis-research-details'), fullTitle = node('summary', '', 'Volledige analyse'), answer = node('div', 'analysis-research-answer'); full.append(fullTitle, answer);
     const sources = node('details', 'analysis-research-details'), sourcesTitle = node('summary', '', 'Bronnen (0)'), sourceList = node('div', 'analysis-research-sources'); sources.append(sourcesTitle, sourceList);
     aiCard.append(researchDate, aiSummary, full, sources);
-    const error = message(''), actions = node('div', 'analysis-editor-actions'), draft = node('button', 'secondary-button', 'Opslaan als concept'), complete = node('button', 'analysis-complete', 'Afronden');
-    draft.type = 'button'; complete.type = 'submit'; actions.append(draft, complete); form.append(aiCard, summaryCard, error, actions); header.prepend(back);section.append(header, form); title.focus({ preventScroll: true });
+    const error = message(''); form.append(aiCard, summaryCard, error); header.prepend(back);section.append(header, form); title.focus({ preventScroll: true });
     window.scrollTo({ top: 0, left: window.scrollX, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     back.onclick = () => { if (!busy) { drafts.set(number, text.value); renderOverview(number); } };
-    let ready = false; text.disabled = true;
-    const lock = value => { busy = value; back.disabled = value; draft.disabled = value || !ready; complete.disabled = value || !ready; text.disabled = value || !ready; adopt.disabled = value || !ready || !availableText; form.setAttribute('aria-busy', String(value)); };
+    let ready = false, editing = false, original = ''; text.disabled = true;
+    const lock = value => { busy = value; back.disabled = value; text.disabled = value || !ready || !editing; adopt.disabled = value || !ready || !editing || !availableText; form.setAttribute('aria-busy', String(value)); editActions.update({ busy: value, canSave: editing && ready && !value && text.value.trim().length > 0 && text.value.length <= 400, editable: ready && !value || editing }); };
     lock(false);
-    async function save(status) {
-      if (busy || !ready) return;
+    const enter = () => { if (editing || busy || !ready) return; editing = true; original = text.value; error.textContent = ''; setEditMode(section, 'edit'); playEditTransition(form); lock(false); requestAnimationFrame(() => { if (editing) text.focus({ preventScroll: true }); }); };
+    const leave = () => { if (!editing || busy) return; editing = false; text.value = original; drafts.delete(number); counter.textContent = `${text.value.length} / 400`; text.setCustomValidity(''); error.textContent = ''; setEditMode(section, 'read'); playEditTransition(form); lock(false); editActions.edit.focus({ preventScroll: true }); };
+    text.addEventListener('input', () => { if (!busy) lock(false); });
+    // Opslaan = afronden: pas na bevestiging door de server terug naar de leesmodus.
+    async function save() {
+      if (busy || !ready || !editing) return;
       if (text.value.length > 400) { text.setCustomValidity('Kort je samenvatting in tot maximaal 400 tekens.'); text.reportValidity(); return; }
-      if (status === 'completed' && !text.value.trim()) { text.setCustomValidity('Vul een samenvatting in voordat je de analyse afrondt.'); text.reportValidity(); return; }
-      drafts.set(number,text.value);
-      saves.enqueue(number,status,text.value);
-      renderOverview(number);
+      if (!text.value.trim()) { text.setCustomValidity('Vul een samenvatting in voordat je opslaat.'); text.reportValidity(); return; }
+      drafts.set(number, text.value); error.textContent = ''; lock(true);
+      const done = new Promise(resolve => { const off = saves.subscribe(() => { if (!saves.pending.has(number)) { off(); resolve(!saves.errors.has(number)); } }); });
+      if (!saves.enqueue(number, 'completed', text.value)) { lock(false); error.textContent = 'Opslaan is niet gelukt.'; return; }
+      const ok = await done; if (disposed || editorNumber !== number) return;
+      if (!ok) { lock(false); error.textContent = saves.errors.get(number) || 'Opslaan is niet gelukt.'; return; }
+      editing = false; original = text.value; setEditMode(section, 'read'); playEditTransition(form);
+      const badge = header.querySelector('.analysis-status'); if (badge) badge.replaceWith(Object.assign(badgeFor(number), { className: 'analysis-status edit-header-badge' }));
+      lock(false); editActions.edit.focus({ preventScroll: true });
     }
-    draft.onclick = () => save('draft'); form.onsubmit = event => { event.preventDefault(); save('completed'); };
     const finish = researchByNumber === null ? loading?.start() : null; aiCard.setAttribute('aria-busy', 'true');
     try {
       const data = researchByNumber !== null ? { analyses: records, revision, finalization, research: researchByNumber[number] || null } : await request({ operation: 'read', questionNumber: number }); if (disposed || editorNumber !== number) return;
