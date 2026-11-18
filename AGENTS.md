@@ -5,7 +5,7 @@ showprofiel-analyses) dezelfde knop Bewerken rechtsboven in de header, links van
 Annuleren verwerpt; Opslaan bevestigt eerst op de server en keert dan pas terug naar leesmodus, bij een fout blijft de bewerkmodus met de invoer. Knoppen en label 40 x 112 px,
 radius 8 px, Opslaan #374151, overgangen 380 ms cubic-bezier(0.22, 1, 0.36, 1), prefers-reduced-motion respecteerd. Dit is de enige bewerkknop op de pagina; andere
 Bewerken-/Opslaan-/'Opslaan als concept'-knoppen verdwijnen en 'Opslaan als concept' bestaat nergens meer (opslaan of de wijziging gaat verloren). Gefaseerd: V1.205 operationele
-risico's; vervolg barrier/vloerdruk, maatregelen, showprofiel-analyses. Dit vervangt voor deze pagina's de eerdere achtergrondopslag-/directe-opslagafspraken. Zie docs/tasks/claude-edit-mode-20261118.md.
+risico's; V1.206 barrieropstelling en vloerdruk (Opslaan = heropenen indien nodig + afronden in één bevestigde reeks, statuslabel Afgerond/Niet afgerond); vervolg maatregelen, showprofiel-analyses en het overzicht van productionele risico's (Ja/Nee). Dit vervangt voor deze pagina's de eerdere achtergrondopslag-/directe-opslagafspraken. Zie docs/tasks/claude-edit-mode-20261118.md.
 
 ## Artiestenpagina's uit de concertagenda (18 november 2026)
 

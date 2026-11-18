@@ -51,10 +51,13 @@ try{
   await send('Emulation.setDeviceMetricsOverride',{width,height:1100,deviceScaleFactor:1,mobile:false});
   await send('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/'});
   for(let n=0;n<100;n++){if(await evaluate('window.ready===true'))break;await pause(30);}
-  await evaluate(`document.documentElement.dataset.theme='${theme}';window.imageStart=performance.now();document.querySelector('select').value='end_stage_gc';document.querySelector('select').dispatchEvent(new Event('change'))`);
+  await evaluate(`document.documentElement.dataset.theme='${theme}';window.imageStart=performance.now();[...document.querySelectorAll('button')].find(button=>button.textContent==='Bewerken').click();document.querySelector('select').value='end_stage_gc';document.querySelector('select').dispatchEvent(new Event('change'))`);
   let imageMs;for(let n=0;n<100;n++){if(await evaluate("Boolean(document.querySelector('.assessment-preview img')?.naturalWidth)")){imageMs=await evaluate('performance.now()-window.imageStart');break;}await pause(15);}assert.ok(imageMs<850,'Delayed private image must render promptly');
-  await evaluate("window.saveStart=performance.now();[...document.querySelectorAll('button')].find(button=>button.textContent==='Beoordelen').click()");
-  let floorMs;for(let n=0;n<100;n++){if(await evaluate("Boolean(document.querySelector('[id$=\"-visitors\"]:not(:disabled)'))")){floorMs=await evaluate('performance.now()-window.saveStart');break;}await pause(15);}assert.ok(floorMs<950,'Confirmed save must enable floor without a second HTTP round');assert.deepEqual(await evaluate('window.calls'),['barrier-layout']);assert.equal(await evaluate('window.imageCalls'),1);assert.deepEqual(await evaluate('window.errors'),[]);timings.push({theme,width,imageMs:Math.round(imageMs),saveToFloorMs:Math.round(floorMs),simulatedImageMs:500,simulatedSaveMs:600});
+  // Bewerken -> Opslaan: pas na bevestiging terug naar de leesmodus; daarna opent Vloerdruk zonder tweede HTTP-ronde.
+  await evaluate("window.saveStart=performance.now();document.querySelector('.edit-action-save').click()");
+  let savedMs;for(let n=0;n<150;n++){if(await evaluate("document.querySelector('.edit-page').dataset.editMode==='read'")){savedMs=await evaluate('performance.now()-window.saveStart');break;}await pause(15);}assert.ok(savedMs<950,'Confirmed save must return to read mode promptly');
+  await evaluate("document.querySelector('.profile-back').click()");
+  let floorMs;for(let n=0;n<100;n++){if(await evaluate("Boolean(document.querySelector('.edit-actions:not([hidden]) .edit-action-edit:not(:disabled)'))")){floorMs=await evaluate('performance.now()-window.saveStart');break;}await pause(15);}assert.ok(floorMs<1100,'Floor must open from the confirmed save without a second HTTP round');assert.deepEqual(await evaluate('window.calls'),['barrier-layout']);assert.equal(await evaluate('window.imageCalls'),1);
  }
  console.log(JSON.stringify({kind:'synthetic-production-details',timings}));
 }finally{

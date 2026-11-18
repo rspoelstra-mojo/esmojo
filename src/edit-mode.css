@@ -30,5 +30,8 @@
 .edit-swap-edit textarea, .edit-swap-edit input[type="text"] { width: 100%; box-sizing: border-box; }
 .edit-title-input { padding: 6px 10px; border: 1px solid var(--line, #dfe4ea); border-radius: 8px; background: var(--canvas, #fff); color: var(--text); font: inherit; font-size: 20px; line-height: 1.3; font-weight: 700; }
 .edit-title-input:focus-visible, .edit-swap-edit textarea:focus-visible { outline: 2px solid var(--profile-blue, #0046f2); outline-offset: 1px; }
+@keyframes edit-field-in { from { opacity: 0.35; translate: 0 9px; } to { opacity: 1; translate: 0 0; } }
+.edit-enter { animation: edit-field-in var(--edit-time) var(--edit-ease); }
+.edit-page > .analysis-editor-header > .assessment-page-title { flex: 1 1 auto; min-width: 0; }
 @media (max-width: 640px) { .edit-header-right { flex: 1 1 100%; justify-content: flex-end; } }
-@media (prefers-reduced-motion: reduce) { .edit-actions, .edit-action, .edit-swap > * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .edit-actions, .edit-action, .edit-swap > * { transition: none !important; } .edit-enter { animation: none; } }

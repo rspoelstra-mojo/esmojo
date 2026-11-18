@@ -21,3 +21,5 @@ export function setEditMode(page,mode){page.dataset.editMode=mode==='edit'?'edit
 export const editMode=page=>page.dataset.editMode==='edit'?'edit':'read';
 // Rechterkant van de header: [Bewerken | Annuleren Opslaan] [statuslabel]; het label blijft op dezelfde plek.
 export function editHeaderRight(actions,badge){const right=make('div','edit-header-right');if(badge)badge.classList.add('edit-header-badge');right.append(actions.element,...badge?[badge]:[]);return right;}
+// Inhoudsovergang bij het wisselen van modus: zachte fade en 9 px omhoog (380 ms); met prefers-reduced-motion geen animatie (CSS).
+export function playEditTransition(element){element.classList.remove('edit-enter');void element.offsetWidth;element.classList.add('edit-enter');element.addEventListener('animationend',()=>element.classList.remove('edit-enter'),{once:true});}

@@ -96,7 +96,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
         button.append(title);
         if(notApplicable){const status=node('span','analysis-status','NVT bij Gashouder');status.dataset.status='not-applicable';button.append(status);}
         const assessment=assessments[entry.id==='barrier_layout'?'barrier':entry.id==='floor_pressure'?'floor':''];
-        if(assessment?.revision){const status=node('span','analysis-status',assessment.completed?'Afgerond':'Concept');status.dataset.status=assessment.completed?'completed':'draft';button.append(status);}
+        if(assessment?.revision){const status=node('span','analysis-status',assessment.completed?'Afgerond':'Niet afgerond');status.dataset.status=assessment.completed?'completed':'draft';button.append(status);}
         button.append(glyph('chevron','analysis-chevron'));
         button.onclick=()=>{if(!button.disabled)productionDetail(entry,group);};frame.append(button);row.append(frame);
         if(entry.conditional){
