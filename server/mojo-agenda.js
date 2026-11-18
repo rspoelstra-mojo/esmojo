@@ -97,15 +97,18 @@ export function upcomingShows(concerts, now = new Date()) {
     if (!artists.has(key)) artists.set(key, new Map());
     artists.get(key).set(row.date, row);
   }
-  const series = [];
+  const series = [], generalIds = new Map();
   for (const rows of artists.values()) {
     let current;
     for (const row of [...rows.values()].sort((a, b) => a.date.localeCompare(b.date))) {
-      if (!current || addDays(current.dates.at(-1), 1) !== row.date) {
+      // Opeenvolgende dagen, of een (handmatig samengestelde) reeks met dezelfde reeksidentiteit, ook met tussendagen.
+      const sameSeries = Boolean(row.generalConcertId) && generalIds.get(current)?.has(row.generalConcertId);
+      if (!current || (addDays(current.dates.at(-1), 1) !== row.date && !sameSeries)) {
         current = { key: row.concertId || concertId(row.artist, row.date), name: row.artist, dates: [], venue: row.venue, city: row.city };
         series.push(current);
       }
       current.dates.push(row.date);
+      if (row.generalConcertId) { if (!generalIds.has(current)) generalIds.set(current, new Set()); generalIds.get(current).add(row.generalConcertId); }
     }
   }
   return series.filter(show => show.dates.some(date => date >= from && date < until))
