@@ -1,0 +1,34 @@
+/* Gedeelde bewerkmodus: knoppen 40 x 112 px, radius 8 px; overgangen 380 ms met cubic-bezier(0.22, 1, 0.36, 1). */
+.edit-page { --edit-ease: cubic-bezier(0.22, 1, 0.36, 1); --edit-time: 380ms; }
+.edit-header-right { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: 0 0 auto; }
+.edit-actions { position: relative; width: 112px; height: 40px; flex: 0 0 auto; transition: width var(--edit-time) var(--edit-ease); }
+.edit-page[data-edit-mode="edit"] .edit-actions { width: 232px; }
+.edit-actions[hidden] { display: none; }
+.edit-action { position: absolute; top: 0; box-sizing: border-box; width: 112px; height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; padding: 0; border: 1px solid var(--line, #dfe4ea); border-radius: 8px; background: var(--canvas, #fff); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer; transition: opacity var(--edit-time) var(--edit-ease), translate var(--edit-time) var(--edit-ease), transform 120ms ease, background-color 160ms ease, border-color 160ms ease, visibility 0s linear var(--edit-time); }
+.edit-action svg { flex: 0 0 auto; }
+.edit-action:hover:not(:disabled) { background: var(--rail, #f3f4f6); border-color: color-mix(in srgb, var(--text) 25%, var(--line, #dfe4ea)); }
+.edit-action:active:not(:disabled) { transform: scale(0.97); }
+.edit-action:focus-visible { outline: 2px solid var(--profile-blue, #0046f2); outline-offset: 2px; }
+.edit-action:disabled { cursor: default; opacity: 0.6; }
+.edit-action-edit { right: 0; }
+.edit-action-cancel { left: 0; }
+.edit-action-save { left: 120px; background: #f3f4f6; color: #374151; border-color: #d1d5db; }
+.edit-action-save:hover:not(:disabled) { background: #e5e7eb; border-color: #c4c9d1; }
+/* Leesmodus: Bewerken zichtbaar; Annuleren/Opslaan verborgen links van hun plek. Bewerkmodus: omgekeerd. Verborgen knoppen zijn niet aanklikbaar of focusbaar. */
+.edit-page[data-edit-mode="read"] .edit-action-cancel, .edit-page[data-edit-mode="read"] .edit-action-save { opacity: 0; translate: -13px 0; visibility: hidden; pointer-events: none; }
+.edit-page[data-edit-mode="edit"] .edit-action-edit { opacity: 0; translate: 13px 0; visibility: hidden; pointer-events: none; }
+.edit-page[data-edit-mode="edit"] .edit-action-cancel, .edit-page[data-edit-mode="edit"] .edit-action-save { transition: opacity var(--edit-time) var(--edit-ease), translate var(--edit-time) var(--edit-ease), transform 120ms ease, background-color 160ms ease, border-color 160ms ease, visibility 0s; }
+.edit-page[data-edit-mode="read"] .edit-action-edit { transition: opacity var(--edit-time) var(--edit-ease), translate var(--edit-time) var(--edit-ease), transform 120ms ease, background-color 160ms ease, border-color 160ms ease, visibility 0s; }
+/* Het statuslabel naast de actieknoppen heeft dezelfde afmetingen en afronding en blijft op zijn plek. */
+.edit-header-badge { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 112px; height: 40px; margin: 0; padding: 0; border-radius: 8px; font-size: 12px; font-weight: 600; line-height: 1.15; text-align: center; flex: 0 0 112px; }
+/* Leeslaag en invoerlaag in dezelfde cel: geen layoutsprong. */
+.edit-swap { display: grid; min-width: 0; }
+.edit-swap > * { grid-area: 1 / 1; min-width: 0; overflow: hidden; max-height: 640px; transition: opacity var(--edit-time) var(--edit-ease), translate var(--edit-time) var(--edit-ease), max-height var(--edit-time) var(--edit-ease), visibility 0s; }
+.edit-page[data-edit-mode="read"] .edit-swap-edit { opacity: 0; translate: 0 9px; max-height: 0; visibility: hidden; pointer-events: none; transition: opacity var(--edit-time) var(--edit-ease), translate var(--edit-time) var(--edit-ease), max-height var(--edit-time) var(--edit-ease), visibility 0s linear var(--edit-time); }
+.edit-page[data-edit-mode="edit"] .edit-swap-read { opacity: 0; max-height: 0; visibility: hidden; pointer-events: none; transition: opacity var(--edit-time) var(--edit-ease), max-height var(--edit-time) var(--edit-ease), visibility 0s linear var(--edit-time); }
+.edit-swap-edit { padding: 2px; margin: -2px; }
+.edit-swap-edit textarea, .edit-swap-edit input[type="text"] { width: 100%; box-sizing: border-box; }
+.edit-title-input { padding: 6px 10px; border: 1px solid var(--line, #dfe4ea); border-radius: 8px; background: var(--canvas, #fff); color: var(--text); font: inherit; font-size: 20px; line-height: 1.3; font-weight: 700; }
+.edit-title-input:focus-visible, .edit-swap-edit textarea:focus-visible { outline: 2px solid var(--profile-blue, #0046f2); outline-offset: 1px; }
+@media (max-width: 640px) { .edit-header-right { flex: 1 1 100%; justify-content: flex-end; } }
+@media (prefers-reduced-motion: reduce) { .edit-actions, .edit-action, .edit-swap > * { transition: none !important; } }

@@ -1,3 +1,12 @@
+## Eén bewerkmodus op de showpagina's (18 november 2026)
+
+Gebruiker vraagt op alle pagina's binnen Shows waar iets te bewerken valt (productionele risico's, barrieropstelling, vloerdruk, operationele risico's, maatregelen,
+showprofiel-analyses) dezelfde knop Bewerken rechtsboven in de header, links van het bestaande statuslabel (src/edit-mode.js): leesmodus standaard; Bewerken -> Annuleren + Opslaan;
+Annuleren verwerpt; Opslaan bevestigt eerst op de server en keert dan pas terug naar leesmodus, bij een fout blijft de bewerkmodus met de invoer. Knoppen en label 40 x 112 px,
+radius 8 px, Opslaan #374151, overgangen 380 ms cubic-bezier(0.22, 1, 0.36, 1), prefers-reduced-motion respecteerd. Dit is de enige bewerkknop op de pagina; andere
+Bewerken-/Opslaan-/'Opslaan als concept'-knoppen verdwijnen en 'Opslaan als concept' bestaat nergens meer (opslaan of de wijziging gaat verloren). Gefaseerd: V1.205 operationele
+risico's; vervolg barrier/vloerdruk, maatregelen, showprofiel-analyses. Dit vervangt voor deze pagina's de eerdere achtergrondopslag-/directe-opslagafspraken. Zie docs/tasks/claude-edit-mode-20261118.md.
+
 ## Artiestenpagina's uit de concertagenda (18 november 2026)
 
 Gebruiker wil alle artiesten altijd in Artiesten zien (de grote artiestendatabase) en dat elke artiest uit de concertagenda (komende 365 dagen) alvast een

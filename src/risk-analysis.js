@@ -8,6 +8,7 @@ import './show-profile.css';
 import './risk-analysis.css';
 import './production-assessment.css';
 import {createRiskReviewCard} from './risk-review-card.js';
+import {createEditActions,editSwap,createEditPage,setEditMode,editHeaderRight} from './edit-mode.js';
 import {operationalRiskLabels} from '../shared/operational-risk.js';
 import {validateOperationalReview} from '../shared/operational-review.js';
 import {validateRiskEdit,riskEditLimits} from '../shared/risk-edit.js';
@@ -30,7 +31,7 @@ const badge = record => { const el=node('span','analysis-status',operationalRisk
 
 export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0, requestAccess=access, request = body => requestAccess('show-risks', { method:'POST', body }), choices, reviewMemory, saveSelection = body => requestAccess('production-risks', {method:'POST',body}) } = {}) {
   let disposed=false, loaded=false, loadingNow=false, risks=[], state='pending', error='', view='overview';
-  let loadedVersion=-1,operational=null,activeRisk=null;
+  let loadedVersion=-1,operational=null,activeRisk=null,detailEditing=false;
   // Eigen risico van de ESM in voorbereiding of in opslag; alleen sessiegeheugen. De requestId blijft gelijk tot de opslag bevestigd is.
   const freshOwn=()=>({title:'',description:'',consequence:'',riskLevel:null,riskNote:'',measureRequired:null,requestId:crypto.randomUUID(),busy:false,error:'',payload:null});
   let own=freshOwn();
@@ -79,7 +80,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
   }
   function overview(focusId,productionId) {
     if(disposed)return;
-    view='overview';
+    view='overview';detailEditing=false;
     if(choices.failed){error=choiceError;choiceFailure();}
     section.replaceChildren();choiceControls.clear();
     const layout=node('div','profile-layout'),categories=node('div','profile-categories'),productionCards=[];
@@ -153,100 +154,99 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
     intro.append(title,node('p','',`Productionele risico's · ${group.title}`));header.append(glyph('production','profile-category-icon'),intro);header.prepend(back);section.append(header);title.focus({preventScroll:true});
     window.scrollTo({top:0,left:window.scrollX,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   }
-  function detail(risk) {
+  // Detailpagina van een operationeel risico: leesmodus met één knop Bewerken (titel, gedefinieerd risico, mogelijk gevolg en de beoordeling). Opslaan bevestigt eerst op de
+  // server en keert dan pas terug naar de leesmodus; Annuleren verwerpt alle wijzigingen. Er is geen apart concept: wat niet is opgeslagen gaat verloren.
+  function detail(initial) {
     if(disposed)return;
-    closeDetail();view='operational';activeRisk=risk.id;
-    section.replaceChildren();
-    const back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=()=>overview(risk.id);
-    const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro'),title=node('h2','',risk.title);title.tabIndex=-1;
-    intro.append(title,node('p','',"Operationele risico's"));header.append(glyph('operational','profile-category-icon'),intro,badge(operational?.assessments?.[risk.id]));
-    if(!readOnly&&operational?.source){const editButton=node('button','secondary-button risk-edit-button','Risico bewerken');editButton.type='button';editButton.onclick=()=>editPage(risk);header.append(editButton);}
-    const content=node('div','analysis-editor-form');
-    for(const [label,text]of [['Gedefinieerd risico',risk.description],['Mogelijk gevolg',risk.consequence]]){
-      const card=node('section','analysis-editor-card');card.append(node('h3','',label),node('p','risk-definition',text));content.append(card);
+    closeDetail();view='operational';activeRisk=initial.id;detailEditing=false;section.replaceChildren();
+    let risk=initial,busy=false;
+    const stored=()=>operational?.assessments?.[risk.id],canEdit=!readOnly&&Boolean(operational?.source);
+    const form={title:'',description:'',consequence:'',riskLevel:null,measureRequired:null};
+    const page=createEditPage(),back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=()=>overview(risk.id);
+    const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro');
+    const titleRead=node('h2','',risk.title);titleRead.tabIndex=-1;
+    const titleInput=node('input','edit-title-input');titleInput.type='text';titleInput.maxLength=riskEditLimits.title;titleInput.setAttribute('aria-label','Titel');
+    intro.append(editSwap(titleRead,titleInput),node('p','',"Operationele risico's"));
+    const status=badge(stored());
+    const actions=createEditActions({onEdit:()=>enter(),onCancel:()=>leave(),onSave:()=>void saveAll()});
+    header.append(back,glyph('operational','profile-category-icon'),intro,editHeaderRight(actions,status));
+    const content=node('div','analysis-editor-form'),areas={},reads={},counters={};
+    for(const [key,label,max,rows]of [['description','Gedefinieerd risico',riskEditLimits.description,4],['consequence','Mogelijk gevolg',riskEditLimits.consequence,4]]){
+      const card=node('section','analysis-editor-card'),read=node('p','risk-definition',risk[key]),area=node('textarea','analysis-summary'),editLayer=node('div','edit-field'),counter=node('span','analysis-character-count','');
+      area.rows=rows;area.maxLength=max;area.setAttribute('aria-label',label);editLayer.append(area,counter);card.append(node('h3','',label),editSwap(read,editLayer));content.append(card);areas[key]=area;reads[key]=read;counters[key]=counter;
+      area.oninput=()=>{form[key]=area.value;clearError();refresh();};
     }
-    const stored=operational?.assessments?.[risk.id];
-    let draft=reviewDrafts.get(risk.id);
-    if(!draft){draft={riskLevel:stored?.riskLevel||null,riskNote:'',measureRequired:typeof stored?.measureRequired==='boolean'?stored.measureRequired:null,editing:!stored,revision:stored?.revision||0,busy:false,error:'',payload:null};reviewDrafts.set(risk.id,draft);}
-    const source=operational?.source,sourceKey=JSON.stringify(source);
-    const reviewFeedback=feedback(saveRequestInfo('operational-risk',{concertId:show.key,riskId:risk.id}));
-    const retry=node('button','secondary-button','Opnieuw proberen');retry.type='button';retry.hidden=true;
-    const reload=node('button','secondary-button','Actuele risico’s laden');reload.type='button';reload.hidden=true;
-    const live=()=>!disposed&&view==='operational'&&activeRisk===risk.id;
-    const values=()=>({concertId:show.key,source,riskId:risk.id,revision:draft.revision,riskLevel:draft.riskLevel,riskNote:draft.riskNote,measureRequired:draft.measureRequired});
-    const valid=()=>{try{validateOperationalReview(values());return true;}catch{return false;}};
-    const update=()=>{
-      if(!live())return;
-      review.update({riskLevel:draft.riskLevel,riskNote:draft.riskNote,measureRequired:draft.measureRequired,disabled:readOnly||!source||draft.busy||!draft.editing,busy:draft.busy,completed:!draft.editing,canSave:valid(),canEdit:!readOnly&&!draft.busy,failed:false});
-      if(draft.error)reviewFeedback.show(draft.error,save,'Opnieuw proberen',[{label:'Actuele risico’s laden',run:()=>reload.onclick()}]);else reviewFeedback.clear();
-      const status=Array.from(header.querySelectorAll('span')).find(el=>el.className==='analysis-status');
-      if(status){const row=operational?.assessments?.[risk.id];status.textContent=operationalRiskLabels[row?.riskLevel]||'Nog te beoordelen';status.dataset.status=row?.riskLevel||'unreviewed';}
-    };
-    const save=async()=>{
-      if(disposed||readOnly||draft.busy||!valid())return false;draft.busy=true;draft.error='';draft.payload ||= validateOperationalReview(values());const payload=structuredClone(draft.payload);overview(risk.id);
-      try{
-        const data=await reviewMemory.run(()=>requestAccess('operational-risk',{method:'POST',body:payload}));
-        if(!data?.record?.completedAt||data.record.riskLevel!==payload.riskLevel||data.record.measureRequired!==payload.measureRequired||!data.overview?.operational||JSON.stringify(data.overview.operational.source)!==sourceKey)throw Error('UNCONFIRMED');
-        draft.payload=null;draft.editing=false;draft.revision=data.record.revision;draft.riskLevel=data.record.riskLevel;draft.riskNote='';draft.measureRequired=data.record.measureRequired;
-        reviewFeedback.resolved();if(disposed)return;
-        operational=data.overview.operational;risks=data.overview.risks;state=data.overview.state;loadedVersion=version();if(view==='overview')overview(risk.id);
-      }catch{if(reviewMemory.active)backgroundSaves.fail(saveRequestInfo('operational-risk',payload));draft.error='Opslag niet bevestigd. Je invoer is behouden. Probeer opnieuw of laad de actuele risico’s.';reviewFeedback.show(draft.error,save,'Opnieuw proberen',[{label:'Actuele risico’s laden',run:()=>reload.onclick()}]);return false;}
-      finally{draft.busy=false;reviewMemory.notify();}
-    };
-    refreshOperational=update;
-    const review=createRiskReviewCard({name:'operational-'+risk.id,saveLabel:'Beoordelen',measureChoice:true,onChange:(level)=>{const previous=draft.riskLevel;draft.riskLevel=level;draft.riskNote='';if(level==='none')draft.measureRequired=false;else if(previous==='none')draft.measureRequired=null;draft.error='';draft.payload=null;update();},onMeasureChange:value=>{draft.measureRequired=value;draft.error='';draft.payload=null;update();},onSave:save,onEdit:()=>{draft.editing=true;update();}});
-    retry.onclick=save;reload.onclick=async()=>{if(draft.busy)return false;reviewDrafts.delete(risk.id);view='overview';overview();await load();return !error;};
+    titleInput.oninput=()=>{form.title=titleInput.value;clearError();refresh();};
+    titleInput.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();if(canSave())void saveAll();}};
+    const review=createRiskReviewCard({name:'operational-'+risk.id,measureChoice:true,showSave:false,onSave:()=>{},onChange:level=>{const previous=form.riskLevel;form.riskLevel=level;if(level==='none')form.measureRequired=false;else if(previous==='none')form.measureRequired=null;clearError();refresh();},onMeasureChange:value=>{form.measureRequired=value;clearError();refresh();}});
     const aside=node('aside','operational-review-aside');aside.append(review.element);
     const layout=node('div','barrier-assessment-layout operational-assessment-layout');layout.append(content,aside);
-    header.prepend(back);section.append(header,layout);update();title.focus({preventScroll:true});
-    window.scrollTo({top:0,left:window.scrollX,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-  }
-  // Titel, gedefinieerd risico en mogelijk gevolg van een operationeel risico bewerken (ook bij risico's uit de analyse).
-  const riskEditDrafts=new Map();
-  function editPage(risk){
-    if(disposed||readOnly||!operational?.source)return;
-    closeDetail();view='edit';activeRisk=risk.id;section.replaceChildren();
-    const base=JSON.stringify([risk.title,risk.description,risk.consequence,risk.editRevision||0]);let draft=riskEditDrafts.get(risk.id);
-    if(!draft||draft.base!==base){draft={base,title:risk.title,description:risk.description,consequence:risk.consequence,busy:false,error:'',payload:null};riskEditDrafts.set(risk.id,draft);}
-    const back=node('button','profile-back','← Terug naar overzicht');detailBackButton(back);back.onclick=()=>detail(risk);
-    const header=node('div','analysis-editor-header'),intro=node('div','analysis-editor-intro'),title=node('h2','','Risico bewerken');title.tabIndex=-1;
-    intro.append(title,node('p','',"Operationele risico's"));header.append(back,glyph('operational','profile-category-icon'),intro);
-    const form=node('form','analysis-editor-form risk-edit-form'),inputs={};
-    for(const [key,label,max,rows]of [['title','Titel',riskEditLimits.title,1],['description','Gedefinieerd risico',riskEditLimits.description,4],['consequence','Mogelijk gevolg',riskEditLimits.consequence,4]]){
-      const card=node('section','analysis-editor-card'),heading=node('label','analysis-editor-label',label),input=node('textarea','analysis-summary');
-      input.id='risk-edit-'+key;heading.htmlFor=input.id;input.rows=rows;input.maxLength=max;input.required=true;input.value=draft[key];
-      const counter=node('span','analysis-character-count',`${input.value.length} / ${max}`);
-      input.oninput=()=>{draft[key]=input.value;draft.error='';draft.payload=null;counter.textContent=`${input.value.length} / ${max}`;update();};
-      card.append(heading,input,counter);form.append(card);inputs[key]=input;
+    page.append(header,layout);section.append(page);
+    const textFeedback=feedback(saveRequestInfo('operational-risk-edit',{concertId:show.key,riskId:risk.id})),reviewFeedback=feedback(saveRequestInfo('operational-risk',{concertId:show.key,riskId:risk.id}));
+    const clearError=()=>{textFeedback.clear();reviewFeedback.clear();};
+    const reviewStored=()=>{const row=stored();return{riskLevel:row?.riskLevel||null,measureRequired:typeof row?.measureRequired==='boolean'?row.measureRequired:null};};
+    const textChanged=()=>form.title!==risk.title||form.description!==risk.description||form.consequence!==risk.consequence;
+    const reviewChanged=()=>{const current=reviewStored();return form.riskLevel!==current.riskLevel||form.measureRequired!==current.measureRequired;};
+    const textValues=()=>({concertId:show.key,source:operational?.source,riskId:risk.id,editRevision:risk.editRevision||0,title:form.title,description:form.description,consequence:form.consequence});
+    const reviewValues=()=>({concertId:show.key,source:operational?.source,riskId:risk.id,revision:stored()?.revision||0,riskLevel:form.riskLevel,riskNote:'',measureRequired:form.measureRequired});
+    const textValid=()=>{try{validateRiskEdit(textValues());return true;}catch{return false;}};
+    const reviewValid=()=>{try{validateOperationalReview(reviewValues());return true;}catch{return false;}};
+    const canSave=()=>canEdit&&(textChanged()||reviewChanged())&&(!textChanged()||textValid())&&(!reviewChanged()||reviewValid());
+    function resetForm(){
+      const current=reviewStored();Object.assign(form,{title:risk.title,description:risk.description,consequence:risk.consequence,riskLevel:current.riskLevel,measureRequired:current.measureRequired});
+      titleInput.value=form.title;for(const key of Object.keys(areas))areas[key].value=form[key];
     }
-    const values=()=>({concertId:show.key,source:operational?.source,riskId:risk.id,editRevision:risk.editRevision||0,title:draft.title,description:draft.description,consequence:draft.consequence});
-    const valid=()=>{try{validateRiskEdit(values());return true;}catch{return false;}};
-    const submit=node('button','analysis-complete','Opslaan');submit.type='submit';form.append(submit);
-    function update(){if(disposed||view!=='edit')return;submit.disabled=draft.busy||!valid();}
-    form.onsubmit=event=>{event.preventDefault();if(!submit.disabled)void saveEdit(risk,draft);};
-    section.append(header,form);update();title.focus({preventScroll:true});
+    function fillRead(){
+      titleRead.textContent=risk.title;for(const key of Object.keys(reads))reads[key].textContent=risk[key];
+      const row=stored();status.textContent=operationalRiskLabels[row?.riskLevel]||'Nog te beoordelen';status.dataset.status=row?.riskLevel||'unreviewed';
+    }
+    function refresh(){
+      if(disposed||view!=='operational'||activeRisk!==risk.id)return;
+      for(const key of Object.keys(counters))counters[key].textContent=`${form[key].length} / ${riskEditLimits[key]}`;
+      actions.update({busy,canSave:canSave(),editable:canEdit});
+      review.update({riskLevel:form.riskLevel,riskNote:'',measureRequired:form.measureRequired,disabled:!detailEditing||busy,busy,completed:false,canSave:false,canEdit:false,failed:false});
+    }
+    refreshOperational=refresh;
+    function enter(){
+      if(busy||detailEditing||!canEdit)return;
+      detailEditing=true;resetForm();setEditMode(page,'edit');refresh();requestAnimationFrame(()=>{if(detailEditing)titleInput.focus({preventScroll:true});});
+    }
+    function leave(){
+      if(busy)return;
+      detailEditing=false;clearError();resetForm();fillRead();setEditMode(page,'read');refresh();actions.edit.focus({preventScroll:true});
+    }
+    page.addEventListener('keydown',event=>{if(event.key==='Escape'&&detailEditing&&!busy){event.preventDefault();leave();}});
+    const reloadNow=async()=>{if(busy)return false;detailEditing=false;view='overview';overview();await load();return !error;};
+    async function saveAll(){
+      if(disposed||busy||!canSave())return false;
+      busy=true;clearError();refresh();
+      let stage='edit';
+      try{
+        if(textChanged()){
+          const payload=validateRiskEdit(textValues()),sourceKey=JSON.stringify(operational.source);
+          const data=await reviewMemory.run(()=>requestAccess('operational-risk-edit',{method:'POST',body:payload}));
+          const saved=data?.overview?.risks?.find(item=>item.id===risk.id&&item.title===payload.title&&item.description===payload.description&&item.consequence===payload.consequence&&item.editRevision===payload.editRevision+1);
+          if(!saved||data.riskId!==risk.id||!data.overview?.operational||JSON.stringify(data.overview.operational.source)!==sourceKey)throw Error('UNCONFIRMED');
+          operational=data.overview.operational;risks=data.overview.risks;state=data.overview.state;loadedVersion=version();risk=saved;
+        }
+        stage='review';
+        if(reviewChanged()){
+          const payload=validateOperationalReview(reviewValues()),sourceKey=JSON.stringify(operational.source);
+          const data=await reviewMemory.run(()=>requestAccess('operational-risk',{method:'POST',body:payload}));
+          if(!data?.record?.completedAt||data.record.riskLevel!==payload.riskLevel||data.record.measureRequired!==payload.measureRequired||!data.overview?.operational||JSON.stringify(data.overview.operational.source)!==sourceKey)throw Error('UNCONFIRMED');
+          operational=data.overview.operational;risks=data.overview.risks;state=data.overview.state;loadedVersion=version();
+        }
+      }catch{
+        busy=false;
+        if(!disposed){const message='Opslag niet bevestigd. Je invoer is behouden. Probeer opnieuw of laad de actuele risico’s.';(stage==='edit'?textFeedback:reviewFeedback).show(message,saveAll,'Opnieuw proberen',[{label:'Actuele risico’s laden',run:reloadNow}]);refresh();}
+        return false;
+      }
+      busy=false;textFeedback.resolved();reviewFeedback.resolved();
+      if(disposed)return true;
+      detailEditing=false;resetForm();fillRead();setEditMode(page,'read');refresh();actions.edit.focus({preventScroll:true});return true;
+    }
+    resetForm();fillRead();refresh();titleRead.focus({preventScroll:true});
     window.scrollTo({top:0,left:window.scrollX,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-  }
-  // Valideert lokaal, keert direct terug naar het risico en bevestigt op de achtergrond; pas na serverbevestiging staat de nieuwe tekst in de lijst.
-  async function saveEdit(risk,draft){
-    if(disposed||readOnly||draft.busy||!operational?.source)return false;
-    let payload;try{draft.payload||=validateRiskEdit({concertId:show.key,source:operational.source,riskId:risk.id,editRevision:risk.editRevision||0,title:draft.title,description:draft.description,consequence:draft.consequence});payload=structuredClone(draft.payload);}catch{return false;}
-    const editFeedback=feedback(saveRequestInfo('operational-risk-edit',{concertId:show.key,riskId:risk.id})),sourceKey=JSON.stringify(operational.source);
-    draft.busy=true;draft.error='';detail(risk);
-    try{
-      const data=await reviewMemory.run(()=>requestAccess('operational-risk-edit',{method:'POST',body:payload}));
-      const saved=data?.overview?.risks?.find(item=>item.id===risk.id&&item.title===payload.title&&item.description===payload.description&&item.consequence===payload.consequence&&item.editRevision===payload.editRevision+1);
-      if(!saved||data.riskId!==risk.id||!data.overview?.operational||JSON.stringify(data.overview.operational.source)!==sourceKey)throw Error('UNCONFIRMED');
-      riskEditDrafts.delete(risk.id);editFeedback.resolved();if(disposed)return true;
-      operational=data.overview.operational;risks=data.overview.risks;state=data.overview.state;loadedVersion=version();
-      if(view==='operational'&&activeRisk===risk.id)detail(saved);else if(view==='overview')overview(risk.id);
-      return true;
-    }catch{
-      draft.error='Opslag niet bevestigd. Je invoer is behouden. Probeer opnieuw.';
-      if(reviewMemory.active)backgroundSaves.fail(saveRequestInfo('operational-risk-edit',payload));
-      if(!disposed){editFeedback.show(draft.error,()=>{draft.payload=null;return saveEdit(risk,draft);},'Opnieuw proberen',[{label:'Risico bewerken',run:()=>{editPage(risk);return false;}}]);}
-      return false;
-    }finally{draft.busy=false;reviewMemory.notify();}
   }
   // Pagina binnen het tabblad: eigen operationeel risico met mogelijk gevolg en meteen de beoordeling (beheersmaatregel bij Midden/Hoog).
   function ownRiskPage(){
@@ -309,7 +309,7 @@ export function createRiskAnalysis(panel, { show, readOnly=false, version=()=>0,
       for(const risk of data.risks){if(!risk||!/^R\d{2}$/.test(risk.id)||ids.has(risk.id)||['title','description','consequence'].some(key=>typeof risk[key]!=='string'||!risk[key].trim()))throw Error('Invalid risk');ids.add(risk.id);}
       validateProductionRiskState(data.production);choices.sync(data.production);production=choices.server;assessments=data.assessments||{};productionReady=true;state=data.state;risks=data.risks;operational=data.operational||null;const sourceKey=JSON.stringify(data.operational?.source);if(reviewMemory.source!==sourceKey){reviewDrafts.clear();reviewMemory.source=sourceKey;}loaded=true;loadedVersion=version();error=choices.failed?choiceError:'';readFeedback.resolved();
     }catch{if(!disposed){if(!choices.failed){loaded=false;risks=[];}error=choices.failed?choiceError:'Risicoanalyse laden is niet gelukt. Probeer opnieuw.';}if(!disposed){if(choices.failed)choiceFailure();else readFeedback.show(error,async()=>{await load();return !error;},'Opnieuw laden');}if(strict===true)throw Error(error);}
-    finally{loadingNow=false;finish?.();panel.removeAttribute('aria-busy');if(!disposed&&view==='overview')overview();else if(!disposed&&view==='operational'&&loaded&&!error){const risk=risks.find(risk=>risk.id===activeRisk);if(risk)detail(risk);else overview();}}
+    finally{loadingNow=false;finish?.();panel.removeAttribute('aria-busy');if(!disposed&&view==='overview')overview();else if(!disposed&&view==='operational'&&loaded&&!error&&!detailEditing){const risk=risks.find(risk=>risk.id===activeRisk);if(risk)detail(risk);else overview();}}
   }
   overview();
   return { prepare(){return load(true);},
