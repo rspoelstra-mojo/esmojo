@@ -11,7 +11,7 @@ export const intakeFileLimit=8*1024*1024;
 export function createReportIntakeRepository({env=process.env,request=fetch,connection=request===fetch?nativeConnection(env):undefined,readOnly=true,writer=createMigrationWriter({env,request,...(connection?{connection}:{}),readOnly,contract:{tableByName:reportIntakeSchemaContract.tableByName,choices:{}}})}={}){
  const columns=reportIntakeTable.columns.map(c=>c.target?'_'+c.logical_name+'_value':c.logical_name).filter(name=>name!=='esmojo_bestand');
  async function list({limit=25,statuses}={}){
-  if(!Number.isInteger(limit)||limit<1||limit>100||statuses!==undefined&&(!Array.isArray(statuses)||!statuses.length||statuses.some(value=>!['ontvangen','verwerken'].includes(value))))throw Error('VALIDATION');
+  if(!Number.isInteger(limit)||limit<1||limit>100||statuses!==undefined&&(!Array.isArray(statuses)||!statuses.length||statuses.some(value=>!['ontvangen','verwerken','verwerkt'].includes(value))))throw Error('VALIDATION');
   const m=await writer.meta(table),result=await writer.json(m.EntitySetName+'?'+new URLSearchParams({'$select':[m.PrimaryIdAttribute,...columns,'createdon','modifiedon'].join(','),'$orderby':'createdon desc',...(statuses?{'$filter':statuses.map(value=>"esmojo_status eq '"+value+"'").join(' or ')}:{}),'$top':String(limit)}));
   if(!Array.isArray(result?.value))throw Error('INTAKE_UNAVAILABLE');
   for(const row of result.value)if(!guid(row[m.PrimaryIdAttribute])||typeof row['@odata.etag']!=='string')throw Error('INTAKE_UNAVAILABLE');

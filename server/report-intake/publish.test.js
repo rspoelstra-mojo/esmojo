@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {csv} from '../ontrack-report/data.test.js';
-import {createReportIntakePublisher,planIntakeShow,intakeBundle,intakeRows,intakeStatus} from './publish.js';
+import {createReportIntakePublisher,planIntakeShow,intakeBundle,intakeRows,intakeStatus,assertReadable,repairLegacySource} from './publish.js';
 import {digest,recordKey} from '../show-migration-writer.js';
 const bytes=Buffer.from(csv([{Division:'Medisch','Date and Time':'2026-11-16 - 08:00 PM'},{Division:'Beveiliging','Date and Time':'2026-11-16 - 09:00 PM'}]));
 const hash=createHash('sha256').update(bytes).digest('hex');
@@ -25,13 +25,15 @@ test('Bundle en rijen zijn stabiel bij herhaling en bevatten het originele besta
  assert.equal(rows.dataset.filter(r=>r.table==='esmojo_rapportincident').length,2);
 });
 function fake({bronbytes,files}={}){
- const store=new Map(),calls=[],uploaded=[];let published=null,verifiedVersion=null,fileBytes=null;
+ const store=new Map(),calls=[],uploaded=[],patches=[];let published=null,verifiedVersion=null,fileBytes=null;
  const writer={
   async core(entry){calls.push(['core',entry.show.key]);return{concert:{table:'esmojo_concert',key:'c'.repeat(64)},series:{table:'esmojo_concertreeks',key:'d'.repeat(64)},header:{table:'esmojo_rapportage',key:'e'.repeat(64)}};},
+  async find(row){const r=store.get(row.key);return r?{...r.fields,'@odata.etag':'W/"1"'}:null;},patches,
   async ensureMany(rows){for(const r of rows)store.set(r.key,r);},async inspectMany(rows){return{missing:rows.filter(r=>!store.has(r.key)).length,count:rows.length};},
   async resolve(ref){return{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',set:'esmojo_documents'};},async meta(){return{PrimaryIdAttribute:'esmojo_documentid'};},
   async json(path){if(path.includes('$select=esmojo_bestand'))return{esmojo_bestand:fileBytes?'x':null};throw Error('json '+path);},
   async call(name,{body}={}){const ok=data=>({ok:true,status:200,json:async()=>data});
+   if(String(name).includes('(')&&body?.esmojo_herkomst_json){patches.push(body.esmojo_herkomst_json);const key=[...store.keys()].find(k=>store.get(k).table==='esmojo_rapportbron');store.get(key).fields.esmojo_herkomst_json=body.esmojo_herkomst_json;return ok({});}
    if(name==='InitializeFileBlocksUpload')return ok({FileContinuationToken:'t'});
    if(name==='UploadBlock'){uploaded.push(Buffer.from(body.BlockData,'base64'));return ok({});}
    if(name==='CommitFileBlocksUpload'){fileBytes=Buffer.concat(uploaded);return ok({});}
@@ -44,7 +46,7 @@ function fake({bronbytes,files}={}){
  const repository={async list(){return[row];},async file(){return files??{present:true,size:bytes.length,declaredSize:bytes.length,sha256:hash,bytes,before:row};},
   async update(id,etag,change){updates.push({etag,...change});Object.assign(row,change.fields,{'@odata.etag':'W/"'+(updates.length+1)+'"'});return row;}};
  const catalogue={all:async()=>({concerts,artists})};
- return{writer,repository,catalogue,row,updates,calls,store,state:()=>({published,verifiedVersion,fileBytes})};
+ return{writer,repository,catalogue,row,updates,calls,store,patches,state:()=>({published,verifiedVersion,fileBytes})};
 }
 test('Publiceert een ontvangst: nieuw concert/artiest, bestand, incidenten, koppeling en status verwerkt',async()=>{
  const f=fake({bronbytes:bytes.length}),publisher=createReportIntakePublisher(f);
@@ -52,7 +54,7 @@ test('Publiceert een ontvangst: nieuw concert/artiest, bestand, incidenten, kopp
  assert.equal(out.status,intakeStatus.done);assert.equal(out.incidents,2);
  assert.deepEqual(f.calls[0],['core','Good-Charlotte_AFAS-Live_16112026']);assert.deepEqual(f.state().fileBytes,bytes);assert.ok(f.state().published);
  assert.equal(f.updates[0].fields.esmojo_status,intakeStatus.working);const last=f.updates.at(-1);assert.equal(last.fields.esmojo_status,intakeStatus.done);assert.equal(last.fields.esmojo_bestandshash,hash);assert.equal(last.concertRecordId,'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
- assert.match(last.fields.esmojo_resultaat,/"createdConcert":true/);assert.ok(!last.fields.esmojo_resultaat.includes('Medisch'));
+ assert.match(last.fields.esmojo_resultaat,/"v":2/);assert.match(last.fields.esmojo_resultaat,/"createdConcert":true/);assert.ok(!last.fields.esmojo_resultaat.includes('Medisch'));
 });
 test('Onvolledig of afwijkend bestand wordt niet gepubliceerd',async()=>{
  for(const config of [{bronbytes:bytes.length+1},{files:{present:true,size:bytes.length,declaredSize:bytes.length+1,sha256:hash,bytes,before:receipt()}},{files:{present:false,before:receipt()}}]){
@@ -77,4 +79,19 @@ test('Een samenloop-verlies op de ETag stopt voor enige bedrijfswrite',async()=>
 });
 test('Ontbrekende verificatierij blokkeert de publicatie',async()=>{
  const f=fake();f.writer.inspectMany=async rows=>({missing:1,count:rows.length});const out=await createReportIntakePublisher(f).publish(f.row);assert.equal(out.status,'retry');assert.equal(f.state().published,null);assert.equal(f.state().verifiedVersion,null);
+});
+
+test('De Rapportages-lezer accepteert de geplande bron (validation.context aanwezig); zonder context wordt niets gepubliceerd',()=>{
+ const show=planIntakeShow(receipt().esmojo_bestandsnaam,{concerts,artists}).show,rows=intakeRows(intakeBundle({show,receipt:receipt(),bytes}),bytes);
+ assert.doesNotThrow(()=>assertReadable(rows.base));
+ const broken=structuredClone(rows.base),source=broken.find(r=>r.table==='esmojo_rapportbron'),json=JSON.parse(source.fields.esmojo_herkomst_json);delete json.validation.context;source.fields.esmojo_herkomst_json=JSON.stringify(json);
+ assert.throws(()=>assertReadable(broken),/REPORT_CONFLICT/);
+});
+test('Een door V1.192 geschreven bron zonder context wordt exact hersteld en daarna opnieuw verwerkt',async()=>{
+ const f=fake({bronbytes:bytes.length}),show=planIntakeShow(f.row.esmojo_bestandsnaam,{concerts,artists}).show,rows=intakeRows(intakeBundle({show,receipt:f.row,bytes}),bytes);
+ await f.writer.ensureMany(rows.base);const stored=f.store.get(rows.base.find(r=>r.table==='esmojo_rapportbron').key),json=JSON.parse(stored.fields.esmojo_herkomst_json);delete json.validation.context;stored.fields={...stored.fields,esmojo_herkomst_json:JSON.stringify(json)};
+ f.row.esmojo_status='verwerkt';f.row.esmojo_resultaat=JSON.stringify({v:1,concertId:'x'});
+ const out=await createReportIntakePublisher(f).publish(f.row);assert.equal(out.status,intakeStatus.done);assert.equal(f.patches.length,1);assert.equal(JSON.parse(f.patches[0]).validation.context,JSON.parse(rows.base.find(r=>r.table==='esmojo_rapportbron').fields.esmojo_herkomst_json).validation.context);
+ assert.equal(await repairLegacySource(f.writer,rows.base),false);
+ const other=fake();other.row.esmojo_status='verwerkt';other.row.esmojo_resultaat=JSON.stringify({v:2});assert.equal((await createReportIntakePublisher(other).publish(other.row)).status,'skipped');
 });

@@ -9,6 +9,7 @@ import {canonical,digest} from '../show-migration-writer.js';
 import {documentRows,sourceRows,mapDataset,filePlan,headerRef,datasetRef,canonicalSources} from '../reports-migration/map.js';
 import {groupReportEntries} from '../reports-migration/writer.js';
 import {migrateFileStep} from '../show-migration-files.js';
+import {sourceMetadata} from '../dataverse-reports/read.js';
 
 // Receipt lifecycle (the flow only ever writes `upload-bezig` and, as its very
 // last step, `ontvangen`; everything below is written by ESMOJO):
@@ -43,7 +44,7 @@ export function planIntakeShow(filename,{concerts,artists}){
 export function intakeBundle({show,receipt,bytes}){
  const hash=sha256(bytes),stamp=receipt.createdon||receipt.modifiedon;if(typeof stamp!=='string'||!Number.isFinite(Date.parse(stamp)))throw Error('INTAKE_SOURCE');
  const id='sharepoint/'+receipt.esmojo_sleutel,source={id,name:receipt.esmojo_bestandsnaam,modifiedAt:new Date(stamp).toISOString(),mime:'text/csv',size:bytes.length,show,context:digest({receipt:receipt.esmojo_sleutel,sha256:hash}),validationVersion:'csv-web-v2'};
- const item={source,sha256:hash,validation:{state:'valid',sourceHash:hash,validatedAt:source.modifiedAt,mojo:{sourceUrl:show.sourceUrl||null,photo:null}}};
+ const item={source,sha256:hash,validation:{state:'valid',sourceHash:hash,context:source.context,validatedAt:source.modifiedAt,mojo:{sourceUrl:show.sourceUrl||null,photo:null}}};
  return{version:1,show,sources:[item],groups:[],files:[{fileId:id,name:source.name,mime:'text/csv',size:bytes.length,sha256:hash,modifiedAt:source.modifiedAt,kind:'csv'}],timetable:null,contextGeneral:{productionManager:null,eventSafetyManager:null,tscProjectLead:null,soldTickets:null,foreignPercentage:null}};
 }
 export function intakeRows(bundle,bytes){
@@ -51,17 +52,37 @@ export function intakeRows(bundle,bytes){
  return{base,dataset:plan.records,incidents:plan.incidentCount};
 }
 const batches=rows=>{const out=[];for(let at=0;at<rows.length;){const first=rows[at],batch=[];for(const row of rows.slice(at,at+32)){if(row.table!==first.table||Buffer.byteLength(canonical([...batch,row]))>1800000)break;batch.push(row);}if(!batch.length)throw Error('MIGRATION_MAPPING');out.push(batch);at+=batch.length;}return out;};
+// The reader refuses a source whose validation lacks its context. Prove the exact
+// reader contract on the planned rows before anything can become visible.
+export function assertReadable(baseRows){
+ const row=baseRows.find(r=>r.table==='esmojo_rapportbron');if(!row)throw Error('MIGRATION_MAPPING');
+ sourceMetadata({esmojo_herkomst_json:row.fields.esmojo_herkomst_json,esmojo_externebronid:row.fields.esmojo_externebronid,esmojo_contexthash:row.fields.esmojo_contexthash,esmojo_inhoudsha256:row.fields.esmojo_inhoudsha256,esmojo_brontype:row.fields.esmojo_brontype,esmojo_brongewijzigdop:row.fields.esmojo_brongewijzigdop});
+}
+// Receipts published by V1.192 stored a source without validation.context. That
+// exact legacy form is repaired in place (ETag-guarded, read back); anything else
+// that differs stays a conflict.
+export async function repairLegacySource(writer,baseRows){
+ const row=baseRows.find(r=>r.table==='esmojo_rapportbron'),actual=await writer.find(row);if(!actual)return false;
+ let stored;try{stored=JSON.parse(actual.esmojo_herkomst_json);}catch{return false;}
+ if(stored?.validation?.context!==undefined)return false;
+ const expected=JSON.parse(row.fields.esmojo_herkomst_json),legacy=structuredClone(expected);delete legacy.validation.context;
+ if(canonical(stored)!==canonical(legacy)||!actual['@odata.etag'])return false;
+ const target=await writer.resolve({table:row.table,key:row.key}),response=await writer.call(target.set+'('+target.id+')',{method:'PATCH',headers:{'If-Match':actual['@odata.etag']},body:{esmojo_herkomst_json:row.fields.esmojo_herkomst_json}});
+ if(!response.ok)throw Error('MIGRATION_UNCONFIRMED');
+ const after=await writer.find(row);if(after?.esmojo_herkomst_json!==row.fields.esmojo_herkomst_json)throw Error('MIGRATION_UNCONFIRMED');return true;
+}
+const legacyDone=row=>row.esmojo_status===intakeStatus.done&&(()=>{try{return JSON.parse(row.esmojo_resultaat||'{}').v===1;}catch{return false;}})();
 const memoryFile=(bytes,hash)=>offset=>({size:bytes.length,sha256:hash,offset,base64:bytes.subarray(offset,offset+1048576).toString('base64')});
 
 export function createReportIntakePublisher({repository,catalogue,writer,now=()=>new Date()}){
  if(!repository||!catalogue||!writer)throw Error('VALIDATION');
- const finish=async(row,status,summary,hash,concertRecordId)=>repository.update(row.id,row['@odata.etag'],{fields:{esmojo_status:status,esmojo_resultaat:JSON.stringify({v:1,at:now().toISOString(),...summary}).slice(0,2000),...(hash?{esmojo_bestandshash:hash}:{})},...(concertRecordId?{concertRecordId}:{})});
+ const finish=async(row,status,summary,hash,concertRecordId)=>repository.update(row.id,row['@odata.etag'],{fields:{esmojo_status:status,esmojo_resultaat:JSON.stringify({v:2,at:now().toISOString(),...summary}).slice(0,2000),...(hash?{esmojo_bestandshash:hash}:{})},...(concertRecordId?{concertRecordId}:{})});
  const attemptsOf=row=>{try{return Number(JSON.parse(row.esmojo_resultaat||'{}').attempts)||0;}catch{return 0;}};
  // Publishes exactly one receipt. Every write is create-only or ETag-guarded and
  // verified by an independent re-read; the whole run is safe to repeat.
  async function publish(row0,{deadline=Date.now()+240000}={}){
   let row=row0;const stale=row.esmojo_status===intakeStatus.working&&Date.now()-Date.parse(row.modifiedon)>leaseMs;
-  if(row.esmojo_status!==intakeStatus.received&&!stale)return result('skipped','STATUS');
+  if(row.esmojo_status!==intakeStatus.received&&!stale&&!legacyDone(row))return result('skipped','STATUS');
   const attempts=attemptsOf(row)+1;if(attempts>maxAttempts){row=await finish(row,intakeStatus.failed,{code:'ATTEMPTS',attempts:attempts-1});return result(intakeStatus.failed,'ATTEMPTS');}
   row=await repository.update(row.id,row['@odata.etag'],{fields:{esmojo_status:intakeStatus.working,esmojo_resultaat:JSON.stringify({v:1,attempts,at:now().toISOString()})}}); // lease claim; a concurrent worker loses on the ETag
   try{
@@ -74,7 +95,9 @@ export function createReportIntakePublisher({repository,catalogue,writer,now=()=
    try{validateReportDay(calculateReport(bytes,{generatedAt:row.createdon}),plan.show.date);}
    catch(error){const code=/^CSV_/.test(error.code||error.message)?(error.code||error.message):null;if(!code)throw error;await finish(row,intakeStatus.invalid,{code,attempts},hash);return result(intakeStatus.invalid,code);}
    const bundle=intakeBundle({show:plan.show,receipt:row,bytes}),rows=intakeRows(bundle,bytes),entry=groupReportEntries([{show:plan.show,sources:[]}])[0],item=bundle.sources[0],version=datasetRef(bundle,item);
+   assertReadable(rows.base);
    const refs=await writer.core(entry);
+   await repairLegacySource(writer,rows.base);
    for(const batch of batches(rows.base)){await writer.ensureMany(batch);if(Date.now()>deadline)throw Object.assign(Error('INTAKE_DEADLINE'),{retry:true});}
    const planFile=filePlan(bundle)[0];let state=null;
    for(let step=0;step<40;step++){state=await migrateFileStep({file:planFile,state,writer,read:memoryFile(bytes,hash)});if(state?.done)break;if(Date.now()>deadline)throw Object.assign(Error('INTAKE_DEADLINE'),{retry:true});}
@@ -96,8 +119,8 @@ export function createReportIntakePublisher({repository,catalogue,writer,now=()=
   }
  }
  async function processPending({limit=3,deadline=Date.now()+240000}={}){
-  const rows=await repository.list({limit:100,statuses:[intakeStatus.received,intakeStatus.working]}),out=[];
-  for(const row of rows.filter(r=>r.esmojo_status===intakeStatus.received||Date.now()-Date.parse(r.modifiedon)>leaseMs).slice(0,limit)){if(Date.now()>deadline)break;out.push({status:(await publish(row,{deadline})).status});}
+  const rows=await repository.list({limit:100,statuses:[intakeStatus.received,intakeStatus.working,intakeStatus.done]}),out=[];
+  for(const row of rows.filter(r=>r.esmojo_status===intakeStatus.received||legacyDone(r)||r.esmojo_status===intakeStatus.working&&Date.now()-Date.parse(r.modifiedon)>leaseMs).slice(0,limit)){if(Date.now()>deadline)break;out.push({status:(await publish(row,{deadline})).status});}
   return{processed:out.length,results:out};
  }
  return{publish,processPending};

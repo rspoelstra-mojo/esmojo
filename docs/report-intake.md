@@ -37,3 +37,10 @@ De bestaande online-rapportmail pakt een nieuw beschikbare rapportage zelf op (g
 Beheerder → Datatransitie: "CSV-rapportages ontvangen" (schema, ook de nieuwe kolommen `bronbytes`, `bestandshash`,
 `concert`) en "Ontvangen CSV's controleren" (alleen-lezen overzicht).
 Nog niet ondersteund: een tweede, afwijkende CSV voor een al gepubliceerde rapportage (blijft `fout`/handmatig).
+
+## Leescontract (V1.193)
+De Rapportages-lezer (`server/dataverse-reports/read.js`) eist in de bronrij `validation.context` gelijk aan `source.context`.
+V1.192 schreef dat veld niet: de eerste ontvangst (Tove Lo) was daardoor onleesbaar en kon het menu verstoren.
+V1.193 schrijft het veld, toetst de geplande bron vóór publicatie met dezelfde lezerfunctie (`assertReadable`) en
+herstelt een door V1.192 geschreven bron exact in-place (`repairLegacySource`, ETag + readback). Ontvangsten met
+`resultaat.v=1` en status `verwerkt` worden daarom één keer opnieuw (idempotent) verwerkt; nieuw resultaat is `v=2`.
