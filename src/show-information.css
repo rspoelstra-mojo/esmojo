@@ -2,7 +2,6 @@
 /* Het blok vult zijn cel: de rijen staan bovenaan, Analyses en Risico's plakken tegen de onderkant. */
 .show-information { display:flex; flex-direction:column; }
 .show-information-body { margin-top:12px; min-width:0; flex:1 1 auto; display:flex; flex-direction:column; gap:16px; }
-.show-information-section:first-of-type { margin-top:auto; }
 .show-information-subtitle { margin:0 0 8px; font-size:12px; line-height:18px; font-weight:600; color:var(--muted); }
 .show-information-tiles { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .show-information-tiles-two { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -31,3 +30,7 @@
 :root[data-theme="dark"] .show-score-tile { background:hsl(var(--score-hue) 38% 19%); color:hsl(var(--score-hue) 85% 76%); }
 :root[data-theme="dark"] .show-score-tile[data-empty="true"] { background:var(--canvas); color:var(--muted); }
 .show-score-tile[data-empty="true"] dd { font-size:12px; line-height:1.4; font-weight:400; }
+/* Nul is neutraal: een risicoklasse kleurt pas zodra er minimaal één risico in zit. */
+.show-information-tile.show-risk-low[data-zero="true"],.show-information-tile.show-risk-medium[data-zero="true"],.show-information-tile.show-risk-high[data-zero="true"] { background:var(--canvas); color:var(--muted); }
+:root[data-theme="dark"] .show-information-tile.show-risk-low[data-zero="true"],:root[data-theme="dark"] .show-information-tile.show-risk-medium[data-zero="true"],:root[data-theme="dark"] .show-information-tile.show-risk-high[data-zero="true"] { background:var(--canvas); color:var(--muted); }
+.show-information-tile[data-zero="true"] dd { font-weight:600; }

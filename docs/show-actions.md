@@ -1,6 +1,15 @@
-# Actielijst op het showoverzicht
+# Planning en acties op het showoverzicht (V1.195)
 
-Blok Actielijst (src/show-actions.js, rekenlaag src/lib/show-actions.js) toont een status en maximaal drie to-do's.
+Sinds V1.195 zijn Planning en Actielijst één blok (src/show-planning.js; rekenlaag src/lib/show-actions.js, `showPlanActions`).
+Elke planningsstap toont eronder de openstaande to-do's van dat onderdeel; een afgeronde stap toont er geen. De status staat als één
+rustige tekst rechtsboven (Op schema, Achter op schema in subtiel rood, Afgerond in groen). Profiel en risico's houden de samenvattende
+regel boven drie acties; bij beheersmaatregelen toont het blok er drie en "Toon alle N" klapt de rest open (niets valt weg).
+Rood wordt uitsluitend gebruikt voor "te laat" (tekst). De diepe links hieronder gelden ongewijzigd.
+De losse Actielijst-kaart (src/show-actions.js) bestaat niet meer; `showActions` blijft het model achter de tests en de sortering.
+
+## Oorspronkelijke beschrijving van de losse Actielijst
+
+Blok Actielijst toonde een status en maximaal drie to-do's.
 
 **Status** volgt de planning (showPagePlanning): Afgerond als alle drie de planningsstappen af zijn (profiel verzonden,
 risico's beoordeeld, beheersmaatregelen afgerond), Achter op schema als een stap zijn deadline heeft gemist, anders Op schema.

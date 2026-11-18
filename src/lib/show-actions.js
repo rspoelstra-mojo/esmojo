@@ -35,7 +35,7 @@ const collapse=(items,id,title,tab)=>items.length>MAX_TODOS?[{id,title,multiple:
 export function showActions(show,snapshot={},now=new Date()){
   const planning=showPagePlanning(show,snapshot,now);if(!planning)return null;
   const step=id=>planning.steps.find(item=>item.id===id),status=planning.allDone?'done':planning.steps.some(item=>item.overdue)?'behind':'on-track';
-  const tag=(items,id,suffix)=>items.map((item,order)=>({...item,suffix:item.multiple?'':suffix,deadline:step(id).date,overdue:step(id).overdue,order}));
+  const tag=(items,id,suffix)=>items.map((item,order)=>({...item,group:id,suffix:item.multiple?'':suffix,deadline:step(id).date,overdue:step(id).overdue,order}));
   const all=[
     ...tag(collapse(profileItems(show,snapshot),'multiple-analyses','Nog meerdere openstaande analyses','showprofiel'),'profile','nog te doen'),
     ...tag(collapse(riskItems(show,snapshot),'multiple-risks','Nog meerdere openstaande risico’s','risicoanalyse'),'risks','nog te doen'),
@@ -44,4 +44,18 @@ export function showActions(show,snapshot={},now=new Date()){
   // Stabiele sortering: eerst op deadline, daarna op de volgorde binnen het onderdeel.
   const sorted=all.map((item,index)=>({item,index})).sort((a,b)=>a.item.deadline<b.item.deadline?-1:a.item.deadline>b.item.deadline?1:a.index-b.index).map(entry=>entry.item);
   return{status,label:statusLabels[status],items:sorted.slice(0,MAX_TODOS),total:sorted.length};
+}
+
+// Gecombineerd planningsblok: alle openstaande acties per planningsstap (profile, risks, measures), in volgorde per onderdeel.
+// Profiel en risico's houden de samenvattende regel boven drie acties; maatregelen blijven volledig (de weergave klapt ze in).
+export function showPlanActions(show,snapshot={},now=new Date()){
+  const planning=showPagePlanning(show,snapshot,now);if(!planning)return null;
+  const step=id=>planning.steps.find(item=>item.id===id),status=planning.allDone?'done':planning.steps.some(item=>item.overdue)?'behind':'on-track';
+  const tag=(items,id,suffix)=>items.map((item,order)=>({...item,group:id,suffix:item.multiple?'':suffix,deadline:step(id).date,overdue:step(id).overdue,order}));
+  const groups={
+    profile:tag(collapse(profileItems(show,snapshot),'multiple-analyses','Nog meerdere openstaande analyses','showprofiel'),'profile','nog te doen'),
+    risks:tag(collapse(riskItems(show,snapshot),'multiple-risks','Nog meerdere openstaande risico’s','risicoanalyse'),'risks','nog te doen'),
+    measures:tag(showMeasures(show,snapshot).rows.filter(row=>!row.implemented).map(row=>({id:'measure-'+row.id,title:row.title,target:{tab:'maatregelen',measure:row.id}})),'measures','nog niet afgerond'),
+  };
+  return{status,label:statusLabels[status],groups};
 }
