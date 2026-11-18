@@ -114,10 +114,18 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
       if (claims.sub !== data.user.id) return reply(401, { error: 'Ongeldige sessie.' });
       if (claims.aal !== 'aal2' || !claims.amr?.some(method => method.method === 'totp')
           || !data.user.factors?.some(factor => factor.factor_type === 'totp' && factor.status === 'verified')) {
-        clearSessionCookie(res);
+        clearSessionCookie(res);clearMfaCookie(req,res,env);
         return reply(403, { error: 'Rond eerst de 2-stapsverificatie af.', code: 'MFA_REQUIRED' });
       }
-      if(!isFluidPreview(env)&&!hasAppMfa(req,env,claims))return reply(403,{error:'Bevestig je aanmelding opnieuw met je authenticator.',code:'MFA_REQUIRED'});
+      // Alleen restore mag een legacy-cookie opwaarderen: het versleutelde
+      // refresh-token is hierboven bij Auth gecontroleerd, nooit een bearer van
+      // de aanvrager. Een al gebonden cookie mag niet naar een andere sessie.
+      const restoredFromCookie=Boolean(restored&&remembered?.userId===claims.sub&&typeof claims.session_id==='string'&&claims.session_id&&(!Object.hasOwn(remembered,'sessionId')||remembered.sessionId===claims.session_id));
+      if(restored&&Object.hasOwn(remembered,'sessionId')&&!restoredFromCookie)return expired();
+      if(!isFluidPreview(env)&&!restoredFromCookie&&!hasAppMfa(req,env,claims))return reply(403,{error:'Bevestig je aanmelding opnieuw met je authenticator.',code:'MFA_REQUIRED'});
+      // Een verlopen wachtwoordaanmelding geeft ook geen accountprofielread meer.
+      const passwordDeadline=sessionDeadline(claims);
+      if(passwordDeadline&&passwordDeadline<=Date.now())return expired();
       const actor = data.user.id;
       if(action==='show-open'&&!isFluidPreview(env)&&(shows.prepareRead||dataverseResearch.configured?.())){
         // Technical OAuth/schema warmup only, no business or account read. Current
@@ -145,26 +153,26 @@ export function makeAccountsHandler({ env = process.env, clientFactory = createC
         if(!isAdministrator(own)||!own.activated)return reply(403,{error:'Deze testomgeving vereist een geactiveerd beheerderaccount met MFA.'});
         if(!fluidAccountRead(action,req.method,req.body))return reply(403,{error:'Deze testomgeving is uitsluitend alleen-lezen.'});
       }
-      let expiresAt = sessionDeadline(claims);
+      let expiresAt = passwordDeadline;
       if(previewDeadline)expiresAt=Math.min(expiresAt||0,previewDeadline);
       if (remembered) expiresAt = Math.min(expiresAt || 0, remembered.expiresAt);
       if (own.activated && (!expiresAt || expiresAt <= Date.now())) return expired();
       if (action === 'session' && req.method === 'GET') return reply(200, { profile: own, expiresAt,homeDashboard });
       if(action==='login'&&req.method==='POST'){
         if(!req.body||Object.keys(req.body).join(',')!=='refreshToken'||typeof req.body.refreshToken!=='string'||req.body.refreshToken.length<8||req.body.refreshToken.length>2000)throw Error('VALIDATION');
-        if(own.activated)writeSessionCookie(res,{userId:actor,refreshToken:req.body.refreshToken,expiresAt},env);
+        if(own.activated)writeSessionCookie(res,{userId:actor,sessionId:claims.session_id,refreshToken:req.body.refreshToken,expiresAt},env);
         return reply(200,{profile:own,expiresAt,homeDashboard});
       }
       if (action === 'restore' && req.method === 'POST') {
         if (!own.activated) return expired();
-        writeSessionCookie(res, { userId: actor, refreshToken: restored.refresh_token, expiresAt }, env);
+        writeSessionCookie(res, { userId: actor, sessionId:claims.session_id, refreshToken: restored.refresh_token, expiresAt }, env);
         return reply(200, { profile: own, session: restored, expiresAt,homeDashboard });
       }
       if (action === 'remember' && req.method === 'POST') {
         if (!own.activated) return reply(403, { error: 'Stel eerst je account in.' });
         const refreshToken = req.body?.refreshToken;
         if (typeof refreshToken !== 'string' || refreshToken.length < 8 || refreshToken.length > 2000) throw new Error('VALIDATION');
-        writeSessionCookie(res, { userId: actor, refreshToken, expiresAt }, env);
+        writeSessionCookie(res, { userId: actor, sessionId:claims.session_id, refreshToken, expiresAt }, env);
         return reply(200, { expiresAt });
       }
       if (action === 'complete' && req.method === 'POST') {

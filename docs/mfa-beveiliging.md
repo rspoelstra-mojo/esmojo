@@ -56,6 +56,28 @@ applicatiepoort, gebonden aan gebruiker en Auth-sessie. Bestaande versleutelde
 72-uurs sessiecookies blijven geldig. Dit is extra bescherming van ESMOJO-toegang,
 geen claim dat de publieke Auth-dienst zelf uitsluitend via onze route bereikbaar is.
 
+## Binding aan de inlogsessie (18 november 2026)
+
+Zowel het aanvullende MFA-bewijs als een nieuwe 72-uurs sessiecookie bevatten de
+servergeverifieerde Auth-`session_id`. Een cookie voor sessie A kan geen bearer
+uit sessie B toelaten, ook niet wanneer beide hetzelfde account hebben. De
+MFA-verificatie weigert tevens een providerantwoord voor een andere Auth-sessie.
+
+Oudere versleutelde sessiecookies zonder sessie-ID zijn geen algemeen MFA-bewijs
+meer. Alleen `restore` kan ze veilig opwaarderen: eerst het daarin versleutelde
+refresh-token bij Supabase vernieuwen, daarna dezelfde identiteit, AAL2, TOTP,
+actuele factor en accountrechten controleren. Een al gebonden cookie mag bij
+refresh niet naar een andere sessie wisselen. De oorspronkelijke absolute
+72-uursgrens blijft gelden. Een verlopen wachtwoordaanmelding wordt vóór een
+vertrouwelijke accountprofielread geweigerd.
+
+`node server/access-boundary.test.js` test alle herkende private action-takken
+met vier HTTP-methoden en onvolledige/ongeldige/gemengde sessies. De onafhankelijke
+livecontrole `node --use-env-proxy tools/security/check-anonymous.mjs` stuurt
+uitsluitend aanvragen zonder credentials of met een ongeldig testtoken en print
+alleen statuscodes. Een groene controle bewijst de geteste weigeringen; ze is
+geen bewijs van onhackbaarheid of van infrastructuurrechten buiten de website.
+
 Na MFA combineert `/api/access?action=login` de actuele Drive-rechtencontrole en
 sessiecookie in één ronde. Toegang wordt pas daarna vrijgegeven. Accountprofielen
 blijven in Drive; geen nieuwe persistente browseropslag. Bestaande sessieduur en

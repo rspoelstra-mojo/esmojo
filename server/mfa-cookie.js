@@ -10,8 +10,9 @@ export function issueMfaCookie(res,claims,env,now=Date.now()){
 }
 export function hasAppMfa(req,env,claims,now=Date.now()){
  if(!mfaGuardEnabled(env))return true;
- // Bestaande serverversleutelde 72u-sessies zijn al ná MFA uitgegeven.
- const remembered=readSessionCookie(req,env,now);if(remembered?.userId===claims.sub)return true;
+ // Een bewijs voor hetzelfde account mag nooit een andere Auth-sessie toelaten.
+ // Oude cookies zonder sessionId kunnen alleen via geverifieerde refresh in restore.
+ const remembered=readSessionCookie(req,env,now);if(remembered?.userId===claims.sub&&typeof claims.session_id==='string'&&claims.session_id&&remembered.sessionId===claims.session_id)return true;
  try{const value=(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(NAME+'='))?.slice(NAME.length+1);if(!value||value.length>2000)return false;const bytes=Buffer.from(value,'base64url'),decipher=createDecipheriv('aes-256-gcm',key(env),bytes.subarray(0,12));decipher.setAuthTag(bytes.subarray(12,28));const proof=JSON.parse(Buffer.concat([decipher.update(bytes.subarray(28)),decipher.final()]));return proof.userId===claims.sub&&proof.sessionId===claims.session_id&&typeof claims.session_id==='string'&&Number.isFinite(proof.expiresAt)&&proof.expiresAt>now;}catch{return false;}
 }
 export function clearMfaCookie(req,res,env){
