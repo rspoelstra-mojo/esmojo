@@ -44,3 +44,9 @@ V1.192 schreef dat veld niet: de eerste ontvangst (Tove Lo) was daardoor onleesb
 V1.193 schrijft het veld, toetst de geplande bron vóór publicatie met dezelfde lezerfunctie (`assertReadable`) en
 herstelt een door V1.192 geschreven bron exact in-place (`repairLegacySource`, ETag + readback). Ontvangsten met
 `resultaat.v=1` en status `verwerkt` worden daarom één keer opnieuw (idempotent) verwerkt; nieuw resultaat is `v=2`.
+
+## Artiestfoto (V1.194)
+Direct na een geslaagde publicatie doet de verwerking één poging om de openbare MOJO-artiestfoto vast te leggen
+(zelfde capture `getMojoArtistPhotoResult` en idempotente `artist-photo-save` als de 05:00-import), alleen voor een
+artiest zonder foto. Best effort: een tijdelijke MOJO-fout (`photo: later`) raakt het rapport niet en laat de artiest
+kandidaat voor de 05:00-run. Het resultaat (`saved|missing|later|present`) staat in `resultaat`.

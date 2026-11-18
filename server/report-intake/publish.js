@@ -74,9 +74,22 @@ export async function repairLegacySource(writer,baseRows){
 const legacyDone=row=>row.esmojo_status===intakeStatus.done&&(()=>{try{return JSON.parse(row.esmojo_resultaat||'{}').v===1;}catch{return false;}})();
 const memoryFile=(bytes,hash)=>offset=>({size:bytes.length,sha256:hash,offset,base64:bytes.subarray(offset,offset+1048576).toString('base64')});
 
-export function createReportIntakePublisher({repository,catalogue,writer,now=()=>new Date()}){
+export function createReportIntakePublisher({repository,catalogue,writer,now=()=>new Date(),photo=null}){
  if(!repository||!catalogue||!writer)throw Error('VALIDATION');
  const finish=async(row,status,summary,hash,concertRecordId)=>repository.update(row.id,row['@odata.etag'],{fields:{esmojo_status:status,esmojo_resultaat:JSON.stringify({v:2,at:now().toISOString(),...summary}).slice(0,2000),...(hash?{esmojo_bestandshash:hash}:{})},...(concertRecordId?{concertRecordId}:{})});
+ // One immediate attempt at the public MOJO artist photo, using the same capture and
+ // idempotent save as the 05:00 import. Best effort: it never affects the report; an
+ // undecided or failed attempt leaves the artist as a candidate for the 05:00 run.
+ async function capturePhoto(plan,data){
+  if(!photo)return null;
+  try{
+   const known=data.artists.find(row=>slug(row.name)===slug(plan.show.name));if(known?.photo)return 'present';
+   const artistId=known?.artistId||'a_'+digest(normalizeArtistName(plan.show.name)),found=await photo.capture(known?.name||plan.show.name);
+   if(found?.final!==true)return 'later';
+   const saved=await photo.save({artistId,photo:found.photo?{imageUrl:found.photo.imageUrl,sourceUrl:found.photo.sourceUrl}:null});
+   return saved?.saved?'saved':'missing';
+  }catch{return 'later';}
+ }
  const attemptsOf=row=>{try{return Number(JSON.parse(row.esmojo_resultaat||'{}').attempts)||0;}catch{return 0;}};
  // Publishes exactly one receipt. Every write is create-only or ETag-guarded and
  // verified by an independent re-read; the whole run is safe to repeat.
@@ -110,7 +123,8 @@ export function createReportIntakePublisher({repository,catalogue,writer,now=()=
    await writer.markVerified(version,'esmojo_versiestatus');
    await writer.publish(headerRef(bundle.show),version);
    const concert=await writer.resolve(refs.concert);
-   await finish(row,intakeStatus.done,{concertId:plan.show.key,createdConcert:plan.created,createdArtist:Boolean(plan.newArtist),incidents:rows.incidents,attempts},hash,concert.id);
+   const photoState=await capturePhoto(plan,data);
+   await finish(row,intakeStatus.done,{concertId:plan.show.key,createdConcert:plan.created,createdArtist:Boolean(plan.newArtist),incidents:rows.incidents,attempts,...(photoState?{photo:photoState}:{})},hash,concert.id);
    return result(intakeStatus.done,null,{concertId:plan.show.key,incidents:rows.incidents});
   }catch(error){
    // Leave the lease; the next round resumes after it expires. Never mark success.

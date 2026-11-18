@@ -95,3 +95,15 @@ test('Een door V1.192 geschreven bron zonder context wordt exact hersteld en daa
  assert.equal(await repairLegacySource(f.writer,rows.base),false);
  const other=fake();other.row.esmojo_status='verwerkt';other.row.esmojo_resultaat=JSON.stringify({v:2});assert.equal((await createReportIntakePublisher(other).publish(other.row)).status,'skipped');
 });
+
+test('Direct na publicatie één foto-poging voor een nieuwe artiest; mislukking raakt het rapport niet',async()=>{
+ const calls=[],mk=(capture)=>{const f=fake({bronbytes:bytes.length});return{f,publisher:createReportIntakePublisher({...f,photo:{capture,save:async payload=>{calls.push(payload);return{saved:Boolean(payload.photo)};}}})};};
+ const good={final:true,photo:{imageUrl:'https://www.mojo.nl/media/a.jpg',sourceUrl:'https://www.mojo.nl/good-charlotte'}};
+ const a=mk(async name=>{calls.push(name);return good;});assert.equal((await a.publisher.publish(a.f.row)).status,intakeStatus.done);assert.equal(calls[0],'Good Charlotte');assert.equal(calls[1].artistId,'a_'+digest('good charlotte'));assert.match(a.f.updates.at(-1).fields.esmojo_resultaat,/"photo":"saved"/);
+ calls.length=0;const b=mk(async()=>({final:false}));assert.equal((await b.publisher.publish(b.f.row)).status,intakeStatus.done);assert.equal(calls.length,0);assert.match(b.f.updates.at(-1).fields.esmojo_resultaat,/"photo":"later"/);
+ const c=mk(async()=>{throw Error('MOJO_UNAVAILABLE');});assert.equal((await c.publisher.publish(c.f.row)).status,intakeStatus.done);assert.match(c.f.updates.at(-1).fields.esmojo_resultaat,/"photo":"later"/);
+ const d=mk(async()=>({final:true,photo:null}));assert.equal((await d.publisher.publish(d.f.row)).status,intakeStatus.done);assert.match(d.f.updates.at(-1).fields.esmojo_resultaat,/"photo":"missing"/);
+ // Bestaande artiest met foto: geen poging.
+ calls.length=0;const e=fake();e.row.esmojo_bestandsnaam='incidents_bekend_AFAS-Live_16112026.csv';e.catalogue={all:async()=>({concerts:[],artists:[{...artists[0],photo:'https://www.mojo.nl/media/x.jpg'}]})};
+ const pe=createReportIntakePublisher({...e,photo:{capture:async()=>{throw Error('moet niet');},save:async()=>({})}});assert.equal((await pe.publish(e.row)).status,intakeStatus.done);assert.match(e.updates.at(-1).fields.esmojo_resultaat,/"photo":"present"/);
+});
