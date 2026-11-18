@@ -6,19 +6,19 @@ import {readFileSync} from 'node:fs';
 function harness(request,saveSelection,extra={}){
   let focused;
   class Element{
-    constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.attributes={};this.className='';this.value='';this._text='';this.classList={toggle(){}};}
+    constructor(tag){this.tagName=tag;this.children=[];this.dataset={};this.attributes={};this.className='';this.value='';this._text='';this.classList={toggle(){},add(){}};}
     append(...items){for(const item of items){item.parent=this;this.children.push(item);}}
     prepend(...items){for(const item of items)item.parent=this;this.children.unshift(...items);}
     replaceChildren(...items){this.children=[];this._text='';this.append(...items);}
     set textContent(text){this._text=text;this.children=[];}get textContent(){return this._text+this.children.map(c=>c.textContent).join(' ');}
     setAttribute(k,v){this.attributes[k]=v;}removeAttribute(k){delete this.attributes[k];}
     querySelectorAll(selector){const children=this.children.flatMap(c=>[c,...c.querySelectorAll(selector)]);return children.filter(c=>selector.startsWith('[data-')?c.dataset[selector.slice(6,-1).replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]!==undefined:c.tagName===selector);}
-    focus(){focused=this;}remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this);}
+    addEventListener(){}insertAdjacentHTML(){}focus(){focused=this;}remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this);}
   }
   const panel=new Element('section'),menu=new Element('a');
   const openAssessment=(section,{onBack})=>{section.replaceChildren();const back=new Element('button');back.textContent='Terug';back.onclick=onBack;const title=new Element('h2');title.textContent='Barrieropstelling';section.append(back,title);return()=>{};};
-  const context=vm.createContext({crypto:globalThis.crypto,access:async()=>{throw Error("Unexpected API request");},Promise,structuredClone,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{addEventListener(){},scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
-  for(const file of ['src/lib/profile-icons.js','src/lib/background-saves.js','src/lib/page-feedback.js','src/detail-back.js','shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','src/lib/operational-review-memory.js','shared/barrier-layout.js','shared/operational-risk.js','shared/operational-review.js','shared/risk-edit.js','shared/own-risk.js','src/production-assessment-ui.js','src/risk-review-card.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
+  const context=vm.createContext({requestAnimationFrame:callback=>callback(),crypto:globalThis.crypto,access:async()=>{throw Error("Unexpected API request");},Promise,structuredClone,createBarrierLayoutPage:openAssessment,createFloorPressurePage:openAssessment,document:{createElement:tag=>new Element(tag),querySelector:()=>menu},window:{addEventListener(){},scrollTo(){},scrollX:0,matchMedia:()=>({matches:true})}});
+  for(const file of ['src/lib/profile-icons.js','src/lib/background-saves.js','src/lib/page-feedback.js','src/detail-back.js','shared/production-risks.js','src/lib/submenu-loading.js','src/lib/production-choice-saves.js','src/lib/operational-review-memory.js','shared/barrier-layout.js','shared/operational-risk.js','shared/operational-review.js','shared/risk-edit.js','shared/own-risk.js','src/production-assessment-ui.js','src/risk-review-card.js','src/edit-mode.js','src/risk-analysis.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replaceAll('export ',''),context);
   const page=context.createRiskAnalysis(panel,{show:{key:'Test'},request,saveSelection,...extra});
   return{notices:()=>vm.runInContext('backgroundSaves.messages',context),retry:()=>vm.runInContext('backgroundSaves.retry(backgroundSaves.messages[0].key)',context),page,panel,menu,focused:()=>focused,buttons:()=>panel.querySelectorAll('[data-risk-id]'),text:()=>panel.textContent};
 }
@@ -29,7 +29,7 @@ test('Risico’s laden pas bij tabselectie, krijgen ieder eigen pagina en terugk
   assert.deepEqual(h.panel.querySelectorAll('h3').map(el=>el.textContent),['Zaalindeling',"Operationele risico's",'Special effects']);assert.match(h.text(),/Operationele risico's/);assert.equal(calls,0);
   h.page.activate();h.page.activate();assert.equal(calls,1);assert.equal(h.panel.attributes['aria-busy'],'true');
   resolve({state:'ready',risks,production:{revision:0,choices:{}}});await tick();assert.equal(h.buttons().length,2);assert.equal(h.panel.attributes['aria-busy'],undefined);
-  for(const risk of risks){h.buttons().find(b=>b.dataset.riskId===risk.id).onclick();assert.ok(h.text().includes(risk.title));assert.ok(h.text().includes(risk.description));assert.ok(h.text().includes(risk.consequence));assert.equal(h.panel.querySelectorAll('textarea').length,1);assert.ok(h.text().includes('Risico beoordeling'));h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.buttons().length,2);assert.equal(h.focused().dataset.riskId,risk.id);}
+  for(const risk of risks){h.buttons().find(b=>b.dataset.riskId===risk.id).onclick();assert.ok(h.text().includes(risk.title));assert.ok(h.text().includes(risk.description));assert.ok(h.text().includes(risk.consequence));assert.equal(h.panel.querySelectorAll('textarea').length,3,'twee bewerkvelden en de verborgen toelichting van de beoordeling');assert.ok(h.text().includes('Risico beoordeling'));h.panel.querySelectorAll('button')[0].onclick();assert.equal(h.buttons().length,2);assert.equal(h.focused().dataset.riskId,risk.id);}
   h.page.activate();assert.equal(calls,1);h.page.dispose();assert.equal(h.text(),'');assert.equal(h.menu.children.length,0);
 });
 test('Ontbrekende analyse, nul risico’s en laadfout hebben verschillende uitkomsten met veilige herpoging',async()=>{
@@ -88,11 +88,28 @@ test('Fout behoudt keuzes en hervat pas na expliciet Opnieuw proberen, niet bij 
   fail=false;state={revision:7,choices:{}};void h.retry();await tick();await tick();assert.equal(calls,2);assert.ok(!h.text().includes('nog niet bevestigd'));h.page.dispose();
 });
 
-test('Opslaan keert synchroon terug, toont gekozen klasse en bewaart fout/invoer voor herpoging',async()=>{
+test('Bewerken is de enige bewerkknop; een mislukte opslag blijft in de bewerkmodus met de invoer, annuleren verwerpt',async()=>{
  const source={revision:'a'.repeat(64),sha256:'b'.repeat(64)},data={state:'ready',risks,production:{revision:0,choices:{}},operational:{source,assessments:{}}};let reject;
  const h=harness(async()=>data,undefined,{requestAccess:()=>new Promise((_,fail)=>reject=fail)});await h.page.prepare();h.buttons()[0].onclick();
+ const find=name=>h.panel.querySelectorAll('button').find(el=>el.className.includes(name)),page=()=>h.panel.querySelectorAll('div').find(el=>el.dataset.editMode!==undefined);
+ assert.equal(page().dataset.editMode,'read');assert.doesNotMatch(h.text(),/Risico bewerken|Beoordelen|concept/);
+ find('edit-action-edit').onclick();assert.equal(page().dataset.editMode,'edit');
  const radios=h.panel.querySelectorAll('input');radios.find(el=>el.value==='medium').checked=true;radios.find(el=>el.value==='medium').onchange();
- const yes=radios.find(el=>el.value==='yes');yes.checked=true;yes.onchange();const form=h.panel.querySelectorAll('form')[0];form.reportValidity=()=>true;form.onsubmit({preventDefault(){}});
- assert.equal(h.buttons().length,2,'Direct overzicht vóór de opslag begint');assert.match(h.buttons()[0].textContent,/Midden/);
- await tick();reject(Error('Geen private details tonen'));await tick();assert.doesNotMatch(h.text(),/Opslaan is niet gelukt/);assert.ok(h.notices().some(item=>/Opslag niet bevestigd/.test(item.message||'')));assert.doesNotMatch(h.text(),/private details/);h.buttons()[0].onclick();assert.equal(h.panel.querySelectorAll('input').find(el=>el.value==='yes').checked,true,'de keuze Ja blijft bewaard');assert.doesNotMatch(h.text(),/Opnieuw proberen/);assert.ok(h.notices().length>0);h.page.dispose();
+ const yes=radios.find(el=>el.value==='yes');yes.checked=true;yes.onchange();
+ assert.equal(find('edit-action-save').disabled,false);find('edit-action-save').onclick();
+ assert.equal(find('edit-action-save').disabled,true,'tijdens het opslaan uitgeschakeld');assert.equal(find('edit-action-cancel').disabled,true);
+ await tick();reject(Error('Geen private details tonen'));await tick();
+ assert.equal(page().dataset.editMode,'edit','na een fout blijft de bewerkmodus');assert.ok(h.notices().some(item=>/Opslag niet bevestigd/.test(item.message||'')));assert.doesNotMatch(h.text(),/private details/);
+ assert.equal(h.panel.querySelectorAll('input').find(el=>el.value==='yes').checked,true,'de keuze Ja blijft bewaard');assert.equal(find('edit-action-save').disabled,false);
+ find('edit-action-cancel').onclick();assert.equal(page().dataset.editMode,'read');
+ find('edit-action-edit').onclick();assert.equal(h.panel.querySelectorAll('input').find(el=>el.value==='yes').checked,false,'annuleren verwerpt de wijzigingen');h.page.dispose();
+});
+test('Geslaagde opslag toont pas na bevestiging de leesmodus met de bijgewerkte beoordeling',async()=>{
+ const source={revision:'a'.repeat(64),sha256:'b'.repeat(64)},assessments={},data={state:'ready',risks,production:{revision:0,choices:{}},operational:{source,assessments}};const calls=[];
+ const requestAccess=async(action,{body})=>{calls.push(action);assessments.R01={riskLevel:body.riskLevel,measureRequired:body.measureRequired,revision:1,completedAt:'2026-11-18T10:00:00Z'};return{record:assessments.R01,overview:{state:'ready',risks,operational:{source,assessments:{...assessments}}}};};
+ const h=harness(async()=>data,undefined,{requestAccess});await h.page.prepare();h.buttons()[0].onclick();
+ const find=name=>h.panel.querySelectorAll('button').find(el=>el.className.includes(name)),page=()=>h.panel.querySelectorAll('div').find(el=>el.dataset.editMode!==undefined);
+ find('edit-action-edit').onclick();const radios=h.panel.querySelectorAll('input');radios.find(el=>el.value==='high').checked=true;radios.find(el=>el.value==='high').onchange();const yes=radios.find(el=>el.value==='yes');yes.checked=true;yes.onchange();
+ find('edit-action-save').onclick();assert.equal(page().dataset.editMode,'edit','nog niet bevestigd');await tick();await tick();
+ assert.deepEqual(calls,['operational-risk']);assert.equal(page().dataset.editMode,'read');assert.match(h.text(),/Hoog/);h.page.dispose();
 });
