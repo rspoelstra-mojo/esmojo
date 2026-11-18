@@ -1,6 +1,10 @@
-# Personeelsplanning
+# Concertagenda (voorheen Personeelsplanning)
 
-Pagina `/beheerder/personeelsplanning` (src/staff-planning.js): titelblok met tabjesmenu (Totaalplanning) en een paginabrede tabel.
+Pagina `/beheerder/concertagenda` (src/staff-planning.js; de oude route `/beheerder/personeelsplanning` verwijst door): titelblok met vier tabs en een
+paginabrede tabel. De concertkolommen (Artiestnaam, Locatie, Datum) blijven altijd zichtbaar; de kolommen erachter wisselen per tab (V1.196,
+`staffTabs` in shared/staff-planning.js): **Algemeen** (nog geen extra kolommen), **MOJO personeel** (Productie manager, Event Safety manager,
+CMT leider MOJO), **Beveiliging** (Projectleider beveiliging) en **Zaal** (Productie manager zaal, Event manager zaal, CMT leider zaal).
+Wachtende invoer blijft bij een tabwissel staan en wordt op de achtergrond opgeslagen; opslag, revisies en rechten zijn ongewijzigd.
 
 **Gegevens**
 - *Concertlijst* (openbare MOJO-gegevens): de 05:00-import (`staffplanning`-stap in `shows-sync`, `mojo-shows.yml`) leest per zaal de komende 365 dagen

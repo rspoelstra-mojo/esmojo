@@ -1,3 +1,11 @@
+## Concertagenda met vier tabs (18 november 2026)
+
+Gebruiker hernoemt Beheerder / Personeelsplanning naar Concertagenda (route /beheerder/concertagenda, oude route verwijst door) en vraagt vier tabs:
+Algemeen, MOJO personeel, Beveiliging, Zaal. De lijst met concerten blijft altijd zichtbaar; de kolommen erachter wisselen per tab (MOJO personeel:
+Productie manager, Event Safety manager, CMT leider MOJO; Beveiliging: Projectleider beveiliging; Zaal: Productie manager zaal, Event manager zaal,
+CMT leider zaal). Opslag, rechten en Vertrouwelijke classificatie van de namen ongewijzigd. In tab Algemeen komen later artiestnaam-aliassen en
+concertreeksen; die vragen eerst afstemming over ontwerp en gegevensclassificatie. Zie docs/personeelsplanning.md.
+
 ## Showoverzicht rustiger (18 november 2026)
 
 Gebruiker vindt het overzicht te druk en kiest: rood alleen voor "te laat" (subtiele tekst, geen rode balken/iconen/pills), neutrale

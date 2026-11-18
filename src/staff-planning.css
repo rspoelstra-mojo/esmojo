@@ -1,4 +1,4 @@
-/* Beheerder / Personeelsplanning: titelblok met tabjes en een paginabrede tabel; drie kleurgroepen. */
+/* Beheerder / Concertagenda: titelblok met vier tabjes en een paginabrede tabel; de concertkolommen blijven, de kolommen erachter wisselen per tab. */
 .staff-planning-page { width:100%; min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-content:start; }
 .staff-card { min-width:0; padding:20px 24px; border:1px solid var(--line); border-radius:14px; background:var(--fluid-card,#fff); }
 .staff-header { padding-bottom:0; }
@@ -13,7 +13,7 @@
 :root[data-theme="dark"] .staff-planning-page { --staff-info:#1a2030; --staff-info-head:#252d42; --staff-prod:#16213a; --staff-prod-head:#213460; --staff-venue:#14291f; --staff-venue-head:#1e4331; }
 .staff-table-wrap { overflow:auto; max-height:calc(100dvh - 320px); min-height:260px; border:1px solid var(--staff-line); border-radius:10px; }
 .staff-table-wrap:focus-visible { outline:2px solid var(--blue,#002ff4); outline-offset:2px; }
-.staff-table { width:100%; min-width:1400px; border-collapse:separate; border-spacing:0; font-size:13px; line-height:1.4; }
+.staff-table { width:100%; min-width:640px; border-collapse:separate; border-spacing:0; font-size:13px; line-height:1.4; }
 .staff-table th,.staff-table td { padding:0; border-bottom:1px solid var(--staff-line); text-align:left; vertical-align:middle; }
 .staff-table thead th { position:sticky; top:0; z-index:2; padding:12px 12px; font-size:12px; font-weight:600; white-space:nowrap; border-bottom:1px solid var(--staff-line); }
 .staff-table tbody th,.staff-table tbody td.staff-group-concert { padding:10px 12px; font-weight:400; }
@@ -34,3 +34,6 @@
 .staff-input:focus { outline:none; border-color:var(--blue,#002ff4); background:var(--fluid-card,#fff); box-shadow:0 0 0 2px color-mix(in srgb,var(--blue,#002ff4) 25%,transparent); }
 .staff-input:disabled { color:var(--muted); cursor:not-allowed; }
 @media (max-width:700px) { .staff-card { padding:16px; } }
+
+.staff-table[data-tab="mojo"],.staff-table[data-tab="venue"] { min-width:980px; }
+.staff-table[data-tab="security"] { min-width:760px; }

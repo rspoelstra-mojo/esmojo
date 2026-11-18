@@ -12,6 +12,14 @@ export const staffGroups=Object.freeze([
     {id:'venueCmtLead',label:'CMT leider zaal'},
   ])},
 ]);
+// Tabs van de Concertagenda: de concertkolommen blijven altijd zichtbaar, de kolommen erachter wisselen per tab.
+// Elke functie staat in precies één tab; kleurgroep volgt de oorspronkelijke twee groepen (MOJO/TSC en Zaal).
+export const staffTabs=Object.freeze([
+  {id:'general',label:'Algemeen',color:'info',fields:Object.freeze([])},
+  {id:'mojo',label:'MOJO personeel',color:'production',fields:Object.freeze([{id:'productionManager',label:'Productie manager'},{id:'eventSafetyManager',label:'Event Safety manager'},{id:'cmtLeadMojo',label:'CMT leider MOJO'}])},
+  {id:'security',label:'Beveiliging',color:'production',fields:Object.freeze([{id:'securityProjectLead',label:'Projectleider beveiliging'}])},
+  {id:'venue',label:'Zaal',color:'venue',fields:Object.freeze([{id:'venueProductionManager',label:'Productie manager zaal'},{id:'venueEventManager',label:'Event manager zaal'},{id:'venueCmtLead',label:'CMT leider zaal'}])},
+]);
 export const staffFieldIds=Object.freeze(staffGroups.flatMap(group=>group.fields.map(field=>field.id)));
 export const staffNameMax=120;
 // Een naam is vrije tekst van een mens: getrimd, zonder stuurtekens, maximaal 120 tekens. Leeg betekent niet ingevuld.
