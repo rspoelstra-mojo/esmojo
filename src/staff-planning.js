@@ -22,7 +22,7 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
   body.id='staff-panel';body.setAttribute('role','tabpanel');page.append(header,body);content.replaceChildren(page);
   const position=()=>{const tab=tabButtons[active];indicator.style.width=tab.offsetWidth+'px';indicator.style.transform=`translate(${tab.offsetLeft}px, ${tab.offsetTop+tab.offsetHeight-3}px)`;};
   const frame=requestAnimationFrame(()=>{position();tabs.classList.add('show-tabs-ready');});
-  const rows=new Map(),timers=new Map(),aliasDrafts=new Map(),aliasTimers=new Map(),aliasRevisions=new Map();let inflight=0,suggestions=[];
+  const rows=new Map(),timers=new Map(),aliasDrafts=new Map(),aliasTimers=new Map(),aliasRevisions=new Map();let inflight=0,suggestions=[],moveNote='';
   // Wachtende of lopende opslag telt mee voor de centrale afsluitwaarschuwing.
   const dirty=()=>[...rows.values()].some(row=>row.drafts.size>0)||aliasDrafts.size>0||inflight>0;
   const stopWatching=backgroundSaves.watch(dirty);
@@ -61,6 +61,14 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
     row.drafts.set(field,value);input.dataset.saved='false';backgroundSaves.changed();
     clearTimeout(timers.get(row));timers.set(row,setTimeout(()=>{timers.delete(row);void flush(row);},debounce));
   }
+  // Korte melding na het koppelen van bestaande concerten aan de gekozen artiest (alleen bij een gewijzigde naam).
+  function moveSummary(move,shown){
+    if(!move)return '';const parts=[];
+    const count=list=>list.reduce((sum,item)=>sum+(item.dates?.length||0),0);
+    if(move.moved?.length)parts.push(`${count(move.moved)} bestaand ${count(move.moved)===1?'concert is':'concerten zijn'} in ESMOJO aan ${shown} gekoppeld.`);
+    if(move.blocked?.length)parts.push(`${count(move.blocked)} ${count(move.blocked)===1?'concert staat':'concerten staan'} al in ESMOJO met showgegevens (of kon niet worden gecontroleerd) en ${count(move.blocked)===1?'is':'zijn'} niet verplaatst.`);
+    return parts.join(' ');
+  }
   // Artiestnaam aanpassen (tab Algemeen): geldt voor alle concerten met dezelfde MOJO-bronnaam. Leeg of gelijk aan de bronnaam zet de alias terug.
   async function flushAlias(source){
     const draft=aliasDrafts.get(aliasSourceKey(source));if(!draft||draft.busy)return;draft.busy=true;inflight++;
@@ -75,14 +83,18 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
           return;
         }
       }
-      aliasRevisions.set(key,result.revision);const shown=result.name??source;
+      aliasRevisions.set(key,result.revision);const shown=result.name??source;moveNote=moveSummary(result.move,shown);
       for(const concert of concertsData)if(aliasSourceKey(concert.sourceArtist||concert.artist)===key)concert.artist=shown;
       if(aliasDrafts.get(key)===draft&&draft.value===value)aliasDrafts.delete(key);
       if(!disposed){if(![...aliasDrafts.values()].length)feedback.resolved();if(active===0){if(document.activeElement?.classList?.contains('staff-artist-input'))updateArtistCells(key,source,shown);else render(concertsData);}}
     }finally{draft.busy=false;inflight--;backgroundSaves.changed();}
   }
   // Tijdens het typen wordt de tabel niet opnieuw opgebouwd: alleen de andere cellen met dezelfde bronnaam en de MOJO-notitie worden bijgewerkt.
-  function updateArtistCells(key,source,shown){
+  function showMoveNote(){
+    const intro=body.querySelector('.staff-table-intro');if(!intro)return;let note=intro.querySelector('.staff-move-note');
+    if(!moveNote){note?.remove();return;}if(!note){note=Object.assign(node('p','staff-muted staff-move-note'),{role:'status'});intro.append(note);}note.textContent=moveNote;
+  }
+  function updateArtistCells(key,source,shown){showMoveNote();
     for(const cell of body.querySelectorAll('th.staff-artist')){
       if(cell.dataset.source!==key)continue;const input=cell.querySelector('input');if(input&&input!==document.activeElement)input.value=shown;
       let note=cell.querySelector('.staff-source-name');if(shown!==source){if(!note){note=node('span','staff-source-name');cell.append(note);}note.textContent='MOJO: '+source;}else note?.remove();
@@ -105,7 +117,7 @@ export function createStaffPlanningView(content,link,{request=access,debounce=60
   let loaded=false;
   function render(concerts){
     concertsData=concerts;body.replaceChildren();const tabDefinition=staffTabs[active];
-    const intro=node('div','staff-table-intro');intro.append(node('h2','',tabDefinition.label),node('p','staff-muted',`${concerts.length} ${concerts.length===1?'concert':'concerten'} · komende 365 dagen · wordt dagelijks om 05:00 bijgewerkt`));body.append(intro);
+    const intro=node('div','staff-table-intro');intro.append(node('h2','',tabDefinition.label),node('p','staff-muted',`${concerts.length} ${concerts.length===1?'concert':'concerten'} · komende 365 dagen · wordt dagelijks om 05:00 bijgewerkt`));if(moveNote&&tabDefinition.id==='general')intro.append(Object.assign(node('p','staff-muted staff-move-note',moveNote),{role:'status'}));body.append(intro);
     if(!concerts.length){body.append(node('p','staff-empty','Er staan nog geen concerten in de agenda. De lijst wordt dagelijks om 05:00 uit de MOJO-agenda gevuld.'));return;}
     const wrap=node('div','staff-table-wrap'),table=node('table','staff-table'),head=node('thead',''),headRow=node('tr','');
     wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Concertagenda, scrolbaar');table.dataset.tab=tabDefinition.id;

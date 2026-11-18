@@ -12,7 +12,8 @@ import {normalizeArtistName} from '../../shared/artist-catalogue.js';
 import {showPlanning} from './planning.js';
 import {createStaffPlanning} from './staff-planning.js';
 import {createArtistAliases} from './artist-alias.js';
-import {resolveArtistAlias} from '../../shared/artist-alias.js';
+import {createNativeReportsRepository} from '../dataverse-reports/repository.js';
+import {resolveArtistAlias,aliasSourceKey} from '../../shared/artist-alias.js';
 const day=value=>typeof value==='string'?value.slice(0,10):'';
 const sameKeys=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).sort().join(',')===[...keys].sort().join(',');
 const photoValid=p=>sameKeys(p,['imageUrl','sourceUrl'])&&/^https:\/\/www\.mojo\.nl\/media\/[\w/.-]+\.(?:jpe?g|png|webp)(?:\?[^#\s]*)?$/i.test(p.imageUrl)&&/^https:\/\/www\.mojo\.nl\/concerten\/[\w%/-]+$/.test(p.sourceUrl);
@@ -22,7 +23,7 @@ function validSourceIdentity(show){
  const source=parseResearchKey(show.sourceKey),venue=MOJO_VENUES.find(v=>v.name===show.venue);
  return source&&source.date===show.dates[0]&&researchSlug(source.artistToken)===researchSlug(show.name)&&venue&&[venue.name,venue.id,...venue.aliases].some(name=>researchSlug(name)===researchSlug(source.venueToken));
 }
-export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}={}){
+export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),reports=null}={}){
  const repo=state.repo,metaKey=recordKey('esmojo_integratiestatus','native-catalogue/v1'),staff=createStaffPlanning({env,repo,now}),artistAliases=createArtistAliases({repo,now});
  async function writeRows(rows){const ops=await recordOperations(repo,rows);if(ops.length)await repo.atomic(ops);}
  async function all(){
@@ -80,7 +81,7 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
   const seen=new Set();
   for(const row of snapshot.concerts){if(!row||typeof row.artist!=='string'||!row.artist.trim()||row.artist.length>160||!MOJO_VENUES.some(venue=>venue.name===row.venue&&venue.city===row.city)||!validTimetableDate(row.date)||row.date<snapshot.from||row.date>=snapshot.until||makeConcertId(row.artist,row.date,row.venue)!==row.concertId||seen.has(row.concertId)||!/^https:\/\/www\.mojo\.nl\/(agenda|concerten\/[\w%/-]+)(\?[^#\s]*)?$/.test(row.sourceUrl||''))throw Error('VALIDATION');seen.add(row.concertId);}
   await normalizeLocations();
-  const current=await all(),aliasMap=await artistAliases.map();snapshot={...snapshot,concerts:snapshot.concerts.map(raw=>{const direct=current.rows.find(old=>old.concertId===raw.concertId),row=direct?raw:{...raw,artist:resolveArtistAlias(raw.artist,aliasMap)},same=old=>normalizeArtistName(old.artist)===normalizeArtistName(row.artist)&&old.venue===row.venue&&old.date===row.date;if(direct&&!same(direct))throw Error('DATAVERSE_SHOWS_CONFLICT');if(current.rows.some(old=>old.venue===row.venue&&old.date===row.date&&old.sourceUrl===row.sourceUrl&&!same(old)))throw Error('DATAVERSE_SHOWS_CONFLICT');const matches=current.rows.filter(same);if(matches.length>1)throw Error('DATAVERSE_SHOWS_CONFLICT');const artists=current.artists.filter(artist=>normalizeArtistName(artist.esmojo_naam)===normalizeArtistName(row.artist));if(artists.length>1)throw Error('DATAVERSE_SHOWS_CONFLICT');return{...row,...artists.length?{artist:artists[0].esmojo_naam}:{},...matches.length?{concertId:matches[0].concertId}:{}};})};seen.clear();for(const row of snapshot.concerts)seen.add(row.concertId);
+  const current=await all(),aliasMap=await artistAliases.map();snapshot={...snapshot,concerts:snapshot.concerts.map(raw=>{const direct=current.rows.find(old=>old.concertId===raw.concertId),resolved=resolveArtistAlias(raw.artist,aliasMap),row=direct&&normalizeArtistName(direct.artist)!==normalizeArtistName(resolved)?raw:{...raw,artist:resolved},same=old=>normalizeArtistName(old.artist)===normalizeArtistName(row.artist)&&old.venue===row.venue&&old.date===row.date;if(direct&&!same(direct))throw Error('DATAVERSE_SHOWS_CONFLICT');if(current.rows.some(old=>old.venue===row.venue&&old.date===row.date&&old.sourceUrl===row.sourceUrl&&!same(old)))throw Error('DATAVERSE_SHOWS_CONFLICT');const matches=current.rows.filter(same);if(matches.length>1)throw Error('DATAVERSE_SHOWS_CONFLICT');const artists=current.artists.filter(artist=>normalizeArtistName(artist.esmojo_naam)===normalizeArtistName(row.artist));if(artists.length>1)throw Error('DATAVERSE_SHOWS_CONFLICT');return{...row,...artists.length?{artist:artists[0].esmojo_naam}:{},...matches.length?{concertId:matches[0].concertId}:{}};})};seen.clear();for(const row of snapshot.concerts)seen.add(row.concertId);
   const people=await state.employeeSource(),pinned=await repo.query('esmojo_historie',{filter:"esmojo_entiteitsoort eq 'account-role'"});
   const admins=pinned.map(row=>{const value=JSON.parse(row.esmojo_snapshot_json);if(digest(value)!==row.esmojo_fingerprint||value.policy!=='existing-pinned-super-administrator')throw Error('DATAVERSE_SHOWS_CONFLICT');return value.authUserId;});
   if(admins.length>1)throw Error('DATAVERSE_SHOWS_CONFLICT');
@@ -180,7 +181,41 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date()}
   const read=await repo.byKey('esmojo_integratiestatus',key),actual=await repo.byKey('esmojo_artiest',artist.esmojo_sleutel);if(!read||migrationDifferences(marker,read,marker.fields).length||photo&&actual?.esmojo_fotobronurl!==photo.imageUrl)throw Error('ARTIST_PHOTO_UNCONFIRMED');return{saved:!!photo};
  }
  const globals=new Set(['list','sync','dataverse-ensure','research-identities','home-dashboard','home-metadata','home-rebuild','home-photo-cache','biography-candidates','biography-save','biography-initial-list','biography-initial-save','biography-initial-batch','concert-catalogue','artist-photo-candidates','artist-photo-save','staff-planning-store','staff-planning-read','staff-planning-alias','staff-planning-save','staff-planning-team','management-candidates','advance-timetable-candidates','advance-timetable-save','advance-timetable-read','native-timetable-read','native-timetable-save']);
+
+ // Fase 2 van de artiestnaam-aliassen: bestaande concerten onder de bronnaam worden aan de gekozen artiest gekoppeld, alleen als er nog geen
+ // showgegevens aan hangen (geen documenten, bestanden of bevestigde voorbereidingsstand). Elke reeks apart, met ETags, en daarna onafhankelijk
+ // teruggelezen met dezelfde controle als elke Shows-bewerking. Zo niet verplaatsbaar: melding, niets gewijzigd.
+ async function moveToAlias(saved){
+  const result={moved:[],blocked:[],orphaned:[]};if(!saved?.name)return result;
+  const aliasMap=await artistAliases.map(),canonicalName=resolveArtistAlias(saved.name,aliasMap),sourceKey=aliasSourceKey(saved.source),data=await all();
+  if(sourceKey===null||aliasSourceKey(canonicalName)===sourceKey)return result;
+  const targetKey=aliasSourceKey(canonicalName),target=data.artists.find(row=>aliasSourceKey(row.esmojo_naam)===targetKey)||null,targetId=target?.esmojo_bronartiestid||'a_'+digest(normalizeArtistName(canonicalName)),shownName=target?.esmojo_naam||canonicalName;
+  const bySeries=new Map();for(const row of data.rows)if(aliasSourceKey(row.artist)===sourceKey){const list=bySeries.get(row.generalConcertId)||[];list.push(row);bySeries.set(row.generalConcertId,list);}
+  for(const [generalId,concerts] of bySeries){
+   const label={venue:concerts[0].venue,dates:concerts.map(row=>row.date).sort()};
+   try{
+    const loaded=await state.load(concerts[0].concertId),source=loaded.source;
+    if(Object.keys(source.documents||{}).length||(source.files||[]).length||source.nativeGeneration>0||loaded.control){result.blocked.push({...label,reason:'showgegevens'});continue;}
+    // Ook een gepubliceerde of ontvangen rapportage is een showgegeven; een mislukte controle telt als aanwezig (faalt gesloten).
+    const reportsRepo=reports||(reports=createNativeReportsRepository({env})),cm=await repo.meta('esmojo_concert');
+    let reported=false;for(const row of concerts)if((await reportsRepo.query('esmojo_rapportage',{filter:'_esmojo_concert_value eq '+row.native[cm.PrimaryIdAttribute],select:['esmojo_bronidentiteit']})).length)reported=true;
+    if(reported){result.blocked.push({...label,reason:'showgegevens'});continue;}
+    const next={...source,artistId:targetId,shows:source.shows.map(show=>({...show,artist:shownName}))};delete next.biography;delete next.photo;
+    if(target?.esmojo_biografie)next.biography={text:target.esmojo_biografie,sourceUrl:target.esmojo_biografiebron||null,capturedAt:target.esmojo_biografieopgehaaldop};
+    if(target?.esmojo_fotobronurl)next.photo={imageUrl:target.esmojo_fotobronurl};
+    const rows=internalRows(mapShow(next,loaded.people)).filter(row=>['esmojo_artiest','esmojo_concertreeks','esmojo_concert','esmojo_routealias'].includes(row.table)&&(target?row.table!=='esmojo_artiest':true));
+    const operations=await recordOperations(repo,rows);if(operations.length)await repo.atomic(operations);
+    const after=await state.load(concerts[0].concertId);await state.verifyPlan(mapShow(after.source,after.people),0);
+    if(after.source.artistId!==targetId)throw Error('DATAVERSE_SHOWS_CONFLICT');
+    result.moved.push(label);
+   }catch{result.blocked.push({...label,reason:'niet bevestigd'});}
+  }
+  // Een artiest zonder reeksen blijft bestaan (alleen melden): bestaande koppelingen en foto worden niet verwijderd.
+  if(result.moved.length){const old=data.artists.find(row=>aliasSourceKey(row.esmojo_naam)===sourceKey),am=old&&await repo.meta('esmojo_artiest');if(old&&(await repo.query('esmojo_concertreeks',{filter:'statecode eq 0 and _esmojo_artiest_value eq '+old[am.PrimaryIdAttribute]})).length===0)result.orphaned.push(old.esmojo_naam);}
+  return result;
+ }
  async function request(operation,payload={}){
+  if(operation==='staff-planning-alias'){const saved=await staff.handle(operation,payload),move=await moveToAlias(saved).catch(()=>({moved:[],blocked:[],orphaned:[],failed:true}));return{...saved,move};}
   if(staff.handles(operation))return staff.handle(operation,payload);
   if(operation==='concert-catalogue')return createConcertCatalogue({env,repository:repo}).all();
   if(operation==='management-candidates'){if(Object.keys(payload).some(key=>key!=='after'))throw Error('VALIDATION');return{shows:await managementCandidates(payload.after)};}
