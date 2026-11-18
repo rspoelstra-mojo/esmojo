@@ -154,9 +154,11 @@ function renderPage() {
     const incidentLink=document.createElement('a');incidentLink.href='/beheerder/incidenten';incidentLink.className='submenu-link';incidentLink.textContent='Incidenten';incidentLink.dataset.submenuTitle='Incidenten';
     if(route==='beheerder/incidenten')incidentLink.setAttribute('aria-current','page');submenu.append(incidentLink);
     if(route==='beheerder/incidenten')disposePage=createIncidentAdminView(content,incidentLink);
-    const staffLink=document.createElement('a');staffLink.href='/beheerder/personeelsplanning';staffLink.className='submenu-link';staffLink.textContent='Personeelsplanning';staffLink.dataset.submenuTitle='Personeelsplanning';
-    if(route==='beheerder/personeelsplanning')staffLink.setAttribute('aria-current','page');submenu.append(staffLink);
-    if(route==='beheerder/personeelsplanning')disposePage=createStaffPlanningView(content,staffLink);
+    // Concertagenda (voorheen Personeelsplanning); de oude route verwijst door naar het nieuwe pad.
+    if(route==='beheerder/personeelsplanning'){route='beheerder/concertagenda';history.replaceState(null,'','/beheerder/concertagenda'+location.search);}
+    const staffLink=document.createElement('a');staffLink.href='/beheerder/concertagenda';staffLink.className='submenu-link';staffLink.textContent='Concertagenda';staffLink.dataset.submenuTitle='Concertagenda';
+    if(route==='beheerder/concertagenda')staffLink.setAttribute('aria-current','page');submenu.append(staffLink);
+    if(route==='beheerder/concertagenda')disposePage=createStaffPlanningView(content,staffLink);
     const emailLink=document.createElement('a');emailLink.href='/beheerder/email';emailLink.className='submenu-link';emailLink.textContent='Email';emailLink.dataset.submenuTitle='Email';
     if(route==='beheerder/email')emailLink.setAttribute('aria-current','page');submenu.append(emailLink);
     if(route==='beheerder/email')disposePage=createEmailAdminView(content,emailLink);
