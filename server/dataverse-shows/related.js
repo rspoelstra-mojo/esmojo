@@ -11,16 +11,23 @@ export function createRelatedShows({state,catalogue,research=null,now=()=>new Da
  return async(operation,payload,legacy)=>{
   if(operation.startsWith('biography-'))throw Error('INTEGRATION_RETIRED');
   if(!['artist-catalogue','artist-profile','artist-show','incident-read'].includes(operation))return legacy();
-  const data=await catalogue.all(),idFor=name=>'a_'+digest(normalizeArtistName(name)),matches=name=>payload.artistIds?.includes(idFor(name)),cache=new Map();
+  const data=await catalogue.all(),agenda=['artist-catalogue','artist-profile'].includes(operation)&&catalogue.agenda?await catalogue.agenda().catch(()=>[]):[],idFor=name=>'a_'+digest(normalizeArtistName(name)),matches=name=>payload.artistIds?.includes(idFor(name)),cache=new Map();
   const load=async id=>{if(!cache.has(id))cache.set(id,(async()=>{const loaded=await state.load(id);await state.verifyPlan(mapShow(loaded.source,loaded.people),loaded.source.nativeGeneration||0);return loaded;})());return cache.get(id);};
   let result;
-  try{result=await legacy();}catch(error){if(error.message!=='NOT_FOUND'||!['artist-show','artist-profile'].includes(operation)||!data.rows.some(row=>matches(row.artist)))throw error;result=operation==='artist-show'?{show:{name:data.rows.find(row=>matches(row.artist)).artist,venue:payload.venue,date:payload.date,...(payload.performance?{performance:payload.performance}:{})},report:null,timetable:null,preparation:null}:{concerts:[],audience:{},photo:null,biography:null,latestDate:null};}
+  try{result=await legacy();}catch(error){if(error.message!=='NOT_FOUND'||!['artist-show','artist-profile'].includes(operation)||!data.rows.some(row=>matches(row.artist))&&!(operation==='artist-profile'&&agenda.some(row=>matches(row.artist))))throw error;result=operation==='artist-show'?{show:{name:data.rows.find(row=>matches(row.artist)).artist,venue:payload.venue,date:payload.date,...(payload.performance?{performance:payload.performance}:{})},report:null,timetable:null,preparation:null}:{concerts:[],audience:{},photo:null,biography:null,latestDate:null};}
   if(operation==='artist-catalogue'){
-   const artists=new Map((result.artists||[]).map(row=>[row.id,row]));for(const artist of data.artists)if(!artists.has(artist.esmojo_bronartiestid))artists.set(artist.esmojo_bronartiestid,{id:artist.esmojo_bronartiestid,name:artist.esmojo_naam});return{...result,artists:[...artists.values()]};
+   const artists=new Map((result.artists||[]).map(row=>[row.id,row]));for(const artist of data.artists)if(!artists.has(artist.esmojo_bronartiestid))artists.set(artist.esmojo_bronartiestid,{id:artist.esmojo_bronartiestid,name:artist.esmojo_naam});
+   // Artiesten uit de concertagenda (komende 365 dagen) krijgen alvast een pagina; hetzelfde ID als de latere import.
+   for(const row of agenda){const id=idFor(row.artist);if(!artists.has(id))artists.set(id,{id,name:row.artist});}
+   return{...result,artists:[...artists.values()]};
   }
   if(operation==='artist-profile'){
    const rows=data.rows.filter(row=>matches(row.artist)),groups=new Map((result.concerts||[]).map(row=>[row.venue+'|'+row.dates.join(','),row]));
    for(const primary of new Set(rows.map(row=>row.generalConcertId))){const group=rows.filter(row=>row.generalConcertId===primary),concert={venue:group[0].venue,dates:[...new Set(group.map(row=>row.date))].sort()};if(![...groups.values()].some(existing=>existing.venue===concert.venue&&concert.dates.every(date=>existing.dates.includes(date))))groups.set(primary,concert);}
+   // Toekomstige concerten uit de concertagenda (ook voorbij de 45 dagen van de catalogus), zonder doublures met bestaande concerten.
+   const known=[...groups.values()],today0=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(now()),future=new Map();
+   for(const row of agenda.filter(item=>matches(item.artist)&&item.date>=today0&&!known.some(existing=>existing.venue===item.venue&&existing.dates.includes(item.date))))future.set(row.venue,[...(future.get(row.venue)||[]),row.date]);
+   for(const [venue,dates] of future)groups.set('agenda|'+venue,{venue,dates:[...new Set(dates)].sort()});
    result.concerts=[...groups.values()].sort((a,b)=>b.dates.at(-1).localeCompare(a.dates.at(-1)));
    const artist=data.artists.find(row=>payload.artistIds.includes(row.esmojo_bronartiestid));if(artist?.esmojo_fotobronurl)result.photo=artist.esmojo_fotobronurl;result.biography=null;
    const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit',day:'2-digit'}).format(now()),latest=rows.filter(row=>row.date<=today).sort((a,b)=>b.date.localeCompare(a.date))[0];

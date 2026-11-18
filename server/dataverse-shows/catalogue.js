@@ -302,5 +302,5 @@ export function createNativeCatalogue({env=process.env,state,now=()=>new Date(),
   }
   throw Error('VALIDATION');
  }
- return{handles:operation=>globals.has(operation),request,all,persistClock,primaryShows:async()=>{const data=await all();return data.rows.filter(row=>row.concertId===row.generalConcertId).map(row=>({key:row.concertId})).sort((a,b)=>a.key.localeCompare(b.key));}};
+ return{handles:operation=>globals.has(operation),request,all,agenda:()=>staff.agenda(),persistClock,primaryShows:async()=>{const data=await all();return data.rows.filter(row=>row.concertId===row.generalConcertId).map(row=>({key:row.concertId})).sort((a,b)=>a.key.localeCompare(b.key));}};
 }

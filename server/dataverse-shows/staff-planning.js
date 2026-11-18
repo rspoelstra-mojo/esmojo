@@ -115,5 +115,7 @@ export function createStaffPlanning({env=process.env,repo,now=()=>new Date()}){
     return{roles};
   }
   const handlers={'staff-planning-series':seriesApply,'staff-planning-alias':payload=>aliases.save(payload),'staff-planning-store':store,'staff-planning-read':read,'staff-planning-save':save,'staff-planning-team':team};
-  return{handles:operation=>Object.hasOwn(handlers,operation),handle:(operation,payload={})=>handlers[operation](payload),operations:Object.keys(handlers)};
+  // Openbare agenda voor de artiestenmodule: alleen concertgegevens met de gekozen (alias-)artiestnaam, zonder functienamen.
+  async function agenda(){const aliasMap=await aliases.map();return concertsFrom(await listRows()).map(row=>({...row,sourceArtist:row.artist,artist:resolveArtistAlias(row.artist,aliasMap)}));}
+  return{handles:operation=>Object.hasOwn(handlers,operation),handle:(operation,payload={})=>handlers[operation](payload),operations:Object.keys(handlers),agenda};
 }
