@@ -1,3 +1,14 @@
+## MFA-bewijs aan Auth-sessie binden (18 november 2026)
+
+Gebruiker vraagt extra beveiliging vóór een externe test op toegang zonder account/MFA.
+Nieuwe 72u-cookies bevatten de geverifieerde Auth-session_id; account-ID alleen is
+geen app-MFA-bewijs. Legacy-cookies uitsluitend via echte server-refresh opwaarderen,
+met AAL2/TOTP/actuele factor/accountrechten en oorspronkelijke deadline. Gebonden
+cookies en MFA-providerantwoorden mogen niet naar een andere Auth-sessie wisselen.
+Verlopen wachtwoordaanmelding weigeren vóór profielread. Geen Auth-bypass, nieuwe
+sleutel/schema of testmail. Zie docs/mfa-beveiliging.md en de taaknotitie
+security-access-hardening-20261118.md; live en lokale controles apart rapporteren.
+
 ## Eén bewerkmodus op de showpagina's (18 november 2026)
 
 Gebruiker vraagt op alle pagina's binnen Shows waar iets te bewerken valt (productionele risico's, barrieropstelling, vloerdruk, operationele risico's, maatregelen,
