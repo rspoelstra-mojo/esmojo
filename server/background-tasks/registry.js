@@ -1,4 +1,3 @@
-import {createRedisRetirementTask} from '../redis-native/task.js';
 import {redisTaskType} from '../redis-native/policy.js';
 import {createNativeAccountTask} from '../account-native/task.js';
 import {accountNativeType} from '../account-native/model.js';
@@ -16,7 +15,7 @@ import {createTaskStore} from './store.js';
 import {createBackgroundTasks} from './engine.js';
 export const taskDefinitions=Object.freeze({[redisTaskType]:Object.freeze({title:'Redis vervangen door Dataverse',module:'artists',requiredModules:['shows'],version:1,idempotent:true}),[accountNativeType]:Object.freeze({title:'Volledige accountopslag',module:'shows',version:1,idempotent:true}),[reportsCutoverType]:Object.freeze({title:'Rapportages gecontroleerd omschakelen',module:'reports',version:1,idempotent:true,delegatedOnly:true}),[reportsValidationType]:Object.freeze({title:'Rapportages-eindvalidatie',module:'reports',version:1,idempotent:true,delegatedOnly:true}),[reportsMigrationType]:Object.freeze({title:'Rapportages-migratie',module:'reports',version:1,idempotent:true}),[reportsSchemaTaskType]:Object.freeze({title:'Dataverse klaarzetten voor Rapportages',module:'reports',version:1,idempotent:true}),[accessTaskType]:Object.freeze({title:'Snelle toegangscontrole',module:'shows',version:1,idempotent:true}),'shows-migration-v1':Object.freeze({title:'Shows-migratie',module:'shows',version:1,idempotent:true}),'shows-validation-v1':Object.freeze({title:'Shows-eindvalidatie',module:'shows',version:1,idempotent:true})});
 export const backgroundTaskModule=type=>typeof type==='string'&&Object.hasOwn(taskDefinitions,type)?taskDefinitions[type].module:null;
-export function createTaskRegistry({env=process.env,migrate=createShowMigration({env}),validate=createShowMigration({env,readOnly:true}),access=createAccessTask({env}),nativeAccounts=createNativeAccountTask({env}),redis=createRedisRetirementTask({env}),reportsSchema=createReportsSchemaTask({env}),reportsMigration=createReportsMigrationTask({env}),reportsValidation=createReportsValidation({env}),reportsCutover=createReportsCutover({env})}={}){
+export function createTaskRegistry({env=process.env,migrate=createShowMigration({env}),validate=createShowMigration({env,readOnly:true}),access=createAccessTask({env}),nativeAccounts=createNativeAccountTask({env}),reportsSchema=createReportsSchemaTask({env}),reportsMigration=createReportsMigrationTask({env}),reportsValidation=createReportsValidation({env}),reportsCutover=createReportsCutover({env})}={}){
  const adapter=(type,service)=>({...taskDefinitions[type],
   async step({cursor,actor,authorizationExpiresAt}){
    const result=await service(cursor?{operation:'advance',token:cursor}:{operation:'start'},actor,{authorizationExpiresAt});
@@ -25,7 +24,7 @@ export function createTaskRegistry({env=process.env,migrate=createShowMigration(
    return{cursor:result.token,status:waiting?'waiting':result.status==='running'?'ready':result.status,delayMs:waiting?300000:0,public:{label:result.label,total:result.total,progress:result.progress,...(result.status==='blocked'&&!waiting?{error:'De schemacontrole blokkeert de taak. Controleer de gemelde tabel of sleutel.',code:'MIGRATION_SCHEMA'}:{})}};
   },
   failure(error){const failure=showMigrationFailure(error);return{...failure,uncertain:['MIGRATION_UNCONFIRMED','SETUP_TEMPORARY'].includes(failure.code)};}
- });const registry={[redisTaskType]:redis,[accountNativeType]:nativeAccounts,[reportsCutoverType]:reportsCutover,[reportsValidationType]:reportsValidation,[reportsMigrationType]:reportsMigration,[reportsSchemaTaskType]:reportsSchema,[accessTaskType]:access,'shows-migration-v1':adapter('shows-migration-v1',migrate),'shows-validation-v1':adapter('shows-validation-v1',validate)};if(env.VERCEL_ENV==='production')for(const [type,definition]of Object.entries(registry))if(![accountNativeType,redisTaskType].includes(type))registry[type]={...definition,retired:true};return registry;
+ });const registry={[redisTaskType]:Object.freeze({...taskDefinitions[redisTaskType],retired:true,async step(){throw Error('TASK_RETIRED');},failure(){return{code:'TASK_RETIRED',error:'Deze migratie is afgerond en niet meer beschikbaar.'};}}),[accountNativeType]:nativeAccounts,[reportsCutoverType]:reportsCutover,[reportsValidationType]:reportsValidation,[reportsMigrationType]:reportsMigration,[reportsSchemaTaskType]:reportsSchema,[accessTaskType]:access,'shows-migration-v1':adapter('shows-migration-v1',migrate),'shows-validation-v1':adapter('shows-validation-v1',validate)};if(env.VERCEL_ENV==='production')for(const [type,definition]of Object.entries(registry))if(type!==accountNativeType)registry[type]={...definition,retired:true};return registry;
 }
 export function createApplicationTasks({env=process.env,profiles=createProfiles({env}),store=createTaskStore({env}),registry=createTaskRegistry({env}),now=Date.now}={}){
  const authorize=async(actor,definition)=>{let profile;try{profile=await profiles('self',actor);}catch(error){if(error.message==='FORBIDDEN')return false;throw error;}return profile.id===actor&&profile.activated===true&&!profile.disabled&&isAdministrator(profile)&&hasModule(profile,definition.module)&&(definition.requiredModules||[]).every(module=>hasModule(profile,module));};
@@ -42,10 +41,5 @@ export function createApplicationTasks({env=process.env,profiles=createProfiles(
   if(!await authorize(row.state.actor,definition))throw Error('FORBIDDEN');const diagnostic=await definition.diagnose({actor:row.state.actor,cursor:row.state.cursor,runId:row.state.epoch,authorizationExpiresAt:row.state.expiresAt});
   if(diagnostic.stage!==(dataset?'dataset-ready':'complete')||diagnostic.code!==null)throw Error('CONTROL_REQUIRED');
   return tasks.control({operation:'resume',type:reportsMigrationType},row.state.actor,{expectedEpoch:row.state.epoch,expectedSequence:row.state.sequence});
- },async resumeRedisCopy(){
-  const row=await store.get(redisTaskType),definition=registry[redisTaskType];if(!row)throw Error('TASK_NOT_FOUND');if(row.state.status==='complete')return{resumed:false};
-  if(row.state.expiresAt<=now())throw Error('TASK_EXPIRED');if(row.state.status!=='blocked'||row.state.lease?.until>now()||row.state.handlerVersion!==definition.version||row.state.public?.code!=='NOT_FOUND')throw Error('TASK_BUSY');
-  if(!await authorize(row.state.actor,definition))throw Error('FORBIDDEN');if(!await definition.canResumeCopy(row.state.cursor,row.state.epoch))throw Error('CONTROL_REQUIRED');
-  await tasks.control({operation:'resume',type:redisTaskType},row.state.actor,{expectedEpoch:row.state.epoch,expectedSequence:row.state.sequence});return{resumed:true};
  },ensureValidation:()=>ensureShowsValidation({store,tasks,now})};
 }
