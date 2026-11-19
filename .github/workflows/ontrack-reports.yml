@@ -1,7 +1,8 @@
 name: Process OnTrack reports
+# Geplande run uitgeschakeld op 19 november 2026: de oude OnTrack-/Drive-verwerking (CSV-scan,
+# PDF-wachtrij) is vervangen door native Rapportages en report-intake.yml en faalde elke 30 minuten.
+# Handmatig starten blijft mogelijk.
 on:
-  schedule:
-    - cron: '*/30 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
