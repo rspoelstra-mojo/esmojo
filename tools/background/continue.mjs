@@ -4,7 +4,7 @@ const keys=['steps','completed','blocked','waiting','failed'];
 // Eén workflow houdt meerdere korte serverrondes gaande. De server blijft
 // eigenaar van machtiging, checkpoints, leases, Retry-After en conflictstops.
 export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,log=console.log,budgetMs=40*60000,maxRounds=160,mode='tasks',operation='continue',resumeReportsTechnical=false,resumeCutoverTechnical=false,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
- const endpoint=endpoints[mode];if(!endpoint||!['continue','status','reports-check','reports-resume','redis-resume'].includes(operation)||operation!=='continue'&&mode!=='tasks')throw Error('Onbekende vaste worker.');
+ const endpoint=endpoints[mode];if(!endpoint||!['continue','status','reports-check','reports-resume'].includes(operation)||operation!=='continue'&&mode!=='tasks')throw Error('Onbekende vaste worker.');
  const deadline=now()+Math.min(budgetMs,40*60000);
  for(let round=1;round<=maxRounds&&now()+280000<=deadline;round++){
   let response,data,transportStage='identity';
@@ -13,7 +13,7 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
    const identity=await fetcher(url,{headers:{Authorization:`Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`},signal:AbortSignal.timeout(30000)});
    if(!identity.ok)throw Error();const {value}=await identity.json();if(typeof value!=='string'||!value)throw Error();log(`::add-mask::${value}`);
    transportStage='request';
-   response=await fetcher(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:((mode==='reports-validation'&&resumeReportsTechnical)||(mode==='reports-cutover'&&resumeCutoverTechnical))&&round===1?JSON.stringify({operation:'resume-technical'}):operation!=='continue'&&!(['reports-resume','redis-resume'].includes(operation)&&round>1)?JSON.stringify({operation}):'{}',signal:AbortSignal.timeout(280000)});
+   response=await fetcher(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,'Content-Type':'application/json'},body:((mode==='reports-validation'&&resumeReportsTechnical)||(mode==='reports-cutover'&&resumeCutoverTechnical))&&round===1?JSON.stringify({operation:'resume-technical'}):operation!=='continue'&&!(operation==='reports-resume'&&round>1)?JSON.stringify({operation}):'{}',signal:AbortSignal.timeout(280000)});
    transportStage='response';
    data=await response.json();
    if(mode==='reports-validation'&&!response.ok){
@@ -26,7 +26,6 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
    const allowed=['groups','multiDateGroups','missingShow','badGroupId','badSourceHash','catalogue','historical','validations','sources','available','unlinked','entries','grouped','manifestPages','settingsPages','csvBytes','plannedRecords','recordIndex','existingRecords','missingRecords','batchRecords'];
    log(JSON.stringify({stage:d.stage,code:d.code,counts:Object.fromEntries(allowed.filter(k=>Object.hasOwn(d.counts,k)).map(k=>[k,d.counts[k]]))}));return;
   }
-  if(!response.ok&&operation==='redis-resume'){const codes=['OIDC_FORBIDDEN','TASK_EXPIRED','TASK_BUSY','TASK_STALE','TASK_VERSION','FORBIDDEN','CONTROL_REQUIRED','REDIS_AUTHORITY_INVALID','REDIS_SOURCE_CONFLICT','ARTIST_VIEWS_UNAVAILABLE','MFA_CACHE_UNAVAILABLE','BACKGROUND_UNCONFIRMED'];log(JSON.stringify({recoveryHttpStatus:response.status,code:codes.includes(data?.code)?data.code:'UNCONFIRMED'}));}
   const continuation=data?.continuation;
   if(continuation!==undefined){
    if(!continuation||typeof continuation.active!=='boolean'||!Array.isArray(continuation.tasks)||continuation.active&&(!Number.isSafeInteger(continuation.pollAfterMs)||continuation.pollAfterMs<1000||continuation.pollAfterMs>60000))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
@@ -36,7 +35,7 @@ export async function continueTasks({env=process.env,fetcher=fetch,now=Date.now,
    }
   }
   if(operation==='status'){if(!response.ok||data?.ok!==true||!continuation)throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');return;}
-  if(['reports-resume','redis-resume'].includes(operation)&&round===1){if(!response.ok||data?.ok!==true||!continuation)throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');if(!continuation.active)return;await wait(continuation.pollAfterMs);continue;}
+  if(operation==='reports-resume'&&round===1){if(!response.ok||data?.ok!==true||!continuation)throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');if(!continuation.active)return;await wait(continuation.pollAfterMs);continue;}
   const stats=data?.stats;
   if(!response.ok||data?.ok!==true||!stats||keys.some(key=>!Number.isSafeInteger(stats[key])||stats[key]<0))throw Error('Achtergrondronde niet bevestigd; controleer de beheerpagina.');
   log(JSON.stringify({round,...Object.fromEntries(keys.map(key=>[key,stats[key]]))}));
