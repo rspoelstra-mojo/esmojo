@@ -73,6 +73,12 @@ Artiesten binnen 1 seconde is niet bewezen. Gebruiker heeft verdere optimalisati
 na V1.149 expliciet laten stoppen. Geen nieuwe performancewerkzaamheden zonder
 opdracht. Metingen van backend, synthetische browser en echte sessie onderscheiden.
 
+## Deployments en geplande runs (19 november 2026)
+
+Vercel bouwt alleen `main` (geen previewbuilds; zie vercel.json en docs/samenwerken.md); retentie 1 dag. Dagelijkse bijwerkingen
+lopen in één run om 05:00 (mojo-shows.yml, inclusief incidentreferenties); showrapportagemails in een aparte run elke 15 minuten
+(ontrack-reports.yml). Redis/Upstash is afgesloten; de oude OnTrack-/Drive-verwerking en de 5-minutenmailrun bestaan niet meer.
+
 ## Relevante bronnen per taak
 
 - docs/samenwerken.md: registratie, overlap, branches, tests, publicatie.

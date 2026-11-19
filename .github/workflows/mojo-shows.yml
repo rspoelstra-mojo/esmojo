@@ -67,3 +67,33 @@ jobs:
           if(managementFailed)throw Error('SHOWBEHEER_INCOMPLETE');
           if(timetableFailure)throw timetableFailure;
           JS
+  references:
+    # Tweede deel van de dagrun van 05:00: dagelijkse incidentreferenties en voorbereiding van artiestopeningen.
+    # Draait ook als de import deels faalde, maar nooit bij alleen controleren (verify_only) of een push.
+    needs: import
+    if: ${{ !cancelled() && github.event_name != 'push' && inputs.verify_only != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Update daily incident references and prepare artist openings
+        env:
+          RUN_NOW: ${{ github.event_name == 'workflow_dispatch' && inputs.run_now == true }}
+        run: |
+          node --input-type=module <<'JS'
+          const hour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date());
+          if(process.env.RUN_NOW!=='true'&&hour!=='05'){console.log('Geen Nederlandse dagrun.');process.exit(0);}
+          const target='https://esmojo.nl/api/incident-references-sync';
+          async function call(body){
+            const url=new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);url.searchParams.set('audience',target);
+            const identity=await fetch(url,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}});if(!identity.ok)throw Error('OIDC_UNAVAILABLE');const {value}=await identity.json();console.log('::add-mask::'+value);
+            const response=await fetch(target,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(310000)});const result=await response.json();
+            if(!response.ok||result?.ok!==true){console.log(JSON.stringify({code:/^[A-Z][A-Z0-9_]{2,59}$/.test(result?.code||'')?result.code:'UNCONFIRMED',stage:result?.stage||null}));throw Error('DAILY_WORKER_UNCONFIRMED');}
+            return result;
+          }
+          let ready=false;for(let attempt=0;attempt<12;attempt++){try{if((await call({incidentRefresh:true,checkOnly:true})).workerVersion===3){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,20000));}if(!ready)throw Error('INCIDENT_WORKER_NOT_READY');
+          let complete=false;for(let round=0;round<600;round++){const result=await call({incidentRefresh:true});if(result.workerVersion!==3||typeof result.pending!=='boolean'||!['processing','complete','no_eligible_reports'].includes(result.status))throw Error('INCIDENT_WORKER_UNCONFIRMED');if(!result.pending){if(result.status!=='complete')throw Error('INCIDENT_REFERENCES_NO_ELIGIBLE_REPORTS');complete=true;break;}}
+          if(!complete)throw Error('INCIDENT_REFERENCES_INCOMPLETE');console.log('Incidentreferenties bijgewerkt.');
+          // Voorbereiding van artiestopeningen is onderhoud; voortgang blijft bewaard en wordt bij de volgende run voortgezet.
+          let prepared=await call({artistPerformance:'inventory'});for(let round=0;round<1000&&!prepared.complete;round++){prepared=await call({artistPerformance:'prepare'});if(prepared.busy)await new Promise(resolve=>setTimeout(resolve,1000));}
+          console.log(JSON.stringify({artistOpeningsComplete:prepared.complete===true}));
+          JS

@@ -1,3 +1,17 @@
+## Geen previewbuilds; één dagrun om 05:00; mailrun elke 15 minuten (19 november 2026)
+
+Vercel bouwt uitsluitend `main` (`ignoreCommand` in vercel.json); taakbranches en PR's krijgen geen previewdeployment of
+preview-URL. Controle vóór samenvoegen loopt via GitHub-CI (`check`, `database`) en lokale tests; een uitrolprobleem blijkt
+pas bij de productiedeployment van main. Vercel-deploymentretentie staat op 1 dag (door de gebruiker ingesteld). Reden: ESMOJO
+is nog in ontwikkeling zonder eindgebruikers en de deployment storage moet laag blijven; houd bundels licht (geen zware
+afhankelijkheden in functies die ze niet nodig hebben). Doe geen previewdeploys of preview-URL-controles.
+Dagelijkse bijwerkingen horen in de run van 05:00 (mojo-shows.yml, Europe/Amsterdam): agenda-import, personeelsplanning,
+Showbeheer, tijdschema's, foto's en daarna de dagelijkse incidentreferenties en artiestopening-voorbereiding. De incidentdagstand
+wordt dus vanaf 05:00 gebouwd (was middernacht); de gebruiker koos dit expliciet. De run `Update incident references`
+(web-reports.yml) blijft alleen voor push-controle en handmatig starten. Showrapportagemails gaan via een aparte workflow
+elke 15 minuten (ontrack-reports.yml, naam "Send show report emails"); de oude OnTrack-/Drive-verwerking is uitgefaseerd.
+Redis/Upstash is volledig afgesloten (database en integratie verwijderd door de gebruiker); gebruik geen Redis.
+
 ## MFA-bewijs aan Auth-sessie binden (18 november 2026)
 
 Gebruiker vraagt extra beveiliging vóór een externe test op toegang zonder account/MFA.
