@@ -55,6 +55,17 @@ test('De worker begint met online mail voordat de afzonderlijke PDF-verwerking g
  await handler({method:'POST',headers:{authorization:'Bearer synthetic'}},response);assert.deepEqual(calls,['identity','online-mail']);assert.equal(response.code,200);assert.deepEqual(response.value,{ok:true,sent:1});
  for(const [message,code] of [['REPORT_CONFLICT','REPORT_CONFLICT'],['provider said: secret@example.invalid','MAIL_DELIVERY_UNCONFIRMED']]){const failing=makeOnTrackReportsSyncHandler({identify:async()=>{},online:{run:async()=>{throw Error(message);}}}),failed={setHeader(){},status(c){this.code=c;return this;},json(v){this.value=v;}};await failing({method:'POST',headers:{authorization:'Bearer synthetic'}},failed);assert.equal(failed.code,503);assert.deepEqual(failed.value,{ok:false,code});}
 });
+test('coördinatoracties: alleen vaste inspect/recover, strikte invoer en geen lekkende details',async()=>{
+ const {makeOnTrackReportsSyncHandler}=await import('../api/ontrack-reports-sync.js'),calls=[],mailRuns=[];
+ const handler=makeOnTrackReportsSyncHandler({identify:async token=>{if(token!=='trusted')throw Error();},online:{run:async()=>{mailRuns.push(1);return{ok:true,sent:0};}},coordinator:async action=>{calls.push(action);if(action==='recover')throw Error('REPORT_BUSY');return{state:'frozen',uncertain:true,leaseActive:false};}});
+ const res=()=>({setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;return this;}}),post=body=>({method:'POST',headers:{authorization:'Bearer trusted'},body});
+ let r=res();await handler(post({coordinator:'inspect'}),r);assert.equal(r.code,200);assert.deepEqual(r.value,{ok:true,state:'frozen',uncertain:true,leaseActive:false});
+ r=res();await handler(post({coordinator:'recover'}),r);assert.equal(r.code,503);assert.deepEqual(r.value,{ok:false,code:'REPORT_BUSY'});
+ for(const bad of [{coordinator:'delete'},{coordinator:'inspect',x:1},{recipient:'a@example.invalid'},[],'text']){r=res();await handler(post(bad),r);assert.equal(r.code,400);assert.deepEqual(r.value,{ok:false,code:'VALIDATION'});}
+ r=res();await handler({method:'POST',headers:{authorization:'Bearer invalid'},body:{coordinator:'recover'}},r);assert.equal(r.code,403);
+ assert.deepEqual(calls,['inspect','recover']);assert.equal(mailRuns.length,0,'coördinatoracties versturen geen mail');
+ r=res();await handler(post(undefined),r);assert.equal(r.code,200);assert.equal(mailRuns.length,1);
+});
 
 test('Een nieuwe PDF-generatie voor eerder gemailde CSV gebruikt ook bij handmatig mailen de oorspronkelijke legacyregistratie',async()=>{
  const f=setup(),{show,source}=await publish(f),index=JSON.parse(f.folder.files.find(file=>file.name==='_esmojo_web_reports_v1.json').content),data=state(f),oldId='e'.repeat(64),newId='f'.repeat(64),meta={sourceId:source.id,sourceHash:index.entries[source.id].sourceHash,show:{key:show.concertId}};data.reports.push({...meta,id:oldId,emailStatus:'sent',deliveries:[{recipientId:'reader',status:'sent'}]},{...meta,id:newId,emailStatus:'no-recipients',deliveries:[]});Object.assign(data.sources[0],{status:'ready',latestReportId:newId,modifiedAt:source.getLastUpdated().toISOString(),processedModifiedAt:source.getLastUpdated().toISOString()});save(f,data);f.profiles[0].role='beheerder';f.updateProfiles();await f.store('online-sync',null);await f.store('send','reader',{reportId:newId});assert.equal(state(f).reports[1].deliveries.length,0);assert.equal(state(f).reports[0].deliveries.length,1);

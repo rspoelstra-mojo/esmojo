@@ -58,7 +58,8 @@ test('Ontvangers uitgeschakeld vóór generatie worden niet gemaild; linkrevisie
 test('Workerendpoint vereist vaste OIDC vóór verwerking, negeert clientinhoud en geeft geen geheime foutdetails',async()=>{
  const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(value){this.data=value;return this;}});let calls=0;const handler=makeOnTrackReportsSyncHandler({identify:async token=>{if(token!=='trusted')throw Error();},online:{run:async()=>{calls++;return{ok:true,sent:0};}}});
  for(const input of [{method:'GET',headers:{}},{method:'POST',headers:{}},{method:'POST',headers:{authorization:'Bearer invalid'}}]){const res=response();await handler(input,res);assert.ok([403,405].includes(res.code));}assert.equal(calls,0);
- const res=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{recipient:'other@example.invalid',csv:'injected'}},res);assert.equal(res.code,200);assert.deepEqual(res.data,{ok:true,sent:0});assert.equal(calls,1);
+ const rejected=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{recipient:'other@example.invalid',csv:'injected'}},rejected);assert.equal(rejected.code,400);assert.deepEqual(rejected.data,{ok:false,code:'VALIDATION'});assert.equal(calls,0,'clientinhoud wordt geweigerd en start geen verwerking');
+ const res=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'}},res);assert.equal(res.code,200);assert.deepEqual(res.data,{ok:true,sent:0});assert.equal(calls,1);
  const failing=makeOnTrackReportsSyncHandler({identify:async()=>{},online:{run:async()=>{throw Error('secret provider detail for someone@example.invalid');}}}),failed=response();await failing({method:'POST',headers:{authorization:'Bearer trusted'}},failed);assert.equal(failed.code,503);assert.deepEqual(failed.data,{ok:false,code:'MAIL_DELIVERY_UNCONFIRMED'});
 });
 
