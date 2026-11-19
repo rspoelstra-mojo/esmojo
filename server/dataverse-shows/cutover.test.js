@@ -28,7 +28,7 @@ test('a final comparison failure releases the freeze before any native business 
  const route=createManagedShowsRouting({env,repository:f.repo});assert.equal(await route({legacy:()=>true,native:()=>false}),true);
 });
 test('cutover endpoint verifies fixed identity before any task or source access',async()=>{
- const {makeShowsCutoverSync}=await import('../../api/shows-cutover-sync.js');let called=0;const handler=makeShowsCutoverSync({identify:async()=>{throw Error('denied');},cutover:async()=>{called++;}}),res={setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;return this;}};await handler({method:'POST',headers:{},body:{operation:'start'}},res);assert.equal(res.code,403);assert.equal(called,0);
+ const {makeShowsCutoverSync}=await import('../retired-handlers/shows-cutover-sync.js');let called=0;const handler=makeShowsCutoverSync({identify:async()=>{throw Error('denied');},cutover:async()=>{called++;}}),res={setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;return this;}};await handler({method:'POST',headers:{},body:{operation:'start'}},res);assert.equal(res.code,403);assert.equal(called,0);
 });
 test('workflow client sends only explicit operations and waits through the drain',async()=>{
  const {cutoverShows}=await import('../../tools/background/cutover-shows.mjs');let clock=0,calls=0;const operations=[];
