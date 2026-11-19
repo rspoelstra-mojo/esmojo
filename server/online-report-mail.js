@@ -4,6 +4,9 @@ import {sendEmail} from './email.js';
 // Geen assets/PDF-import of bytes nodig om een zichtbare webrapportage te mailen.
 export function createOnlineReportMailService({store,mail=sendEmail}){
  return{async run(){
+  // Leesvoorcontrole: zonder nieuwe rapportage of wachtende aflevering geen lease en geen write. Een fout of een oudere
+  // server zonder deze operatie valt terug op het volledige pad, dat zelf fouten met een vast codewoord meldt.
+  const work=await store('online-pending',null).catch(()=>null);if(work?.pending===false)return{ok:true,sent:0,idle:true};
   const capabilities=await store('online-sync',null);let sent=0;
   for(let i=0;i<10;i++){
    const delivery=await store('online-reserve',null,{jobId:randomUUID(),...(capabilities.tracking==='mail-open-v1'?{trackingVersion:'mail-open-v1'}:{})});if(delivery.state!=='reserved')break;

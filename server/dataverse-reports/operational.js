@@ -31,5 +31,22 @@ export function createReportsOperationalStore({env=process.env,store=createRepor
    }throw error;
   }
  }
- return{read,exclusive};
+ // Alleen vaste, niet-gevoelige velden; nooit inhoud, ontvangers of providerberichten.
+ async function inspect(){
+  const row=await store.get(type);if(!row)return{state:'absent'};const s=row.state,leaseActive=Boolean(s.lease&&s.lease.until>now());
+  return{state:s.uncertain===true?'frozen':'open',uncertain:s.uncertain===true,leaseActive,leaseUntil:Number.isFinite(s.lease?.until)?new Date(s.lease.until).toISOString():null,updatedAt:Number.isFinite(s.updatedAt)?new Date(s.updatedAt).toISOString():null,sequence:Number.isSafeInteger(s.sequence)?s.sequence:null,cursorVersion:s.cursor?.version??null};
+ }
+ // Heft uitsluitend de blijvende onzekerheidsfence op wanneer die vaststaat en veilig is: geen actieve lease, minstens
+ // de volledige leasetijd verstreken sinds de laatste wijziging en een leesbare, geldige coördinatorstatus. Zakelijke
+ // schrijfacties zijn voorwaardelijk (ETag/changeset) en afleveringen hebben vaste providersleutels; daarom kan een
+ // herhaling daarna geen dubbele schrijver of dubbele mail opleveren. Eén conditionele write; geen zakelijke wijziging.
+ async function recover(){
+  const row=await store.get(type);if(!row)return{recovered:false,reason:'ABSENT'};const s=row.state;
+  if(s.uncertain!==true)return{recovered:false,reason:'NOT_FROZEN'};
+  if(s.lease?.until>now()||!Number.isFinite(s.updatedAt)||now()-s.updatedAt<leaseMs)throw Error('REPORT_BUSY');
+  if(s.cursor?.version!==1)throw Error('REPORT_WRITE_UNCONFIRMED');
+  try{await store.save(row,{...s,uncertain:false,lease:null,sequence:s.sequence+1,updatedAt:now()});}catch(error){if(error.message==='TASK_STALE')throw Error('REPORT_BUSY');throw error;}
+  return{recovered:true};
+ }
+ return{read,exclusive,inspect,recover};
 }

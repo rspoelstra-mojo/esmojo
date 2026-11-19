@@ -6,6 +6,15 @@ on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
+    inputs:
+      operation:
+        description: 'mail = rapportagemail versturen; inspect = status technische coördinatie lezen; recover = blijvende onzekerheidsfence opheffen (alleen als veilig)'
+        type: choice
+        default: mail
+        options:
+          - mail
+          - inspect
+          - recover
 permissions:
   contents: read
   id-token: write
@@ -18,6 +27,8 @@ jobs:
     timeout-minutes: 7
     steps:
       - name: Send pending show report emails without copying data to GitHub
+        env:
+          OPERATION: ${{ github.event.inputs.operation }}
         run: |
           node --input-type=module <<'JS'
           const endpoint='https://esmojo.nl/api/ontrack-reports-sync';
@@ -25,8 +36,10 @@ jobs:
           const identity=await fetch(url,{headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}});
           if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
           const {value}=await identity.json();console.log(`::add-mask::${value}`);
-          const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`},signal:AbortSignal.timeout(310000)});
+          const operation=['inspect','recover'].includes(process.env.OPERATION)?process.env.OPERATION:null;
+          const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`,...operation?{'Content-Type':'application/json'}:{}},body:operation?JSON.stringify({coordinator:operation}):undefined,signal:AbortSignal.timeout(310000)});
           const result=await response.json().catch(()=>({}));
           if(!response.ok||result.ok!==true){console.log(JSON.stringify({code:/^[A-Z][A-Z0-9_]{2,59}$/.test(result.code||'')?result.code:'UNCONFIRMED'}));throw Error('Rapportmail niet bevestigd; geen ontvangers of inhoud in logs.');}
-          console.log(JSON.stringify({ok:true,sent:result.sent}));
+          if(operation){const safe=['state','uncertain','leaseActive','leaseUntil','updatedAt','sequence','cursorVersion','recovered','reason'],out={};for(const key of safe)if(Object.hasOwn(result,key)&&(result[key]===null||['string','number','boolean'].includes(typeof result[key])))out[key]=result[key];console.log(JSON.stringify({operation,...out}));}
+          else console.log(JSON.stringify({ok:true,sent:result.sent}));
           JS

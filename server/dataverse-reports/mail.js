@@ -88,5 +88,14 @@ export function createNativeReportMail({env=process.env,repository:repo,mutation
    await change(group,delivery,fields,markWrite);return{ok:true};
   });
  }
- return{sync,send,reserve,confirm};
+ // Alleen lezen, zonder lease of write: is er een nieuwe zichtbare rapportage zonder online verzending of een wachtende
+ // aflevering? De 15-minutenrun slaat de schrijvende stappen over wanneer er niets te doen is.
+ async function pending(){
+  await authorize(null,{worker:true});
+  const [groups,current]=await Promise.all([repo.query('esmojo_rapportverzending'),visible()]),online=groups.map(row=>({row,info:metadata(row)})).filter(entry=>entry.info.channel==='online');
+  if(online.some(entry=>entry.row.esmojo_verzendstatus===status('pending')))return{pending:true};
+  const known=new Set(online.map(entry=>entry.info.id));
+  return{pending:current.some(source=>!known.has(digest('online-showreport-v1\n'+source.show.key+'\n'+source.sourceHash)))};
+ }
+ return{sync,pending,send,reserve,confirm};
 }
