@@ -13,8 +13,9 @@ async function run(results,{daily=false,event='schedule',at='2026-11-08T23:00:00
  }});return calls;}catch(error){if(skipped)return calls;error.callCount=calls.length;throw error;}
 }
 const ready={ok:true,workerVersion:3,pending:false,status:'complete'};
-test('CSV scan, historical batch and import controls are removed; regular run delivers existing reports and maintains artist projections',async()=>{
- assert.doesNotMatch(workflow,/historicalImport|historicalVerify|historical_batch|historical_only/);const calls=await run([{ok:true},{ok:true,complete:true}]);assert.deepEqual(calls,[{url:'https://esmojo.nl/api/web-reports-sync',body:{deliverExisting:true}},{url:'https://esmojo.nl/api/incident-references-sync',body:{artistPerformance:'inventory'}}]);
+test('CSV scan, historical batch, import and mail controls are removed from the incident workflow',()=>{
+ assert.doesNotMatch(workflow,/historicalImport|historicalVerify|historical_batch|historical_only|deliverExisting|reports-existing-mail/);
+ assert.doesNotMatch(workflow,/\*\/5 \* \* \* \*/);
 });
 test('daily references wait for current worker then process to completion without mail or CSV intake',async()=>{
  const calls=await run([{ok:true},ready,{...ready,pending:true,status:'processing'},ready,{ok:true,complete:true}],{daily:true});assert.equal(calls.length,5);assert.ok(calls.slice(0,4).every(row=>row.url.endsWith('/incident-references-sync')&&row.body.incidentRefresh===true));assert.equal(calls[0].body.checkOnly,true);assert.equal(calls[1].body.checkOnly,true);assert.equal(calls[2].body.checkOnly,undefined);
@@ -32,4 +33,4 @@ test('publication waits for native artist runtime, initializes daily state and p
 });
 
 
-test('regular artist maintenance uses only fixed commands and completes busy preparation without CSV or test mail',async()=>{const calls=await run([{ok:true},{ok:true,complete:false},{ok:true,complete:false,busy:true},{ok:true,complete:true}]);assert.deepEqual(calls.map(row=>row.body),[{deliverExisting:true},{artistPerformance:'inventory'},{artistPerformance:'prepare'},{artistPerformance:'prepare'}]);assert.ok(calls.slice(1).every(row=>row.url.endsWith('/incident-references-sync')));});
+test('regular artist maintenance uses only fixed commands and completes busy preparation without CSV or test mail',async()=>{const calls=await run([{ok:true,complete:false},{ok:true,complete:false,busy:true},{ok:true,complete:true}]);assert.deepEqual(calls.map(row=>row.body),[{artistPerformance:'inventory'},{artistPerformance:'prepare'},{artistPerformance:'prepare'}]);assert.ok(calls.every(row=>row.url.endsWith('/incident-references-sync')));});
