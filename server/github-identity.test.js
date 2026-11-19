@@ -118,3 +118,10 @@ test('identiteit geeft de bevestigde event-naam terug voor de handmatige-run-con
   const request = async () => ({ ok: true, json: async () => ({ keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'test-key', use: 'sig' }] }) });
   for (const event_name of ['schedule', 'workflow_dispatch']) assert.equal((await verifyImportIdentity(token({ event_name }), { request, now })).event, event_name);
 });
+test('de dagrun van 05:00 (mojo-shows.yml) mag de incidentreferenties bijwerken, maar niet via push en niet op een andere audience',async()=>{
+ const incident='https://esmojo.nl/api/incident-references-sync',workflow='mojo-shows.yml',workflow_ref=`rspoelstra-mojo/esmojo/.github/workflows/${workflow}@refs/heads/main`;
+ for(const event_name of ['schedule','workflow_dispatch'])assert.deepEqual(await runIdOf(token({aud:incident,workflow_ref,event_name}),{request,now,audience:incident,workflow}),{runId:'123'});
+ await assert.rejects(verifyImportIdentity(token({aud:incident,workflow_ref,event_name:'push'}),{request,now,audience:incident,workflow}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:'https://esmojo.nl/api/web-reports-sync',workflow_ref,event_name:'schedule'}),{request,now,audience:'https://esmojo.nl/api/web-reports-sync',workflow}),/FORBIDDEN/);
+ await assert.rejects(verifyImportIdentity(token({aud:incident,workflow_ref,event_name:'schedule',ref:'refs/heads/task'}),{request,now,audience:incident,workflow}),/FORBIDDEN/);
+});

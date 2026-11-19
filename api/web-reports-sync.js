@@ -7,7 +7,7 @@ import {createShowsStore} from '../server/shows-store.js';
 import {isolateFluidApi} from '../server/fluid-preview.js';
 import {verifyImportIdentity} from '../server/github-identity.js';
 export const config={maxDuration:300};
-export function makeWebReportsSync({identify=(token,{metricsOnly=false}={})=>verifyImportIdentity(token,{audience:metricsOnly?'https://esmojo.nl/api/incident-references-sync':'https://esmojo.nl/api/web-reports-sync',workflow:'web-reports.yml'}),metrics=null,verifyArtists=createArtistRuntimeVerification(),verifyRuntime=createNativeRuntimeVerification(),reportPerformance=createReportPerformance(),artistPerformance=createArtistPerformance()}={}){
+export function makeWebReportsSync({identify=async(token,{metricsOnly=false}={})=>{const audience=metricsOnly?'https://esmojo.nl/api/incident-references-sync':'https://esmojo.nl/api/web-reports-sync';try{return await verifyImportIdentity(token,{audience,workflow:'web-reports.yml'});}catch(error){if(!metricsOnly)throw error;return verifyImportIdentity(token,{audience,workflow:'mojo-shows.yml'});}},metrics=null,verifyArtists=createArtistRuntimeVerification(),verifyRuntime=createNativeRuntimeVerification(),reportPerformance=createReportPerformance(),artistPerformance=createArtistPerformance()}={}){
  return async(req,res)=>{
   res.setHeader('Cache-Control','no-store');res.setHeader('X-ESMOJO-Artist-Runtime','13');if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Niet toegestaan.'});}
   try{await identify(/^Bearer (\S+)$/.exec(req.headers.authorization||'')?.[1],{metricsOnly:req.query?.incidentMetrics==='1'});}catch{return res.status(403).json({error:'Geen toegang.'});}

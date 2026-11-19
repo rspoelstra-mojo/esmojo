@@ -34,3 +34,8 @@ test('publication waits for native artist runtime, initializes daily state and p
 
 
 test('regular artist maintenance uses only fixed commands and completes busy preparation without CSV or test mail',async()=>{const calls=await run([{ok:true,complete:false},{ok:true,complete:false,busy:true},{ok:true,complete:true}]);assert.deepEqual(calls.map(row=>row.body),[{artistPerformance:'inventory'},{artistPerformance:'prepare'},{artistPerformance:'prepare'}]);assert.ok(calls.every(row=>row.url.endsWith('/incident-references-sync')));});
+test('dagelijkse bijwerkingen lopen in de run van 05:00; web-reports.yml heeft geen eigen schedule meer',()=>{
+ const shows=readFileSync('.github/workflows/mojo-shows.yml','utf8');
+ assert.doesNotMatch(workflow,/^  schedule:/m);
+ assert.match(shows,/^  references:/m);assert.match(shows,/needs: import/);assert.match(shows,/github\.event_name != 'push'/);assert.match(shows,/incidentRefresh:true/);assert.match(shows,/hour!=='05'/);
+});

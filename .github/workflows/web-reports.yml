@@ -15,8 +15,6 @@ on:
       - 'server/dataverse-reports/opening.js'
       - 'api/web-reports-sync.js'
       - '.github/workflows/web-reports.yml'
-  schedule:
-    - cron: '0 22,23 * * *'
   workflow_dispatch:
     inputs:
       stage:
