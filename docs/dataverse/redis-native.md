@@ -98,3 +98,7 @@ proef, geen claim dat bestaande Vercel-variabelen al zijn verwijderd. Alleen de 
 technische MFA-probe schrijft/leest/verwijdert; geen Auth-challenge, codes of kliks.
 Provider/database en oudere deploymentcredentials moeten apart worden afgesloten;
 een geslaagde native controle bewijst geen gestopte Redis-facturering.
+
+## Gerichte nacontrole (19 november 2026)
+
+`redis-closure` zit ook in het brede push-pad van web-reports.yml, maar dat pad bereikt de stap pas na de artiestvoorbereiding. Handmatig starten van web-reports.yml met invoer `stage = redis-closure` voert uitsluitend deze ene vaste stap uit (zelfde main/OIDC-identiteit, geen incidentverversing, geen artiestvoorbereiding). De uitvoer bevat alleen vaste codes/tellingen: aantal nog aanwezige Rediscredentials, `credentiallessNativeProof`, `mfaHealthy` en `providerShutdownVerified:false`. Een geslaagde run bewijst native werking zonder Rediscredentials, geen gestopte providerdienst of facturering.
