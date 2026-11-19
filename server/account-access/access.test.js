@@ -3,7 +3,7 @@ import {createAccessStore,accessFlags} from './store.js';
 import {createAccessProfiles} from './profiles.js';
 import {createAccessTask} from './task.js';
 import {createAccessController} from './controller.js';
-import {makeAccessSync} from '../../api/account-access-sync.js';
+import {makeAccessSync} from '../retired-handlers/account-access-sync.js';
 import {nativeFixture,sampleSource,samplePeople} from '../dataverse-shows/test-fixture.js';
 const env={GOOGLE_DRIVE_SHARED_SECRET:'synthetic-account-access-long-secret-123456'};
 const admin='11111111-1111-4111-8111-111111111111',user='22222222-2222-4222-8222-222222222222',third='33333333-3333-4333-8333-333333333333';

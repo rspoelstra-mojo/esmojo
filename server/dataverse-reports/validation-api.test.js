@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {makeReportsValidationSync,createReportsValidationRunner} from '../../api/reports-validation-sync.js';
+import {makeReportsValidationSync,createReportsValidationRunner} from '../retired-handlers/reports-validation-sync.js';
 const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}});
 test('fixed OIDC validation route rejects anonymous callers and all free actor/cursor/command parameters',async()=>{
  let calls=0;const tasks={ensure:async()=>{calls++;return{task:{status:'complete',total:221,progress:{verifiedRecords:8517,verifiedFiles:226},private:'hidden'}};},inspect:async()=>({active:false,pollAfterMs:null,tasks:[]})};

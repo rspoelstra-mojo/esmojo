@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {makeShowStorageSync} from '../api/show-storage-sync.js';
+import {makeShowStorageSync} from './retired-handlers/show-storage-sync.js';
 let calls=0,identified=0;
 const store=Object.assign(()=>assert.fail('Geen vrije bronroute'),{activeStorage:{run:async()=>{calls++;return{enabled:true,mirrored:1,archived:0,failed:0};},verify:async()=>({schemaReady:true,enabled:false,verifiedShows:1,driveBridge:true})}});
 const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(status){this.code=status;return this;},json(body){this.body=body;return this;}});
