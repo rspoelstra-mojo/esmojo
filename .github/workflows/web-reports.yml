@@ -16,7 +16,6 @@ on:
       - 'api/web-reports-sync.js'
       - '.github/workflows/web-reports.yml'
   schedule:
-    - cron: '*/5 * * * *'
     - cron: '0 22,23 * * *'
   workflow_dispatch:
     inputs:
