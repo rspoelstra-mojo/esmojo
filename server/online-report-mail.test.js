@@ -51,8 +51,9 @@ test('De bestaande handmatige verzendactie hergebruikt de online levering in pla
 });
 
 test('De worker begint met online mail voordat de afzonderlijke PDF-verwerking gestart wordt',async()=>{
- const {makeOnTrackReportsSyncHandler}=await import('../api/ontrack-reports-sync.js'),calls=[],handler=makeOnTrackReportsSyncHandler({identify:async()=>{calls.push('identity');},online:{run:async()=>{calls.push('online-mail');return{ok:true,sent:1};}},service:{run:async()=>{calls.push('pdf');return{ok:true,processed:0,sent:0,blocked:'ONTRACK_ICON_MISSING'};}}}),response={setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;}};
- await handler({method:'POST',headers:{authorization:'Bearer synthetic'}},response);assert.deepEqual(calls,['identity','online-mail','pdf']);assert.equal(response.code,200);assert.equal(response.value.ok,true);
+ const {makeOnTrackReportsSyncHandler}=await import('../api/ontrack-reports-sync.js'),calls=[],handler=makeOnTrackReportsSyncHandler({identify:async()=>{calls.push('identity');},online:{run:async()=>{calls.push('online-mail');return{ok:true,sent:1};}}}),response={setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;}};
+ await handler({method:'POST',headers:{authorization:'Bearer synthetic'}},response);assert.deepEqual(calls,['identity','online-mail']);assert.equal(response.code,200);assert.deepEqual(response.value,{ok:true,sent:1});
+ for(const [message,code] of [['REPORT_CONFLICT','REPORT_CONFLICT'],['provider said: secret@example.invalid','MAIL_DELIVERY_UNCONFIRMED']]){const failing=makeOnTrackReportsSyncHandler({identify:async()=>{},online:{run:async()=>{throw Error(message);}}}),failed={setHeader(){},status(c){this.code=c;return this;},json(v){this.value=v;}};await failing({method:'POST',headers:{authorization:'Bearer synthetic'}},failed);assert.equal(failed.code,503);assert.deepEqual(failed.value,{ok:false,code});}
 });
 
 test('Een nieuwe PDF-generatie voor eerder gemailde CSV gebruikt ook bij handmatig mailen de oorspronkelijke legacyregistratie',async()=>{

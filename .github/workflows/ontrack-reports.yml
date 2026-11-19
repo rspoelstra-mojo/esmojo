@@ -1,8 +1,10 @@
-name: Process OnTrack reports
-# Geplande run uitgeschakeld op 19 november 2026: de oude OnTrack-/Drive-verwerking (CSV-scan,
-# PDF-wachtrij) is vervangen door native Rapportages en report-intake.yml en faalde elke 30 minuten.
-# Handmatig starten blijft mogelijk.
+name: Send show report emails
+# Elke 15 minuten: verstuurt de showrapportagemail voor nieuwe online beschikbare rapportages.
+# (Bestandsnaam blijft ontrack-reports.yml omdat de vaste workflow-identiteit daaraan gebonden is.)
+# De oude OnTrack-/Drive-verwerking is uitgefaseerd; de CSV-aanlevering loopt via report-intake.yml.
 on:
+  schedule:
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
-      - name: Process private Drive queue without copying data to GitHub
+      - name: Send pending show report emails without copying data to GitHub
         run: |
           node --input-type=module <<'JS'
           const endpoint='https://esmojo.nl/api/ontrack-reports-sync';
@@ -24,7 +26,7 @@ jobs:
           if(!identity.ok)throw Error('Workflow-identiteit niet bevestigd.');
           const {value}=await identity.json();console.log(`::add-mask::${value}`);
           const response=await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${value}`},signal:AbortSignal.timeout(310000)});
-          if(!response.ok)throw Error('Rapportverwerking niet bevestigd; geen broninhoud in logs.');
-          const result=await response.json();if(result.ok!==true)throw Error('Rapportverwerking niet bevestigd.');
-          console.log(JSON.stringify({ok:result.ok,blocked:result.blocked}));
+          const result=await response.json().catch(()=>({}));
+          if(!response.ok||result.ok!==true){console.log(JSON.stringify({code:/^[A-Z][A-Z0-9_]{2,59}$/.test(result.code||'')?result.code:'UNCONFIRMED'}));throw Error('Rapportmail niet bevestigd; geen ontvangers of inhoud in logs.');}
+          console.log(JSON.stringify({ok:true,sent:result.sent}));
           JS
