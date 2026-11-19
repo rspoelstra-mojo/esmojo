@@ -19,6 +19,14 @@ on:
     - cron: '*/5 * * * *'
     - cron: '0 22,23 * * *'
   workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Alleen de vaste Redis-afsluitcontrole zonder incidentverversing of artiestvoorbereiding'
+        type: choice
+        default: full
+        options:
+          - full
+          - redis-closure
 permissions:
   contents: read
   id-token: write
@@ -33,6 +41,7 @@ jobs:
       - name: Update stored daily incident references without CSV ingestion
         env:
           GITHUB_EVENT_SCHEDULE: ${{ github.event.schedule }}
+          RUN_STAGE: ${{ github.event.inputs.stage }}
         run: |
           node --input-type=module <<'JS'
           const hour=new Intl.DateTimeFormat('nl-NL',{timeZone:'Europe/Amsterdam',hour:'2-digit',hourCycle:'h23'}).format(new Date());
@@ -44,6 +53,7 @@ jobs:
             const identity=await fetch(url,{headers:{Authorization:'Bearer '+process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}});if(!identity.ok)throw Error('OIDC_UNAVAILABLE');const {value}=await identity.json();console.log('::add-mask::'+value);
             const response=await fetch(target,{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(310000)});const result=await response.json();if(!response.ok||result?.ok!==true){console.log(JSON.stringify({code:result.code||'UNCONFIRMED',stage:result.stage||null}));throw Error('REPORT_WORKER_UNCONFIRMED');}return result;
           }
+          if(process.env.GITHUB_EVENT_NAME==='workflow_dispatch'&&process.env.RUN_STAGE==='redis-closure'){const result=await call({runtimeVerify:'redis-closure'});console.log(JSON.stringify(result));if(result.storage!=='dataverse'||result.credentiallessNativeProof!==true||result.mfaHealthy!==true)throw Error('REDIS_CLOSURE_UNCONFIRMED');process.exit(0);}
           if(daily){
             if(process.env.GITHUB_EVENT_NAME==='push'){let ready=false;for(let attempt=0;attempt<30;attempt++){try{const response=await fetch(endpoint,{signal:AbortSignal.timeout(10000)});if(response.headers.get('x-esmojo-artist-runtime')==='13'){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,10000));}if(!ready)throw Error('ARTIST_DEPLOYMENT_NOT_READY');}
             let ready=false;for(let attempt=0;attempt<12;attempt++){try{if((await call({incidentRefresh:true,checkOnly:true})).workerVersion===3){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,20000));}if(!ready)throw Error('INCIDENT_WORKER_NOT_READY');
