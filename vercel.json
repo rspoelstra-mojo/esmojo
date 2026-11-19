@@ -1,24 +1,14 @@
 {
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]",
   "functions": {
-    "api/reports-validation-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
-      "maxDuration": 300
-    },
-    "api/shows-validation-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
-      "maxDuration": 300
-    },
     "api/access.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/report-original/**,server/email/template.html,server/email-templates/**,server/ontrack-report/assets/**,server/dataverse-shows/rules/**}",
-      "maxDuration": 300
+      "maxDuration": 300,
+      "excludeFiles": "node_modules/@img/*linuxmusl*/**"
     },
     "api/ontrack-reports-sync.js": {
       "includeFiles": "{server/report-original/assets/**,server/email/template.html,server/ontrack-report/assets/**,docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
       "maxDuration": 300
-    },
-    "api/show-storage-sync.js": {
-      "maxDuration": 300,
-      "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}"
     },
     "api/email-deliverability.js": {
       "includeFiles": "{server/email/template.html,docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
@@ -28,17 +18,12 @@
       "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
       "maxDuration": 300
     },
-    "api/home-planning-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}"
-    },
-    "api/artist-biographies-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}"
-    },
     "api/shows-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}"
     },
     "api/web-reports-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}"
+      "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
+      "excludeFiles": "node_modules/@img/*linuxmusl*/**"
     },
     "api/report-intake-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
@@ -46,7 +31,8 @@
     },
     "api/shows-runtime-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
-      "maxDuration": 300
+      "maxDuration": 300,
+      "excludeFiles": "node_modules/@img/*linuxmusl*/**"
     },
     "api/show-management.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}"
@@ -55,20 +41,8 @@
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
       "maxDuration": 300
     },
-    "api/shows-cutover-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
-      "maxDuration": 300
-    },
     "api/shows-performance-sync.js": {
       "includeFiles": "{docs/dataverse/shows-schema.json,server/dataverse-shows/rules/**,docs/dataverse/reports-schema.json}",
-      "maxDuration": 300
-    },
-    "api/account-access-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
-      "maxDuration": 300
-    },
-    "api/reports-cutover-sync.js": {
-      "includeFiles": "{docs/dataverse/shows-schema.json,docs/dataverse/reports-schema.json,server/dataverse-shows/rules/**}",
       "maxDuration": 300
     }
   },

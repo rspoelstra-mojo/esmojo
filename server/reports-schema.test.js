@@ -91,5 +91,5 @@ test('historic PDF/mail versions can retain unknown original CSV while deploymen
  assert.equal(source.columns.find(c=>c.logical_name==='esmojo_document').required,'Nee');
  for(const key of ['gekozenbron','parsercontract','rekencontract','contexthash'])assert.equal(version.columns.find(c=>c.logical_name==='esmojo_'+key).required,'Nee');
  const vercel=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
- for(const path of ['api/access.js','api/background-tasks-sync.js','api/shows-validation-sync.js','api/account-access-sync.js','api/reports-validation-sync.js'])assert.ok(vercel.functions[path].includeFiles.includes('docs/dataverse/reports-schema.json'));
+ for(const path of ['api/access.js','api/background-tasks-sync.js'])assert.ok(vercel.functions[path].includeFiles.includes('docs/dataverse/reports-schema.json'));
 });
