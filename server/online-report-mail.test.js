@@ -80,3 +80,9 @@ test('PDF vóór webpublicatie verstuurt niets; daarna volgt één online mail e
 test('Gevalideerde maar ambigue datum is niet zichtbaar in de rapportagecatalogus en activeert geen mail',async()=>{
  const f=setup();for(const venue of ['Ziggo Dome','AFAS Live']){const show=f.addShow({name:'Ambigue artiest',venue});f.addCsv(show);}const web=createWebCatalogueService({store:f.store});await web.synchronize();assert.equal((await web.menu('reader')).reports.length,0);const online=createOnlineReportMailService({store:f.store,mail:async()=>{throw Error('Not visible');}});assert.equal((await online.run()).sent,0);assert.equal(state(f).onlineReports.length,0);
 });
+test('geen nieuwe rapportage of wachtende aflevering: alleen een leesvoorcontrole, geen lease en geen write',async()=>{
+ const calls=[],service=createOnlineReportMailService({store:async operation=>{calls.push(operation);if(operation==='online-pending')return{pending:false};throw Error('mag niet schrijven');},mail:async()=>{throw Error('geen mail');}});
+ assert.deepEqual(await service.run(),{ok:true,sent:0,idle:true});assert.deepEqual(calls,['online-pending']);
+ const older=createOnlineReportMailService({store:async operation=>{if(operation==='online-pending')throw Error('VALIDATION');if(operation==='online-sync')return{tracking:'mail-open-v1'};return{state:'idle'};}});
+ assert.deepEqual(await older.run(),{ok:true,sent:0},'een oudere server zonder voorcontrole valt terug op het volledige pad');
+});

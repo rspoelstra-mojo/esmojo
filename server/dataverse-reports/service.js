@@ -47,6 +47,7 @@ export function createNativeReportsService({env=process.env,repository:repo=crea
   scan:()=>pdf.scan(),pipeline:(actor,input)=>management.pipeline(input),reserve:(actor,input)=>pdf.reserve(input),commit:(actor,input)=>pdf.commit(input),fail:(actor,input)=>pdf.fail(input),
   link:(actor,input)=>management.change(actor,'link',input),retry:(actor,input)=>management.change(actor,'retry',input),download:(actor,input)=>archive.download(actor,input.reportId),send:(actor,input)=>mail.send(actor,input.reportId),
   'coordinator-inspect':async()=>{await authorize(null,{worker:true});return operational.inspect();},'coordinator-recover':async()=>{await authorize(null,{worker:true});return operational.recover();},
+  'online-pending':()=>mail.pending(),
   'online-sync':()=>mail.sync(),'online-reserve':(actor,input)=>mail.reserve('online',input),'online-commit':(actor,input)=>mail.confirm('online',input),'online-fail':(actor,input)=>mail.confirm('online',input,{failed:true}),
   'delivery-reserve':(actor,input)=>mail.reserve('pdf',input),'delivery-commit':(actor,input)=>mail.confirm('pdf',input),'delivery-fail':(actor,input)=>mail.confirm('pdf',input,{failed:true}),
   'pdf-alerts':actor=>management.alerts(actor),'email-history':actor=>archive.history(actor),'email-open':(actor,input)=>archive.open(actor,input),

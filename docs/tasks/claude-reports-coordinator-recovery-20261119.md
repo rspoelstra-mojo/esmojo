@@ -10,3 +10,6 @@ Wijziging:
 - /api/ontrack-reports-sync: strikte invoer: leeg = mail versturen, of exact `{coordinator:'inspect'|'recover'}`; alles anders geeft 400 VALIDATION. Foutcodes blijven vaste codewoorden.
 - ontrack-reports.yml: handmatige invoer `operation` (mail | inspect | recover); standaard mail; de 15-minutenrun blijft mail.
 Beperking: de herstelcontrole controleert de coördinatorinvarianten; of een eerdere afleveringsmail al is verstuurd, wordt niet opnieuw bepaald maar blijft beschermd door de bestaande vaste providersleutels en de 23-uursreviewgrens. De oorzaak van de oorspronkelijke onzekere write is onbekend; keert hij terug, dan zichtbaar via inspect.
+
+## Aanvulling: leesvoorcontrole in de mailrun (gebruikerswens, 19 november 2026)
+De 15-minutenrun hoort bij "geen nieuwe rapportage" niets te doen. Nieuwe alleen-lezen operatie `online-pending` (mail.pending()): is er een zichtbare rapportage zonder online verzending, of een online verzending met status pending? Zo niet, dan keert `online.run()` terug met `{ok:true,sent:0,idle:true}` zonder lease, zonder write en zonder reserveringen. Een fout in de voorcontrole of een oudere server zonder deze operatie valt terug op het volledige pad. Gevolg: de run neemt alleen nog de coördinatielease en schrijft alleen als er werk is, wat het risico op een nieuwe onzekere write sterk verkleint.
