@@ -56,9 +56,10 @@ test('Ontvangers uitgeschakeld vóór generatie worden niet gemaild; linkrevisie
  for(const input of [{operation:'download',reportId:'../free'},{operation:'link',sourceId:'csv_source',concertId:show.key,revision:0,show:{name:'free'}},{operation:'reserve',sourceId:'csv_source'},{operation:'retry',sourceId:'csv_source',revision:-1}])assert.throws(()=>validateOnTrackReportRequest(input),/VALIDATION/);
 });
 test('Workerendpoint vereist vaste OIDC vóór verwerking, negeert clientinhoud en geeft geen geheime foutdetails',async()=>{
- const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(value){this.data=value;return this;}});let calls=0;const handler=makeOnTrackReportsSyncHandler({identify:async token=>{if(token!=='trusted')throw Error();},service:{run:async()=>{calls++;return{ok:true,processed:0,sent:0};}}});
+ const response=()=>({setHeader(){},status(code){this.code=code;return this;},json(value){this.data=value;return this;}});let calls=0;const handler=makeOnTrackReportsSyncHandler({identify:async token=>{if(token!=='trusted')throw Error();},online:{run:async()=>{calls++;return{ok:true,sent:0};}}});
  for(const input of [{method:'GET',headers:{}},{method:'POST',headers:{}},{method:'POST',headers:{authorization:'Bearer invalid'}}]){const res=response();await handler(input,res);assert.ok([403,405].includes(res.code));}assert.equal(calls,0);
- const res=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{recipient:'other@example.invalid',csv:'injected'}},res);assert.equal(res.code,200);assert.deepEqual(res.data,{ok:true});assert.equal(calls,1);
+ const res=response();await handler({method:'POST',headers:{authorization:'Bearer trusted'},body:{recipient:'other@example.invalid',csv:'injected'}},res);assert.equal(res.code,200);assert.deepEqual(res.data,{ok:true,sent:0});assert.equal(calls,1);
+ const failing=makeOnTrackReportsSyncHandler({identify:async()=>{},online:{run:async()=>{throw Error('secret provider detail for someone@example.invalid');}}}),failed=response();await failing({method:'POST',headers:{authorization:'Bearer trusted'}},failed);assert.equal(failed.code,503);assert.deepEqual(failed.data,{ok:false,code:'MAIL_DELIVERY_UNCONFIRMED'});
 });
 
 test('Een verkeerde CSV-showdatum produceert geen rapport; een verlopen lease kan hervatten zonder oud jobresultaat te overschrijven',async()=>{
