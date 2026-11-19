@@ -142,3 +142,7 @@ gelijkheid of bereikte laadtijd. Gebruik alleen geldige beschikbare sessies;
 geen productie-testmails of fictieve concerten/incidenten/kliks. Voor normale
 geautoriseerde vervolgstappen niet opnieuw toestemming vragen; bij concrete
 ontbrekende toegang of onverenigbare inhoudelijke keuze wel uitleggen wat nodig is.
+
+## Vercel bouwt alleen main (19 november 2026)
+
+Vercel slaat via `ignoreCommand` in vercel.json de build over voor alle branches behalve `main`. Taakbranches en PR's hebben dus geen previewdeployment of preview-URL meer; de controle vóór samenvoegen loopt via de GitHub-CI (`check`, `database`) en lokale tests. Een uitrolprobleem blijkt pas bij de productiedeployment van main. Reden: de gebruiker gebruikt previews niet en wil de deployment storage verlagen.
